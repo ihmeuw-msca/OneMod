@@ -1,0 +1,100 @@
+# OPEnMod settings
+input_path: /path/to/data.parquet
+col_id: [age_group_id, location_id, sex_id, year_id]
+location_id: [10, 11]
+sex_id: [1, 2]
+age_group_id: [3, 4, 5]
+year_id: [1990, 2000]
+col_obs: obs_rate
+col_pred: pred_rate
+col_holdout: [holdout1, holdout2]
+col_test: test
+
+# Rover settings
+rover:
+  max_attempts: 1
+  model_type: binomial
+  inv_link: exp
+  groupby: [sex_id, age_group_id]
+  col_fixed_covs: [intercept]
+  col_covs: [cov1, cov2, cov3, cov4, cov5]
+  col_weights: population
+  strategy_names: [down]
+  eval_metric: rmse
+
+
+# SWiMR settings
+swimr:
+  max_attempts: 1
+  singularity_image: /ihme/singularity-images/rstudio/ihme_rstudio_4201.img
+  age_metadata: /mnt/team/msca/priv/projects/openmod/data/age_metadata.csv
+  swimr_parentdir: /ihme/scratch/users/rsoren/projects/swimr_dev/
+  conda_binary: /ihme/code/mscm/miniconda3/bin/conda
+  conda_env: mrtool_0.0.2
+  models:
+    noncascade:
+      groupby: [super_region_id, sex_id]
+      similarity_matrix: /mnt/team/msca/priv/projects/openmod/data/gbd_matrix.parquet
+      similarity_multiplier: 1
+      overwrite: yes
+      model_type: noncascade
+      n_internal_knots_year: 3
+      n_internal_knots_age: .na
+      theta: .na
+      intercept_theta: 0
+      ranef_variable: loc__tmp
+      gamma_uprior_lower: 0
+      gamma_uprior_upper: 0
+      use_similarity_matrix: 1
+      save_input_data: 0
+      save_fitted_models: 0
+      save_similarity_matrix: 0
+    cascade:
+      groupby: [super_region_id, sex_id]
+      similarity_matrix: /mnt/team/msca/priv/projects/openmod/data/gbd_matrix.parquet
+      similarity_multiplier: 1
+      overwrite: yes
+      model_type: cascade
+      n_internal_knots_year: 3
+      n_internal_knots_age: .na
+      theta: 1
+      intercept_theta: 1
+      ranef_variable: submodel_id__tmp
+      gamma_uprior_lower: .na
+      gamma_uprior_upper: .na
+      use_similarity_matrix: 0
+      save_input_data: 0
+      save_fitted_models: 0
+      save_similarity_matrix: 0
+
+# WeAve settings
+weave:
+  max_attempts: 1
+  models:
+    weave:
+      max_batch: 3
+      groupby: [super_region_id, sex_id]
+      dimensions:
+        age:
+          name: age_group_id
+          coordinates: age_mid
+          kernel: exponential
+          radius: 1
+        year:
+          name: year_id
+          kernel: tricubic
+          exponent: [0.5]
+        location:
+          name: location_id
+          coordinates: [super_region_id, region_id, location_id]
+          kernel: depth
+          radius: [0.7]
+
+# Ensemble settings
+ensemble:
+  max_attempts: 1
+  metric: rmse
+  score: neg_exp
+  top_pct_score: 1
+  top_pct_model: 1
+

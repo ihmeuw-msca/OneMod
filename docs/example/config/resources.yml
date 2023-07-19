@@ -1,0 +1,27 @@
+# Default resources
+tool_resources:
+  slurm:
+    queue: all.q
+    cores: 1
+    memory: 1G
+    runtime: 1m
+    project: proj_mscm
+
+# Optional task-specific resources
+task_template_resources:
+  rover_modeling_template:
+    slurm:
+      memory: 10G
+      runtime: 10m
+  swimr_modeling_template:
+    slurm:
+      memory: 10G
+      runtime: 10m
+  weave_modeling_template:
+    slurm:
+      memory: 10G
+      runtime: 10m
+  ensemble_modeling_template:
+    slurm:
+      memory: 10G
+      runtime: 10m

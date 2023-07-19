@@ -1,0 +1,39 @@
+tool_resources:
+  # Base resources used by all tasks unless over-written
+  dummy:
+    queue: all.q
+    cores: 1
+    memory: 1G
+    runtime: (60 * 10)
+    project: proj_mscm
+
+task_template_resources:
+  # TODO: decide what resource values need to be updated
+  rover_model_template:
+    dummy:
+      queue: all.q
+      cores: 1
+      memory: 1G
+      runtime: (60 * 10)
+      project: proj_mscm
+  swimr:
+    dummy:
+      queue: all.q
+      cores: 1
+      memory: 1G
+      runtime: (60 * 10)
+      project: proj_mscm
+  weave_model_template:
+    dummy:
+      queue: all.q
+      cores: 1
+      memory: 1G
+      runtime: (60 * 10)
+      project: proj_mscm
+  ensemble_model_template:
+    dummy:
+      queue: all.q
+      cores: 1
+      memory: 1G
+      runtime: 00:10:00
+      project: proj_mscm
