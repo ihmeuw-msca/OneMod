@@ -46,7 +46,10 @@ def get_predictions(
         )
     else:
         raise FileNotFoundError("Smoother results do not exist")
-    df_smoother.columns.rename("smoother_id", inplace=True)
+    # df_smoother is always a multi-indexed dataframe, so df_smoother.columns is always a
+    # MultiIndex object instead of an Index object.
+    # If the dataframe is single-indexed the below line will raise an error.
+    df_smoother.columns.rename("smoother_id", level=0, inplace=True)  # type: ignore
     return df_smoother
 
 
