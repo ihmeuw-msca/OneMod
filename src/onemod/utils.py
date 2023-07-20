@@ -90,7 +90,7 @@ class Parameters:
         """Get list of parameter IDs."""
         return self.param_sets["param_id"].tolist()
 
-    def get_param(self, param: str, param_id: int) -> Any:
+    def get_param(self, param: str, param_id: Union[int, str]) -> Any:
         """Get submodel parameter."""
         params = self.param_sets[self.param_sets["param_id"] == param_id]
         return params[param].item()
@@ -184,7 +184,7 @@ class Subsets:
             Model ID.
         settings : dict
             Model specifications.
-        data : pandas.DataFrame
+        data : pandas.DataFrame, optional
             Input data.
         subsets : pandas.DataFrame, optional
             Subset data frame.
