@@ -40,7 +40,7 @@ def black(session):
 def tests(session: Session) -> None:
     """Run the test suite and coverage report."""
     session.install("pytest", "pytest-xdist", "pytest-cov")
-    session.install("-e", ".")
+    session.install("-e", ".[test]")
 
     args = session.posargs or ["tests"]
 

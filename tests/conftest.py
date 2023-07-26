@@ -1,4 +1,5 @@
 import itertools
+
 from pathlib import Path
 
 import numpy as np
@@ -8,11 +9,10 @@ import shutil
 import yaml
 
 from jobmon.client.api import Tool
-import pandas as pd
 
 
 @pytest.fixture(scope='session')
-def testing_tool():
+def testing_tool(web_server_process):
 
     tool = Tool(name="onemod_unit_testing_tool")
     tool.set_default_cluster_name('dummy')
