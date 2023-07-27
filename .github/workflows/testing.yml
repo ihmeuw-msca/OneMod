@@ -1,0 +1,41 @@
+name: build
+on: [push]
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: python -m pip install .[test] nox --upgrade pip
+    - name: Run the web server in the background
+      run: nox -s setup_local_server --filepath ${{ runner.temp }}/sqlite.db &
+    - name: Wait for Web Service to be Ready
+      run: |
+        max_attempts=30  # Adjust the number of attempts as per your needs
+        delay_seconds=10  # Adjust the delay between each attempt as per your needs
+        success=false
+        attempts=0
+        server_url=$(python -c "from jobmon.server.web.api import JobmonConfig; jc = JobmonConfig(); print(jc.get('http', 'service_url'))")
+        while [ $attempts -lt $max_attempts ]; do
+          response=$(curl -sSf $server_url)  # Replace with the actual URL of your web service
+          if [ $? -eq 0 ]; then
+            echo "Web service is ready!"
+            success=true
+            break
+          fi
+          echo "Attempt $((attempts+1)): Web service not ready yet, waiting for $delay_seconds seconds..."
+          sleep $delay_seconds
+          attempts=$((attempts+1))
+        done
+        if [ "$success" = false ]; then
+          echo "Web service did not become ready after $max_attempts attempts. Exiting..."
+          exit 1
+        fi
+    - name: Test with pytest
+      run: pytest tests/

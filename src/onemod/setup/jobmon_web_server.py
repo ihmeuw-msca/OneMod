@@ -17,10 +17,10 @@ class WebServerProcess:
     def __init__(self, filepath: str) -> None:
         """Initializes the web server process.
 
+        Runs on
+
         Args:
-            ephemera: a dictionary containing the connection information for the database,
-            specifically the database host, port, service account user, service account
-            password, and database name
+            filepath: path to the SQLlite database file backing up the service.
         """
         if sys.platform == "darwin":
             self.web_host = "127.0.0.1"
