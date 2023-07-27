@@ -32,6 +32,36 @@ from the last point of failure, saving the tedium of re-running previous steps t
 
 For more details on Jobmon, please refer to the [documentation](https://scicomp-docs.ihme.washington.edu/jobmon/current/).
 
+#### Creating a Local Server
+
+Jobmon requires some infrastructure in order to run, namely a back end web service and a database. At IHME these are hosted
+on a private Kubernetes cluster and a reserved database host respectively. However, users without access to the UW VPN 
+are unable to access either of these resources, requiring manual instantiation of these structures prior to running. 
+
+`nox` provides a handy way to provide a one-line command that installs custom dependencies and runs the web service. 
+To create this local web service, run `pip install nox` if not already installed and subsequently `nox -s setup_local_server`
+from the root level of the repository. You should see the app start to run: 
+
+```buildoutcfg
+ * Serving Flask app 'jobmon.server.web.app_factory'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:27546
+ * Running on http://10.104.145.4:27546
+Press CTRL+C to quit
+```
+
+Note that this will run the web service in the foreground of your terminal, and block execution of any other commands. 
+If you want to free up your terminal, say for running your actual workflow, you can send this process to the background
+by pressing `Ctrl + Z` followed by `bg` in your terminal (OSX or Linux only). Any Jobmon workflows created should be 
+configured and able to run against this local web service automatically. 
+
+When done with work remember to kill this process to avoid consuming resources unnecessarily on your computer. 
+You can do so using `jobs` to retrieve jobs sent to the background, `fg <id>` on the ID of that background job
+to bring it back to the foreground, and simply `Ctrl + C` to kill the process. 
+
+
 ### Subsets and Submodels
 
 A key requirement of onemod is the ability to flexibly model different sets of fixed/random effects. To facilitate computation, 
