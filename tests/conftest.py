@@ -3,6 +3,7 @@ import itertools
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import os
 import shutil
@@ -12,7 +13,7 @@ from jobmon.client.api import Tool
 
 
 @pytest.fixture(scope='session')
-def testing_tool(web_server_process):
+def testing_tool():
 
     tool = Tool(name="onemod_unit_testing_tool")
     tool.set_default_cluster_name('dummy')

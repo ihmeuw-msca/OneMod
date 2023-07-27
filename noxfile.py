@@ -58,3 +58,19 @@ def typecheck(session: Session) -> None:
     session.install("mypy", "types-PyYAML", "pandas-stubs")
     session.install("-e", ".")
     session.run("mypy", "--explicit-package-bases", *args)
+
+
+@nox.session(python=python, venv_backend="conda")
+def setup_local_server(session: Session) -> None:
+    """A nox session for setting up a local Jobmon web service.
+
+    The intent is that this session can be used to create a local database and web server
+    stack for Jobmon in the event IHME's proprietary servers are unavailable, i.e.
+    for users not on the IHME VPN or workflows on Github's test servers.
+    """
+
+    args = session.posargs or ["/tmp/sqlite.db"]  # Only argument is the filepath
+    session.install("-e", ".")
+    session.install("jobmon[server]")
+    session.conda_install("mysqlclient")  # mysqlclient has to be conda installed
+    session.run("start_web_service", "--filepath", *args)
