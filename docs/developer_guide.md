@@ -94,7 +94,7 @@ validating results relies on actually running real workflows against representat
 To test on the cluster:
 1. Follow the standard procedure to login and obtain a compute session with srun. 
 2. Create a conda environment and install onemod from source. 
-   1. Clone this repository, and from the root level run `pip install -e .`
+   1. Clone this repository, and from the root level run `pip install -e ".[ihme]"`
       1. The `-e` flag means you can edit the code in the cloned repository and those changes will immediately propagate, allowing for rapid iteration.
 3. Follow the instructions in the main README in this repository to either being new workflows or resume an existing one. 
 
