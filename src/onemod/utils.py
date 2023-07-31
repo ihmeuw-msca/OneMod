@@ -222,6 +222,8 @@ class Subsets:
 
         """
         subsets: dict[str, list] = {column: [] for column in self.columns + ["n_batch"]}
+        # TODO: use a different name distinguish column name and column value
+        # to improve readibility
         for columns, df in data.groupby(self.columns):
             if len(self.columns) == 1:
                 subsets[self.columns[0]].append(columns)

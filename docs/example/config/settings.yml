@@ -10,6 +10,22 @@ col_pred: pred_rate
 col_holdout: [holdout1, holdout2, holdout3, holdout4, holdout7]
 col_test: test
 
+# Rover covariate selection settings
+rover_covsel:
+  max_attempts: 1
+  groupby: [age_group_id, sex_id]
+  Rover:
+    model_type: binomial
+    obs: obs_rate
+    cov_fixed: [intercept]
+    cov_exploring: [cov1, cov2, cov3, cov4, cov5]
+    weights: population
+    holdouts: [holdout1, holdout2, holdout3, holdout4, holdout7]
+  Rover.fit:
+    strategies: [forward]
+    top_pct_score: 1.0
+    top_pct_learner: 0.5
+
 # Rover settings
 rover:
   max_attempts: 1
