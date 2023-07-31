@@ -1,4 +1,5 @@
 """Run rover covariate selection model."""
+import fire
 from pathlib import Path
 from modrover.api import Rover
 from pplkit.data.interface import DataInterface
@@ -32,7 +33,7 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
     dataif.add_dir("covsel", dataif.experiment / "results" / "rover" / "covsel")
-    settings = dataif.load_config("settings.yaml")
+    settings = dataif.load_config("settings.yml")
 
     subsets = Subsets(
         "rover_covsel",
@@ -56,3 +57,7 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     dataif.dump_covsel(rover, f"{submodel_id}/rover.pkl")
     dataif.dump_covsel(rover.learner_info, f"{submodel_id}/learner_info.csv")
     dataif.dump_covsel(rover.summary, f"{submodel_id}/summary.csv")
+
+
+def main() -> None:
+    fire.Fire(rover_covsel_model)

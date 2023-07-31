@@ -26,6 +26,43 @@ rover_covsel:
     top_pct_score: 1.0
     top_pct_learner: 0.5
 
+# Regmod smooth settings
+regmod_smooth:
+  max_attempts: 1
+  Model:
+    model_type: binomial
+    obs: obs_rate
+    var_groups:
+      - col: "intercept"
+      - col: "intercept"
+        dim: "super_region_id"
+        gprior: [0, 0.35]
+      - col: "intercept"
+        dim: "region_id"
+        gprior: [0, 0.18]
+      - col: "intercept"
+        dim: "location_id"
+        gprior: [0, 0.09]
+    weights: population
+    coef_bounds:
+      LDI_pc: [-inf, 0]
+      education_yrs_pc: [-inf, 0]
+      lpc: [0, inf]
+      mean_BMI: [0, inf]
+      mean_SBP: [0, inf]
+      mean_cholesterol: [0, inf]
+      smoking_prev: [0, inf]
+      universal_health_coverage": [inf, 0]
+    dims:
+      - age_mid: numerical
+      - super_region_id: categorical
+      - region_id: categorical
+      - location_id: categorical
+  Model.fit:
+    options:
+      verbose: false
+      m_scale: 0.1
+
 # Rover settings
 rover:
   max_attempts: 1
