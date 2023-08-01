@@ -357,7 +357,7 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any) -> None:
     df_pred.to_parquet(ensemble_dir / "predictions.parquet")
 
 
-def main():
+def main() -> None:
     """Main entry point of the module.
 
     This function uses the Fire library to allow the rover_model function to be

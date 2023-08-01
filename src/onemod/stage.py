@@ -72,7 +72,7 @@ class StageTemplate:
         else:
             self.submodel_ids = ["dummy"]
 
-    def create_tasks(self, upstream_tasks) -> list[Task]:
+    def create_tasks(self, upstream_tasks: list[Task]) -> list[Task]:
         """Create stage tasks.
 
         Parameters

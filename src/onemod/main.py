@@ -52,8 +52,8 @@ def create_workflow(
     configure_resources : bool
         Whether to configure resources in directory/config/resources.yml.
     tool : Tool, optional
-        The jobmon Tool instance to use for creating the workflow. If not provided, a new Tool instance
-        named "onemod_tool" will be created with default compute resources set.
+        The jobmon Tool instance to use for creating the workflow. If not provided, a new
+        Tool instance named "onemod_tool" will be created with default compute resources set.
 
     Returns
     -------
@@ -162,8 +162,8 @@ def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
 def main() -> None:
     """Entry point for running onemod pipeline using command-line interface.
 
-    This function is intended to be executed using the 'fire.Fire' method to enable command-line
-    execution of the 'run_pipeline' and 'resume_pipeline' functions.
+    This function is intended to be executed using the 'fire.Fire' method to enable
+    command-line execution of the 'run_pipeline' and 'resume_pipeline' functions.
 
     """
     fire.Fire(

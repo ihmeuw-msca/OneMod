@@ -211,6 +211,7 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
 def main() -> None:
     """Main entry point of the module.
 
-    This function uses the Fire library to allow the swimr_model function to be invoked from the command line.
+    This function uses the Fire library to allow the swimr_model function to be invoked
+    from the command line.
     """
     fire.Fire(swimr_model)

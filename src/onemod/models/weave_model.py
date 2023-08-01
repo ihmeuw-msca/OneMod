@@ -29,7 +29,8 @@ def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     """Run weave model by submodel ID.
 
     Args:
-        experiment_dir (Union[Path, str]): The path to the directory containing the experiment data.
+        experiment_dir (Union[Path, str]): The path to the directory containing the
+            experiment data.
         submodel_id (str): The ID of the submodel to be processed.
     """
     experiment_dir = Path(experiment_dir)
