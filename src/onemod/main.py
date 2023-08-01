@@ -37,7 +37,30 @@ def create_workflow(
     configure_resources: bool,
     tool: Optional[Tool] = None,
 ) -> Workflow:
-    """Create OneMod workflow."""
+    """Create OneMod workflow.
+
+    Parameters
+    ----------
+    directory : str
+        The experiment directory. It must contain config/settings.yml.
+    stages : list of str
+        The pipeline stages to run.
+    save_intermediate : bool
+        Whether to save intermediate stage results.
+    cluster_name : str
+        Name of the cluster to run the pipeline on.
+    configure_resources : bool
+        Whether to configure resources in directory/config/resources.yml.
+    tool : Tool, optional
+        The jobmon Tool instance to use for creating the workflow. If not provided, a new Tool instance
+        named "onemod_tool" will be created with default compute resources set.
+
+    Returns
+    -------
+    Workflow
+        The created OneMod workflow.
+
+    """
     experiment_dir = Path(directory)
     if configure_resources:
         resources_file = str(experiment_dir / "config" / "resources.yml")
@@ -92,17 +115,15 @@ def run_pipeline(
     Parameters
     ----------
     directory : str
-        Experiment directory. Must contain config/settings.yml.
-    stages : list of str, optional
-        Pipeline stages to run.
-        Default is ['rover', 'swimr', 'weave', 'ensemble'].
+        The experiment directory. It must contain config/settings.yml.
+    stages : list of str or str, optional
+        The pipeline stages to run. Default is ['rover', 'swimr', 'weave', 'ensemble'].
     save_intermediate : bool, optional
-        Save intermedate stage results. Default is False.
-    cluster_name : {'slurm', 'dummy'}, optional
-        Name of cluster to run pipeline on. Default is 'slurm'.
+        Whether to save intermediate stage results. Default is False.
+    cluster_name : str, optional
+        Name of the cluster to run the pipeline on. Default is 'slurm'.
     configure_resources : bool, optional
-        Configure resources in directory/config/resources.yml.
-        Default is True.
+        Whether to configure resources in directory/config/resources.yml. Default is True.
 
     """
     if stages is None:
@@ -139,6 +160,12 @@ def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
 
 
 def main() -> None:
+    """Entry point for running onemod pipeline using command-line interface.
+
+    This function is intended to be executed using the 'fire.Fire' method to enable command-line
+    execution of the 'run_pipeline' and 'resume_pipeline' functions.
+
+    """
     fire.Fire(
         {
             "run_pipeline": run_pipeline,

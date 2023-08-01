@@ -20,7 +20,23 @@ if TYPE_CHECKING:
 
 
 class StageTemplate:
-    """Onemod stage template."""
+    """Onemod stage template.
+
+    Parameters
+    ----------
+    stage_name : str
+        The name of the stage.
+    experiment_dir : Path
+        The experiment directory. It must contain config/settings.yml.
+    save_intermediate : bool
+        Whether to save intermediate stage results.
+    cluster_name : str
+        Name of the cluster to run the pipeline on.
+    resources_file : Union[Path, str]
+        Path to the file containing task template resources.
+    tool : Tool
+        The jobmon Tool instance to use for creating tasks.
+    """
 
     def __init__(
         self,
@@ -57,7 +73,19 @@ class StageTemplate:
             self.submodel_ids = ["dummy"]
 
     def create_tasks(self, upstream_tasks) -> list[Task]:
-        """Create stage tasks."""
+        """Create stage tasks.
+
+        Parameters
+        ----------
+        upstream_tasks : list of Task
+            List of upstream tasks for the current stage.
+
+        Returns
+        -------
+        list of Task
+            List of tasks representing the current stage.
+
+        """
         settings = load_settings(self.experiment_dir / "config" / "settings.yml")
 
         # Create stage initialization tasks
@@ -82,7 +110,14 @@ class StageTemplate:
         return tasks
 
     def create_initialization_task(self) -> list[Task]:
-        """Create stage initialization tasks."""
+        """Create stage initialization tasks.
+
+        Returns
+        -------
+        list of Task
+            List of tasks for stage initialization.
+
+        """
         tasks = []
 
         # Delete submodels
@@ -119,7 +154,21 @@ class StageTemplate:
     def create_modeling_tasks(
         self, max_attempts: int, upstream_tasks: list[Task]
     ) -> list[Task]:
-        """Create stage modeling tasks."""
+        """Create stage modeling tasks.
+
+        Parameters
+        ----------
+        max_attempts : int
+            The maximum number of attempts for each modeling task.
+        upstream_tasks : list of Task
+            List of upstream tasks for the modeling tasks.
+
+        Returns
+        -------
+        list of Task
+            List of tasks representing the modeling stage.
+
+        """
         model_template = self.create_modeling_template(
             task_template_name=f"{self.stage_name}_modeling_template"
         )
@@ -133,7 +182,19 @@ class StageTemplate:
         )
 
     def create_collection_task(self, upstream_tasks: list[Task]) -> Task:
-        """Create stage collection task."""
+        """Create stage collection task.
+
+        Parameters
+        ----------
+        upstream_tasks : list of Task
+            List of upstream tasks for the collection task.
+
+        Returns
+        -------
+        Task
+            The collection task.
+
+        """
         collection_template = self.create_collection_template()
         return collection_template.create_task(
             name=f"{self.stage_name}_collection_task",
@@ -145,7 +206,19 @@ class StageTemplate:
         )
 
     def create_deletion_tasks(self, upstream_tasks: list[Task]) -> list[Task]:
-        """Create stage deletion tasks."""
+        """Create stage deletion tasks.
+
+        Parameters
+        ----------
+        upstream_tasks : list of Task
+            List of upstream tasks for the deletion tasks.
+
+        Returns
+        -------
+        list of Task
+            List of tasks representing the deletion stage.
+
+        """
         tasks = []
 
         # Delete submodels
@@ -182,7 +255,19 @@ class StageTemplate:
 
     @task_template_cache(task_template_name="initialization_template")
     def create_initialization_template(self, task_template_name: str) -> TaskTemplate:
-        """Stage initialization template."""
+        """Stage initialization template.
+
+        Parameters
+        ----------
+        task_template_name : str
+            The name of the task template.
+
+        Returns
+        -------
+        TaskTemplate
+            The task template for stage initialization.
+
+        """
         template = self.tool.get_task_template(
             template_name=task_template_name,
             command_template="{entrypoint} {stage_name}"
@@ -200,7 +285,19 @@ class StageTemplate:
         return template
 
     def create_modeling_template(self, task_template_name: str) -> TaskTemplate:
-        """Stage modeling template."""
+        """Stage modeling template.
+
+        Parameters
+        ----------
+        task_template_name : str
+            The name of the task template.
+
+        Returns
+        -------
+        TaskTemplate
+            The task template for stage modeling.
+
+        """
         template = self.tool.get_task_template(
             template_name=task_template_name,
             command_template="{entrypoint}"
@@ -220,7 +317,19 @@ class StageTemplate:
 
     @task_template_cache(task_template_name="collection_template")
     def create_collection_template(self, task_template_name: str) -> TaskTemplate:
-        """Stage collection template."""
+        """Stage collection template.
+
+        Parameters
+        ----------
+        task_template_name : str
+            The name of the task template.
+
+        Returns
+        -------
+        TaskTemplate
+            The task template for stage collection.
+
+        """
         template = self.tool.get_task_template(
             template_name=task_template_name,
             command_template="{entrypoint} {stage_name}"
@@ -239,7 +348,19 @@ class StageTemplate:
 
     @task_template_cache(task_template_name="deletion_template")
     def create_deletion_template(self, task_template_name: str) -> TaskTemplate:
-        """Stage deletion template."""
+        """Stage deletion template.
+
+        Parameters
+        ----------
+        task_template_name : str
+            The name of the task template.
+
+        Returns
+        -------
+        TaskTemplate
+            The task template for stage deletion.
+
+        """
         template = self.tool.get_task_template(
             template_name=task_template_name,
             command_template="{entrypoint} stage"
@@ -260,7 +381,19 @@ class StageTemplate:
     def create_submodel_deletion_template(
         self, task_template_name: str
     ) -> TaskTemplate:
-        """Stage submodel deletion template."""
+        """Stage submodel deletion template.
+
+        Parameters
+        ----------
+        task_template_name : str
+            The name of the task template.
+
+        Returns
+        -------
+        TaskTemplate
+            The task template for stage submodel deletion.
+
+        """
         template = self.tool.get_task_template(
             template_name=task_template_name,
             command_template="{entrypoint} result --result {result}",

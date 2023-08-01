@@ -25,7 +25,21 @@ param_dict = {
 
 
 def get_residual(row: pd.Series, model_type: str, col_obs: str, inv_link: str) -> float:
-    """Get residual."""
+    """Get residual for a given row of data.
+
+    Args:
+        row (pd.Series): A row of the input DataFrame containing model data.
+        model_type (str): The type of the model ('binomial', 'poisson', 'tobit').
+        col_obs (str): The name of the column representing observed values.
+        inv_link (str): The inverse link function to use ('expit' for binomial, 'exp'
+            for poisson and tobit).
+
+    Returns:
+        float: The calculated residual value.
+
+    Raises:
+        ValueError: If the provided combination of model_type and inv_link is not supported.
+    """
     if model_type == "binomial" and inv_link == "expit":
         return (row[col_obs] - row["p"]) / (row["p"] * (1 - row["p"]))
     if model_type == "poisson" and inv_link == "exp":
@@ -42,7 +56,21 @@ def get_residual(row: pd.Series, model_type: str, col_obs: str, inv_link: str) -
 def get_residual_se(
     row: pd.Series, model_type: str, col_obs: str, inv_link: str
 ) -> float:
-    """Get residual standard error."""
+    """Get residual standard error for a given row of data.
+
+    Args:
+        row (pd.Series): A row of the input DataFrame containing model data.
+        model_type (str): The type of the model ('binomial', 'poisson', 'tobit').
+        col_obs (str): The name of the column representing observed values.
+        inv_link (str): The inverse link function to use ('expit' for binomial, 'exp'
+            for poisson and tobit).
+
+    Returns:
+        float: The calculated residual standard error value.
+
+    Raises:
+        ValueError: If the provided combination of model_type and inv_link is not supported.
+    """
     if model_type == "binomial" and inv_link == "expit":
         return 1 / np.sqrt(row["p"] * (1 - row["p"]))
     if model_type == "poisson" and inv_link == "exp":
@@ -57,7 +85,13 @@ def get_residual_se(
 
 
 def rover_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
-    """Run rover model by submodel ID."""
+    """Run the rover model for a specific submodel ID.
+
+    Args:
+        experiment_dir (Union[Path, str]): The path to the directory containing the
+            experiment data.
+        submodel_id (str): The ID of the submodel to be processed.
+    """
     experiment_dir = Path(experiment_dir)
     rover_dir = experiment_dir / "results" / "rover"
     settings = load_settings(experiment_dir / "config" / "settings.yml")
@@ -158,4 +192,9 @@ def rover_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
 
 
 def main() -> None:
+    """Main entry point of the module.
+
+    This function uses the Fire library to allow the rover_model function to be invoked
+    from the command line.
+    """
     fire.Fire(rover_model)
