@@ -466,14 +466,14 @@ def get_ensemble_input(settings: dict) -> pd.DataFrame:
     return rover_input[list(input_cols)]
 
 
-def get_rover_submodels(
-    experiment_dir: Union[Path, str], save_file: Optional[bool] = False
+def get_rover_covsel_submodels(
+    experiment_dir: Union[Path, str], save_file: bool = False
 ) -> list[str]:
     """Get rover submodel IDs and save subsets.
     TODO: merge this to the rover_covsel function to avoid confusion
     """
     experiment_dir = Path(experiment_dir)
-    rover_dir = experiment_dir / "results" / "rover" / "covsel"
+    rover_covsel_dir = experiment_dir / "results" / "rover" / "covsel"
 
     # Create rover subsets and submodels
     settings = load_settings(experiment_dir / "config" / "settings.yml")
@@ -483,7 +483,7 @@ def get_rover_submodels(
 
     # Save file
     if save_file:
-        subsets.subsets.to_csv(rover_dir / "subsets.csv", index=False)
+        subsets.subsets.to_csv(rover_covsel_dir / "subsets.csv", index=False)
     return submodels
 
 

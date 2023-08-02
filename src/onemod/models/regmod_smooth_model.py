@@ -2,38 +2,12 @@
 the covariate coefficients across age groups.
 """
 import fire
+import numpy as np
 import pandas as pd
 from pathlib import Path
+from scipy.stats import norm
 from regmodsm.model import Model
 from pplkit.data.interface import DataInterface
-
-
-def _get_selected_covs(experiment_dir: Path | str) -> list[str]:
-    """Process all the significant covariates for each sub group. If a covaraite
-    is significant across more than half of the subgroups if will be selected.
-    """
-    dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("covsel", dataif.experiment / "results" / "rover" / "covsel")
-
-    subsets = dataif.load_covsel("subsets.csv")
-    summaries = []
-    for subset_id in subsets.subset_id:
-        submodel_id = f"subset{subset_id}"
-        summary = dataif.load_covsel(f"{submodel_id}/summary.csv")
-        summary["submodel_id"] = submodel_id
-        summaries.append(summary)
-    summaries = pd.concat(summaries, axis=0)
-
-    selected_covs = (
-        summaries.groupby("cov")["significant"]
-        .mean()
-        .reset_index()
-        .query("significant >= 0.5")["cov"]
-        .tolist()
-    )
-
-    return selected_covs
 
 
 def get_residual(row: pd.Series, model_type: str, col_obs: str, inv_link: str) -> float:
@@ -68,7 +42,7 @@ def get_residual_se(
     raise ValueError("Unsupported model_type and inv_link pair")
 
 
-def regmod_smooth_model(experiment_dir: Path | str) -> None:
+def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
 
@@ -89,15 +63,15 @@ def regmod_smooth_model(experiment_dir: Path | str) -> None:
     """
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("covsel", dataif.experiment / "results" / "rover" / "covsel")
-    dataif.add_dir("smooth", dataif.experiment / "results" / "rover" / "smooth")
+    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
+    dataif.add_dir("smooth", dataif.rover / "smooth")
     settings = dataif.load_config("settings.yml")
 
     # Create regmod smooth parameters
     var_groups = settings["regmod_smooth"]["Model"]["var_groups"]
     coef_bounds = settings["regmod_smooth"]["Model"]["coef_bounds"]
 
-    selected_covs = _get_selected_covs(experiment_dir)
+    selected_covs = dataif.load_rover("selected_covs.yaml")
     for cov in selected_covs:
         var_group = dict(col=cov, dim="age_mid")
         if cov in coef_bounds:
@@ -142,7 +116,7 @@ def regmod_smooth_model(experiment_dir: Path | str) -> None:
 
     # Save results
     dataif.dump_smooth(model, "model.pkl")
-    dataif.dump_smooth(df, "predictions.parquet")
+    dataif.dump_rover(df, "predictions.parquet")
 
 
 def main() -> None:

@@ -1,33 +1,51 @@
 """Collect onemod stage submodel results."""
 from pathlib import Path
 from typing import Union
+from pplkit.data.interface import DataInterface
 
 import fire
 import pandas as pd
 
 from onemod.utils import (
     as_list,
-    get_rover_submodels,
+    get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
     load_settings,
 )
 
 
-def collect_rover_results(experiment_dir: Union[Path, str]) -> None:
-    """Collect rover submodel results."""
-    experiment_dir = Path(experiment_dir)
-    rover_dir = experiment_dir / "results" / "rover"
-    submodel_ids = get_rover_submodels(experiment_dir)
-    pd.concat(
-        [
-            pd.read_parquet(
-                rover_dir / "submodels" / submodel_id / "predictions.parquet"
-            )
-            for submodel_id in submodel_ids
-        ],
-        ignore_index=True,
-    ).to_parquet(rover_dir / "predictions.parquet")
+def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
+    """Collect rover covariate selection results. Process all the significant
+    covariates for each sub group. If a covaraite is significant across more
+    than half of the subgroups if will be selected.
+
+    This step will save ``selected_covs.yaml`` with a list of selected
+    covariates in the rover results folder.
+    """
+    dataif = DataInterface(experiment=experiment_dir)
+    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
+    submodel_ids = get_rover_covsel_submodels(experiment_dir)
+    summaries = []
+    for submodel_id in submodel_ids:
+        summary = dataif.load_covsel(f"{submodel_id}/summary.csv")
+        summary["submodel_id"] = submodel_id
+        summaries.append(summary)
+    summaries = pd.concat(summaries, axis=0)
+    selected_covs = (
+        summaries.groupby("cov")["significant"]
+        .mean()
+        .reset_index()
+        .query("significant >= 0.5")["cov"]
+        .tolist()
+    )
+    dataif.dump_rover(selected_covs, "selected_covs.yaml")
+
+
+def collect_regmod_smooth_results(experiment_dir: Path | str) -> None:
+    """This is a dummy step without any functionality.
+    TODO: remove me and allow stage to skip the collection step.
+    """
 
 
 def collect_swimr_results(experiment_dir: Union[Path, str]) -> None:
@@ -92,7 +110,8 @@ def collect_weave_results(experiment_dir: Union[Path, str]) -> None:
 def main() -> None:
     fire.Fire(
         {
-            "rover": collect_rover_results,
+            "rover_covsel": collect_rover_covsel_results,
+            "regmod_smooth": collect_regmod_smooth_results,
             "swimr": collect_swimr_results,
             "weave": collect_weave_results,
         }
