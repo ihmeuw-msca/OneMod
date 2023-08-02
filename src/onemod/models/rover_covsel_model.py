@@ -54,9 +54,9 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     rover.fit(data=df_train, **settings["rover_covsel"]["Rover.fit"])
 
     # Save results
-    dataif.dump_covsel(rover, f"{submodel_id}/rover.pkl")
-    dataif.dump_covsel(rover.learner_info, f"{submodel_id}/learner_info.csv")
-    dataif.dump_covsel(rover.summary, f"{submodel_id}/summary.csv")
+    dataif.dump_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
+    dataif.dump_covsel(rover.learner_info, f"submodels/{submodel_id}/learner_info.csv")
+    dataif.dump_covsel(rover.summary, f"submodels/{submodel_id}/summary.csv")
 
 
 def main() -> None:
