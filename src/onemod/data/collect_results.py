@@ -24,7 +24,7 @@ def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
     covariates in the rover results folder.
     """
     dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
+    dataif.add_dir("covsel", dataif.experiment / "results" / "rover_covsel" / "submodels")
     submodel_ids = get_rover_covsel_submodels(experiment_dir)
     summaries = []
     for submodel_id in submodel_ids:
@@ -39,13 +39,14 @@ def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
         .query("significant >= 0.5")["cov"]
         .tolist()
     )
-    dataif.dump_rover(selected_covs, "selected_covs.yaml")
+    dataif.dump_covsel(selected_covs, "selected_covs.yaml")
 
 
 def collect_regmod_smooth_results(experiment_dir: Path | str) -> None:
     """This is a dummy step without any functionality.
     TODO: remove me and allow stage to skip the collection step.
     """
+    pass
 
 
 def collect_swimr_results(experiment_dir: Union[Path, str]) -> None:

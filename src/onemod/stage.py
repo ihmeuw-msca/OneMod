@@ -47,7 +47,8 @@ class StageTemplate:
             self.resources = {}
 
         # Get stage submodels
-        if stage_name == "rover_covsel":
+        if stage_name in ("rover_covsel", "regmod_smooth"):
+            # Assumption to check: 1:1 relation between rover and regmod_smooth submodel ids
             self.submodel_ids = get_rover_covsel_submodels(experiment_dir)
         elif stage_name == "swimr":
             self.submodel_ids = get_swimr_submodels(experiment_dir)

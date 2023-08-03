@@ -32,7 +32,7 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     """
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("covsel", dataif.experiment / "results" / "rover" / "covsel")
+    dataif.add_dir("covsel", dataif.experiment / "results" / "rover_covsel")
     settings = dataif.load_config("settings.yml")
 
     subsets = Subsets(

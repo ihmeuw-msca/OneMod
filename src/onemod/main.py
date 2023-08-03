@@ -107,9 +107,9 @@ def run_pipeline(
 
     """
     if stages is None:
-        stages = ["rover", "swimr", "weave", "ensemble"]
+        stages = ["rover_covsel", "regmod_smooth", "swimr", "weave", "ensemble"]
     for stage in as_list(stages):
-        if stage not in ["rover", "swimr", "weave", "ensemble"]:
+        if stage not in ["rover_covsel", "regmod_smooth", "swimr", "weave", "ensemble"]:
             raise ValueError(f"Invalid stage: {stage}")
     workflow = create_workflow(
         directory=directory,

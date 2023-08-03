@@ -54,10 +54,14 @@ regmod_smooth:
       smoking_prev: [0, inf]
       universal_health_coverage": [inf, 0]
     dims:
-      - age_mid: numerical
-      - super_region_id: categorical
-      - region_id: categorical
-      - location_id: categorical
+      - name: "age_mid"
+        type: "numerical"
+      - name: "super_region_id"
+        type: "categorical"
+      - name: "region_id"
+        type: "categorical"
+      - name: "location_id"
+        type: "categorical"
   Model.fit:
     options:
       verbose: false

@@ -18,7 +18,7 @@ from onemod.utils import (
 def initialize_rover_covsel_results(experiment_dir: Path | str) -> None:
     """Initialize rover results."""
     experiment_dir = Path(experiment_dir)
-    rover_covsel_dir = experiment_dir / "results" / "rover" / "covsel"
+    rover_covsel_dir = experiment_dir / "results" / "rover_covsel"
 
     # Initialize directories
     if rover_covsel_dir.exists():
@@ -32,7 +32,7 @@ def initialize_rover_covsel_results(experiment_dir: Path | str) -> None:
 
 def initialize_regmod_smooth_results(experiment_dir: Path | str) -> None:
     experiment_dir = Path(experiment_dir)
-    rover_smooth_dir = experiment_dir / "results" / "rover" / "covsel"
+    rover_smooth_dir = experiment_dir / "results" / "regmod_smooth"
 
     # Initialize directories
     if rover_smooth_dir.exists():

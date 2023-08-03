@@ -478,7 +478,7 @@ def get_rover_covsel_submodels(
     # Create rover subsets and submodels
     settings = load_settings(experiment_dir / "config" / "settings.yml")
     df_input = get_rover_input(settings)
-    subsets = Subsets("rover", settings["rover"], df_input)
+    subsets = Subsets("rover_covsel", settings["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file

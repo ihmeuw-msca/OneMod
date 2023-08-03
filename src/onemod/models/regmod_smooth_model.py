@@ -63,15 +63,15 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     """
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
-    dataif.add_dir("smooth", dataif.rover / "smooth")
+    dataif.add_dir("rover_covsel", dataif.experiment / "results" / "rover_covsel" / "submodels")
+    dataif.add_dir("smooth", dataif.rover_covsel / "smooth")
     settings = dataif.load_config("settings.yml")
 
     # Create regmod smooth parameters
     var_groups = settings["regmod_smooth"]["Model"]["var_groups"]
     coef_bounds = settings["regmod_smooth"]["Model"]["coef_bounds"]
 
-    selected_covs = dataif.load_rover("selected_covs.yaml")
+    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     for cov in selected_covs:
         var_group = dict(col=cov, dim="age_mid")
         if cov in coef_bounds:
@@ -87,9 +87,18 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
         weights=settings["regmod_smooth"]["Model"]["weights"],
     )
 
+    # Load and filter by subset
+    subsets = Subsets(
+        "regmod_smooth",
+        settings["regmod_smooth"],
+        subsets=dataif.load_smooth("subsets.csv"),
+    )
+    subset_id = int(submodel_id[6:])
+    df_input = subsets.filter_subset(get_rover_input(settings), subset_id)
+
     # Fit regmod smooth model
-    df = dataif.load(settings["intput_path"])
-    df_train = df.query("col_test == 0")
+    df = dataif.load(settings["input_path"])
+    df_train = df.query(f"{settings['col_test']} == 0")
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
 
     # Create prediction and residuals
@@ -97,18 +106,18 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     df["residual"] = df.apply(
         lambda row: get_residual(
             row,
-            settings["rover"]["model_type"],
+            settings["rover_covsel"]["model_type"],
             settings["col_obs"],
-            settings["rover"]["inv_link"],
+            settings["rover_covsel"]["inv_link"],
         ),
         axis=1,
     )
     df["residual_se"] = df.apply(
         lambda row: get_residual_se(
             row,
-            settings["rover"]["model_type"],
+            settings["rover_covsel"]["model_type"],
             settings["col_obs"],
-            settings["rover"]["inv_link"],
+            settings["rover_covsel"]["inv_link"],
         ),
         axis=1,
     )
