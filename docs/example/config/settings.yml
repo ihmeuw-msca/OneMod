@@ -44,6 +44,7 @@ regmod_smooth:
         dim: "location_id"
         gprior: [0, 0.09]
     weights: population
+    lambda: 0.1
     coef_bounds:
       LDI_pc: [-inf, 0]
       education_yrs_pc: [-inf, 0]
@@ -52,7 +53,10 @@ regmod_smooth:
       mean_SBP: [0, inf]
       mean_cholesterol: [0, inf]
       smoking_prev: [0, inf]
-      universal_health_coverage": [inf, 0]
+      universal_health_coverage: [inf, 0]
+      SEV_diet_nuts: [-inf, 0],
+      age_std_hiv_prev: [0, inf]
+      sdi: [-inf, 0]
     dims:
       - name: "age_mid"
         type: "numerical"
@@ -66,18 +70,6 @@ regmod_smooth:
     options:
       verbose: false
       m_scale: 0.1
-
-# Rover settings
-rover:
-  max_attempts: 1
-  model_type: binomial
-  inv_link: expit
-  groupby: [age_group_id, sex_id]
-  col_fixed_covs: [intercept]
-  col_covs: [cov1, cov2, cov3, cov4, cov5]
-  col_weights: population
-  stragety_names: [down]
-  eval_metric: rmse
 
 # SWiMR settings
 swimr:

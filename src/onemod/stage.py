@@ -47,8 +47,7 @@ class StageTemplate:
             self.resources = {}
 
         # Get stage submodels
-        if stage_name in ("rover_covsel", "regmod_smooth"):
-            # Assumption to check: 1:1 relation between rover and regmod_smooth submodel ids
+        if stage_name == "rover_covsel":
             self.submodel_ids = get_rover_covsel_submodels(experiment_dir)
         elif stage_name == "swimr":
             self.submodel_ids = get_swimr_submodels(experiment_dir)
@@ -69,7 +68,8 @@ class StageTemplate:
             max_attempts=settings[self.stage_name]["max_attempts"],
             upstream_tasks=upstream_tasks + [initialization_tasks[-1]],
         )
-        if self.stage_name == "ensemble":
+        # Ensemble and regmod_smooth aren't parallelized, so no need to implement collection or deletion tasks.
+        if self.stage_name in ["ensemble"]:
             return [*initialization_tasks, *modeling_tasks]
 
         # Create stage collection task

@@ -224,7 +224,12 @@ class Subsets:
         subsets: dict[str, list] = {column: [] for column in self.columns + ["n_batch"]}
         # TODO: use a different name distinguish column name and column value
         # to improve readibility
-        for columns, df in data.groupby(self.columns):
+
+        groupby_cols = self.columns
+        if len(groupby_cols) == 1:
+            groupby_cols = groupby_cols[0]
+
+        for columns, df in data.groupby(groupby_cols):
             if len(self.columns) == 1:
                 subsets[self.columns[0]].append(columns)
             else:
@@ -385,7 +390,7 @@ def get_smoother_input(
     experiment_dir = Path(experiment_dir)
     if from_rover:
         df_input = pd.read_parquet(
-            experiment_dir / "results" / "rover" / "predictions.parquet"
+            experiment_dir / "results" / "regmod_smooth" / "predictions.parquet"
         ).rename(columns={"residual": "residual_value"})
     else:
         df_input = get_rover_input(settings)
@@ -473,7 +478,7 @@ def get_rover_covsel_submodels(
     TODO: merge this to the rover_covsel function to avoid confusion
     """
     experiment_dir = Path(experiment_dir)
-    rover_covsel_dir = experiment_dir / "results" / "rover" / "covsel"
+    rover_covsel_dir = experiment_dir / "results" / "rover_covsel"
 
     # Create rover subsets and submodels
     settings = load_settings(experiment_dir / "config" / "settings.yml")

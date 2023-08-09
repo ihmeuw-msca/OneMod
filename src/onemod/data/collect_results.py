@@ -24,11 +24,11 @@ def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
     covariates in the rover results folder.
     """
     dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("covsel", dataif.experiment / "results" / "rover_covsel" / "submodels")
+    dataif.add_dir("covsel_submodels", dataif.experiment / "results" / "rover_covsel" / "submodels")
     submodel_ids = get_rover_covsel_submodels(experiment_dir)
     summaries = []
     for submodel_id in submodel_ids:
-        summary = dataif.load_covsel(f"{submodel_id}/summary.csv")
+        summary = dataif.load_covsel_submodels(f"{submodel_id}/summary.csv")
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)
@@ -39,12 +39,14 @@ def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
         .query("significant >= 0.5")["cov"]
         .tolist()
     )
-    dataif.dump_covsel(selected_covs, "selected_covs.yaml")
+    dataif.add_dir("covsel_main", dataif.experiment / "results" / "rover_covsel")
+    dataif.dump_covsel_main(selected_covs, "selected_covs.yaml")
 
 
 def collect_regmod_smooth_results(experiment_dir: Path | str) -> None:
-    """This is a dummy step without any functionality.
-    TODO: remove me and allow stage to skip the collection step.
+    """Dummy task
+
+    TODO: Don't enforce collection tasks as part of standard structure in stages
     """
     pass
 
