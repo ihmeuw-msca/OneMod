@@ -3,7 +3,7 @@ import fire
 from pathlib import Path
 from modrover.api import Rover
 from pplkit.data.interface import DataInterface
-from onemod.utils import get_rover_input, Subsets
+from onemod.utils import get_rover_covsel_input, Subsets
 
 
 def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
@@ -43,7 +43,7 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
 
     # Load and filter by subset
     subset_id = int(submodel_id[6:])
-    df_input = subsets.filter_subset(get_rover_input(settings), subset_id)
+    df_input = subsets.filter_subset(get_rover_covsel_input(settings), subset_id)
     df_train = df_input[df_input[settings["col_test"]] == 0]
     dataif.dump_covsel(df_train, f"data/{submodel_id}.parquet")
 
