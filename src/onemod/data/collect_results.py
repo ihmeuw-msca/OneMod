@@ -28,7 +28,7 @@ def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
     submodel_ids = get_rover_covsel_submodels(experiment_dir)
     summaries = []
     for submodel_id in submodel_ids:
-        summary = dataif.load_covsel(f"{submodel_id}/summary.csv")
+        summary = dataif.load_rover(f"covsel/submodels/{submodel_id}/summary.csv")
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)
