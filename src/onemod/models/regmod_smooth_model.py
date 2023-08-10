@@ -10,33 +10,35 @@ from regmodsm.model import Model
 from pplkit.data.interface import DataInterface
 
 
-def get_residual(row: pd.Series, model_type: str, col_obs: str, inv_link: str) -> float:
+def get_residual(
+    row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
+) -> float:
     """Get residual."""
     if model_type == "binomial" and inv_link == "expit":
-        return (row[col_obs] - row["p"]) / (row["p"] * (1 - row["p"]))
+        return (row[col_obs] - row[col_pred]) / (row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
-        return row[col_obs] / row["lam"] - 1
+        return row[col_obs] / row[col_pred] - 1
     if model_type == "tobit" and inv_link == "exp":
         if row[col_obs] > 0:
-            return row[col_obs] / row["mu"] - 1
-        w = row["mu"] / row["sigma"]
+            return row[col_obs] / row[col_pred] - 1
+        w = row[col_pred] / row["sigma"]
         term = w * np.imag(norm.logcdf(-w + 1e-6j)) / (1e-6)
         return -1 / (1 - w**2 + term)
     raise ValueError("Unsupported model_type and inv_link pair")
 
 
 def get_residual_se(
-    row: pd.Series, model_type: str, col_obs: str, inv_link: str
+    row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
 ) -> float:
     """Get residual standard error."""
     if model_type == "binomial" and inv_link == "expit":
-        return 1 / np.sqrt(row["p"] * (1 - row["p"]))
+        return 1 / np.sqrt(row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
-        return 1 / np.sqrt(row["lam"])
+        return 1 / np.sqrt(row[col_pred])
     if model_type == "tobit" and inv_link == "exp":
         if row[col_obs] > 0:
-            return row["sigma"] / row["mu"]
-        w = row["mu"] / row["sigma"]
+            return row["sigma"] / row[col_pred]
+        w = row[col_pred] / row["sigma"]
         term = w * np.imag(norm.logcdf(-w + 1e-6j)) / (1e-6)
         return np.sqrt(1 / (term * (1 - w**2 + term)))
     raise ValueError("Unsupported model_type and inv_link pair")
@@ -88,8 +90,8 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     )
 
     # Fit regmod smooth model
-    df = dataif.load(settings["intput_path"])
-    df_train = df.query("col_test == 0")
+    df = dataif.load(settings["input_path"])
+    df_train = df.query(f"{settings['col_test']} == 0")
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
 
     # Create prediction and residuals
@@ -99,6 +101,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
             row,
             settings["rover"]["model_type"],
             settings["col_obs"],
+            settings["col_pred"],
             settings["rover"]["inv_link"],
         ),
         axis=1,
@@ -108,6 +111,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
             row,
             settings["rover"]["model_type"],
             settings["col_obs"],
+            settings["col_pred"],
             settings["rover"]["inv_link"],
         ),
         axis=1,
