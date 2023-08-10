@@ -10,10 +10,12 @@ from regmodsm.model import Model
 from pplkit.data.interface import DataInterface
 
 
-def get_residual(row: pd.Series, model_type: str, col_obs: str, inv_link: str) -> float:
+def get_residual(row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str) -> float:
     """Get residual."""
+    # TODO: Are lam/mu/sigma created by specific regmod models?
+    # Also TODO: can these be vectorized functions?
     if model_type == "binomial" and inv_link == "expit":
-        return (row[col_obs] - row["p"]) / (row["p"] * (1 - row["p"]))
+        return (row[col_obs] - row[col_pred]) / (row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
         return row[col_obs] / row["lam"] - 1
     if model_type == "tobit" and inv_link == "exp":
@@ -26,11 +28,11 @@ def get_residual(row: pd.Series, model_type: str, col_obs: str, inv_link: str) -
 
 
 def get_residual_se(
-    row: pd.Series, model_type: str, col_obs: str, inv_link: str
+    row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
 ) -> float:
     """Get residual standard error."""
     if model_type == "binomial" and inv_link == "expit":
-        return 1 / np.sqrt(row["p"] * (1 - row["p"]))
+        return 1 / np.sqrt(row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
         return 1 / np.sqrt(row["lam"])
     if model_type == "tobit" and inv_link == "exp":
@@ -61,7 +63,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
     dataif.add_dir("rover", dataif.experiment / "results" / "rover_covsel")
-    dataif.add_dir("smooth", dataif.rover / "smooth")
+    dataif.add_dir("smooth", dataif.experiment / "regmod_smooth")
     settings = dataif.load_config("settings.yml")
 
     # Create regmod smooth parameters
@@ -114,6 +116,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
             row,
             settings["rover_covsel"]["Rover"]["model_type"],
             settings["col_obs"],
+            settings["col_pred"],
             settings["rover_covsel"]["inv_link"],
         ),
         axis=1,
@@ -121,9 +124,10 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     df["residual_se"] = df.apply(
         lambda row: get_residual_se(
             row,
-            settings["rover"]["model_type"],
+            settings["rover_covsel"]["Rover"]["model_type"],
             settings["col_obs"],
-            settings["rover"]["inv_link"],
+            settings["col_pred"],
+            settings["rover_covsel"]["inv_link"],
         ),
         axis=1,
     )
@@ -131,7 +135,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
 
     # Save results
     dataif.dump_smooth(model, "model.pkl")
-    dataif.dump_rover(df, "predictions.parquet")
+    dataif.dump_smooth(df, "predictions.parquet")
 
 
 def main() -> None:

@@ -54,9 +54,6 @@ regmod_smooth:
       mean_cholesterol: [0, inf]
       smoking_prev: [0, inf]
       universal_health_coverage: [inf, 0]
-      SEV_diet_nuts: [-inf, 0],
-      age_std_hiv_prev: [0, inf]
-      sdi: [-inf, 0]
     dims:
       - name: "age_mid"
         type: "numerical"

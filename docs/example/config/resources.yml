@@ -3,8 +3,8 @@ tool_resources:
   slurm:
     queue: all.q
     cores: 1
-    memory: 1G
-    runtime: 1m
+    memory: 30G
+    runtime: 1h
     project: proj_mscm
 
 # Optional task-specific resources

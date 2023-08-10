@@ -77,7 +77,7 @@ def initialize_ensemble_results(experiment_dir: Union[Path, str]) -> None:
     # Initialize directory
     if ensemble_dir.exists():
         shutil.rmtree(ensemble_dir)
-    ensemble_dir.mkdir()
+    ensemble_dir.mkdir(parents=True)
 
     # Create ensemble subsets
     settings = load_settings(experiment_dir / "config" / "settings.yml")
