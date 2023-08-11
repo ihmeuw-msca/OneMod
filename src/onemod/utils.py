@@ -372,7 +372,7 @@ def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True) 
     return settings
 
 
-def get_rover_input(settings: dict) -> pd.DataFrame:
+def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
     """Get input data for rover model."""
     df_input = pd.read_parquet(settings["input_path"])
     for dimension in as_list(settings["col_id"]):
@@ -393,8 +393,17 @@ def get_smoother_input(
             experiment_dir / "results" / "regmod_smooth" / "predictions.parquet"
         ).rename(columns={"residual": "residual_value"})
     else:
-        df_input = get_rover_input(settings)
+        df_input = get_rover_covsel_input(settings)
+
     columns = _get_smoother_columns(smoother, settings).difference(df_input.columns)
+    # Test column might be generated in rover, not always present
+    # Generate if needed
+    test_col = settings["col_test"]
+    if test_col not in df_input:
+        df_input[test_col] = df_input[settings["col_obs"]].isna().astype("int")
+        # Will always be present in the extra columns, so remove
+        columns -= {test_col}
+
     if len(columns) > 0:
         df_input = df_input.merge(
             right=pd.read_parquet(settings["input_path"])[
@@ -403,8 +412,8 @@ def get_smoother_input(
             on=settings["col_id"],
         )
     if smoother == "weave":  # weave models can't have NaN data
-        df_input.loc[df_input[settings["col_test"]].isna(), "residual_value"] = 1
-        df_input.loc[df_input[settings["col_test"]].isna(), "residual_se"] = 1
+        df_input.loc[df_input[settings["col_obs"]].isna(), "residual_value"] = 1
+        df_input.loc[df_input[settings["col_obs"]].isna(), "residual_se"] = 1
     if smoother == "swimr":
         df_input["submodel_id"] = df_input["location_id"].astype(str)
         df_input["row_id"] = np.arange(len(df_input))
@@ -467,7 +476,7 @@ def get_ensemble_input(settings: dict) -> pd.DataFrame:
     )
     if "groupby" in settings["ensemble"]:
         input_cols.update(as_list(settings["ensemble"]["groupby"]))
-    rover_input = get_rover_input(settings)
+    rover_input = get_rover_covsel_input(settings)
     return rover_input[list(input_cols)]
 
 
@@ -482,7 +491,7 @@ def get_rover_covsel_submodels(
 
     # Create rover subsets and submodels
     settings = load_settings(experiment_dir / "config" / "settings.yml")
-    df_input = get_rover_input(settings)
+    df_input = get_rover_covsel_input(settings)
     subsets = Subsets("rover_covsel", settings["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 

@@ -77,7 +77,7 @@ class StageTemplate:
 
         # Create optional stage deletion tasks
         tasks = [*initialization_tasks, *modeling_tasks, collection_task]
-        if self.save_intermediate:
+        if self.save_intermediate or self.stage_name == "regmod_smooth":
             return tasks
         tasks.extend(self.create_deletion_tasks(upstream_tasks=[collection_task]))
         return tasks

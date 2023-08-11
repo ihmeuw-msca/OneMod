@@ -10,18 +10,20 @@ from regmodsm.model import Model
 from pplkit.data.interface import DataInterface
 
 
-def get_residual(row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str) -> float:
+def get_residual(
+    row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
+) -> float:
     """Get residual."""
     # TODO: Are lam/mu/sigma created by specific regmod models?
     # Also TODO: can these be vectorized functions?
     if model_type == "binomial" and inv_link == "expit":
         return (row[col_obs] - row[col_pred]) / (row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
-        return row[col_obs] / row["lam"] - 1
+        return row[col_obs] / row[col_pred] - 1
     if model_type == "tobit" and inv_link == "exp":
         if row[col_obs] > 0:
-            return row[col_obs] / row["mu"] - 1
-        w = row["mu"] / row["sigma"]
+            return row[col_obs] / row[col_pred] - 1
+        w = row[col_pred] / row["sigma"]
         term = w * np.imag(norm.logcdf(-w + 1e-6j)) / (1e-6)
         return -1 / (1 - w**2 + term)
     raise ValueError("Unsupported model_type and inv_link pair")
@@ -34,11 +36,11 @@ def get_residual_se(
     if model_type == "binomial" and inv_link == "expit":
         return 1 / np.sqrt(row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
-        return 1 / np.sqrt(row["lam"])
+        return 1 / np.sqrt(row[col_pred])
     if model_type == "tobit" and inv_link == "exp":
         if row[col_obs] > 0:
-            return row["sigma"] / row["mu"]
-        w = row["mu"] / row["sigma"]
+            return row["sigma"] / row[col_pred]
+        w = row[col_pred] / row["sigma"]
         term = w * np.imag(norm.logcdf(-w + 1e-6j)) / (1e-6)
         return np.sqrt(1 / (term * (1 - w**2 + term)))
     raise ValueError("Unsupported model_type and inv_link pair")
@@ -63,7 +65,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
     dataif.add_dir("rover", dataif.experiment / "results" / "rover_covsel")
-    dataif.add_dir("smooth", dataif.experiment / "regmod_smooth")
+    dataif.add_dir("smooth", dataif.experiment / "results" / "regmod_smooth")
     settings = dataif.load_config("settings.yml")
 
     # Create regmod smooth parameters
@@ -107,6 +109,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
 
     df_train = df_train[expected_columns]
     df_train = df_train[~(df_train[settings["col_obs"]].isnull())]
+
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
 
     # Create prediction and residuals
@@ -131,7 +134,6 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
         ),
         axis=1,
     )
-    df.drop(columns=settings["col_obs"], inplace=True)
 
     # Save results
     dataif.dump_smooth(model, "model.pkl")

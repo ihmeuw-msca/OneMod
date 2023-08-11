@@ -81,23 +81,22 @@ def get_weights(
     """Get smoother weights."""
     if subsets is None:
         return get_subset_weights(
-            df_performance.loc[metric + "_mean"],
+            df_performance[metric + "_mean"],
             score,
             top_pct_score,
             top_pct_model,
             psi,
         )
-    performance = df_performance.T
     for subset_id in subsets.get_subset_ids():
         subset_idx = pd.IndexSlice[:, :, :, subset_id]
-        performance.loc[subset_idx, "weight"] = get_subset_weights(
-            performance.loc[subset_idx, metric + "_mean"],
+        df_performance.loc[subset_idx, "weight"] = get_subset_weights(
+            df_performance.loc[subset_idx, metric + "_mean"],
             score,
             top_pct_score,
             top_pct_model,
             psi,
         )
-    return performance.T.loc["weight"]
+    return df_performance["weight"]
 
 
 def get_subset_weights(
@@ -133,7 +132,7 @@ def get_subset_weights(
     raise ValueError(f"Invalid weight score: {score}")
 
 
-def ensemble_model(experiment_dir: Union[Path, str], *args: Any) -> None:
+def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) -> None:
     """Run ensemble model on smoother predictions."""
     experiment_dir = Path(experiment_dir)
     ensemble_dir = experiment_dir / "results" / "ensemble"
@@ -161,6 +160,7 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any) -> None:
         )
     df_list = []
     for holdout_id, df in df_performance.groupby("holdout_id"):
+        # TODO: Handle warnings from 1 level left frame, 3 level right frame
         df_holdout = pd.merge(
             left=df_input,
             right=get_predictions(experiment_dir, holdout_id, settings["col_pred"]),
@@ -182,32 +182,24 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any) -> None:
     columns = ["smoother_id", "model_id", "param_id"]
     if "groupby" in settings["ensemble"]:
         columns += ["subset_id"]
-    df_performance = pd.pivot_table(
-        pd.concat(df_list),
-        columns=columns,
-        values=[settings["ensemble"]["metric"]],
-        aggfunc=[np.mean, np.std],
-    )
-    df_performance.index = df_performance.index.droplevel()
-    df_performance.rename(
-        index={
-            "mean": settings["ensemble"]["metric"] + "_mean",
-            "std": settings["ensemble"]["metric"] + "_std",
-        },
-        inplace=True,
-    )
+
+    metric = settings["ensemble"]["metric"]
+    full_df = pd.concat(df_list)
+    mean = full_df.groupby(columns).mean(numeric_only=True).rename({metric: f"{metric}_mean"}, axis=1)
+    std = full_df.groupby(columns).std(numeric_only=True).rename({metric: f"{metric}_std"}, axis=1)
+    df_performance = pd.concat([mean, std], axis=1)
     if settings["ensemble"]["score"] == "avg":
-        df_performance.loc["weight"] = get_weights(
+        df_performance["weight"] = get_weights(
             df_performance,
             subsets,
             settings["ensemble"]["metric"],
             settings["ensemble"]["score"],
         )
     else:
-        df_performance.loc["weight"] = get_weights(
+        df_performance["weight"] = get_weights(
             df_performance,
             subsets,
-            settings["ensemble"]["metric"],
+            metric,
             settings["ensemble"]["score"],
             settings["ensemble"]["top_pct_score"],
             settings["ensemble"]["top_pct_model"],
@@ -226,7 +218,7 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any) -> None:
             ]
             df_subset = df_full.loc[indices]
             df_list.append(
-                (df_subset * df_performance.loc["weight"][:, :, :, subset_id])
+                (df_subset * df_performance["weight"][:, :, :, subset_id])
                 .T.sum()
                 .reset_index()
                 .rename(columns={0: settings["col_pred"]})
