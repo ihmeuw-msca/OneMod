@@ -7,7 +7,7 @@ import fire
 
 from onemod.utils import (
     get_ensemble_input,
-    get_rover_submodels,
+    get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
     load_settings,
@@ -15,19 +15,29 @@ from onemod.utils import (
 )
 
 
-def initialize_rover_results(experiment_dir: Union[Path, str]) -> None:
+def initialize_rover_covsel_results(experiment_dir: Path | str) -> None:
     """Initialize rover results."""
     experiment_dir = Path(experiment_dir)
-    rover_dir = experiment_dir / "results" / "rover"
+    rover_covsel_dir = experiment_dir / "results" / "rover" / "covsel"
 
     # Initialize directories
-    if rover_dir.exists():
-        shutil.rmtree(rover_dir)
+    if rover_covsel_dir.exists():
+        shutil.rmtree(rover_covsel_dir)
     for sub_dir in ["data", "submodels"]:
-        (rover_dir / sub_dir).mkdir(parents=True)
+        (rover_covsel_dir / sub_dir).mkdir(parents=True)
 
     # Create rover subsets
-    get_rover_submodels(experiment_dir, save_file=True)
+    get_rover_covsel_submodels(experiment_dir, save_file=True)
+
+
+def initialize_regmod_smooth_results(experiment_dir: Path | str) -> None:
+    experiment_dir = Path(experiment_dir)
+    rover_smooth_dir = experiment_dir / "results" / "rover" / "covsel"
+
+    # Initialize directories
+    if rover_smooth_dir.exists():
+        shutil.rmtree(rover_smooth_dir)
+    rover_smooth_dir.mkdir(parents=True)
 
 
 def initialize_swimr_results(experiment_dir: Union[Path, str]) -> None:
@@ -80,7 +90,8 @@ def initialize_ensemble_results(experiment_dir: Union[Path, str]) -> None:
 def main() -> None:
     fire.Fire(
         {
-            "rover": initialize_rover_results,
+            "rover_covsel": initialize_rover_covsel_results,
+            "regmod_smooth": initialize_regmod_smooth_results,
             "swimr": initialize_swimr_results,
             "weave": initialize_weave_results,
             "ensemble": initialize_ensemble_results,

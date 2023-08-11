@@ -6,7 +6,7 @@ import shutil
 from typing import TYPE_CHECKING, Union
 
 from onemod.utils import (
-    get_rover_submodels,
+    get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
     load_settings,
@@ -47,8 +47,8 @@ class StageTemplate:
             self.resources = {}
 
         # Get stage submodels
-        if stage_name == "rover":
-            self.submodel_ids = get_rover_submodels(experiment_dir)
+        if stage_name == "rover_covsel":
+            self.submodel_ids = get_rover_covsel_submodels(experiment_dir)
         elif stage_name == "swimr":
             self.submodel_ids = get_swimr_submodels(experiment_dir)
         elif stage_name == "weave":

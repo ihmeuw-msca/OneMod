@@ -9,10 +9,14 @@ tool_resources:
 
 # Optional task-specific resources
 task_template_resources:
-  rover_modeling_template:
+  rover_covsel_modeling_template:
     slurm:
       memory: 10G
       runtime: 10m
+  regmod_smooth_modeling_template:
+    slurm:
+      memory: 10G
+      runtime: 20m
   swimr_modeling_template:
     slurm:
       memory: 10G

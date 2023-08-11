@@ -22,9 +22,10 @@ if TYPE_CHECKING:
 
 
 upstream_dict: dict[str, list] = {
-    "rover": [],
-    "swimr": ["rover"],
-    "weave": ["rover"],
+    "rover_covsel": [],
+    "regmod_smooth": ["rover_covsel"],
+    "swimr": ["regmod_smooth"],
+    "weave": ["regmod_smooth"],
     "ensemble": ["swimr", "weave"],
 }
 
