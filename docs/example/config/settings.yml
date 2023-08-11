@@ -44,7 +44,6 @@ regmod_smooth:
         dim: "location_id"
         gprior: [0, 0.09]
     weights: population
-    lambda: 0.1
     coef_bounds:
       LDI_pc: [-inf, 0]
       education_yrs_pc: [-inf, 0]
@@ -53,7 +52,7 @@ regmod_smooth:
       mean_SBP: [0, inf]
       mean_cholesterol: [0, inf]
       smoking_prev: [0, inf]
-      universal_health_coverage: [inf, 0]
+      universal_health_coverage": [inf, 0]
     dims:
       - name: "age_mid"
         type: "numerical"

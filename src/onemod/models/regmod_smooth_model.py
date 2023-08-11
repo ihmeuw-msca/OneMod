@@ -49,12 +49,14 @@ def get_residual_se(
 def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
+
     Parameters
     ----------
     experiment_dir
         Parent folder where the experiment is run.
         - ``experiment_dir / config / settings.yaml`` contains rover modeling settings
         - ``experiment_dir / results / rover`` stores all rover results
+
     Outputs
     -------
     model.pkl
@@ -66,6 +68,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     dataif.add_dir("config", dataif.experiment / "config")
     dataif.add_dir("rover", dataif.experiment / "results" / "rover_covsel")
     dataif.add_dir("smooth", dataif.experiment / "results" / "regmod_smooth")
+
     settings = dataif.load_config("settings.yml")
 
     # Create regmod smooth parameters
@@ -86,6 +89,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
             # Optionally set smoothing parameter, defaults to 0 if not provided
             if "lambda" in settings["regmod_smooth"]["Model"]:
                 var_group["lam"] = settings["regmod_smooth"]["Model"]["lambda"]
+
         var_groups.append(var_group)
 
     # Create regmod smooth model

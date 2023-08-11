@@ -44,6 +44,7 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     # Load and filter by subset
     subset_id = int(submodel_id[6:])
     df_input = subsets.filter_subset(get_rover_covsel_input(settings), subset_id)
+
     # Create a test column if not existing
     test_col = settings["col_test"]
     if test_col not in df_input:

@@ -176,6 +176,12 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     df_pred["holdout_id"] = holdout_id
     df_pred["location_id"] = pd.to_numeric(df_pred["location_id"])
     df_pred["sex_id"] = df_input["sex_id"].unique()[0]
+
+    # Since we are merging on columns specified in the col_id list, ensure they are the correct
+    # datatypes.
+    for id_col in settings["col_id"]:
+        df_pred[id_col] = df_pred[id_col].astype(df_input[id_col].dtype)
+
     df_pred = df_pred.merge(
         right=df_input[as_list(settings["col_id"]) + ["test", settings["col_pred"]]],
         on=settings["col_id"],
