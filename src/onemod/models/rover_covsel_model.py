@@ -46,6 +46,8 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     df_input = subsets.filter_subset(get_rover_covsel_input(settings), subset_id)
 
     # Create a test column if not existing
+    # TODO: Either move this to some data prep stage or make it persistent, needed in
+    # other models
     test_col = settings["col_test"]
     if test_col not in df_input:
         df_input[test_col] = df_input[settings["col_obs"]].isna().astype("int")

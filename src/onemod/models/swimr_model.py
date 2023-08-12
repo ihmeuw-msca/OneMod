@@ -133,7 +133,6 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
         model_settings["cascade_hierarchy_csv_path"] = (
             model_settings["working_dir"] + "cascade_hierarchy.csv"
         )
-    breakpoint()
     with open(model_settings["working_dir"] + "settings.yml", "w") as f:
         yaml.dump(model_settings, f)
 

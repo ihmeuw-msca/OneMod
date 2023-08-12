@@ -14,8 +14,7 @@ def get_residual(
     row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
 ) -> float:
     """Get residual."""
-    # TODO: Are lam/mu/sigma created by specific regmod models?
-    # Also TODO: can these be vectorized functions?
+    # TODO: can these be vectorized functions?
     if model_type == "binomial" and inv_link == "expit":
         return (row[col_obs] - row[col_pred]) / (row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
