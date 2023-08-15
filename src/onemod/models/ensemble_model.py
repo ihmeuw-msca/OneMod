@@ -1,4 +1,5 @@
 """Run ensemble model."""
+from functools import reduce
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -37,6 +38,7 @@ def get_predictions(
     holdout_id = str(holdout_id)
     experiment_dir = Path(experiment_dir)
     if holdout_id == "full":
+
         swimr_path = Path(experiment_dir / "results" / "swimr" / "predictions.parquet")
         weave_path = Path(experiment_dir / "results" / "weave" / "predictions.parquet")
     else:
@@ -107,11 +109,11 @@ def get_performance(
         If an invalid performance metric is provided.
 
     """
-    df_holdout = df_holdout[df_holdout[row["holdout_id"]] == 1]
+    df_holdout = df_holdout[(df_holdout[row["holdout_id"]] == 1) & (df_holdout['param_id'] == row['param_id'])]
     if subsets is not None:
         df_holdout = subsets.filter_subset(df_holdout, row["subset_id"])
     if metric == "rmse":
-        return np.sqrt(np.mean((df_holdout[col_obs] - df_holdout[tuple(row[:3])]) ** 2))
+        return np.sqrt(np.mean((df_holdout[col_obs] - df_holdout[row.model_id]) ** 2))
     raise ValueError(f"Invalid performance metric: {metric}")
 
 
@@ -274,13 +276,24 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
             how="cross",
         )
     df_list = []
+    id_cols = settings['col_id']
+
     for holdout_id, df in df_performance.groupby("holdout_id"):
-        # TODO: Handle warnings from 1 level left frame, 3 level right frame
-        df_holdout = pd.merge(
-            left=df_input,
-            right=get_predictions(experiment_dir, holdout_id, settings["col_pred"]),
-            on=settings["col_id"],
+        predictions = get_predictions(experiment_dir, holdout_id, settings["col_pred"])
+        # Iteratively merge on prediction columns
+        df_holdout = reduce(
+            lambda df, smoother: pd.merge(
+                left=df,
+                right=predictions.loc[:, smoother].stack().reset_index(),
+                how='right',
+                on=id_cols + ['param_id']
+            ),
+            predictions.columns.get_level_values("smoother_id"),
+            pd.DataFrame(columns=id_cols + ['param_id'])
         )
+        df_holdout = pd.merge(df_holdout, df_input, on=id_cols)
+
+        # Select holdout ids, and calc rmse by subset
         df[settings["ensemble"]["metric"]] = df.apply(
             lambda row: get_performance(
                 row,
