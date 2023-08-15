@@ -114,6 +114,7 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
         get_smoother_input("swimr", settings, experiment_dir, from_rover=True),
         subset_id,
     )
+    breakpoint()
     df_input["holdout"] = df_input[settings["col_test"]] != 0
     if (
         model_settings["model_type"] == "cascade"
@@ -125,6 +126,11 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     model_data = str(
         swimr_dir / "data" / f"{model_id}_subset{subset_id}_{holdout_id}.parquet"
     )
+
+    # The swimr task script overwrites holdout with the value of holdout1, for some reason
+    # So enforce the same column here
+    if "holdout1" in df_input.columns:
+        df_input["holdout1"] = df_input["holdout"].astype({"holdout": int})
     df_input.astype({"holdout": int}).to_parquet(model_data)
 
     # Create submodel settings
@@ -136,7 +142,7 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     )
     model_settings["prediction_year_ids"] = get_str(df_input["year_id"].unique())
     model_settings["working_dir"] = str(swimr_dir / "submodels" / submodel_id) + "/"
-    Path(model_settings["working_dir"]).mkdir()
+    Path(model_settings["working_dir"]).mkdir(exist_ok=True)
     for param in params.params:
         if param in ("theta", "intercept_theta"):
             model_settings[param] = get_str(params.get_param(param, param_id))
@@ -192,6 +198,12 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     df_pred["holdout_id"] = holdout_id
     df_pred["location_id"] = pd.to_numeric(df_pred["location_id"])
     df_pred["sex_id"] = df_input["sex_id"].unique()[0]
+
+    # Since we are merging on columns specified in the col_id list, ensure they are the correct
+    # datatypes.
+    for id_col in settings["col_id"]:
+        df_pred[id_col] = df_pred[id_col].astype(df_input[id_col].dtype)
+
     df_pred = df_pred.merge(
         right=df_input[as_list(settings["col_id"]) + ["test", settings["col_pred"]]],
         on=settings["col_id"],

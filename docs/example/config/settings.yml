@@ -10,17 +10,62 @@ col_pred: pred_rate
 col_holdout: [holdout1, holdout2, holdout3, holdout4, holdout7]
 col_test: test
 
-# Rover settings
-rover:
+# Rover covariate selection settings
+rover_covsel:
   max_attempts: 1
-  model_type: binomial
-  inv_link: expit
   groupby: [age_group_id, sex_id]
-  col_fixed_covs: [intercept]
-  col_covs: [cov1, cov2, cov3, cov4, cov5]
-  col_weights: population
-  stragety_names: [down]
-  eval_metric: rmse
+  Rover:
+    model_type: binomial
+    obs: obs_rate
+    cov_fixed: [intercept]
+    cov_exploring: [cov1, cov2, cov3, cov4, cov5]
+    weights: population
+    holdouts: [holdout1, holdout2, holdout3, holdout4, holdout7]
+  Rover.fit:
+    strategies: [forward]
+    top_pct_score: 1.0
+    top_pct_learner: 0.5
+
+# Regmod smooth settings
+regmod_smooth:
+  max_attempts: 1
+  Model:
+    model_type: binomial
+    obs: obs_rate
+    var_groups:
+      - col: "intercept"
+      - col: "intercept"
+        dim: "super_region_id"
+        gprior: [0, 0.35]
+      - col: "intercept"
+        dim: "region_id"
+        gprior: [0, 0.18]
+      - col: "intercept"
+        dim: "location_id"
+        gprior: [0, 0.09]
+    weights: population
+    coef_bounds:
+      LDI_pc: [-inf, 0]
+      education_yrs_pc: [-inf, 0]
+      lpc: [0, inf]
+      mean_BMI: [0, inf]
+      mean_SBP: [0, inf]
+      mean_cholesterol: [0, inf]
+      smoking_prev: [0, inf]
+      universal_health_coverage": [inf, 0]
+    dims:
+      - name: "age_mid"
+        type: "numerical"
+      - name: "super_region_id"
+        type: "categorical"
+      - name: "region_id"
+        type: "categorical"
+      - name: "location_id"
+        type: "categorical"
+  Model.fit:
+    options:
+      verbose: false
+      m_scale: 0.1
 
 # SWiMR settings
 swimr:

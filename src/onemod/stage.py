@@ -6,7 +6,7 @@ import shutil
 from typing import TYPE_CHECKING, Union
 
 from onemod.utils import (
-    get_rover_submodels,
+    get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
     load_settings,
@@ -63,8 +63,8 @@ class StageTemplate:
             self.resources = {}
 
         # Get stage submodels
-        if stage_name == "rover":
-            self.submodel_ids = get_rover_submodels(experiment_dir)
+        if stage_name == "rover_covsel":
+            self.submodel_ids = get_rover_covsel_submodels(experiment_dir)
         elif stage_name == "swimr":
             self.submodel_ids = get_swimr_submodels(experiment_dir)
         elif stage_name == "weave":
@@ -96,7 +96,8 @@ class StageTemplate:
             max_attempts=settings[self.stage_name]["max_attempts"],
             upstream_tasks=upstream_tasks + [initialization_tasks[-1]],
         )
-        if self.stage_name == "ensemble":
+        # Ensemble and regmod_smooth aren't parallelized, so no need to implement collection or deletion tasks.
+        if self.stage_name in ["ensemble"]:
             return [*initialization_tasks, *modeling_tasks]
 
         # Create stage collection task
@@ -104,7 +105,7 @@ class StageTemplate:
 
         # Create optional stage deletion tasks
         tasks = [*initialization_tasks, *modeling_tasks, collection_task]
-        if self.save_intermediate:
+        if self.save_intermediate or self.stage_name == "regmod_smooth":
             return tasks
         tasks.extend(self.create_deletion_tasks(upstream_tasks=[collection_task]))
         return tasks

@@ -22,9 +22,10 @@ if TYPE_CHECKING:
 
 
 upstream_dict: dict[str, list] = {
-    "rover": [],
-    "swimr": ["rover"],
-    "weave": ["rover"],
+    "rover_covsel": [],
+    "regmod_smooth": ["rover_covsel"],
+    "swimr": ["regmod_smooth"],
+    "weave": ["regmod_smooth"],
     "ensemble": ["swimr", "weave"],
 }
 
@@ -96,7 +97,7 @@ def create_workflow(
                     upstream_task = workflow.get_tasks_by_node_args(
                         "collection_template", stage_name=upstream_stage
                     )
-                    upstream_tasks.append(upstream_task[0])
+                    upstream_tasks.extend(upstream_task)
             workflow.add_tasks(
                 stage_template.create_tasks(upstream_tasks=upstream_tasks)
             )
@@ -126,10 +127,11 @@ def run_pipeline(
         Whether to configure resources in directory/config/resources.yml. Default is True.
 
     """
+    all_stages = ["rover_covsel", "regmod_smooth", "swimr", "weave", "ensemble"]
     if stages is None:
-        stages = ["rover", "swimr", "weave", "ensemble"]
+        stages = all_stages
     for stage in as_list(stages):
-        if stage not in ["rover", "swimr", "weave", "ensemble"]:
+        if stage not in all_stages:
             raise ValueError(f"Invalid stage: {stage}")
     workflow = create_workflow(
         directory=directory,

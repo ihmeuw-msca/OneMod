@@ -3,16 +3,20 @@ tool_resources:
   slurm:
     queue: all.q
     cores: 1
-    memory: 1G
-    runtime: 1m
+    memory: 30G
+    runtime: 1h
     project: proj_mscm
 
 # Optional task-specific resources
 task_template_resources:
-  rover_modeling_template:
+  rover_covsel_modeling_template:
     slurm:
       memory: 10G
       runtime: 10m
+  regmod_smooth_modeling_template:
+    slurm:
+      memory: 10G
+      runtime: 20m
   swimr_modeling_template:
     slurm:
       memory: 10G

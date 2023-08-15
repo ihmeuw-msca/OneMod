@@ -77,6 +77,9 @@ def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
         dimensions.append(Dimension(**dim_dict))
     smoother = Smoother(dimensions)
 
+    # Impute missing observation and holdout values
+    # Assume that missing numbers for holdouts are implicit 1's (i.e. used for testing anyways)
+    df_input.fillna(1, inplace=True)
     # Get predictions
     df_pred = smoother(
         data=df_input,
@@ -88,7 +91,7 @@ def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     )
     df_pred[settings["col_pred"]] = df_pred.apply(
         lambda row: get_prediction(
-            row, settings["col_pred"], settings["rover"]["model_type"]
+            row, settings["col_pred"], settings["rover_covsel"]["Rover"]["model_type"]
         ),
         axis=1,
     )

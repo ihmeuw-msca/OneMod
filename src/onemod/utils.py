@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import yaml
+from pplkit.data.interface import DataInterface
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
@@ -222,7 +223,14 @@ class Subsets:
 
         """
         subsets: dict[str, list] = {column: [] for column in self.columns + ["n_batch"]}
-        for columns, df in data.groupby(self.columns):
+        # TODO: use a different name distinguish column name and column value
+        # to improve readibility
+
+        groupby_cols = self.columns
+        if len(groupby_cols) == 1:
+            groupby_cols = groupby_cols[0]
+
+        for columns, df in data.groupby(groupby_cols):
             if len(self.columns) == 1:
                 subsets[self.columns[0]].append(columns)
             else:
@@ -365,7 +373,7 @@ def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True) 
     return settings
 
 
-def get_rover_input(settings: dict) -> pd.DataFrame:
+def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
     """Get input data for rover model."""
     df_input = pd.read_parquet(settings["input_path"])
     for dimension in as_list(settings["col_id"]):
@@ -383,11 +391,20 @@ def get_smoother_input(
     experiment_dir = Path(experiment_dir)
     if from_rover:
         df_input = pd.read_parquet(
-            experiment_dir / "results" / "rover" / "predictions.parquet"
+            experiment_dir / "results" / "regmod_smooth" / "predictions.parquet"
         ).rename(columns={"residual": "residual_value"})
     else:
-        df_input = get_rover_input(settings)
+        df_input = get_rover_covsel_input(settings)
+
     columns = _get_smoother_columns(smoother, settings).difference(df_input.columns)
+    # Test column might be generated in rover, not always present
+    # Generate if needed
+    test_col = settings["col_test"]
+    if test_col not in df_input:
+        df_input[test_col] = df_input[settings["col_obs"]].isna().astype("int")
+        # Will always be present in the extra columns, so remove
+        columns -= {test_col}
+
     if len(columns) > 0:
         df_input = df_input.merge(
             right=pd.read_parquet(settings["input_path"])[
@@ -396,8 +413,8 @@ def get_smoother_input(
             on=settings["col_id"],
         )
     if smoother == "weave":  # weave models can't have NaN data
-        df_input.loc[df_input[settings["col_test"]].isna(), "residual_value"] = 1
-        df_input.loc[df_input[settings["col_test"]].isna(), "residual_se"] = 1
+        df_input.loc[df_input[settings["col_obs"]].isna(), "residual_value"] = 1
+        df_input.loc[df_input[settings["col_obs"]].isna(), "residual_se"] = 1
     if smoother == "swimr":
         df_input["submodel_id"] = df_input["location_id"].astype(str)
         df_input["row_id"] = np.arange(len(df_input))
@@ -460,26 +477,28 @@ def get_ensemble_input(settings: dict) -> pd.DataFrame:
     )
     if "groupby" in settings["ensemble"]:
         input_cols.update(as_list(settings["ensemble"]["groupby"]))
-    rover_input = get_rover_input(settings)
+    rover_input = get_rover_covsel_input(settings)
     return rover_input[list(input_cols)]
 
 
-def get_rover_submodels(
-    experiment_dir: Union[Path, str], save_file: Optional[bool] = False
+def get_rover_covsel_submodels(
+    experiment_dir: Union[Path, str], save_file: bool = False
 ) -> list[str]:
-    """Get rover submodel IDs and save subsets."""
+    """Get rover submodel IDs and save subsets.
+    TODO: merge this to the rover_covsel function to avoid confusion
+    """
     experiment_dir = Path(experiment_dir)
-    rover_dir = experiment_dir / "results" / "rover"
+    rover_covsel_dir = experiment_dir / "results" / "rover_covsel"
 
     # Create rover subsets and submodels
     settings = load_settings(experiment_dir / "config" / "settings.yml")
-    df_input = get_rover_input(settings)
-    subsets = Subsets("rover", settings["rover"], df_input)
+    df_input = get_rover_covsel_input(settings)
+    subsets = Subsets("rover_covsel", settings["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
     if save_file:
-        subsets.subsets.to_csv(rover_dir / "subsets.csv", index=False)
+        subsets.subsets.to_csv(rover_covsel_dir / "subsets.csv", index=False)
     return submodels
 
 
@@ -576,3 +595,52 @@ def task_template_cache(task_template_name: str) -> Callable:
         return inner_func
 
     return inner_decorator
+
+
+def get_data_interface(experiment_dir: str) -> DataInterface:
+    """Get data interface for loading and dumping files. This object encoded the
+    folder structure of the experiments, including where the configuration files
+    data and results are stored.
+
+    Example
+    -------
+    >>> experiment_dir = "/path/to/experiment"
+    >>> dataif = get_data_interface(experiment_dir)
+    >>> settings = dataif.load_settings()
+    >>> df = dataif.load_data()
+    >>> df_results = ...
+    >>> dataif.dump_rover_covsel(df_results, "results.parquet")
+
+    """
+    dataif = DataInterface(experiment=experiment_dir)
+    dataif.add_dir("config", dataif.experiment / "config")
+    dataif.add_dir("results", dataif.experiment / "results")
+
+    # add settings
+    settings_path = dataif.config / "settings.yml"
+    if not settings_path.exists():
+        raise FileNotFoundError(
+            f"please provide a settings file in {str(settings_path)}"
+        )
+    dataif.add_dir("settings", settings_path)
+
+    # add resources
+    resources_path = dataif.config / "resources.yml"
+    if not resources_path.exists():
+        raise FileNotFoundError(
+            f"please provide a resources file in {str(resources_path)}"
+        )
+    dataif.add_dir("resources", resources_path)
+
+    # add data
+    data_path = Path(dataif.load_settings()["input_path"])
+    if not data_path.exists():
+        raise FileNotFoundError(f"please provide a data file in {str(data_path)}")
+    dataif.add_dir("data", data_path)
+
+    # add results folders
+    dataif.add_dir("rover_covsel", dataif.results / "rover_covsel")
+    dataif.add_dir("regmod_smooth", dataif.results / "regmod_smooth")
+    dataif.add_dir("weave", dataif.results / "weave")
+    dataif.add_dir("swimr", dataif.results / "swimr")
+    return dataif
