@@ -68,7 +68,8 @@ class StageTemplate:
             max_attempts=settings[self.stage_name]["max_attempts"],
             upstream_tasks=upstream_tasks + [initialization_tasks[-1]],
         )
-        if self.stage_name == "ensemble":
+        # Ensemble and regmod_smooth aren't parallelized, so no need to implement collection or deletion tasks.
+        if self.stage_name in ["ensemble"]:
             return [*initialization_tasks, *modeling_tasks]
 
         # Create stage collection task
@@ -76,7 +77,7 @@ class StageTemplate:
 
         # Create optional stage deletion tasks
         tasks = [*initialization_tasks, *modeling_tasks, collection_task]
-        if self.save_intermediate:
+        if self.save_intermediate or self.stage_name == "regmod_smooth":
             return tasks
         tasks.extend(self.create_deletion_tasks(upstream_tasks=[collection_task]))
         return tasks

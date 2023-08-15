@@ -54,26 +54,18 @@ regmod_smooth:
       smoking_prev: [0, inf]
       universal_health_coverage": [inf, 0]
     dims:
-      - age_mid: numerical
-      - super_region_id: categorical
-      - region_id: categorical
-      - location_id: categorical
+      - name: "age_mid"
+        type: "numerical"
+      - name: "super_region_id"
+        type: "categorical"
+      - name: "region_id"
+        type: "categorical"
+      - name: "location_id"
+        type: "categorical"
   Model.fit:
     options:
       verbose: false
       m_scale: 0.1
-
-# Rover settings
-rover:
-  max_attempts: 1
-  model_type: binomial
-  inv_link: expit
-  groupby: [age_group_id, sex_id]
-  col_fixed_covs: [intercept]
-  col_covs: [cov1, cov2, cov3, cov4, cov5]
-  col_weights: population
-  stragety_names: [down]
-  eval_metric: rmse
 
 # SWiMR settings
 swimr:

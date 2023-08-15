@@ -14,6 +14,7 @@ def get_residual(
     row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
 ) -> float:
     """Get residual."""
+    # TODO: can these be vectorized functions?
     if model_type == "binomial" and inv_link == "expit":
         return (row[col_obs] - row[col_pred]) / (row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
@@ -85,12 +86,12 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
         Regmodsm model instance for diagnostics.
     predictions.parquet
         Predictions with residual information.
-
     """
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
-    dataif.add_dir("smooth", dataif.rover / "smooth")
+    dataif.add_dir("rover", dataif.experiment / "results" / "rover_covsel")
+    dataif.add_dir("smooth", dataif.experiment / "results" / "regmod_smooth")
+
     settings = dataif.load_config("settings.yml")
 
     # Create regmod smooth parameters
@@ -98,10 +99,20 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     coef_bounds = settings["regmod_smooth"]["Model"]["coef_bounds"]
 
     selected_covs = dataif.load_rover("selected_covs.yaml")
+
+    # Fill in default box constraint for selected covariates if not already provided
+    for cov in selected_covs:
+        if cov not in coef_bounds:
+            coef_bounds[cov] = [-100, 100]
+
     for cov in selected_covs:
         var_group = dict(col=cov, dim="age_mid")
         if cov in coef_bounds:
             var_group.update(dict(uprior=tuple(map(float, coef_bounds[cov]))))
+            # Optionally set smoothing parameter, defaults to 0 if not provided
+            if "lambda" in settings["regmod_smooth"]["Model"]:
+                var_group["lam"] = settings["regmod_smooth"]["Model"]["lambda"]
+
         var_groups.append(var_group)
 
     # Create regmod smooth model
@@ -113,9 +124,17 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
         weights=settings["regmod_smooth"]["Model"]["weights"],
     )
 
-    # Fit regmod smooth model
-    df = dataif.load(settings["input_path"])
+    # Slice the dataframe to only columns of interest
+    expected_columns = settings["rover_covsel"]["Rover"]["cov_exploring"]
+    expected_columns.append(settings["col_obs"])
+    for col in settings["regmod_smooth"]["Model"]["dims"]:
+        expected_columns.append(col["name"])
+
+    df = dataif.load(settings["input_path"], columns=expected_columns)
     df_train = df.query(f"{settings['col_test']} == 0")
+    df_train = df_train[~(df_train[settings["col_obs"]].isnull())]
+
+    # Fit regmod smooth model
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
 
     # Create prediction and residuals
@@ -123,24 +142,23 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     df["residual"] = df.apply(
         lambda row: get_residual(
             row,
-            settings["rover"]["model_type"],
+            settings["rover_covsel"]["Rover"]["model_type"],
             settings["col_obs"],
             settings["col_pred"],
-            settings["rover"]["inv_link"],
+            settings["rover_covsel"]["inv_link"],
         ),
         axis=1,
     )
     df["residual_se"] = df.apply(
         lambda row: get_residual_se(
             row,
-            settings["rover"]["model_type"],
+            settings["rover_covsel"]["Rover"]["model_type"],
             settings["col_obs"],
             settings["col_pred"],
-            settings["rover"]["inv_link"],
+            settings["rover_covsel"]["inv_link"],
         ),
         axis=1,
     )
-    df.drop(columns=settings["col_obs"], inplace=True)
 
     df_coef = get_coef(model)
 

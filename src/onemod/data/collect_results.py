@@ -20,7 +20,7 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     submodel_ids = get_rover_covsel_submodels(dataif.experiment)
     summaries = []
     for submodel_id in submodel_ids:
-        summary = dataif.load_rover(f"covsel/submodels/{submodel_id}/summary.csv")
+        summary = dataif.load_covsel_submodels(f"{submodel_id}/summary.csv")
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)

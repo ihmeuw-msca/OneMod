@@ -32,7 +32,7 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     """
     dataif = DataInterface(experiment=experiment_dir)
     dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("covsel", dataif.experiment / "results" / "rover" / "covsel")
+    dataif.add_dir("covsel", dataif.experiment / "results" / "rover_covsel")
     settings = dataif.load_config("settings.yml")
 
     subsets = Subsets(
@@ -44,7 +44,16 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     # Load and filter by subset
     subset_id = int(submodel_id[6:])
     df_input = subsets.filter_subset(get_rover_covsel_input(settings), subset_id)
+
+    # Create a test column if not existing
+    # TODO: Either move this to some data prep stage or make it persistent, needed in
+    # other models
+    test_col = settings["col_test"]
+    if test_col not in df_input:
+        df_input[test_col] = df_input[settings["col_obs"]].isna().astype("int")
+
     df_train = df_input[df_input[settings["col_test"]] == 0]
+
     dataif.dump_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
