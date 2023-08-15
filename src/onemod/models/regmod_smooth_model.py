@@ -13,7 +13,23 @@ from pplkit.data.interface import DataInterface
 def get_residual(
     row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
 ) -> float:
-    """Get residual."""
+    """
+    Calculate the residual for a given row based on the specified model type and inverse link function.
+
+    Parameters:
+        row (pd.Series): The row containing the observation and prediction data.
+        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+        col_obs (str): Column name for the observed values.
+        col_pred (str): Column name for the predicted values.
+        inv_link (str): Inverse link function ('expit' for logistic, 'exp' for exponential, etc.).
+
+    Returns:
+        float: The calculated residual value.
+
+    Raises:
+        ValueError: If the specified model_type and inv_link pair is unsupported.
+    """
+
     # TODO: can these be vectorized functions?
     if model_type == "binomial" and inv_link == "expit":
         return (row[col_obs] - row[col_pred]) / (row[col_pred] * (1 - row[col_pred]))
@@ -31,7 +47,22 @@ def get_residual(
 def get_residual_se(
     row: pd.Series, model_type: str, col_obs: str, col_pred: str, inv_link: str
 ) -> float:
-    """Get residual standard error."""
+    """
+    Calculate the residual standard error for a given row based on the specified model type and inverse link function.
+
+    Parameters:
+        row (pd.Series): The row containing the observation and prediction data.
+        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+        col_obs (str): Column name for the observed values.
+        col_pred (str): Column name for the predicted values.
+        inv_link (str): Inverse link function ('expit' for logistic, 'exp' for exponential, etc.).
+
+    Returns:
+        float: The calculated residual standard error value.
+
+    Raises:
+        ValueError: If the specified model_type and inv_link pair is unsupported.
+    """
     if model_type == "binomial" and inv_link == "expit":
         return 1 / np.sqrt(row[col_pred] * (1 - row[col_pred]))
     if model_type == "poisson" and inv_link == "exp":
@@ -46,6 +77,15 @@ def get_residual_se(
 
 
 def get_coef(model: Model) -> pd.DataFrame:
+    """
+    Get coefficient information from the specified model.
+
+    Parameters:
+        model (Model): The statistical model object containing coefficient data.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing coefficient, dimension, and dimension value information.
+    """
     df_coef = []
     for var_group in model.var_groups:
         dim = var_group.dim

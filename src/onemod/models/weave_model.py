@@ -26,7 +26,13 @@ kernel_params = {
 
 
 def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
-    """Run weave model by submodel ID."""
+    """Run weave model by submodel ID.
+
+    Args:
+        experiment_dir (Union[Path, str]): The path to the directory containing the
+            experiment data.
+        submodel_id (str): The ID of the submodel to be processed.
+    """
     experiment_dir = Path(experiment_dir)
     weave_dir = experiment_dir / "results" / "weave"
     settings = load_settings(experiment_dir / "config" / "settings.yml")
@@ -99,4 +105,9 @@ def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
 
 
 def main() -> None:
+    """Main entry point of the module.
+
+    This function uses the Fire library to allow the weave_model function to be
+    invoked from the command line.
+    """
     fire.Fire(weave_model)

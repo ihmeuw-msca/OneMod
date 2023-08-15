@@ -195,7 +195,7 @@ class Subsets:
         self.columns = as_list(settings["groupby"])
         if subsets is None:
             if data is None:
-                raise TypeError(f"Data cannot be None if subsets are not provided.")
+                raise TypeError("Data cannot be None if subsets are not provided.")
             self.columns = as_list(settings["groupby"])
             if "max_batch" in settings:
                 max_batch = settings["max_batch"]

@@ -12,7 +12,28 @@ from onemod.utils import as_list, get_ensemble_input, load_settings, Subsets
 def get_predictions(
     experiment_dir: Union[Path, str], holdout_id: Any, col_pred: str
 ) -> pd.DataFrame:
-    """Load available smoother predictions."""
+    """Load available smoother predictions.
+
+    Parameters
+    ----------
+    experiment_dir : Union[Path, str]
+        Path to the experiment directory.
+    holdout_id : Any
+        Holdout ID for which predictions are requested.
+    col_pred : str
+        Column name for the prediction values.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containing the available smoother predictions.
+
+    Raises
+    ------
+    FileNotFoundError
+        If smoother results do not exist.
+
+    """
     holdout_id = str(holdout_id)
     experiment_dir = Path(experiment_dir)
     if holdout_id == "full":
@@ -60,7 +81,32 @@ def get_performance(
     metric: str,
     col_obs: str,
 ) -> float:
-    """Get smoother performance."""
+    """Get smoother performance.
+
+    Parameters
+    ----------
+    row : pd.Series
+        Row containing the subset details.
+    df_holdout : pd.DataFrame
+        Dataframe containing the holdout data.
+    subsets : Optional[Subsets]
+        Subsets object containing the subset data.
+    metric : str
+        Performance metric to be used (e.g., "rmse").
+    col_obs : str
+        Column name for the observed values.
+
+    Returns
+    -------
+    float
+        Smoother performance metric.
+
+    Raises
+    ------
+    ValueError
+        If an invalid performance metric is provided.
+
+    """
     df_holdout = df_holdout[df_holdout[row["holdout_id"]] == 1]
     if subsets is not None:
         df_holdout = subsets.filter_subset(df_holdout, row["subset_id"])
@@ -74,11 +120,40 @@ def get_weights(
     subsets: Optional[Subsets],
     metric: str,
     score: str,
-    top_pct_score: float = 0.,
-    top_pct_model: float = 0.,
-    psi: float = 0.,
+    top_pct_score: float = 0.0,
+    top_pct_model: float = 0.0,
+    psi: float = 0.0,
 ) -> pd.Series:
-    """Get smoother weights."""
+    """Get smoother weights.
+
+    Parameters
+    ----------
+    df_performance : pd.DataFrame
+        Dataframe containing smoother performance metrics.
+    subsets : Optional[Subsets]
+        Subsets object containing the subset data.
+    metric : str
+        Performance metric to be used for weighting (e.g., "rmse_mean").
+    score : str
+        Weighting score to be used (e.g., "avg", "rover", "codem", "best").
+    top_pct_score : float, optional
+        Percentage of top scores to be used for weighting, by default 0.
+    top_pct_model : float, optional
+        Percentage of top models to be used for weighting, by default 0.
+    psi : float, optional
+        Smoothing parameter for codem score, by default 0.
+
+    Returns
+    -------
+    pd.Series
+        Smoother weights.
+
+    Raises
+    ------
+    ValueError
+        If an invalid weight score is provided.
+
+    """
     if subsets is None:
         return get_subset_weights(
             df_performance[metric + "_mean"],
@@ -102,11 +177,44 @@ def get_weights(
 def get_subset_weights(
     performance: pd.Series,
     score: str,
-    top_pct_score: float = 0.,
-    top_pct_model: float = 0.,
-    psi: float = 0.,
-):
-    """Get subset weights."""
+    top_pct_score: float = 0.0,
+    top_pct_model: float = 0.0,
+    psi: float = 0.0,
+) -> pd.Series:
+    """Get subset weights.
+
+    This function calculates subset weights based on the given scoring method.
+
+    Parameters
+    ----------
+    performance : pd.Series
+        Series containing performance scores for each subset.
+    score : str
+        Scoring method to be used for computing weights. Available options are:
+            - "avg": Assigns equal weights to all subsets.
+            - "rover": Uses the ROVER (Rank-Ordered Vote Evaluation Results) method.
+            - "codem": Uses the CODEm (Consistent Over Different Experiments) method.
+            - "best": Assigns all weight to the subset with the best performance score.
+    top_pct_score : float, optional
+        The percentage of top-performing scores to be used for weighting (used only for
+        "rover" score), by default 0.0.
+    top_pct_model : float, optional
+        The percentage of top models to be used for weighting (used only for "rover" score),
+        by default 0.0.
+    psi : float, optional
+        Smoothing parameter for CODEm score (used only for "codem" score), by default 0.0.
+
+    Returns
+    -------
+    pd.Series
+        Series containing the subset weights.
+
+    Raises
+    ------
+    ValueError
+        If an invalid scoring method is provided.
+
+    """
     if score == "avg":
         avg_scores = performance.copy()
         avg_scores[:] = 1
@@ -133,7 +241,14 @@ def get_subset_weights(
 
 
 def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) -> None:
-    """Run ensemble model on smoother predictions."""
+    """Run ensemble model on smoother predictions.
+
+    Parameters
+    ----------
+    experiment_dir : Union[Path, str]
+        Path to the experiment directory.
+
+    """
     experiment_dir = Path(experiment_dir)
     ensemble_dir = experiment_dir / "results" / "ensemble"
     settings = load_settings(experiment_dir / "config" / "settings.yml")
@@ -234,5 +349,10 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
     df_pred.to_parquet(ensemble_dir / "predictions.parquet")
 
 
-def main():
+def main() -> None:
+    """Main entry point of the module.
+
+    This function uses the Fire library to allow the rover_model function to be
+    invoked from the command line.
+    """
     fire.Fire(ensemble_model)
