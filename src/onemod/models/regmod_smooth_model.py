@@ -45,6 +45,30 @@ def get_residual_se(
     raise ValueError("Unsupported model_type and inv_link pair")
 
 
+def get_coef(model: Model) -> pd.DataFrame:
+    df_coef = []
+    for var_group in model.var_groups:
+        dim = var_group.dim
+        if dim is None:
+            dim_vals = [np.nan]
+            dim_name = "None"
+        else:
+            dim_vals = dim.vals
+            dim_name = dim.name
+        df_sub = pd.DataFrame(
+            {
+                "cov": var_group.col,
+                "dim": dim_name,
+                "dim_val": dim_vals,
+            }
+        )
+        df_coef.append(df_sub)
+    df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
+    df_coef["coef"] = model._model.opt_coefs
+    df_coef["coef_sd"] = np.sqrt(np.diag(model._model.opt_vcov))
+    return df_coef
+
+
 def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
@@ -100,19 +124,17 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
         weights=settings["regmod_smooth"]["Model"]["weights"],
     )
 
-    # Fit regmod smooth model
-    df = dataif.load(settings["input_path"])
-    df_train = df.query(f"{settings['col_test']} == 0")
-
     # Slice the dataframe to only columns of interest
     expected_columns = settings["rover_covsel"]["Rover"]["cov_exploring"]
     expected_columns.append(settings["col_obs"])
     for col in settings["regmod_smooth"]["Model"]["dims"]:
         expected_columns.append(col["name"])
 
-    df_train = df_train[expected_columns]
+    df = dataif.load(settings["input_path"], columns=expected_columns)
+    df_train = df.query(f"{settings['col_test']} == 0")
     df_train = df_train[~(df_train[settings["col_obs"]].isnull())]
 
+    # Fit regmod smooth model
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
 
     # Create prediction and residuals
@@ -138,9 +160,12 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
         axis=1,
     )
 
+    df_coef = get_coef(model)
+
     # Save results
     dataif.dump_smooth(model, "model.pkl")
-    dataif.dump_smooth(df, "predictions.parquet")
+    dataif.dump_smooth(df_coef, "coef.csv")
+    dataif.dump_rover(df, "predictions.parquet")
 
 
 def main() -> None:

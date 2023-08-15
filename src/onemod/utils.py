@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import yaml
+from pplkit.data.interface import DataInterface
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
@@ -594,3 +595,52 @@ def task_template_cache(task_template_name: str) -> Callable:
         return inner_func
 
     return inner_decorator
+
+
+def get_data_interface(experiment_dir: str) -> DataInterface:
+    """Get data interface for loading and dumping files. This object encoded the
+    folder structure of the experiments, including where the configuration files
+    data and results are stored.
+
+    Example
+    -------
+    >>> experiment_dir = "/path/to/experiment"
+    >>> dataif = get_data_interface(experiment_dir)
+    >>> settings = dataif.load_settings()
+    >>> df = dataif.load_data()
+    >>> df_results = ...
+    >>> dataif.dump_rover_covsel(df_results, "results.parquet")
+
+    """
+    dataif = DataInterface(experiment=experiment_dir)
+    dataif.add_dir("config", dataif.experiment / "config")
+    dataif.add_dir("results", dataif.experiment / "results")
+
+    # add settings
+    settings_path = dataif.config / "settings.yml"
+    if not settings_path.exists():
+        raise FileNotFoundError(
+            f"please provide a settings file in {str(settings_path)}"
+        )
+    dataif.add_dir("settings", settings_path)
+
+    # add resources
+    resources_path = dataif.config / "resources.yml"
+    if not resources_path.exists():
+        raise FileNotFoundError(
+            f"please provide a resources file in {str(resources_path)}"
+        )
+    dataif.add_dir("resources", resources_path)
+
+    # add data
+    data_path = Path(dataif.load_settings()["input_path"])
+    if not data_path.exists():
+        raise FileNotFoundError(f"please provide a data file in {str(data_path)}")
+    dataif.add_dir("data", data_path)
+
+    # add results folders
+    dataif.add_dir("rover_covsel", dataif.results / "rover_covsel")
+    dataif.add_dir("regmod_smooth", dataif.results / "regmod_smooth")
+    dataif.add_dir("weave", dataif.results / "weave")
+    dataif.add_dir("swimr", dataif.results / "swimr")
+    return dataif

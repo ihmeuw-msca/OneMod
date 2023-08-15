@@ -1,4 +1,5 @@
 """Collect onemod stage submodel results."""
+import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import Union
 from pplkit.data.interface import DataInterface
@@ -15,6 +16,91 @@ from onemod.utils import (
 )
 
 
+def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
+    submodel_ids = get_rover_covsel_submodels(dataif.experiment)
+    summaries = []
+    for submodel_id in submodel_ids:
+        summary = dataif.load_covsel_submodels(f"{submodel_id}/summary.csv")
+        summary["submodel_id"] = submodel_id
+        summaries.append(summary)
+    summaries = pd.concat(summaries, axis=0)
+    return summaries
+
+
+def _get_selected_covs(dataif: DataInterface) -> list[str]:
+    summaries = _get_rover_covsel_summaries(dataif)
+    selected_covs = (
+        summaries.groupby("cov")["significant"]
+        .mean()
+        .reset_index()
+        .query("significant >= 0.5")["cov"]
+        .tolist()
+    )
+    return selected_covs
+
+
+def _plot_rover_covsel_results(
+    dataif: DataInterface, covs: list[str] | None = None
+) -> plt.Figure:
+    """TODO: We hard-coded that the submodels for rover_covsel model are vary
+    across age groups and use age mid as x axis of the plot.
+    """
+    summaries = _get_rover_covsel_summaries(dataif)
+    subsets = dataif.load_rover("covsel/subsets.csv")
+    settings = dataif.load_experiment("config/settings.yml")
+
+    # add age_mid to summary
+    subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
+    summaries = summaries.merge(
+        subsets[["submodel_id", "age_group_id"]], on="submodel_id", how="left"
+    )
+    df_age = dataif.load(
+        settings["input_path"], columns=["age_group_id", "age_mid"]
+    ).drop_duplicates()
+    summaries = summaries.merge(df_age, on="age_group_id", how="left")
+
+    df_covs = summaries.groupby("cov")
+    covs = covs or list(df_covs.groups.keys())
+    fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
+    for i, cov in enumerate(covs):
+        df_cov = df_covs.get_group(cov)
+        ax[i].errorbar(
+            df_cov["age_mid"],
+            df_cov["coef"],
+            yerr=1.96 * df_cov["coef_sd"],
+            fmt="o-",
+            alpha=0.5,
+            label="rover_covsel",
+        )
+        ax[i].set_ylabel(cov)
+        ax[i].axhline(0.0, linestyle="--")
+    return fig
+
+
+def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure:
+    """TODO: same with _plot_rover_covsel_results"""
+    selected_covs = dataif.load_rover("selected_covs.yaml")
+    df_coef = (
+        dataif.load_smooth("coef.csv")
+        .query("dim == 'age_mid'")
+        .rename(columns={"dim_val": "age_mid"})
+    )
+    df_covs = df_coef.groupby("cov")
+
+    fig = _plot_rover_covsel_results(dataif, covs=selected_covs)
+    for ax, cov in zip(fig.axes, selected_covs):
+        df_cov = df_covs.get_group(cov)
+        ax.errorbar(
+            df_cov["age_mid"],
+            df_cov["coef"],
+            yerr=1.96 * df_cov["coef_sd"],
+            fmt="o-",
+            alpha=0.5,
+            label="regmod_smooth",
+        )
+    return fig
+
+
 def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
     """Collect rover covariate selection results. Process all the significant
     covariates for each sub group. If a covaraite is significant across more
@@ -24,31 +110,22 @@ def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
     covariates in the rover results folder.
     """
     dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("covsel_submodels", dataif.experiment / "results" / "rover_covsel" / "submodels")
-    submodel_ids = get_rover_covsel_submodels(experiment_dir)
-    summaries = []
-    for submodel_id in submodel_ids:
-        summary = dataif.load_covsel_submodels(f"{submodel_id}/summary.csv")
-        summary["submodel_id"] = submodel_id
-        summaries.append(summary)
-    summaries = pd.concat(summaries, axis=0)
-    selected_covs = (
-        summaries.groupby("cov")["significant"]
-        .mean()
-        .reset_index()
-        .query("significant >= 0.5")["cov"]
-        .tolist()
-    )
-    dataif.add_dir("covsel_main", dataif.experiment / "results" / "rover_covsel")
-    dataif.dump_covsel_main(selected_covs, "selected_covs.yaml")
+    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
+
+    selected_covs = _get_selected_covs(dataif)
+    dataif.dump_rover(selected_covs, "selected_covs.yaml")
+
+    fig = _plot_rover_covsel_results(dataif)
+    fig.savefig(dataif.rover / "coef.pdf", bbox_inches="tight")
 
 
 def collect_regmod_smooth_results(experiment_dir: Path | str) -> None:
-    """Dummy task
-
-    TODO: Don't enforce collection tasks as part of standard structure in stages
-    """
-    pass
+    """This step is used for creating diagnostics."""
+    dataif = DataInterface(experiment=experiment_dir)
+    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
+    dataif.add_dir("smooth", dataif.rover / "smooth")
+    fig = _plot_regmod_smooth_results(dataif)
+    fig.savefig(dataif.rover / "smooth_coef.pdf", bbox_inches="tight")
 
 
 def collect_swimr_results(experiment_dir: Union[Path, str]) -> None:
