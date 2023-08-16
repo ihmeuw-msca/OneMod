@@ -644,4 +644,5 @@ def get_data_interface(experiment_dir: str) -> DataInterface:
     dataif.add_dir("regmod_smooth", dataif.results / "regmod_smooth")
     dataif.add_dir("weave", dataif.results / "weave")
     dataif.add_dir("swimr", dataif.results / "swimr")
+    dataif.add_dir("ensemble", dataif.results / "ensemble")
     return dataif
