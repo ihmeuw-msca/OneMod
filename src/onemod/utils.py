@@ -1,7 +1,7 @@
 """Useful functions."""
 from __future__ import annotations
 
-from functools import wraps
+from functools import wraps, cache
 from itertools import product
 from pathlib import Path
 from typing import Any, Callable, Optional, TYPE_CHECKING, Union
@@ -597,6 +597,7 @@ def task_template_cache(task_template_name: str) -> Callable:
     return inner_decorator
 
 
+@cache
 def get_data_interface(experiment_dir: str) -> DataInterface:
     """Get data interface for loading and dumping files. This object encoded the
     folder structure of the experiments, including where the configuration files
