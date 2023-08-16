@@ -482,36 +482,35 @@ def get_ensemble_input(settings: dict) -> pd.DataFrame:
 
 
 def get_rover_covsel_submodels(
-    experiment_dir: Union[Path, str], save_file: bool = False
+    experiment_dir: str, save_file: bool = False
 ) -> list[str]:
     """Get rover submodel IDs and save subsets.
     TODO: merge this to the rover_covsel function to avoid confusion
     """
-    experiment_dir = Path(experiment_dir)
-    rover_covsel_dir = experiment_dir / "results" / "rover_covsel"
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Create rover subsets and submodels
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
     df_input = get_rover_covsel_input(settings)
     subsets = Subsets("rover_covsel", settings["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
     if save_file:
-        subsets.subsets.to_csv(rover_covsel_dir / "subsets.csv", index=False)
+        dataif.dump_rover_covsel(subsets.subsets, "subsets.csv")
     return submodels
 
 
 def get_swimr_submodels(
-    experiment_dir: Union[Path, str], save_files: Optional[bool] = False
+    experiment_dir: str, save_files: Optional[bool] = False
 ) -> list[str]:
     """Get swimr submodel IDs; save parameters and subsets."""
-    experiment_dir = Path(experiment_dir)
-    swimr_dir = experiment_dir / "results" / "swimr"
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Create swimr parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+
     df_input = get_smoother_input("swimr", settings, experiment_dir)
     for model_id, model_settings in settings["swimr"]["models"].items():
         params = SwimrParams(model_id, model_settings)
@@ -528,21 +527,21 @@ def get_swimr_submodels(
 
     # Save files
     if save_files:
-        pd.concat(param_list).to_csv(swimr_dir / "parameters.csv", index=False)
-        pd.concat(subset_list).to_csv(swimr_dir / "subsets.csv", index=False)
+        dataif.dump_swimr(pd.concat(param_list), "parameters.csv")
+        dataif.dump_swimr(pd.concat(subset_list), "subsets.csv")
     return submodels
 
 
 def get_weave_submodels(
-    experiment_dir: Union[Path, str], save_files: Optional[bool] = False
+    experiment_dir: str, save_files: Optional[bool] = False
 ) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
-    experiment_dir = Path(experiment_dir)
-    weave_dir = experiment_dir / "results" / "weave"
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+
     df_input = get_smoother_input("weave", settings, experiment_dir)
     for model_id, model_settings in settings["weave"]["models"].items():
         params = WeaveParams(model_id, model_settings)
@@ -563,8 +562,8 @@ def get_weave_submodels(
 
     # Save files
     if save_files:
-        pd.concat(param_list).to_csv(weave_dir / "parameters.csv", index=False)
-        pd.concat(subset_list).to_csv(weave_dir / "subsets.csv", index=False)
+        dataif.dump_weave(pd.concat(param_list), "parameters.csv")
+        dataif.dump_weave(pd.concat(subset_list), "subsets.csv")
     return submodels
 
 
