@@ -375,7 +375,8 @@ def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True) 
 
 def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
     """Get input data for rover model."""
-    df_input = pd.read_parquet(settings["input_path"])
+    interface = DataInterface(data=settings["input_path"])
+    df_input = interface.load_data()
     for dimension in as_list(settings["col_id"]):
         df_input = df_input[df_input[dimension].isin(settings[dimension])]
     return df_input
@@ -389,10 +390,10 @@ def get_smoother_input(
 ) -> pd.DataFrame:
     """Get input data for smoother model."""
     experiment_dir = Path(experiment_dir)
+    interface = get_data_interface(experiment_dir)
     if from_rover:
-        df_input = pd.read_parquet(
-            experiment_dir / "results" / "regmod_smooth" / "predictions.parquet"
-        ).rename(columns={"residual": "residual_value"})
+        df_input = interface.load_regmod_smooth("predictions.parquet")
+        df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
         df_input = get_rover_covsel_input(settings)
 
@@ -406,8 +407,9 @@ def get_smoother_input(
         columns -= {test_col}
 
     if len(columns) > 0:
+        right = interface.load_data()
         df_input = df_input.merge(
-            right=pd.read_parquet(settings["input_path"])[
+            right=right[
                 as_list(settings["col_id"]) + list(columns)
             ].drop_duplicates(),
             on=settings["col_id"],

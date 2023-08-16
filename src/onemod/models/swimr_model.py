@@ -130,7 +130,6 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
         get_smoother_input("swimr", settings, experiment_dir, from_rover=True),
         subset_id,
     )
-    breakpoint()
     df_input["holdout"] = df_input[settings["col_test"]] != 0
     if (
         model_settings["model_type"] == "cascade"
@@ -139,15 +138,16 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
         df_input["location_id"] = df_input.apply(get_combined_id, axis=1)
     if holdout_id != "full":
         df_input["holdout"] = df_input["holdout"] & (df_input[holdout_id] != 0)
-    model_data = str(
-        dataif.swmir / "data" / f"{model_id}_subset{subset_id}_{holdout_id}.parquet"
-    )
+    model_data = f"data/{model_id}_subset{subset_id}_{holdout_id}.parquet"
 
     # The swimr task script overwrites holdout with the value of holdout1, for some reason
     # So enforce the same column here
     if "holdout1" in df_input.columns:
         df_input["holdout1"] = df_input["holdout"].astype({"holdout": int})
-    df_input.astype({"holdout": int}).to_parquet(model_data)
+    dataif.dump_swimr(
+        df_input.astype({"holdout": int}),
+        model_data
+    )
 
     # Create submodel settings
     model_settings["prediction_submodel_ids"] = get_str(
@@ -184,7 +184,7 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
             "-s",
             "/mnt/team/msca/priv/code/swimr/tasks/run_swimr.R",
             "--path_to_input_data",
-            model_data,
+            dataif.swimr / model_data,
             "--path_to_similarity_matrix",
             model_settings["similarity_matrix"],
             "--path_to_model_specs",
@@ -202,7 +202,8 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
     )
 
     # Get predictions
-    df_pred = pd.read_parquet(model_settings["working_dir"] + "predictions.parquet")
+    dataif.add_dir("swimr_preds", model_settings["working_dir"])
+    df_pred = dataif.load_swimr_preds("predictions.parquet")
     df_pred = df_pred.melt(
         id_vars=["age_group_id", "year_id"],
         value_vars=tuple(df_pred.columns[3:]),
@@ -230,10 +231,11 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
         ),
         axis=1,
     )
-    df_pred[
-        as_list(settings["col_id"])
-        + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
-    ].to_parquet(model_settings["working_dir"] + "predictions.parquet")
+    df_pred = df_pred[
+        as_list(settings["col_id"]) +
+        ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
+    ]
+    dataif.dump_swimr_preds(df_pred, "predictions.parquet")
 
 
 def main() -> None:
