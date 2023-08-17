@@ -1,10 +1,6 @@
 """Run weave model."""
-from pathlib import Path
-from typing import Union
-
 import fire
 import numpy as np
-import pandas as pd
 from weave.dimension import Dimension
 from weave.smoother import Smoother
 
@@ -12,9 +8,9 @@ from onemod.utils import (
     as_list,
     get_prediction,
     get_smoother_input,
-    load_settings,
     Subsets,
     WeaveParams,
+    get_data_interface,
 )
 
 # weave kernel parameters
@@ -25,7 +21,7 @@ kernel_params = {
 }
 
 
-def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
+def weave_model(experiment_dir: str, submodel_id: str) -> None:
     """Run weave model by submodel ID.
 
     Args:
@@ -33,9 +29,10 @@ def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
             experiment data.
         submodel_id (str): The ID of the submodel to be processed.
     """
-    experiment_dir = Path(experiment_dir)
-    weave_dir = experiment_dir / "results" / "weave"
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+    dataif = get_data_interface(experiment_dir)
+    # experiment_dir = Path(experiment_dir)
+    # weave_dir = experiment_dir / "results" / "weave"
+    settings = dataif.load_settings()
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]
@@ -44,9 +41,9 @@ def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     holdout_id = submodel_id.split("_")[3]
     batch_id = int(submodel_id.split("_")[4][5:])
     model_settings = settings["weave"]["models"][model_id]
-    params = WeaveParams(model_id, param_sets=pd.read_csv(weave_dir / "parameters.csv"))
+    params = WeaveParams(model_id, param_sets=dataif.load_weave("parameters.csv"))
     subsets = Subsets(
-        model_id, model_settings, subsets=pd.read_csv(weave_dir / "subsets.csv")
+        model_id, model_settings, subsets=dataif.load_weave("subsets.csv")
     )
 
     # Load data and filter by subset and batch
@@ -98,10 +95,11 @@ def weave_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     df_pred["model_id"] = model_id
     df_pred["param_id"] = param_id
     df_pred["holdout_id"] = holdout_id
-    df_pred[
+    df_pred = df_pred[
         as_list(settings["col_id"])
         + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
-    ].to_parquet(weave_dir / "submodels" / f"{submodel_id}.parquet")
+    ]
+    dataif.dump_weave(f"submodels/{submodel_id}.parquet")
 
 
 def main() -> None:

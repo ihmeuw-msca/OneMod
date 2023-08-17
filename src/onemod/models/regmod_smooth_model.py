@@ -4,10 +4,9 @@ the covariate coefficients across age groups.
 import fire
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from scipy.stats import norm
 from regmodsm.model import Model
-from pplkit.data.interface import DataInterface
+from onemod.utils import get_data_interface
 
 
 def get_residual(
@@ -109,7 +108,7 @@ def get_coef(model: Model) -> pd.DataFrame:
     return df_coef
 
 
-def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
+def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
 
@@ -124,15 +123,13 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     -------
     model.pkl
         Regmodsm model instance for diagnostics.
+    coef.csv
+        Coefficients from different age groups.
     predictions.parquet
         Predictions with residual information.
     """
-    dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("rover", dataif.experiment / "results" / "rover_covsel")
-    dataif.add_dir("smooth", dataif.experiment / "results" / "regmod_smooth")
-
-    settings = dataif.load_config("settings.yml")
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Create regmod smooth parameters
     var_groups = settings["regmod_smooth"]["Model"]["var_groups"]
@@ -205,7 +202,7 @@ def regmod_smooth_model(experiment_dir: Path | str, submodel_id: str) -> None:
     # Save results
     dataif.dump_smooth(model, "model.pkl")
     dataif.dump_smooth(df_coef, "coef.csv")
-    dataif.dump_rover(df, "predictions.parquet")
+    dataif.dump_smooth(df, "predictions.parquet")
 
 
 def main() -> None:

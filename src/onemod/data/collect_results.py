@@ -1,7 +1,5 @@
 """Collect onemod stage submodel results."""
 import matplotlib.pyplot as plt
-from pathlib import Path
-from typing import Union
 from pplkit.data.interface import DataInterface
 
 import fire
@@ -12,7 +10,7 @@ from onemod.utils import (
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    load_settings,
+    get_data_interface,
 )
 
 
@@ -20,7 +18,7 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     submodel_ids = get_rover_covsel_submodels(dataif.experiment)
     summaries = []
     for submodel_id in submodel_ids:
-        summary = dataif.load_covsel_submodels(f"{submodel_id}/summary.csv")
+        summary = dataif.load_rover_covsel(f"submodels/{submodel_id}/summary.csv")
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)
@@ -46,8 +44,8 @@ def _plot_rover_covsel_results(
     across age groups and use age mid as x axis of the plot.
     """
     summaries = _get_rover_covsel_summaries(dataif)
-    subsets = dataif.load_rover("covsel/subsets.csv")
-    settings = dataif.load_experiment("config/settings.yml")
+    subsets = dataif.load_rover_covsel("subsets.csv")
+    settings = dataif.load_settings()
 
     # add age_mid to summary
     subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
@@ -79,9 +77,9 @@ def _plot_rover_covsel_results(
 
 def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure:
     """TODO: same with _plot_rover_covsel_results"""
-    selected_covs = dataif.load_rover("selected_covs.yaml")
+    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     df_coef = (
-        dataif.load_smooth("coef.csv")
+        dataif.load_regmod_smooth("coef.csv")
         .query("dim == 'age_mid'")
         .rename(columns={"dim_val": "age_mid"})
     )
@@ -101,7 +99,7 @@ def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure:
     return fig
 
 
-def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
+def collect_rover_covsel_results(experiment_dir: str) -> None:
     """Collect rover covariate selection results. Process all the significant
     covariates for each sub group. If a covaraite is significant across more
     than half of the subgroups if will be selected.
@@ -109,30 +107,27 @@ def collect_rover_covsel_results(experiment_dir: Path | str) -> None:
     This step will save ``selected_covs.yaml`` with a list of selected
     covariates in the rover results folder.
     """
-    dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
+    dataif = get_data_interface(experiment_dir)
 
     selected_covs = _get_selected_covs(dataif)
-    dataif.dump_rover(selected_covs, "selected_covs.yaml")
+    dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
 
     fig = _plot_rover_covsel_results(dataif)
-    fig.savefig(dataif.rover / "coef.pdf", bbox_inches="tight")
+    fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
-def collect_regmod_smooth_results(experiment_dir: Path | str) -> None:
+def collect_regmod_smooth_results(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
-    dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("rover", dataif.experiment / "results" / "rover")
-    dataif.add_dir("smooth", dataif.rover / "smooth")
+    dataif = get_data_interface(experiment_dir)
     fig = _plot_regmod_smooth_results(dataif)
-    fig.savefig(dataif.rover / "smooth_coef.pdf", bbox_inches="tight")
+    fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
 
-def collect_swimr_results(experiment_dir: Union[Path, str]) -> None:
+def collect_swimr_results(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
-    experiment_dir = Path(experiment_dir)
-    swimr_dir = experiment_dir / "results" / "swimr"
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
+
     submodel_ids = get_swimr_submodels(experiment_dir)
     for holdout_id in as_list(settings["col_holdout"]) + ["full"]:
         df_list = []
@@ -142,8 +137,8 @@ def collect_swimr_results(experiment_dir: Union[Path, str]) -> None:
             if submodel_id.split("_")[3] == holdout_id
         ]:
             df_list.append(
-                pd.read_parquet(
-                    swimr_dir / "submodels" / submodel_id / "predictions.parquet"
+                dataif.load_swimr(
+                    f"submodels/{submodel_id}/predictions.parquet"
                 ).astype({"param_id": str})
             )
         df_pred = pd.pivot(
@@ -153,23 +148,23 @@ def collect_swimr_results(experiment_dir: Union[Path, str]) -> None:
             values=["residual", settings["col_pred"]],
         )
         if holdout_id == "full":
-            df_pred.to_parquet(swimr_dir / "predictions.parquet")
+            dataif.dump_swimr(df_pred, "predictions.parquet")
         else:
-            df_pred.to_parquet(swimr_dir / f"predictions_{holdout_id}.parquet")
+            dataif.dump_swimr(df_pred, f"predictions_{holdout_id}.parquet")
 
 
-def collect_weave_results(experiment_dir: Union[Path, str]) -> None:
+def collect_weave_results(experiment_dir: str) -> None:
     """Collect weave submodel results."""
-    experiment_dir = Path(experiment_dir)
-    weave_dir = experiment_dir / "results" / "weave"
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
+
     submodel_ids = get_weave_submodels(experiment_dir)
     for holdout_id in as_list(settings["col_holdout"]) + ["full"]:
         df_pred = pd.concat(
             [
-                pd.read_parquet(
-                    weave_dir / "submodels" / f"{submodel_id}.parquet"
-                ).astype({"param_id": str})
+                pd.load_weave(f"submodels/{submodel_id}.parquet").astype(
+                    {"param_id": str}
+                )
                 for submodel_id in submodel_ids
                 if submodel_id.split("_")[3] == holdout_id
             ],
@@ -182,9 +177,9 @@ def collect_weave_results(experiment_dir: Union[Path, str]) -> None:
             values=["residual", settings["col_pred"]],
         )
         if holdout_id == "full":
-            df_pred.to_parquet(weave_dir / "predictions.parquet")
+            dataif.dump_weave(df_pred, "predictions.parquet")
         else:
-            df_pred.to_parquet(weave_dir / f"predictions_{holdout_id}.parquet")
+            dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
 
 def main() -> None:
