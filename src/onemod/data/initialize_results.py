@@ -1,7 +1,5 @@
 """Initialize onemod stage results."""
-from pathlib import Path
 import shutil
-from typing import Union
 
 import fire
 
@@ -10,81 +8,76 @@ from onemod.utils import (
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    load_settings,
     Subsets,
+    get_data_interface,
 )
 
 
-def initialize_rover_covsel_results(experiment_dir: Path | str) -> None:
+def initialize_rover_covsel_results(experiment_dir: str) -> None:
     """Initialize rover results."""
-    experiment_dir = Path(experiment_dir)
-    rover_covsel_dir = experiment_dir / "results" / "rover_covsel"
+    dataif = get_data_interface(experiment_dir)
 
     # Initialize directories
-    if rover_covsel_dir.exists():
-        shutil.rmtree(rover_covsel_dir)
+    if dataif.rover_covsel.exists():
+        shutil.rmtree(dataif.rover_covsel)
     for sub_dir in ["data", "submodels"]:
-        (rover_covsel_dir / sub_dir).mkdir(parents=True)
+        (dataif.rover_covsel / sub_dir).mkdir(parents=True)
 
     # Create rover subsets
     get_rover_covsel_submodels(experiment_dir, save_file=True)
 
 
-def initialize_regmod_smooth_results(experiment_dir: Path | str) -> None:
-    experiment_dir = Path(experiment_dir)
-    rover_smooth_dir = experiment_dir / "results" / "regmod_smooth"
+def initialize_regmod_smooth_results(experiment_dir: str) -> None:
+    dataif = get_data_interface(experiment_dir)
 
     # Initialize directories
-    if rover_smooth_dir.exists():
-        shutil.rmtree(rover_smooth_dir)
-    rover_smooth_dir.mkdir(parents=True)
+    if dataif.regmod_smooth.exists():
+        shutil.rmtree(dataif.regmod_smooth)
+    dataif.regmod_smooth.mkdir(parents=True)
 
 
-def initialize_swimr_results(experiment_dir: Union[Path, str]) -> None:
+def initialize_swimr_results(experiment_dir: str) -> None:
     """Initialize swimr results."""
-    experiment_dir = Path(experiment_dir)
-    swimr_dir = experiment_dir / "results" / "swimr"
+    dataif = get_data_interface(experiment_dir)
 
     # Initialize directories
-    if swimr_dir.exists():
-        shutil.rmtree(swimr_dir)
+    if dataif.swimr.exists():
+        shutil.rmtree(dataif.swimr)
     for sub_dir in ["data", "submodels"]:
-        (swimr_dir / sub_dir).mkdir(parents=True)
+        (dataif.swimr / sub_dir).mkdir(parents=True)
 
     # Create swimr parameters and subsets
     get_swimr_submodels(experiment_dir, save_files=True)
 
 
-def initialize_weave_results(experiment_dir: Union[Path, str]) -> None:
+def initialize_weave_results(experiment_dir: str) -> None:
     """Initialize weave results."""
-    experiment_dir = Path(experiment_dir)
-    weave_dir = experiment_dir / "results" / "weave"
+    dataif = get_data_interface(experiment_dir)
 
     # Initialize directories
-    if weave_dir.exists():
-        shutil.rmtree(weave_dir)
-    (weave_dir / "submodels").mkdir(parents=True)
+    if dataif.weave.exists():
+        shutil.rmtree(dataif.weave)
+    (dataif.weave / "submodels").mkdir(parents=True)
 
     # Create weave parameters and subsets
     get_weave_submodels(experiment_dir, save_files=True)
 
 
-def initialize_ensemble_results(experiment_dir: Union[Path, str]) -> None:
+def initialize_ensemble_results(experiment_dir: str) -> None:
     """Initialize ensemble results."""
-    experiment_dir = Path(experiment_dir)
-    ensemble_dir = experiment_dir / "results" / "ensemble"
+    dataif = get_data_interface(experiment_dir)
 
     # Initialize directory
-    if ensemble_dir.exists():
-        shutil.rmtree(ensemble_dir)
-    ensemble_dir.mkdir(parents=True)
+    if dataif.ensemble.exists():
+        shutil.rmtree(dataif.ensemble)
+    dataif.ensemble.mkdir(parents=True)
 
     # Create ensemble subsets
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+    settings = dataif.load_settings()
     if "groupby" in settings["ensemble"]:
         Subsets(
             "ensemble", settings["ensemble"], get_ensemble_input(settings)
-        ).subsets.to_csv(ensemble_dir / "subsets.csv", index=False)
+        ).subsets.to_csv(dataif.ensemble / "subsets.csv", index=False)
 
 
 def main() -> None:

@@ -1,12 +1,10 @@
 """Run rover covariate selection model."""
 import fire
-from pathlib import Path
 from modrover.api import Rover
-from pplkit.data.interface import DataInterface
-from onemod.utils import get_rover_covsel_input, Subsets
+from onemod.utils import get_rover_covsel_input, Subsets, get_data_interface
 
 
-def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
+def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     """Run rover covariate selection model by submodel ID.
 
     Parameters
@@ -14,7 +12,7 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
     experiment_dir
         Parent folder where the experiment is run.
         - ``experiment_dir / config / settings.yaml`` contains rover modeling settings
-        - ``experiment_dir / results / rover`` stores all rover results
+        - ``experiment_dir / results / rover_covsel`` stores all rover results
     submodel_id
         Example of ``submodel_id`` can be written as ``'subset0'``. In this case
         the numbered id ``0`` will be used to lookup the corresponding subsets
@@ -30,10 +28,8 @@ def rover_covsel_model(experiment_dir: Path | str, submodel_id: str) -> None:
         Summary covariate coefficients from the ensemble model.
 
     """
-    dataif = DataInterface(experiment=experiment_dir)
-    dataif.add_dir("config", dataif.experiment / "config")
-    dataif.add_dir("covsel", dataif.experiment / "results" / "rover_covsel")
-    settings = dataif.load_config("settings.yml")
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     subsets = Subsets(
         "rover_covsel",

@@ -17,9 +17,9 @@ from onemod.utils import (
     as_list,
     get_prediction,
     get_smoother_input,
-    load_settings,
     Subsets,
     SwimrParams,
+    get_data_interface,
 )
 
 
@@ -44,11 +44,16 @@ def get_str(id_list: Union[list, np.ndarray]) -> str:
     Solution found here:
     https://stackoverflow.com/questions/38369833/pyyaml-and-using-quotes-for-strings-only
 
-    Args:
-        id_list (Union[list, np.ndarray]): The list of IDs to be formatted as a str.
+    Parameters
+    ----------
+    id_list
+        The list of IDs to be formatted as a str.
 
-    Returns:
-        str: The formatted string representation of the ID list.
+    Returns
+    -------
+    describe
+        The formatted string representation of the ID list.
+
     """
     if isinstance(id_list, np.ndarray):
         id_list = list(id_list)
@@ -58,9 +63,13 @@ def get_str(id_list: Union[list, np.ndarray]) -> str:
 def create_cascade_hierarchy(df_input: pd.DataFrame, model_settings: dict) -> None:
     """Create cascade hierarchy file.
 
-    Args:
-        df_input (pd.DataFrame): The input DataFrame containing model data.
-        model_settings (dict): The settings dictionary for the swimr model.
+    Parameters
+    ----------
+    df_input
+        The input DataFrame containing model data.
+    model_settings
+        The settings dictionary for the swimr model.
+
     """
     rename = {"locid": "location_id", "sex__tmp": "sex_id", "age__tmp": "age_group_id"}
     columns = []
@@ -77,26 +86,33 @@ def create_cascade_hierarchy(df_input: pd.DataFrame, model_settings: dict) -> No
 def get_combined_id(row: pd.Series) -> str:
     """Get combined age and location ID for age cascade.
 
-    Args:
-        row (pd.Series): A row of the input DataFrame containing model data.
+    Parameters
+    ----------
+    row
+        A row of the input DataFrame containing model data.
 
-    Returns:
-        str: The combined age and location ID.
+    Returns
+    -------
+    describe
+        The combined age and location ID.
+
     """
     return f"{row['age_group_id']}_{row['location_id']}"
 
 
-def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
+def swimr_model(experiment_dir: str, submodel_id: str) -> None:
     """Run swimr model by submodel ID.
 
-    Args:
-        experiment_dir (Union[Path, str]): The path to the directory containing the
-            experiment data.
-        submodel_id (str): The ID of the submodel to be processed.
+    Parameters
+    ----------
+    experiment_dir
+        The path to the directory containing the experiment data.
+    submodel_id
+        The ID of the submodel to be processed.
+
     """
-    experiment_dir = Path(experiment_dir)
-    swimr_dir = experiment_dir / "results" / "swimr"
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]
@@ -104,9 +120,9 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     subset_id = int(submodel_id.split("_")[2][6:])
     holdout_id = submodel_id.split("_")[3]
     model_settings = settings["swimr"]["models"][model_id]
-    params = SwimrParams(model_id, param_sets=pd.read_csv(swimr_dir / "parameters.csv"))
+    params = SwimrParams(model_id, param_sets=dataif.load_swimr("parameters.csv"))
     subsets = Subsets(
-        model_id, model_settings, subsets=pd.read_csv(swimr_dir / "subsets.csv")
+        model_id, model_settings, subsets=dataif.load_swimr("subsets.csv")
     )
 
     # Load data and filter by subset
@@ -114,7 +130,6 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
         get_smoother_input("swimr", settings, experiment_dir, from_rover=True),
         subset_id,
     )
-    breakpoint()
     df_input["holdout"] = df_input[settings["col_test"]] != 0
     if (
         model_settings["model_type"] == "cascade"
@@ -123,15 +138,16 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
         df_input["location_id"] = df_input.apply(get_combined_id, axis=1)
     if holdout_id != "full":
         df_input["holdout"] = df_input["holdout"] & (df_input[holdout_id] != 0)
-    model_data = str(
-        swimr_dir / "data" / f"{model_id}_subset{subset_id}_{holdout_id}.parquet"
-    )
+    model_data = f"data/{model_id}_subset{subset_id}_{holdout_id}.parquet"
 
     # The swimr task script overwrites holdout with the value of holdout1, for some reason
     # So enforce the same column here
     if "holdout1" in df_input.columns:
         df_input["holdout1"] = df_input["holdout"].astype({"holdout": int})
-    df_input.astype({"holdout": int}).to_parquet(model_data)
+    dataif.dump_swimr(
+        df_input.astype({"holdout": int}),
+        model_data
+    )
 
     # Create submodel settings
     model_settings["prediction_submodel_ids"] = get_str(
@@ -141,7 +157,7 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
         df_input["age_group_id"].unique()
     )
     model_settings["prediction_year_ids"] = get_str(df_input["year_id"].unique())
-    model_settings["working_dir"] = str(swimr_dir / "submodels" / submodel_id) + "/"
+    model_settings["working_dir"] = str(dataif.swimr / "submodels" / submodel_id) + "/"
     Path(model_settings["working_dir"]).mkdir(exist_ok=True)
     for param in params.params:
         if param in ("theta", "intercept_theta"):
@@ -168,7 +184,7 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
             "-s",
             "/mnt/team/msca/priv/code/swimr/tasks/run_swimr.R",
             "--path_to_input_data",
-            model_data,
+            dataif.swimr / model_data,
             "--path_to_similarity_matrix",
             model_settings["similarity_matrix"],
             "--path_to_model_specs",
@@ -186,7 +202,8 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
     )
 
     # Get predictions
-    df_pred = pd.read_parquet(model_settings["working_dir"] + "predictions.parquet")
+    dataif.add_dir("swimr_preds", model_settings["working_dir"])
+    df_pred = dataif.load_swimr_preds("predictions.parquet")
     df_pred = df_pred.melt(
         id_vars=["age_group_id", "year_id"],
         value_vars=tuple(df_pred.columns[3:]),
@@ -214,10 +231,11 @@ def swimr_model(experiment_dir: Union[Path, str], submodel_id: str) -> None:
         ),
         axis=1,
     )
-    df_pred[
-        as_list(settings["col_id"])
-        + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
-    ].to_parquet(model_settings["working_dir"] + "predictions.parquet")
+    df_pred = df_pred[
+        as_list(settings["col_id"]) +
+        ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
+    ]
+    dataif.dump_swimr_preds(df_pred, "predictions.parquet")
 
 
 def main() -> None:

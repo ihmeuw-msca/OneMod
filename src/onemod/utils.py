@@ -1,7 +1,7 @@
 """Useful functions."""
 from __future__ import annotations
 
-from functools import wraps
+from functools import wraps, cache
 from itertools import product
 from pathlib import Path
 from typing import Any, Callable, Optional, TYPE_CHECKING, Union
@@ -375,7 +375,8 @@ def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True) 
 
 def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
     """Get input data for rover model."""
-    df_input = pd.read_parquet(settings["input_path"])
+    interface = DataInterface(data=settings["input_path"])
+    df_input = interface.load_data()
     for dimension in as_list(settings["col_id"]):
         df_input = df_input[df_input[dimension].isin(settings[dimension])]
     return df_input
@@ -384,15 +385,14 @@ def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
 def get_smoother_input(
     smoother: str,
     settings: dict,
-    experiment_dir: Union[Path, str],
+    experiment_dir: str,
     from_rover: Optional[bool] = False,
 ) -> pd.DataFrame:
     """Get input data for smoother model."""
-    experiment_dir = Path(experiment_dir)
+    interface = get_data_interface(experiment_dir)
     if from_rover:
-        df_input = pd.read_parquet(
-            experiment_dir / "results" / "regmod_smooth" / "predictions.parquet"
-        ).rename(columns={"residual": "residual_value"})
+        df_input = interface.load_regmod_smooth("predictions.parquet")
+        df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
         df_input = get_rover_covsel_input(settings)
 
@@ -406,10 +406,9 @@ def get_smoother_input(
         columns -= {test_col}
 
     if len(columns) > 0:
+        right = interface.load_data()
         df_input = df_input.merge(
-            right=pd.read_parquet(settings["input_path"])[
-                as_list(settings["col_id"]) + list(columns)
-            ].drop_duplicates(),
+            right=right[as_list(settings["col_id"]) + list(columns)].drop_duplicates(),
             on=settings["col_id"],
         )
     if smoother == "weave":  # weave models can't have NaN data
@@ -482,36 +481,35 @@ def get_ensemble_input(settings: dict) -> pd.DataFrame:
 
 
 def get_rover_covsel_submodels(
-    experiment_dir: Union[Path, str], save_file: bool = False
+    experiment_dir: str, save_file: bool = False
 ) -> list[str]:
     """Get rover submodel IDs and save subsets.
     TODO: merge this to the rover_covsel function to avoid confusion
     """
-    experiment_dir = Path(experiment_dir)
-    rover_covsel_dir = experiment_dir / "results" / "rover_covsel"
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Create rover subsets and submodels
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
     df_input = get_rover_covsel_input(settings)
     subsets = Subsets("rover_covsel", settings["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
     if save_file:
-        subsets.subsets.to_csv(rover_covsel_dir / "subsets.csv", index=False)
+        dataif.dump_rover_covsel(subsets.subsets, "subsets.csv")
     return submodels
 
 
 def get_swimr_submodels(
-    experiment_dir: Union[Path, str], save_files: Optional[bool] = False
+    experiment_dir: str, save_files: Optional[bool] = False
 ) -> list[str]:
     """Get swimr submodel IDs; save parameters and subsets."""
-    experiment_dir = Path(experiment_dir)
-    swimr_dir = experiment_dir / "results" / "swimr"
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Create swimr parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+
     df_input = get_smoother_input("swimr", settings, experiment_dir)
     for model_id, model_settings in settings["swimr"]["models"].items():
         params = SwimrParams(model_id, model_settings)
@@ -528,21 +526,21 @@ def get_swimr_submodels(
 
     # Save files
     if save_files:
-        pd.concat(param_list).to_csv(swimr_dir / "parameters.csv", index=False)
-        pd.concat(subset_list).to_csv(swimr_dir / "subsets.csv", index=False)
+        dataif.dump_swimr(pd.concat(param_list), "parameters.csv")
+        dataif.dump_swimr(pd.concat(subset_list), "subsets.csv")
     return submodels
 
 
 def get_weave_submodels(
-    experiment_dir: Union[Path, str], save_files: Optional[bool] = False
+    experiment_dir: str, save_files: Optional[bool] = False
 ) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
-    experiment_dir = Path(experiment_dir)
-    weave_dir = experiment_dir / "results" / "weave"
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+
     df_input = get_smoother_input("weave", settings, experiment_dir)
     for model_id, model_settings in settings["weave"]["models"].items():
         params = WeaveParams(model_id, model_settings)
@@ -563,8 +561,8 @@ def get_weave_submodels(
 
     # Save files
     if save_files:
-        pd.concat(param_list).to_csv(weave_dir / "parameters.csv", index=False)
-        pd.concat(subset_list).to_csv(weave_dir / "subsets.csv", index=False)
+        dataif.dump_weave(pd.concat(param_list), "parameters.csv")
+        dataif.dump_weave(pd.concat(subset_list), "subsets.csv")
     return submodels
 
 
@@ -597,6 +595,7 @@ def task_template_cache(task_template_name: str) -> Callable:
     return inner_decorator
 
 
+@cache
 def get_data_interface(experiment_dir: str) -> DataInterface:
     """Get data interface for loading and dumping files. This object encoded the
     folder structure of the experiments, including where the configuration files
@@ -643,4 +642,5 @@ def get_data_interface(experiment_dir: str) -> DataInterface:
     dataif.add_dir("regmod_smooth", dataif.results / "regmod_smooth")
     dataif.add_dir("weave", dataif.results / "weave")
     dataif.add_dir("swimr", dataif.results / "swimr")
+    dataif.add_dir("ensemble", dataif.results / "ensemble")
     return dataif

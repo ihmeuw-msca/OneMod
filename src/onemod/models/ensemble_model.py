@@ -1,26 +1,26 @@
 """Run ensemble model."""
-from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
+import warnings
 
 import fire
 import numpy as np
 import pandas as pd
 
-from onemod.utils import as_list, get_ensemble_input, load_settings, Subsets
+from onemod.utils import as_list, get_data_interface, get_ensemble_input, Subsets
 
 
 def get_predictions(
-    experiment_dir: Union[Path, str], holdout_id: Any, col_pred: str
+    experiment_dir: str, holdout_id: Any, col_pred: str
 ) -> pd.DataFrame:
     """Load available smoother predictions.
 
     Parameters
     ----------
-    experiment_dir : Union[Path, str]
+    experiment_dir
         Path to the experiment directory.
-    holdout_id : Any
+    holdout_id
         Holdout ID for which predictions are requested.
-    col_pred : str
+    col_pred
         Column name for the prediction values.
 
     Returns
@@ -35,37 +35,36 @@ def get_predictions(
 
     """
     holdout_id = str(holdout_id)
-    experiment_dir = Path(experiment_dir)
+    dataif = get_data_interface(experiment_dir)
     if holdout_id == "full":
-        swimr_path = Path(experiment_dir / "results" / "swimr" / "predictions.parquet")
-        weave_path = Path(experiment_dir / "results" / "weave" / "predictions.parquet")
+        swimr_file = "predictions.parquet"
+        weave_file = "predictions.parquet"
     else:
-        swimr_path = Path(
-            experiment_dir / "results" / "swimr" / f"predictions_{holdout_id}.parquet"
-        )
-        weave_path = Path(
-            experiment_dir / "results" / "weave" / f"predictions_{holdout_id}.parquet"
-        )
-    if swimr_path.exists() and weave_path.exists():
-        df_smoother = pd.merge(
-            left=pd.concat(
-                [pd.read_parquet(swimr_path)[col_pred]], axis=1, keys=["swimr"]
-            ),
-            right=pd.concat(
-                [pd.read_parquet(weave_path)[col_pred]], axis=1, keys=["weave"]
-            ),
-            left_index=True,
-            right_index=True,
-        )
-    elif swimr_path.exists():
-        df_smoother = pd.concat(
-            [pd.read_parquet(swimr_path)[col_pred]], axis=1, keys=["swimr"]
-        )
-    elif weave_path.exists():
-        df_smoother = pd.concat(
-            [pd.read_parquet(weave_path)[col_pred]], axis=1, keys=["weave"]
-        )
-    else:
+        swimr_file = f"predictions_{holdout_id}.parquet"
+        weave_file = f"predictions_{holdout_id}.parquet"
+
+    try:
+        df_smoother = dataif.load_weave(weave_file)
+        # Use concat to add a level to the column multi-index
+        df_smoother = pd.concat([df_smoother[col_pred]], axis=1, keys="weave")
+    except FileNotFoundError:
+        # No weave smoother results, initialize empty df
+        warnings.warn("No weave predictions found for ensemble stage.")
+        df_smoother = pd.DataFrame()
+
+    try:
+        swimr_df = dataif.load_swimr(swimr_file)
+        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys="swimr")
+        if df_smoother.empty:
+            df_smoother = swimr_df
+        else:
+            df_smoother = pd.merge(
+                df_smoother, swimr_df, left_index=True, right_index=True
+            )
+    except FileNotFoundError:
+        warnings.warn("No swimr predictions found for ensemble stage.")
+
+    if df_smoother.empty:
         raise FileNotFoundError("Smoother results do not exist")
     # df_smoother is always a multi-indexed dataframe, so df_smoother.columns is always a
     # MultiIndex object instead of an Index object.
@@ -240,7 +239,7 @@ def get_subset_weights(
     raise ValueError(f"Invalid weight score: {score}")
 
 
-def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) -> None:
+def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     """Run ensemble model on smoother predictions.
 
     Parameters
@@ -249,13 +248,14 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
         Path to the experiment directory.
 
     """
-    experiment_dir = Path(experiment_dir)
-    ensemble_dir = experiment_dir / "results" / "ensemble"
-    settings = load_settings(experiment_dir / "config" / "settings.yml")
+    dataif = get_data_interface(experiment_dir)
+    settings = dataif.load_settings()
+    subsets_df = dataif.load_ensemble("subsets.csv")
+
     subsets = Subsets(
         "ensemble",
         settings["ensemble"],
-        subsets=pd.read_csv(ensemble_dir / "subsets.csv"),
+        subsets=subsets_df,
     )
 
     # Load input data and smoother predictions
@@ -300,8 +300,16 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
 
     metric = settings["ensemble"]["metric"]
     full_df = pd.concat(df_list)
-    mean = full_df.groupby(columns).mean(numeric_only=True).rename({metric: f"{metric}_mean"}, axis=1)
-    std = full_df.groupby(columns).std(numeric_only=True).rename({metric: f"{metric}_std"}, axis=1)
+    mean = (
+        full_df.groupby(columns)
+        .mean(numeric_only=True)
+        .rename({metric: f"{metric}_mean"}, axis=1)
+    )
+    std = (
+        full_df.groupby(columns)
+        .std(numeric_only=True)
+        .rename({metric: f"{metric}_std"}, axis=1)
+    )
     df_performance = pd.concat([mean, std], axis=1)
     if settings["ensemble"]["score"] == "avg":
         df_performance["weight"] = get_weights(
@@ -319,7 +327,7 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
             settings["ensemble"]["top_pct_score"],
             settings["ensemble"]["top_pct_model"],
         )
-    df_performance.T.to_csv(ensemble_dir / "performance.csv")
+    dataif.dump_ensemble(df_performance.T, "performance.csv")
 
     # Get ensemble predictions
     if "groupby" in settings["ensemble"]:
@@ -346,7 +354,7 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
             .reset_index()
             .rename(columns={0: settings["col_pred"]})
         )
-    df_pred.to_parquet(ensemble_dir / "predictions.parquet")
+    dataif.dump_ensemble(df_pred, "predictions.parquet")
 
 
 def main() -> None:
