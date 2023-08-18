@@ -385,7 +385,7 @@ def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
 def get_smoother_input(
     smoother: str,
     settings: dict,
-    experiment_dir: Union[Path, str],
+    experiment_dir: str,
     from_rover: Optional[bool] = False,
 ) -> pd.DataFrame:
     """Get input data for smoother model."""
@@ -409,9 +409,7 @@ def get_smoother_input(
     if len(columns) > 0:
         right = interface.load_data()
         df_input = df_input.merge(
-            right=right[
-                as_list(settings["col_id"]) + list(columns)
-            ].drop_duplicates(),
+            right=right[as_list(settings["col_id"]) + list(columns)].drop_duplicates(),
             on=settings["col_id"],
         )
     if smoother == "weave":  # weave models can't have NaN data

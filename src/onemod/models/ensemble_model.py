@@ -1,6 +1,8 @@
 """Run ensemble model."""
+from functools import reduce
 from pathlib import Path
 from typing import Any, Optional, Union
+
 import warnings
 
 import fire
@@ -11,17 +13,17 @@ from onemod.utils import as_list, get_data_interface, get_ensemble_input, load_s
 
 
 def get_predictions(
-    experiment_dir: Union[Path, str], holdout_id: Any, col_pred: str
+    experiment_dir: str, holdout_id: Any, col_pred: str
 ) -> pd.DataFrame:
     """Load available smoother predictions.
 
     Parameters
     ----------
-    experiment_dir : Union[Path, str]
+    experiment_dir
         Path to the experiment directory.
-    holdout_id : Any
+    holdout_id
         Holdout ID for which predictions are requested.
-    col_pred : str
+    col_pred
         Column name for the prediction values.
 
     Returns
@@ -37,6 +39,7 @@ def get_predictions(
     """
     holdout_id = str(holdout_id)
     experiment_dir = Path(experiment_dir)
+
     dataif = get_data_interface(experiment_dir)
     if holdout_id == "full":
         swimr_file = "predictions.parquet"
@@ -48,7 +51,7 @@ def get_predictions(
     try:
         df_smoother = dataif.load_weave(weave_file)
         # Use concat to add a level to the column multi-index
-        df_smoother = pd.concat([df_smoother[col_pred]], axis=1, keys='weave')
+        df_smoother = pd.concat([df_smoother[col_pred]], axis=1, keys="weave")
     except FileNotFoundError:
         # No weave smoother results, initialize empty df
         warnings.warn("No weave predictions found for ensemble stage.")
@@ -56,11 +59,13 @@ def get_predictions(
 
     try:
         swimr_df = dataif.load_swimr(swimr_file)
-        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys='swimr')
+        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys="swimr")
         if df_smoother.empty:
             df_smoother = swimr_df
         else:
-            df_smoother = pd.merge(df_smoother, swimr_df, left_index=True, right_index=True)
+            df_smoother = pd.merge(
+                df_smoother, swimr_df, left_index=True, right_index=True
+            )
     except FileNotFoundError:
         warnings.warn("No swimr predictions found for ensemble stage.")
 
@@ -106,11 +111,11 @@ def get_performance(
         If an invalid performance metric is provided.
 
     """
-    df_holdout = df_holdout[df_holdout[row["holdout_id"]] == 1]
+    df_holdout = df_holdout[(df_holdout[row["holdout_id"]] == 1) & (df_holdout['param_id'] == row['param_id'])]
     if subsets is not None:
         df_holdout = subsets.filter_subset(df_holdout, row["subset_id"])
     if metric == "rmse":
-        return np.sqrt(np.mean((df_holdout[col_obs] - df_holdout[tuple(row[:3])]) ** 2))
+        return np.sqrt(np.mean((df_holdout[col_obs] - df_holdout[row.model_id]) ** 2))
     raise ValueError(f"Invalid performance metric: {metric}")
 
 
@@ -239,7 +244,7 @@ def get_subset_weights(
     raise ValueError(f"Invalid weight score: {score}")
 
 
-def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) -> None:
+def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     """Run ensemble model on smoother predictions.
 
     Parameters
@@ -275,13 +280,24 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
             how="cross",
         )
     df_list = []
+    id_cols = settings['col_id']
+
     for holdout_id, df in df_performance.groupby("holdout_id"):
-        # TODO: Handle warnings from 1 level left frame, 3 level right frame
-        df_holdout = pd.merge(
-            left=df_input,
-            right=get_predictions(experiment_dir, holdout_id, settings["col_pred"]),
-            on=settings["col_id"],
+        predictions = get_predictions(experiment_dir, holdout_id, settings["col_pred"])
+        # Iteratively merge on prediction columns
+        df_holdout = reduce(
+            lambda df, smoother: pd.merge(
+                left=df,
+                right=predictions.loc[:, smoother].stack().reset_index(),
+                how='right',
+                on=id_cols + ['param_id']
+            ),
+            predictions.columns.get_level_values("smoother_id"),
+            pd.DataFrame(columns=id_cols + ['param_id'])
         )
+        df_holdout = pd.merge(df_holdout, df_input, on=id_cols)
+
+        # Select holdout ids, and calc rmse by subset
         df[settings["ensemble"]["metric"]] = df.apply(
             lambda row: get_performance(
                 row,
@@ -301,8 +317,16 @@ def ensemble_model(experiment_dir: Union[Path, str], *args: Any, **kwargs: Any) 
 
     metric = settings["ensemble"]["metric"]
     full_df = pd.concat(df_list)
-    mean = full_df.groupby(columns).mean(numeric_only=True).rename({metric: f"{metric}_mean"}, axis=1)
-    std = full_df.groupby(columns).std(numeric_only=True).rename({metric: f"{metric}_std"}, axis=1)
+    mean = (
+        full_df.groupby(columns)
+        .mean(numeric_only=True)
+        .rename({metric: f"{metric}_mean"}, axis=1)
+    )
+    std = (
+        full_df.groupby(columns)
+        .std(numeric_only=True)
+        .rename({metric: f"{metric}_std"}, axis=1)
+    )
     df_performance = pd.concat([mean, std], axis=1)
     if settings["ensemble"]["score"] == "avg":
         df_performance["weight"] = get_weights(
