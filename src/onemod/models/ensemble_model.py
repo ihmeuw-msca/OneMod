@@ -9,7 +9,7 @@ import fire
 import numpy as np
 import pandas as pd
 
-from onemod.utils import as_list, get_data_interface, get_ensemble_input, load_settings, Subsets
+from onemod.utils import as_list, get_data_interface, get_ensemble_input, Subsets
 
 
 def get_predictions(

@@ -34,7 +34,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     subsets = Subsets(
         "rover_covsel",
         settings["rover_covsel"],
-        subsets=dataif.load_covsel("subsets.csv"),
+        subsets=dataif.load_rover_covsel("subsets.csv"),
     )
 
     # Load and filter by subset
@@ -50,7 +50,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     df_train = df_input[df_input[settings["col_test"]] == 0]
 
-    dataif.dump_covsel(df_train, f"data/{submodel_id}.parquet")
+    dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
     rover = Rover(**settings["rover_covsel"]["Rover"])
@@ -59,9 +59,9 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     rover.fit(data=df_train, **settings["rover_covsel"]["Rover.fit"])
 
     # Save results
-    dataif.dump_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
-    dataif.dump_covsel(rover.learner_info, f"submodels/{submodel_id}/learner_info.csv")
-    dataif.dump_covsel(rover.summary, f"submodels/{submodel_id}/summary.csv")
+    dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
+    dataif.dump_rover_covsel(rover.learner_info, f"submodels/{submodel_id}/learner_info.csv")
+    dataif.dump_rover_covsel(rover.summary, f"submodels/{submodel_id}/summary.csv")
 
 
 def main() -> None:

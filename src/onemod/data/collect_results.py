@@ -162,7 +162,7 @@ def collect_weave_results(experiment_dir: str) -> None:
     for holdout_id in as_list(settings["col_holdout"]) + ["full"]:
         df_pred = pd.concat(
             [
-                pd.load_weave(f"submodels/{submodel_id}.parquet").astype(
+                dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
                     {"param_id": str}
                 )
                 for submodel_id in submodel_ids
