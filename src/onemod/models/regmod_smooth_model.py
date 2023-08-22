@@ -167,6 +167,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
         *settings["col_id"],
         settings["col_obs"],
         settings["col_test"],
+        settings["rover_covsel"]["Rover"]["weights"],
         *[col['name'] for col in settings["regmod_smooth"]["Model"]["dims"]]
     ]
     expected_columns = list(set(expected_columns))
