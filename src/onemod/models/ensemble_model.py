@@ -1,6 +1,8 @@
 """Run ensemble model."""
 from functools import reduce
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any, Optional, Union
+
 import warnings
 
 import fire
@@ -36,6 +38,8 @@ def get_predictions(
 
     """
     holdout_id = str(holdout_id)
+    experiment_dir = Path(experiment_dir)
+
     dataif = get_data_interface(experiment_dir)
     if holdout_id == "full":
         swimr_file = "predictions.parquet"
@@ -249,6 +253,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
         Path to the experiment directory.
 
     """
+    experiment_dir = Path(experiment_dir)
     dataif = get_data_interface(experiment_dir)
     settings = dataif.load_settings()
     subsets_df = dataif.load_ensemble("subsets.csv")

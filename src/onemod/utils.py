@@ -389,6 +389,7 @@ def get_smoother_input(
     from_rover: Optional[bool] = False,
 ) -> pd.DataFrame:
     """Get input data for smoother model."""
+    experiment_dir = Path(experiment_dir)
     interface = get_data_interface(experiment_dir)
     if from_rover:
         df_input = interface.load_regmod_smooth("predictions.parquet")
@@ -397,18 +398,14 @@ def get_smoother_input(
         df_input = get_rover_covsel_input(settings)
 
     columns = _get_smoother_columns(smoother, settings).difference(df_input.columns)
-    # Test column might be generated in rover, not always present
-    # Generate if needed
-    test_col = settings["col_test"]
-    if test_col not in df_input:
-        df_input[test_col] = df_input[settings["col_obs"]].isna().astype("int")
-        # Will always be present in the extra columns, so remove
-        columns -= {test_col}
+    columns = as_list(settings["col_id"]) + list(columns)
+    # Deduplicate
+    columns = list(set(columns))
 
     if len(columns) > 0:
         right = interface.load_data()
         df_input = df_input.merge(
-            right=right[as_list(settings["col_id"]) + list(columns)].drop_duplicates(),
+            right=right[columns].drop_duplicates(),
             on=settings["col_id"],
         )
     if smoother == "weave":  # weave models can't have NaN data

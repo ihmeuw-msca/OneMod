@@ -135,7 +135,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     var_groups = settings["regmod_smooth"]["Model"]["var_groups"]
     coef_bounds = settings["regmod_smooth"]["Model"]["coef_bounds"]
 
-    selected_covs = dataif.load_rover("selected_covs.yaml")
+    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
 
     # Fill in default box constraint for selected covariates if not already provided
     for cov in selected_covs:
@@ -162,14 +162,20 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     )
 
     # Slice the dataframe to only columns of interest
-    expected_columns = settings["rover_covsel"]["Rover"]["cov_exploring"]
-    expected_columns.append(settings["col_obs"])
-    for col in settings["regmod_smooth"]["Model"]["dims"]:
-        expected_columns.append(col["name"])
+    expected_columns = [
+        *settings["rover_covsel"]["Rover"]["cov_exploring"],
+        *settings["col_id"],
+        settings["col_obs"],
+        settings["col_test"],
+        settings["rover_covsel"]["Rover"]["weights"],
+        *[col["name"] for col in settings["regmod_smooth"]["Model"]["dims"]],
+    ]
+    expected_columns = list(set(expected_columns))
 
     df = dataif.load(settings["input_path"], columns=expected_columns)
-    df_train = df.query(f"{settings['col_test']} == 0")
-    df_train = df_train[~(df_train[settings["col_obs"]].isnull())]
+    df_train = df.query(
+        f"({settings['col_test']} == 0) & {settings['col_obs']}.notnull()"
+    )
 
     # Fit regmod smooth model
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
@@ -200,9 +206,9 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     df_coef = get_coef(model)
 
     # Save results
-    dataif.dump_smooth(model, "model.pkl")
-    dataif.dump_smooth(df_coef, "coef.csv")
-    dataif.dump_smooth(df, "predictions.parquet")
+    dataif.dump_regmod_smooth(model, "model.pkl")
+    dataif.dump_regmod_smooth(df_coef, "coef.csv")
+    dataif.dump_regmod_smooth(df, "predictions.parquet")
 
 
 def main() -> None:
