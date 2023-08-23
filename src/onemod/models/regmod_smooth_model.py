@@ -168,13 +168,14 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
         settings["col_obs"],
         settings["col_test"],
         settings["rover_covsel"]["Rover"]["weights"],
-        *[col['name'] for col in settings["regmod_smooth"]["Model"]["dims"]]
+        *[col["name"] for col in settings["regmod_smooth"]["Model"]["dims"]],
     ]
     expected_columns = list(set(expected_columns))
 
     df = dataif.load(settings["input_path"], columns=expected_columns)
-    df_train = df.query(f"{settings['col_test']} == 0")
-    df_train = df_train[~(df_train[settings["col_obs"]].isnull())]
+    df_train = df.query(
+        f"({settings['col_test']} == 0) & {settings['col_obs']}.notnull()"
+    )
 
     # Fit regmod smooth model
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
