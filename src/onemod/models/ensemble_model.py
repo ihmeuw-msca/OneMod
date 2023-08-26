@@ -1,7 +1,7 @@
 """Run ensemble model."""
 from functools import reduce
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import warnings
 
@@ -9,6 +9,7 @@ import fire
 import numpy as np
 import pandas as pd
 
+from onemod.modeling.metric import Metric
 from onemod.utils import as_list, get_data_interface, get_ensemble_input, Subsets
 
 
@@ -84,6 +85,7 @@ def get_performance(
     subsets: Optional[Subsets],
     metric: str,
     col_obs: str,
+    **kwargs,
 ) -> float:
     """Get smoother performance.
 
@@ -111,12 +113,15 @@ def get_performance(
         If an invalid performance metric is provided.
 
     """
-    df_holdout = df_holdout[(df_holdout[row["holdout_id"]] == 1) & (df_holdout['param_id'] == row['param_id'])]
+    df_holdout = df_holdout[
+        (df_holdout[row["holdout_id"]] == 1)
+        & (df_holdout["param_id"] == row["param_id"])
+    ]
     if subsets is not None:
         df_holdout = subsets.filter_subset(df_holdout, row["subset_id"])
-    if metric == "rmse":
-        return np.sqrt(np.mean((df_holdout[col_obs] - df_holdout[row.model_id]) ** 2))
-    raise ValueError(f"Invalid performance metric: {metric}")
+
+    metric = Metric(metric)
+    return metric(df_holdout, col_obs, row.model_id, **kwargs)
 
 
 def get_weights(
@@ -280,7 +285,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
             how="cross",
         )
     df_list = []
-    id_cols = settings['col_id']
+    id_cols = settings["col_id"]
 
     for holdout_id, df in df_performance.groupby("holdout_id"):
         predictions = get_predictions(experiment_dir, holdout_id, settings["col_pred"])
@@ -289,11 +294,11 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
             lambda df, smoother: pd.merge(
                 left=df,
                 right=predictions.loc[:, smoother].stack().reset_index(),
-                how='right',
-                on=id_cols + ['param_id']
+                how="right",
+                on=id_cols + ["param_id"],
             ),
             predictions.columns.get_level_values("smoother_id"),
-            pd.DataFrame(columns=id_cols + ['param_id'])
+            pd.DataFrame(columns=id_cols + ["param_id"]),
         )
         df_holdout = pd.merge(df_holdout, df_input, on=id_cols)
 
@@ -305,6 +310,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
                 subsets,
                 settings["ensemble"]["metric"],
                 settings["col_obs"],
+                **kwargs,
             ),
             axis=1,
         )
