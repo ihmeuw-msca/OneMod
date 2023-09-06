@@ -142,20 +142,18 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
 
-    # Fill in default box constraint for selected covariates if not already provided
+    # add selected covariates as var_group with age_mid as the dimension
     for cov in selected_covs:
-        var_group = dict(
-            col=cov,
-            dim="age_mid",
-            uprior=tuple(map(float, coef_bounds.get(cov, [-100, 100]))),
-            lam=lam,
-        )
-        try:
-            index = var_group_keys.index((cov, "age_mid"))
-            var_group.update(var_groups[index])
-            var_groups[index] = var_group
-        except ValueError:
-            var_groups.append(var_group)
+        if (cov, "age_mid") not in var_group_keys:
+            var_groups.append(dict(col=cov, dim="age_mid"))
+
+    # default settings for everyone
+    for var_group in var_groups:
+        cov = var_group["col"]
+        if "uprior" not in var_group:
+            var_group["uprior"] = tuple(map(float, coef_bounds.get(cov, [-100, 100])))
+        if "lam" not in var_group:
+            var_group["lam"] = lam
 
     # Create regmod smooth model
     model = Model(
