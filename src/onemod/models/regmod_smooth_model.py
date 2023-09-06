@@ -132,25 +132,30 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     settings = dataif.load_settings()
 
     # Create regmod smooth parameters
-    var_groups = settings["regmod_smooth"]["Model"]["var_groups"]
-    coef_bounds = settings["regmod_smooth"]["Model"]["coef_bounds"]
+    var_groups = settings["regmod_smooth"]["Model"].get("var_groups", [])
+    coef_bounds = settings["regmod_smooth"]["Model"].get("coef_bounds", {})
+    lam = settings["regmod_smooth"]["Model"].get("lambda", 0.0)
+
+    var_group_keys = [
+        (var_group["col"], var_group.get("dim")) for var_group in var_groups
+    ]
 
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
 
     # Fill in default box constraint for selected covariates if not already provided
     for cov in selected_covs:
-        if cov not in coef_bounds:
-            coef_bounds[cov] = [-100, 100]
-
-    for cov in selected_covs:
-        var_group = dict(col=cov, dim="age_mid")
-        if cov in coef_bounds:
-            var_group.update(dict(uprior=tuple(map(float, coef_bounds[cov]))))
-            # Optionally set smoothing parameter, defaults to 0 if not provided
-            if "lambda" in settings["regmod_smooth"]["Model"]:
-                var_group["lam"] = settings["regmod_smooth"]["Model"]["lambda"]
-
-        var_groups.append(var_group)
+        var_group = dict(
+            col=cov,
+            dim="age_mid",
+            uprior=tuple(map(float, coef_bounds.get(cov, [-100, 100]))),
+            lam=lam,
+        )
+        try:
+            index = var_group_keys.index((cov, "age_mid"))
+            var_group.update(var_groups[index])
+            var_groups[index] = var_group
+        except ValueError:
+            var_groups.append(var_group)
 
     # Create regmod smooth model
     model = Model(
