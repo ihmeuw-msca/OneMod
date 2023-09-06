@@ -62,10 +62,11 @@ class Metric:
         obs: str,
         pred: str,
         by: str | list[str] | None = None,
-        alpha: float = 0.05,
+        percentile_lwr: float = 0.0,
+        percentile_upr: float = 0.95,
     ) -> float | DataFrame:
-        """Winsorized RMSE. Cap the `alpha` percent largest errors to the
-        `(1 - alpha)` quantile and then compute the RMSE.
+        """Winsorized RMSE. Truncate errors to be between `percentile_lwr` and
+        `percentile_upr` quantiles and then compute the RMSE.
 
         Example
         -------
@@ -76,9 +77,9 @@ class Metric:
         ...     "pred":[0.11, 0.09, 0.12, 0.21, 0.19, 0.22],
         ... })
         >>> metric = Metric("winsorized_rmse")
-        >>> metric(df, "obs", "pred", alpha=0.5)
+        >>> metric(df, "obs", "pred", percentile_upr=0.5)
         >>> 0.01
-        >>> metric(df, "obs", "pred", by="id", alpha=0.5)
+        >>> metric(df, "obs", "pred", by="id", percentile_upr=0.5)
         id      rmse
         0   1  0.01
         1   2  0.01
@@ -89,13 +90,18 @@ class Metric:
         df = df[[obs, pred] + by].copy()
         df[name] = (df[obs] - df[pred]) ** 2
         if by:
-            df["cap"] = df.groupby(by, sort=False)[name].transform(
-                lambda x: x.quantile(1 - alpha)
+            df["upr"] = df.groupby(by, sort=False)[name].transform(
+                lambda x: x.quantile(percentile_upr)
+            )
+            df["lwr"] = df.groupby(by, sort=False)[name].transform(
+                lambda x: x.quantile(percentile_lwr)
             )
         else:
-            df["cap"] = df[name].quantile(1 - alpha)
+            df["upr"] = df[name].quantile(percentile_upr)
+            df["lwr"] = df[name].quantile(percentile_lwr)
 
-        df[name] = np.minimum(df["cap"], df[name])
+        df[name] = np.maximum(df["lwr"], df[name])
+        df[name] = np.minimum(df["upr"], df[name])
 
         if by:
             return np.sqrt(df.groupby(by)[name].mean()).reset_index()
