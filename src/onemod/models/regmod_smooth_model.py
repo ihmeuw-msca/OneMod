@@ -134,7 +134,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     # Create regmod smooth parameters
     var_groups = settings["regmod_smooth"]["Model"].get("var_groups", [])
     coef_bounds = settings["regmod_smooth"]["Model"].get("coef_bounds", {})
-    lam = settings["regmod_smooth"]["Model"].get("lambda", 0.0)
+    lam = settings["regmod_smooth"]["Model"].get("lam", 0.0)
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
