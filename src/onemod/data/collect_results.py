@@ -75,9 +75,12 @@ def _plot_rover_covsel_results(
     return fig
 
 
-def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure:
+def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    if len(selected_covs) == 0:
+        return None
+
     df_coef = (
         dataif.load_regmod_smooth("coef.csv")
         .query("dim == 'age_mid'")
@@ -120,7 +123,8 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
     dataif = get_data_interface(experiment_dir)
     fig = _plot_regmod_smooth_results(dataif)
-    fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
+    if fig is not None:
+        fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
 
 def collect_swimr_results(experiment_dir: str) -> None:
