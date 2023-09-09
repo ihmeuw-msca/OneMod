@@ -1,5 +1,6 @@
 """Collect onemod stage submodel results."""
 import matplotlib.pyplot as plt
+from warnings import warn
 from pplkit.data.interface import DataInterface
 
 import fire
@@ -79,6 +80,7 @@ def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if len(selected_covs) == 0:
+        warn("There are no covariates selected, skip `plot_regmod_smooth_results`")
         return None
 
     df_coef = (
