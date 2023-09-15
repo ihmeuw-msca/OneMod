@@ -52,9 +52,8 @@ def _plot_rover_covsel_results(
     summaries = summaries.merge(
         subsets[["submodel_id", "age_group_id"]], on="submodel_id", how="left"
     )
-    df_age = dataif.load(
-        settings["input_path"], columns=["age_group_id", "age_mid"]
-    ).drop_duplicates()
+    df_age = dataif.load(settings["input_path"]).drop_duplicates()
+    df_age = df_age[["age_group_id", "age_mid"]]
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
 
     df_covs = summaries.groupby("cov")
