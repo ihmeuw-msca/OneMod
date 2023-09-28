@@ -5,6 +5,7 @@ from functools import partial
 from typing import Callable
 
 import fire
+from loguru import logger
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -192,10 +193,14 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
 
+    logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
+
     # add selected covariates as var_group with age_mid as the dimension
     for cov in selected_covs:
         if (cov, "age_mid") not in var_group_keys:
             var_groups.append(dict(col=cov, dim="age_mid"))
+
+    logger.info(f"{len(var_groups)} var_groups created for smoothing.")
 
     # default settings for everyone
     for var_group in var_groups:
@@ -219,9 +224,12 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
         f"({settings['col_test']} == 0) & {settings['col_obs']}.notnull()"
     )
 
+    logger.info(f"Fitting the model with data size {df_train.shape}")
+
     # Fit regmod smooth model
     model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
     # Create prediction and residuals
+    logger.info("Model fit, calculating residuals")
     df[settings["col_pred"]] = model.predict(df)
     residual_func = get_residual_computation_function(
         model_type=settings["rover_covsel"]["Rover"]["model_type"],
