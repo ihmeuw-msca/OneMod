@@ -46,13 +46,15 @@ def get_residual_computation_function(
             pred=col_pred,
         ),
         ("poisson", "exp"): partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1, col_obs, col_pred
+            lambda row, obs, pred: row[obs] / row[pred] - 1,
+            obs=col_obs,
+            pred=col_pred
         ),
         ("tobit", "exp"): partial(
             lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
             if row[obs] > 0
             else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-w + 1e-6j))
+            * np.imag(norm.logcdf(-row[col_pred] / row["sigma"] + 1e-6j))
             / (1e-6),
             obs=col_obs,
             pred=col_pred,
@@ -76,7 +78,7 @@ def get_residual_se_function(
     col_pred: str,
     inv_link: str,
     sigma: str = "",
-) -> float:
+) -> Callable:
     """
     Calculate the residual standard error for a given row based on the specified model type and inverse link function.
 
@@ -108,7 +110,7 @@ def get_residual_se_function(
             lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
             if row[obs] > 0
             else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-w + 1e-6j)) / (1e-6),
+            * np.imag(norm.logcdf(-row[col_pred] / row[sigma] + 1e-6j)) / (1e-6),
             obs=col_obs,
             pred=col_pred,
             sigma=sigma,
