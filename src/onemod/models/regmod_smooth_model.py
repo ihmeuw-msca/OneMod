@@ -143,6 +143,9 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
 
     # add selected covariates as var_group with age_mid as the dimension
+    base_settings = RegmodSmoothConfiguration(**settings["regmod_smooth"])
+
+
     for cov in selected_covs:
         if (cov, "age_mid") not in var_group_keys:
             var_groups.append(dict(col=cov, dim="age_mid"))
