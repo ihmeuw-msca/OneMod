@@ -60,7 +60,9 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Save results
     dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
-    dataif.dump_rover_covsel(rover.learner_info, f"submodels/{submodel_id}/learner_info.csv")
+    dataif.dump_rover_covsel(
+        rover.learner_info, f"submodels/{submodel_id}/learner_info.csv"
+    )
     dataif.dump_rover_covsel(rover.summary, f"submodels/{submodel_id}/summary.csv")
 
 
