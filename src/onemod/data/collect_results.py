@@ -133,6 +133,7 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
     dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
 
     # Concatenate summaries and save
+    logger.info("Saving concatenated rover coefficient summaries.")
     summaries = _get_rover_covsel_summaries(dataif)
     dataif.dump_rover_covsel(summaries, "summaries.csv")
 
