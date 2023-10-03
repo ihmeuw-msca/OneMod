@@ -104,12 +104,8 @@ def _plot_regmod_smooth_results(
     )
     df_covs = df_coef.groupby("cov")
 
-<<<<<<< HEAD
     fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
-=======
-    fig = _plot_rover_covsel_results(dataif, covs=selected_covs)
     logger.info(f"Plotting smoothed covariates for {len(selected_covs)} covariates.")
->>>>>>> 9d3bd94f974dabb713c543adf169aee1b720bfb0
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.errorbar(
