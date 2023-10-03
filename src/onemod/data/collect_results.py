@@ -23,6 +23,13 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)
+
+    # Merge with the existing subsets
+    subsets = dataif.load_rover_covsel("subsets.csv")
+    subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
+    summaries = summaries.merge(
+        subsets.drop("subset_id", axis=1), on="submodel_id", how="left"
+    )
     return summaries
 
 
@@ -39,20 +46,14 @@ def _get_selected_covs(dataif: DataInterface) -> list[str]:
 
 
 def _plot_rover_covsel_results(
-    dataif: DataInterface, covs: list[str] | None = None
+    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str] | None = None
 ) -> plt.Figure:
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
     """
-    summaries = _get_rover_covsel_summaries(dataif)
-    subsets = dataif.load_rover_covsel("subsets.csv")
     settings = dataif.load_settings()
 
     # add age_mid to summary
-    subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
-    summaries = summaries.merge(
-        subsets[["submodel_id", "age_group_id"]], on="submodel_id", how="left"
-    )
     df_age = dataif.load(
         settings["input_path"], columns=["age_group_id", "age_mid"]
     ).drop_duplicates()
@@ -76,7 +77,9 @@ def _plot_rover_covsel_results(
     return fig
 
 
-def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure | None:
+def _plot_regmod_smooth_results(
+    dataif: DataInterface, summaries: pd.DataFrame
+) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if len(selected_covs) == 0:
@@ -90,7 +93,7 @@ def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure | None:
     )
     df_covs = df_coef.groupby("cov")
 
-    fig = _plot_rover_covsel_results(dataif, covs=selected_covs)
+    fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.errorbar(
@@ -117,14 +120,19 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
     selected_covs = _get_selected_covs(dataif)
     dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
 
-    fig = _plot_rover_covsel_results(dataif)
+    # Concatenate summaries and save
+    summaries = _get_rover_covsel_summaries(dataif)
+    dataif.dump_rover_covsel(summaries, "summaries.csv")
+
+    fig = _plot_rover_covsel_results(dataif, summaries)
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
 def collect_regmod_smooth_results(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
     dataif = get_data_interface(experiment_dir)
-    fig = _plot_regmod_smooth_results(dataif)
+    summaries = _get_rover_covsel_summaries(dataif)
+    fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
