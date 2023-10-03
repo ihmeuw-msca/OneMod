@@ -4,6 +4,7 @@ from warnings import warn
 from pplkit.data.interface import DataInterface
 
 import fire
+from loguru import logger
 import pandas as pd
 
 from onemod.utils import (
@@ -35,6 +36,7 @@ def _get_selected_covs(dataif: DataInterface) -> list[str]:
         .query("significant >= 0.5")["cov"]
         .tolist()
     )
+    logger.info(f"Selected covariates: {selected_covs}")
     return selected_covs
 
 
@@ -44,6 +46,7 @@ def _plot_rover_covsel_results(
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
     """
+    logger.info("Plotting coefficient magnitudes by age.")
     summaries = _get_rover_covsel_summaries(dataif)
     subsets = dataif.load_rover_covsel("subsets.csv")
     settings = dataif.load_settings()
@@ -53,15 +56,19 @@ def _plot_rover_covsel_results(
     summaries = summaries.merge(
         subsets[["submodel_id", "age_group_id"]], on="submodel_id", how="left"
     )
-    df_age = dataif.load(settings["input_path"]).drop_duplicates()
-    df_age = df_age[["age_group_id", "age_mid"]]
+    df_age = dataif.load(settings["input_path"])
+    df_age = df_age[["age_group_id", "age_mid"]].drop_duplicates()
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
-
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
+
+    logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
+
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
         df_cov = df_covs.get_group(cov)
+        if i % 5 == 0:
+            logger.info(f"Plotting for group {i}")
         ax[i].errorbar(
             df_cov["age_mid"],
             df_cov["coef"],
@@ -72,6 +79,8 @@ def _plot_rover_covsel_results(
         )
         ax[i].set_ylabel(cov)
         ax[i].axhline(0.0, linestyle="--")
+
+    logger.info("Completed plotting of rover results.")
     return fig
 
 
@@ -90,6 +99,7 @@ def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure | None:
     df_covs = df_coef.groupby("cov")
 
     fig = _plot_rover_covsel_results(dataif, covs=selected_covs)
+    logger.info(f"Plotting smoothed covariates for {len(selected_covs)} covariates.")
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.errorbar(
