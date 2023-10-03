@@ -1,5 +1,6 @@
 """Run rover covariate selection model."""
 import fire
+from loguru import logger
 from modrover.api import Rover
 from onemod.utils import get_rover_covsel_input, Subsets, get_data_interface
 
@@ -40,12 +41,14 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     # Load and filter by subset
     subset_id = int(submodel_id[6:])
     df_input = subsets.filter_subset(get_rover_covsel_input(settings), subset_id)
+    logger.info(f"Fitting rover for {subset_id=}")
 
     # Create a test column if not existing
     # TODO: Either move this to some data prep stage or make it persistent, needed in
     # other models
     test_col = settings["col_test"]
     if test_col not in df_input:
+        logger.warning("Test column not found, setting null observations as test rows.")
         df_input[test_col] = df_input[settings["col_obs"]].isna().astype("int")
 
     df_train = df_input[df_input[settings["col_test"]] == 0]
@@ -56,11 +59,14 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     rover = Rover(**settings["rover_covsel"]["Rover"])
 
     # Fit rover model
+    logger.info(f"Fitting the rover model with options {settings['rover_covsel']['Rover.fit']}")
     rover.fit(data=df_train, **settings["rover_covsel"]["Rover.fit"])
 
     # Save results
     dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
-    dataif.dump_rover_covsel(rover.learner_info, f"submodels/{submodel_id}/learner_info.csv")
+    dataif.dump_rover_covsel(
+        rover.learner_info, f"submodels/{submodel_id}/learner_info.csv"
+    )
     dataif.dump_rover_covsel(rover.summary, f"submodels/{submodel_id}/summary.csv")
 
 

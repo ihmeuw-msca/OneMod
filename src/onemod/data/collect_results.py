@@ -4,6 +4,7 @@ from warnings import warn
 from pplkit.data.interface import DataInterface
 
 import fire
+from loguru import logger
 import pandas as pd
 
 from onemod.utils import (
@@ -42,6 +43,7 @@ def _get_selected_covs(dataif: DataInterface) -> list[str]:
         .query("significant >= 0.5")["cov"]
         .tolist()
     )
+    logger.info(f"Selected covariates: {selected_covs}")
     return selected_covs
 
 
@@ -51,19 +53,26 @@ def _plot_rover_covsel_results(
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
     """
+
+    logger.info("Plotting coefficient magnitudes by age.")
     settings = dataif.load_settings()
 
     # add age_mid to summary
     df_age = dataif.load(
         settings["input_path"], columns=["age_group_id", "age_mid"]
     ).drop_duplicates()
-    summaries = summaries.merge(df_age, on="age_group_id", how="left")
 
+    summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
+
+    logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
+
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
         df_cov = df_covs.get_group(cov)
+        if i % 5 == 0:
+            logger.info(f"Plotting for group {i}")
         ax[i].errorbar(
             df_cov["age_mid"],
             df_cov["coef"],
@@ -74,6 +83,8 @@ def _plot_rover_covsel_results(
         )
         ax[i].set_ylabel(cov)
         ax[i].axhline(0.0, linestyle="--")
+
+    logger.info("Completed plotting of rover results.")
     return fig
 
 
@@ -93,7 +104,12 @@ def _plot_regmod_smooth_results(
     )
     df_covs = df_coef.groupby("cov")
 
+<<<<<<< HEAD
     fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
+=======
+    fig = _plot_rover_covsel_results(dataif, covs=selected_covs)
+    logger.info(f"Plotting smoothed covariates for {len(selected_covs)} covariates.")
+>>>>>>> 9d3bd94f974dabb713c543adf169aee1b720bfb0
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.errorbar(
