@@ -10,7 +10,6 @@ class RoverConfiguration(BaseModel):
 
     groupby: list[str] = []
     model_type: str
-    obs: str
     cov_fixed: list[str] = []
     cov_exploring: list[str] = []
     weights: str
@@ -35,12 +34,11 @@ class RoverConfiguration(BaseModel):
 class RegmodSmoothConfiguration(BaseModel):
 
     model_type: str
-    obs: str
     dims: list[dict] = []
     var_groups: list[dict] = []
     weights: str
     fit_args: dict = {}
-    coef_bounds: list[dict] = []
+    coef_bounds: dict[str, list[float]] = {}
 
     @field_validator("model_type")
     @classmethod
