@@ -1,5 +1,6 @@
 from typing import Optional
 
+import pandas as pd
 from pydantic import BaseModel, field_validator
 
 from modrover.globals import model_type_dict
