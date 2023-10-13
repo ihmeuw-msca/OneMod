@@ -203,9 +203,6 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
 
     # add selected covariates as var_group with age_mid as the dimension
-    base_settings = RegmodSmoothConfiguration(**settings["regmod_smooth"])
-
-
     for cov in selected_covs:
         if (cov, "age_mid") not in var_group_keys:
             var_groups.append(dict(col=cov, dim="age_mid"))
@@ -222,39 +219,40 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Create regmod smooth model
     model = Model(
-        model_type=settings["regmod_smooth"]["Model"]["model_type"],
-        obs=settings["regmod_smooth"]["Model"]["obs"],
-        dims=settings["regmod_smooth"]["Model"]["dims"],
+        model_type=regmod_smooth_config.model_type,
+        obs=regmod_smooth_config.col_obs,
+        dims=regmod_smooth_config.dims,
         var_groups=var_groups,
-        weights=settings["regmod_smooth"]["Model"]["weights"],
+        weights=regmod_smooth_config.weights,
     )
 
-    df = dataif.load(settings["input_path"])
+    df = dataif.load(global_config.input_path)
     df_train = df.query(
-        f"({settings['col_test']} == 0) & {settings['col_obs']}.notnull()"
+        f"({regmod_smooth_config.col_test} == 0) & {regmod_smooth_config.col_obs}.notnull()"
     )
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
+    model.fit(df_train, **regmod_smooth_config.fit_args)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[settings["col_pred"]] = model.predict(df)
+    rover_config = global_config.rover_covsel
     residual_func = get_residual_computation_function(
-        model_type=settings["rover_covsel"]["Rover"]["model_type"],
-        col_obs=settings["col_obs"],
-        col_pred=settings["col_pred"],
-        inv_link=settings["rover_covsel"]["inv_link"],
-        sigma=settings.get("col_sigma", ""),
+        model_type=rover_config.model_type,
+        col_obs=regmod_smooth_config.col_obs,
+        col_pred=regmod_smooth_config.col_pred,
+        inv_link=rover_config.inv_link,
+        sigma=regmod_smooth_config.col_sigma,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=settings["rover_covsel"]["Rover"]["model_type"],
-        col_obs=settings["col_obs"],
-        col_pred=settings["col_pred"],
-        inv_link=settings["rover_covsel"]["inv_link"],
-        sigma=settings.get("col_sigma", ""),
+        model_type=rover_config.model_type,
+        col_obs=regmod_smooth_config.col_obs,
+        col_pred=regmod_smooth_config.col_pred,
+        inv_link=rover_config.inv_link,
+        sigma=regmod_smooth_config.col_sigma,
     )
     df["residual"] = df.apply(
         residual_func,
