@@ -375,7 +375,9 @@ def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
     interface = DataInterface(data=settings["input_path"])
     df_input = interface.load_data()
     for dimension in as_list(settings["col_id"]):
-        df_input = df_input[df_input[dimension].isin(settings[dimension])]
+        if dimension in settings:
+            # Optionally filter data. Defaults to using all values in the dimension
+            df_input = df_input[df_input[dimension].isin(settings[dimension])]
     return df_input
 
 

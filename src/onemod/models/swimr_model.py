@@ -144,10 +144,7 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
     # So enforce the same column here
     if "holdout1" in df_input.columns:
         df_input["holdout1"] = df_input["holdout"].astype({"holdout": int})
-    dataif.dump_swimr(
-        df_input.astype({"holdout": int}),
-        model_data
-    )
+    dataif.dump_swimr(df_input.astype({"holdout": int}), model_data)
 
     # Create submodel settings
     model_settings["prediction_submodel_ids"] = get_str(
@@ -232,8 +229,8 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
         axis=1,
     )
     df_pred = df_pred[
-        as_list(settings["col_id"]) +
-        ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
+        as_list(settings["col_id"])
+        + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
     ]
     dataif.dump_swimr_preds(df_pred, "predictions.parquet")
 

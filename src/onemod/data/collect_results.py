@@ -4,6 +4,7 @@ from warnings import warn
 from pplkit.data.interface import DataInterface
 
 import fire
+from loguru import logger
 import pandas as pd
 
 from onemod.utils import (
@@ -23,6 +24,13 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)
+
+    # Merge with the existing subsets
+    subsets = dataif.load_rover_covsel("subsets.csv")
+    subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
+    summaries = summaries.merge(
+        subsets.drop("subset_id", axis=1), on="submodel_id", how="left"
+    )
     return summaries
 
 
@@ -35,34 +43,36 @@ def _get_selected_covs(dataif: DataInterface) -> list[str]:
         .query("significant >= 0.5")["cov"]
         .tolist()
     )
+    logger.info(f"Selected covariates: {selected_covs}")
     return selected_covs
 
 
 def _plot_rover_covsel_results(
-    dataif: DataInterface, covs: list[str] | None = None
+    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str] | None = None
 ) -> plt.Figure:
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
     """
-    summaries = _get_rover_covsel_summaries(dataif)
-    subsets = dataif.load_rover_covsel("subsets.csv")
+
+    logger.info("Plotting coefficient magnitudes by age.")
     settings = dataif.load_settings()
 
     # add age_mid to summary
-    subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
-    summaries = summaries.merge(
-        subsets[["submodel_id", "age_group_id"]], on="submodel_id", how="left"
-    )
     df_age = dataif.load(
         settings["input_path"], columns=["age_group_id", "age_mid"]
     ).drop_duplicates()
-    summaries = summaries.merge(df_age, on="age_group_id", how="left")
 
+    summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
+
+    logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
+
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
         df_cov = df_covs.get_group(cov)
+        if i % 5 == 0:
+            logger.info(f"Plotting for group {i}")
         ax[i].errorbar(
             df_cov["age_mid"],
             df_cov["coef"],
@@ -73,10 +83,14 @@ def _plot_rover_covsel_results(
         )
         ax[i].set_ylabel(cov)
         ax[i].axhline(0.0, linestyle="--")
+
+    logger.info("Completed plotting of rover results.")
     return fig
 
 
-def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure | None:
+def _plot_regmod_smooth_results(
+    dataif: DataInterface, summaries: pd.DataFrame
+) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if len(selected_covs) == 0:
@@ -90,7 +104,8 @@ def _plot_regmod_smooth_results(dataif: DataInterface) -> plt.Figure | None:
     )
     df_covs = df_coef.groupby("cov")
 
-    fig = _plot_rover_covsel_results(dataif, covs=selected_covs)
+    fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
+    logger.info(f"Plotting smoothed covariates for {len(selected_covs)} covariates.")
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.errorbar(
@@ -117,14 +132,20 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
     selected_covs = _get_selected_covs(dataif)
     dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
 
-    fig = _plot_rover_covsel_results(dataif)
+    # Concatenate summaries and save
+    logger.info("Saving concatenated rover coefficient summaries.")
+    summaries = _get_rover_covsel_summaries(dataif)
+    dataif.dump_rover_covsel(summaries, "summaries.csv")
+
+    fig = _plot_rover_covsel_results(dataif, summaries)
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
 def collect_regmod_smooth_results(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
     dataif = get_data_interface(experiment_dir)
-    fig = _plot_regmod_smooth_results(dataif)
+    summaries = _get_rover_covsel_summaries(dataif)
+    fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
