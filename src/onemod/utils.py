@@ -4,6 +4,7 @@ from __future__ import annotations
 from functools import wraps, cache
 from itertools import product
 from pathlib import Path
+from pydantic import BaseModel
 from typing import Any, Callable, Optional, TYPE_CHECKING, Union
 import warnings
 
@@ -173,7 +174,7 @@ class Subsets:
     def __init__(
         self,
         model_id: str,
-        settings: dict,
+        settings: BaseModel,
         data: Optional[pd.DataFrame] = None,
         subsets: Optional[pd.DataFrame] = None,
     ) -> None:
@@ -192,16 +193,12 @@ class Subsets:
 
         """
         self.model_id = model_id
-        self.columns = as_list(settings["groupby"])
+        self.columns = as_list(settings.groupby)
         if subsets is None:
             if data is None:
                 raise TypeError("Data cannot be None if subsets are not provided.")
             self.columns = as_list(settings["groupby"])
-            if "max_batch" in settings:
-                max_batch = settings["max_batch"]
-            else:
-                max_batch = -1
-            self.subsets = self._create_subsets(data, max_batch)
+            self.subsets = self._create_subsets(data, settings.max_batch)
         else:
             self.subsets = subsets[subsets["model_id"] == model_id]
 

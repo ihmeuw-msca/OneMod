@@ -1,6 +1,7 @@
 """Run rover covariate selection model."""
 import fire
 from modrover.api import Rover
+from onemod.schema.config import ParentConfiguration, RoverConfiguration
 from onemod.utils import get_rover_covsel_input, Subsets, get_data_interface
 
 
@@ -31,9 +32,12 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     dataif = get_data_interface(experiment_dir)
     settings = dataif.load_settings()
 
+    global_config = ParentConfiguration(**settings)
+    rover_config = global_config.rover_covsel
+
     subsets = Subsets(
         "rover_covsel",
-        settings["rover_covsel"],
+        rover_config,
         subsets=dataif.load_rover_covsel("subsets.csv"),
     )
 
@@ -53,10 +57,11 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
-    rover = Rover(**settings["rover_covsel"]["Rover"])
+    rover_init_args = rover_config.model_dump(exclude={"fit_args"})
+    rover = Rover(**rover_init_args)
 
     # Fit rover model
-    rover.fit(data=df_train, **settings["rover_covsel"]["Rover.fit"])
+    rover.fit(data=df_train, **rover_config.fit_args)
 
     # Save results
     dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")

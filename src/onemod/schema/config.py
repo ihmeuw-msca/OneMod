@@ -6,7 +6,7 @@ from pydantic import BaseModel, field_validator
 from modrover.globals import model_type_dict
 
 
-class RoverConfiguration(BaseModel):
+class RoverConfiguration(BaseModel, extra_args='allow'):
 
     groupby: list[str] = []
     model_type: str
@@ -31,7 +31,7 @@ class RoverConfiguration(BaseModel):
         return fit_args
 
 
-class RegmodSmoothConfiguration(BaseModel):
+class RegmodSmoothConfiguration(BaseModel, extra_args='allow'):
 
     model_type: str
     dims: list[dict] = []
@@ -69,12 +69,43 @@ class ParentConfiguration(BaseModel, extra='allow'):
     col_holdout: list[str]
     col_test: str
     max_attempts: int = 3
+    max_batch: int = -1
 
     rover_covsel: Optional[RoverConfiguration] = None
     regmod_smooth: Optional[RegmodSmoothConfiguration] = None
     weave: Optional[WeaveConfiguration] = None
     swimr: Optional[SwimrConfiguration] = None
     ensemble: Optional[EnsembleConfiguration] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Pass global attributes to children
+        global_vals = {
+            "input_path": self.input_path,
+            "col_id": self.col_id,
+            "col_obs": self.col_obs,
+            "col_pred": self.col_pred,
+            "col_holdout": self.col_holdout,
+            "col_test": self.col_test,
+            "max_attempts": self.max_attempts,
+            "max_batch": self.max_batch
+        }
+
+        child_models = [
+            self.rover_covsel,
+            self.regmod_smooth,
+            self.weave,
+            self.swimr,
+            self.ensemble
+        ]
+
+        for child_model in child_models:
+            if child_model:
+                for key, value in global_vals.items():
+                    # Override in child model only if not already set
+                    if not hasattr(child_model, key):
+                        setattr(child_model, key, value)
+
 
     @property
     def extra_fields(self) -> set[str]:

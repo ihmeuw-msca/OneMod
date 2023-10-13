@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from regmodsm.model import Model
+
+from onemod.schema.config import RegmodSmoothConfiguration, ParentConfiguration
 from onemod.utils import get_data_interface
 
 
@@ -131,10 +133,13 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     dataif = get_data_interface(experiment_dir)
     settings = dataif.load_settings()
 
+    global_config = ParentConfiguration(**settings)
+    regmod_smooth_config = global_config.regmod_smooth
+
     # Create regmod smooth parameters
-    var_groups = settings["regmod_smooth"]["Model"].get("var_groups", [])
-    coef_bounds = settings["regmod_smooth"]["Model"].get("coef_bounds", {})
-    lam = settings["regmod_smooth"]["Model"].get("lam", 0.0)
+    var_groups = regmod_smooth_config.var_groups
+    coef_bounds = regmod_smooth_config.coef_bounds
+    lam = regmod_smooth_config.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups

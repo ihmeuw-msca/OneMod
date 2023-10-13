@@ -18,7 +18,7 @@ rover_covsel:
   cov_exploring: [cov1, cov2, cov3, cov4, cov5]
   weights: population
   holdouts: [holdout1, holdout2, holdout3, holdout4, holdout7]
-  Rover.fit:
+  fit_args:
     strategies: [forward]
     top_pct_score: 1.0
     top_pct_learner: 0.5
@@ -59,7 +59,7 @@ regmod_smooth:
       type: "categorical"
     - name: "location_id"
       type: "categorical"
-  Model.fit:
+  fit_args:
     options:
       verbose: false
       m_scale: 0.1
