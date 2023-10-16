@@ -10,16 +10,17 @@ from modrover.globals import model_type_dict
 class RoverConfiguration(BaseModel):
 
     groupby: list[str] = []
-    model_type: str
+    regmod_model_type: str
     cov_fixed: list[str] = []
     cov_exploring: list[str] = []
     weights: str
     holdouts: list[str] = []
     fit_args: dict = {}
+    max_batch: int = -1
 
     model_config = ConfigDict(extra='allow')
 
-    @field_validator("model_type")
+    @field_validator("regmod_model_type")
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
         assert model_type in model_type_dict, \
@@ -36,16 +37,17 @@ class RoverConfiguration(BaseModel):
 
 class RegmodSmoothConfiguration(BaseModel):
 
-    model_type: str
+    regmod_model_type: str
     dims: list[dict] = []
     var_groups: list[dict] = []
     weights: str
     fit_args: dict = {}
     coef_bounds: dict[str, list[float]] = {}
+    max_batch: int = -1
 
     model_config = ConfigDict(extra='allow')
 
-    @field_validator("model_type")
+    @field_validator("regmod_model_type")
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
         assert model_type in model_type_dict, \
@@ -74,42 +76,12 @@ class ParentConfiguration(BaseModel):
     col_holdout: list[str]
     col_test: str
     max_attempts: int = 3
-    max_batch: int = -1
 
     rover_covsel: Optional[RoverConfiguration] = None
     regmod_smooth: Optional[RegmodSmoothConfiguration] = None
     weave: Optional[WeaveConfiguration] = None
     swimr: Optional[SwimrConfiguration] = None
     ensemble: Optional[EnsembleConfiguration] = None
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Pass global attributes to children
-        global_vals = {
-            "input_path": self.input_path,
-            "col_id": self.col_id,
-            "col_obs": self.col_obs,
-            "col_pred": self.col_pred,
-            "col_holdout": self.col_holdout,
-            "col_test": self.col_test,
-            "max_attempts": self.max_attempts,
-            "max_batch": self.max_batch
-        }
-
-        child_models = [
-            self.rover_covsel,
-            self.regmod_smooth,
-            self.weave,
-            self.swimr,
-            self.ensemble
-        ]
-
-        for child_model in child_models:
-            if child_model:
-                for key, value in global_vals.items():
-                    # Override in child model only if not already set
-                    if not hasattr(child_model, key):
-                        setattr(child_model, key, value)
 
     @property
     def extra_fields(self) -> set[str]:

@@ -6,8 +6,10 @@ from typing import Optional, TYPE_CHECKING, Union
 
 import fire
 from jobmon.client.api import Tool
+from pydantic import ValidationError
 
 from onemod.schema.config import ParentConfiguration
+from onemod.schema.validate import validate_config
 from onemod.stage import StageTemplate
 from onemod.utils import as_list, get_data_interface
 
@@ -136,7 +138,7 @@ def run_pipeline(
             raise ValueError(f"Invalid stage: {stage}")
 
     # Validate the configuration file
-    _validate_config(directory)
+    validate_config(directory, stages)
 
     workflow = create_workflow(
         directory=directory,
@@ -164,16 +166,6 @@ def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
     resume_workflow_from_id(
         workflow_id=workflow_id, cluster_name=cluster_name, log=True
     )
-
-def _validate_config(directory: str):
-    """Validate the configuration file according to the expected schema."""
-
-    dataif = get_data_interface(directory)
-    settings = dataif.load_settings()
-
-    config = ParentConfiguration(**settings)
-    config.validate_against_dataset()
-    breakpoint()
 
 
 def main() -> None:
