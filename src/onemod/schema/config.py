@@ -86,6 +86,3 @@ class ParentConfiguration(BaseModel):
     @property
     def extra_fields(self) -> set[str]:
         return set(self.__dict__) - set(self.model_fields)
-
-    def validate_against_dataset(self) -> None:
-        pass  # TODO
