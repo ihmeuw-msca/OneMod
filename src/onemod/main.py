@@ -7,8 +7,9 @@ from typing import Optional, TYPE_CHECKING, Union
 import fire
 from jobmon.client.api import Tool
 
+from onemod.schema.config import ParentConfiguration
 from onemod.stage import StageTemplate
-from onemod.utils import as_list
+from onemod.utils import as_list, get_data_interface
 
 try:
     # Import will fail until the next version of jobmon is released;
@@ -133,6 +134,10 @@ def run_pipeline(
     for stage in as_list(stages):
         if stage not in all_stages:
             raise ValueError(f"Invalid stage: {stage}")
+
+    # Validate the configuration file
+    _validate_config(directory)
+
     workflow = create_workflow(
         directory=directory,
         stages=as_list(stages),
@@ -159,6 +164,16 @@ def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
     resume_workflow_from_id(
         workflow_id=workflow_id, cluster_name=cluster_name, log=True
     )
+
+def _validate_config(directory: str):
+    """Validate the configuration file according to the expected schema."""
+
+    dataif = get_data_interface(directory)
+    settings = dataif.load_settings()
+
+    config = ParentConfiguration(**settings)
+    config.validate_against_dataset()
+    breakpoint()
 
 
 def main() -> None:

@@ -1,12 +1,13 @@
 from typing import Optional
 
 import pandas as pd
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict
+from pydantic.functional_validators import field_validator
 
 from modrover.globals import model_type_dict
 
 
-class RoverConfiguration(BaseModel, extra_args='allow'):
+class RoverConfiguration(BaseModel):
 
     groupby: list[str] = []
     model_type: str
@@ -15,6 +16,8 @@ class RoverConfiguration(BaseModel, extra_args='allow'):
     weights: str
     holdouts: list[str] = []
     fit_args: dict = {}
+
+    model_config = ConfigDict(extra='allow')
 
     @field_validator("model_type")
     @classmethod
@@ -31,7 +34,7 @@ class RoverConfiguration(BaseModel, extra_args='allow'):
         return fit_args
 
 
-class RegmodSmoothConfiguration(BaseModel, extra_args='allow'):
+class RegmodSmoothConfiguration(BaseModel):
 
     model_type: str
     dims: list[dict] = []
@@ -39,6 +42,8 @@ class RegmodSmoothConfiguration(BaseModel, extra_args='allow'):
     weights: str
     fit_args: dict = {}
     coef_bounds: dict[str, list[float]] = {}
+
+    model_config = ConfigDict(extra='allow')
 
     @field_validator("model_type")
     @classmethod
@@ -60,7 +65,7 @@ class EnsembleConfiguration(BaseModel):
     pass  # TODO
 
 
-class ParentConfiguration(BaseModel, extra='allow'):
+class ParentConfiguration(BaseModel):
 
     input_path: str
     col_id: list[str]
@@ -106,10 +111,9 @@ class ParentConfiguration(BaseModel, extra='allow'):
                     if not hasattr(child_model, key):
                         setattr(child_model, key, value)
 
-
     @property
     def extra_fields(self) -> set[str]:
         return set(self.__dict__) - set(self.model_fields)
 
-    def validate_against_dataset(self, dataset: pd.DataFrame):
-        pass # TODO
+    def validate_against_dataset(self) -> None:
+        pass  # TODO
