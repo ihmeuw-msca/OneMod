@@ -13,8 +13,11 @@ import pandas as pd
 import yaml
 from pplkit.data.interface import DataInterface
 
+from onemod.schema.config import ParentConfiguration
+
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
+    from pydantic import BaseModel
 
 
 class Parameters:
@@ -41,7 +44,7 @@ class Parameters:
     def __init__(
         self,
         model_id: str,
-        settings: Optional[dict] = None,
+        settings: Optional[BaseModel] = None,
         param_sets: Optional[pd.DataFrame] = None,
     ) -> None:
         """Create Parameters object.
@@ -53,7 +56,7 @@ class Parameters:
         ----------
         model_id : str
             Smoother model ID.
-        settings : dict, optional
+        settings : BaseModel, optional
             Model specifications.
         param_sets : pandas.DataFrame, optional
             Parameter set data frame.
@@ -67,7 +70,7 @@ class Parameters:
         else:
             self.param_sets = param_sets[param_sets["model_id"] == model_id]
 
-    def _create_param_sets(self, settings: dict) -> pd.DataFrame:
+    def _create_param_sets(self, settings: BaseModel) -> pd.DataFrame:
         """Create parameter set data frame.
 
         Parameter set data frame contains parameter IDs and their
@@ -77,7 +80,7 @@ class Parameters:
 
         Parameters
         ----------
-        settings : dict
+        settings : BaseModel
             Model specifications.
 
         Returns
@@ -110,7 +113,7 @@ class SwimrParams(Parameters):
         "intercept_theta",
     )
 
-    def _create_param_sets(self, settings: dict) -> pd.DataFrame:
+    def _create_param_sets(self, settings: BaseModel) -> pd.DataFrame:
         """Create parameter set data frame."""
         index = pd.MultiIndex.from_product(
             iterables=[as_list(settings[param]) for param in self.params],
@@ -133,7 +136,7 @@ class WeaveParams(Parameters):
 
     params: tuple[str, ...] = ("radius", "exponent", "distance_dict")
 
-    def _create_param_sets(self, settings: dict) -> pd.DataFrame:
+    def _create_param_sets(self, settings: BaseModel) -> pd.DataFrame:
         """Create parameter set data frame."""
         dimensions = settings["dimensions"]
         index = pd.MultiIndex.from_product(
@@ -184,7 +187,7 @@ class Subsets:
         ----------
         model_id : str
             Model ID.
-        settings : dict
+        settings : BaseModel
             Model specifications.
         data : pandas.DataFrame, optional
             Input data.
@@ -201,7 +204,7 @@ class Subsets:
             max_batch_size = getattr(settings, "max_batch", None)
             if not max_batch_size:
                 max_batch_size = settings.parent_args.get("max_batch")
-            self.subsets = self._create_subsets(data, settings.max_batch)
+            self.subsets = self._create_subsets(data, max_batch_size)
         else:
             self.subsets = subsets[subsets["model_id"] == model_id]
 
@@ -359,7 +362,7 @@ def add_holdouts(
     return df
 
 
-def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True) -> dict:
+def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True, as_model: bool = True) -> BaseModel | dict:
     """Load settings file."""
     try:
         with open(settings_file, "r") as f:
@@ -370,15 +373,18 @@ def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True) 
             settings = {}
         else:
             raise
-    return settings
+    if not as_model:
+        # Return a raw dict, like for task template resources
+        return settings
+    return ParentConfiguration(**settings)
 
 
-def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
+def get_rover_covsel_input(settings: BaseModel) -> pd.DataFrame:
     """Get input data for rover model."""
     interface = DataInterface(data=settings["input_path"])
     df_input = interface.load_data()
-    for dimension in as_list(settings["col_id"]):
-        if dimension in settings:
+    for dimension in settings["col_id"]:
+        if hasattr(settings, dimension):
             # Optionally filter data. Defaults to using all values in the dimension
             df_input = df_input[df_input[dimension].isin(settings[dimension])]
     return df_input
@@ -386,7 +392,7 @@ def get_rover_covsel_input(settings: dict) -> pd.DataFrame:
 
 def get_smoother_input(
     smoother: str,
-    settings: dict,
+    settings: BaseModel,
     experiment_dir: str,
     from_rover: Optional[bool] = False,
 ) -> pd.DataFrame:
@@ -420,7 +426,7 @@ def get_smoother_input(
     return df_input
 
 
-def _get_smoother_columns(smoother: str, settings: dict) -> set:
+def _get_smoother_columns(smoother: str, settings: BaseModel) -> set:
     """Get column names needed for smoother model.
 
     Notes
@@ -466,7 +472,7 @@ def _get_smoother_columns(smoother: str, settings: dict) -> set:
     return columns
 
 
-def get_ensemble_input(settings: dict) -> pd.DataFrame:
+def get_ensemble_input(settings: BaseModel) -> pd.DataFrame:
     """Get input data for ensemble model."""
     input_cols = set(
         as_list(settings["col_id"])
@@ -486,7 +492,7 @@ def get_rover_covsel_submodels(
     TODO: merge this to the rover_covsel function to avoid confusion
     """
     dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    settings = ParentConfiguration(**dataif.load_settings())
 
     # Create rover subsets and submodels
     df_input = get_rover_covsel_input(settings)
@@ -504,7 +510,7 @@ def get_swimr_submodels(
 ) -> list[str]:
     """Get swimr submodel IDs; save parameters and subsets."""
     dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    settings = ParentConfiguration(**dataif.load_settings())
 
     # Create swimr parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
@@ -535,7 +541,7 @@ def get_weave_submodels(
 ) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
     dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    settings = ParentConfiguration(**dataif.load_settings())
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []

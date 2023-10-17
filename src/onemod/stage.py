@@ -57,7 +57,7 @@ class StageTemplate:
         self.tool = tool
 
         # Get task resources
-        resources = load_settings(resources_file, raise_on_error=False)
+        resources = load_settings(resources_file, raise_on_error=False, as_model=False)
         if "task_template_resources" in resources:
             self.resources = resources["task_template_resources"]
         else:
@@ -87,8 +87,7 @@ class StageTemplate:
             List of tasks representing the current stage.
 
         """
-        settings = load_settings(self.experiment_dir / "config" / "settings.yml")
-        config = GlobalConfig(**settings)
+        config = load_settings(self.experiment_dir / "config" / "settings.yml", as_model=True)
 
         # Create stage initialization tasks
         initialization_tasks = self.create_initialization_task()

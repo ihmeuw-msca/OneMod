@@ -38,6 +38,9 @@ class RoverConfiguration(BaseModel):
         # Could import Rover.fit and inspect the args
         return fit_args
 
+    def __getitem__(self, item):
+        return getattr(self, item)
+
 
 class RegmodSmoothConfiguration(BaseModel):
 
@@ -59,6 +62,9 @@ class RegmodSmoothConfiguration(BaseModel):
         assert model_type in model_type_dict, \
             f"model_type must be one of {model_type_dict.keys()}"
         return model_type
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
 
 class WeaveConfiguration(BaseModel):
@@ -125,3 +131,6 @@ class ParentConfiguration(BaseModel):
     @property
     def extra_fields(self) -> set[str]:
         return set(self.__dict__) - set(self.model_fields)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
