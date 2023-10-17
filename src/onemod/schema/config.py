@@ -7,10 +7,17 @@ from pydantic.functional_validators import field_validator
 from modrover.globals import model_type_dict
 
 
-model_config = ConfigDict(extra='allow', frozen=False, validate_assignment=True)
 
 
-class RoverConfiguration(BaseModel):
+
+class ParametrizedBaseModel(BaseModel):
+    """An extension of BaseModel that supports __getitem__ and is configured."""
+    model_config = ConfigDict(extra='allow', frozen=False, validate_assignment=True)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+class RoverConfiguration(ParametrizedBaseModel):
 
     groupby: list[str] = []
     model_type: str  # TODO: This clashes with pydantic naming conventions and will raise warnings
@@ -19,8 +26,6 @@ class RoverConfiguration(BaseModel):
     weights: str
     holdouts: list[str] = []
     fit_args: dict = {}
-
-    model_config = model_config
 
     parent_args: dict = {}
 
@@ -38,11 +43,8 @@ class RoverConfiguration(BaseModel):
         # Could import Rover.fit and inspect the args
         return fit_args
 
-    def __getitem__(self, item):
-        return getattr(self, item)
 
-
-class RegmodSmoothConfiguration(BaseModel):
+class RegmodSmoothConfiguration(ParametrizedBaseModel):
 
     model_type: str
     dims: list[dict] = []
@@ -51,10 +53,9 @@ class RegmodSmoothConfiguration(BaseModel):
     fit_args: dict = {}
     inv_link: str
     coef_bounds: dict[str, list[float]] = {}
+    lam: float = 0.0
 
     parent_args: dict = {}
-
-    model_config = model_config
 
     @field_validator("model_type")
     @classmethod
@@ -63,26 +64,23 @@ class RegmodSmoothConfiguration(BaseModel):
             f"model_type must be one of {model_type_dict.keys()}"
         return model_type
 
-    def __getitem__(self, item):
-        return getattr(self, item)
 
-
-class WeaveConfiguration(BaseModel):
+class WeaveConfiguration(ParametrizedBaseModel):
     # TODO
-    model_config = model_config
+    pass
 
 
-class SwimrConfiguration(BaseModel):
+class SwimrConfiguration(ParametrizedBaseModel):
     # TODO
-    model_config = model_config
+    pass
 
 
-class EnsembleConfiguration(BaseModel):
+class EnsembleConfiguration(ParametrizedBaseModel):
     # TODO
-    model_config = model_config
+    pass
 
 
-class ParentConfiguration(BaseModel):
+class ParentConfiguration(ParametrizedBaseModel):
 
     input_path: str
     col_id: list[str]
@@ -131,6 +129,3 @@ class ParentConfiguration(BaseModel):
     @property
     def extra_fields(self) -> set[str]:
         return set(self.__dict__) - set(self.model_fields)
-
-    def __getitem__(self, item):
-        return getattr(self, item)

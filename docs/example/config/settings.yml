@@ -9,6 +9,7 @@ col_obs: obs_rate
 col_pred: pred_rate
 col_holdout: [holdout1, holdout2, holdout3, holdout4, holdout7]
 col_test: test
+col_sigma: standard_error
 max_attempts: 1
 
 rover_covsel:
