@@ -220,7 +220,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     # Create regmod smooth model
     model = Model(
         model_type=regmod_smooth_config.model_type,
-        obs=regmod_smooth_config.col_obs,
+        obs=global_config.col_obs,
         dims=regmod_smooth_config.dims,
         var_groups=var_groups,
         weights=regmod_smooth_config.weights,
@@ -228,7 +228,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     df = dataif.load(global_config.input_path)
     df_train = df.query(
-        f"({regmod_smooth_config.col_test} == 0) & {regmod_smooth_config.col_obs}.notnull()"
+        f"({global_config.col_test} == 0) & {global_config.col_obs}.notnull()"
     )
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
@@ -238,21 +238,20 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[settings["col_pred"]] = model.predict(df)
-    rover_config = global_config.rover_covsel
     residual_func = get_residual_computation_function(
-        model_type=rover_config.model_type,
-        col_obs=regmod_smooth_config.col_obs,
-        col_pred=regmod_smooth_config.col_pred,
-        inv_link=rover_config.inv_link,
-        sigma=regmod_smooth_config.col_sigma,
+        model_type=regmod_smooth_config.model_type,
+        col_obs=global_config.col_obs,
+        col_pred=global_config.col_pred,
+        inv_link=regmod_smooth_config.inv_link,
+        sigma=global_config.col_sigma,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=rover_config.model_type,
-        col_obs=regmod_smooth_config.col_obs,
-        col_pred=regmod_smooth_config.col_pred,
-        inv_link=rover_config.inv_link,
-        sigma=regmod_smooth_config.col_sigma,
+        model_type=regmod_smooth_config.model_type,
+        col_obs=global_config.col_obs,
+        col_pred=global_config.col_pred,
+        inv_link=regmod_smooth_config.inv_link,
+        sigma=global_config.col_sigma,
     )
     df["residual"] = df.apply(
         residual_func,

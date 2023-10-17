@@ -193,11 +193,14 @@ class Subsets:
 
         """
         self.model_id = model_id
-        self.columns = as_list(settings.groupby)
+        self.columns = settings.groupby
         if subsets is None:
             if data is None:
                 raise TypeError("Data cannot be None if subsets are not provided.")
-            self.columns = as_list(settings["groupby"])
+            self.columns = settings.groupby
+            max_batch_size = getattr(settings, "max_batch", None)
+            if not max_batch_size:
+                max_batch_size = settings.parent_args.get("max_batch")
             self.subsets = self._create_subsets(data, settings.max_batch)
         else:
             self.subsets = subsets[subsets["model_id"] == model_id]

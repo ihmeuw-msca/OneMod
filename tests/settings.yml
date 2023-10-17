@@ -13,7 +13,7 @@ max_attempts: 1
 
 rover_covsel:
   groupby: [age_group_id, sex_id]
-  regmod_model_type: binomial
+  model_type: binomial
   cov_fixed: [intercept]
   cov_exploring: [cov1, cov2, cov3, cov4, cov5]
   weights: population
@@ -25,7 +25,7 @@ rover_covsel:
 
 # Regmod smooth settings
 regmod_smooth:
-  regmod_model_type: binomial
+  model_type: binomial
   obs: obs_rate
   var_groups:
     # Intercept relisted multiple times,

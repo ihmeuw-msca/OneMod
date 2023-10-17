@@ -60,7 +60,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
-    rover_init_args = rover_config.model_dump(exclude={"fit_args"})
+    rover_init_args = rover_config.model_dump(exclude={"fit_args", "groupby", "parent_args"})
     rover = Rover(**rover_init_args)
 
     # Fit rover model
