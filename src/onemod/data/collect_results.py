@@ -1,6 +1,7 @@
 """Collect onemod stage submodel results."""
 import matplotlib.pyplot as plt
 from warnings import warn
+import numpy as np
 from pplkit.data.interface import DataInterface
 
 import fire
@@ -9,7 +10,6 @@ import pandas as pd
 
 from onemod.schema.config import ParentConfiguration
 from onemod.utils import (
-    as_list,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
@@ -94,7 +94,7 @@ def _plot_regmod_smooth_results(
 ) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
-    if len(selected_covs) == 0:
+    if not selected_covs:
         warn("There are no covariates selected, skip `plot_regmod_smooth_results`")
         return None
 
@@ -151,7 +151,35 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
     # Generate RMSE
-    summarize_rmse()
+    rmse_df = _summarize_rmse(dataif, stage='regmod_smooth')
+    rmse_df = rmse_df.to_frame(name="rmse").reset_index(names='test')
+    dataif.dump_regmod_smooth(rmse_df, "rmse.csv")
+
+
+def _summarize_rmse(dataif: DataInterface, stage: str):
+    """Compare in and out of sample RMSE for a given stage."""
+    settings = ParentConfiguration(**dataif.load_settings())
+
+    load_func = getattr(dataif, f"load_{stage}")
+    predictions = load_func("predictions.parquet",
+                            columns=[*settings.col_id, settings.col_pred, settings.col_test, settings.col_obs])
+
+    if settings.truth_set:
+        truth_set = dataif.load(settings.truth_set, columns=[*settings.col_id, settings.truth_column])
+        predictions = pd.merge(
+            left=predictions, right=truth_set, on=settings.col_id, how="left"
+        )
+
+    # Fill NA's in test column
+    predictions.loc[predictions[settings.col_test].isna(), settings.col_test] = 1.0
+
+    # Calculate in and outsample RMSE
+    observation_column = settings.truth_column if settings.truth_set else settings.col_obs
+    rmse = predictions.groupby(settings.col_test).apply(
+        lambda x: np.sqrt(np.mean((x[observation_column] - x[settings.col_pred]) ** 2))
+    )
+    return rmse
+
 
 
 def collect_swimr_results(experiment_dir: str) -> None:

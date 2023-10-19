@@ -8,7 +8,7 @@ from modrover.globals import model_type_dict
 
 class ParametrizedBaseModel(BaseModel):
     """An extension of BaseModel that supports __getitem__ and is configured."""
-    model_config = ConfigDict(extra='allow', frozen=False, validate_assignment=True)
+    model_config = ConfigDict(frozen=False, validate_assignment=True)
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -51,13 +51,6 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     inv_link: str
     coef_bounds: dict[str, list[float]] = {}
     lam: float = 0.0
-    # FilePath auto-validates that the path exists and is a file,
-    # but defaults are not validated.
-    truth_set: FilePath = ''
-
-    # If truth_set is provided and truth_column is not,
-    # no validation errors are raised here but the smoothing summarization step will fail.
-    truth_column: str = ''
 
     parent_args: dict = {}
 
@@ -97,6 +90,13 @@ class ParentConfiguration(ParametrizedBaseModel):
     col_sigma: str = ''
     max_attempts: int = 3
     max_batch: int = -1
+
+    # Default arguments are not validated
+    truth_set: FilePath = ''
+
+    # If truth_set is provided and truth_column is not,
+    # no validation errors are raised here but the summarization steps will fail.
+    truth_column: str = ''
 
     rover_covsel: Optional[RoverConfiguration] = None
     regmod_smooth: Optional[RegmodSmoothConfiguration] = None
