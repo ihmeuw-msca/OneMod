@@ -150,6 +150,9 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
     if fig is not None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
+    # Generate RMSE
+    summarize_rmse()
+
 
 def collect_swimr_results(experiment_dir: str) -> None:
     """Collect swimr submodel results."""

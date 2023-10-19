@@ -2,16 +2,17 @@
 the covariate coefficients across age groups.
 """
 from functools import partial
-from typing import Callable
+from typing import Callable, Optional
 
 import fire
 from loguru import logger
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel
 from scipy.stats import norm
 from regmodsm.model import Model
 
-from onemod.schema.config import RegmodSmoothConfiguration, ParentConfiguration
+from onemod.schema.config import ParentConfiguration
 from onemod.utils import get_data_interface
 
 
@@ -163,6 +164,32 @@ def get_coef(model: Model) -> pd.DataFrame:
     return df_coef
 
 
+def calc_rmse(
+    predictions: pd.DataFrame,
+    settings: BaseModel,
+    truth_set: Optional[pd.DataFrame] = None,
+    truth_column: str = "",
+) -> pd.DataFrame:
+
+    id_cols = settings.col_id
+    predictions = predictions[settings.col_id + settings.col_pred]
+
+    if truth_set:
+        predictions = pd.merge(
+            left=predictions, right=truth_set, on=id_cols
+        )
+
+    # Fill NA's in test column
+    predictions.loc[predictions[settings.col_test].isna(), "test"] = 0
+
+    # Calculate in and outsample RMSE
+    observation_column = truth_column if truth_set else settings.col_obs
+    rmse = predictions.groupby(settings.col_test).apply(
+        lambda x: np.sqrt(np.mean((x[observation_column] - x[settings.col_pred]) ** 2))
+    )
+    return rmse
+
+
 def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
@@ -264,10 +291,25 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     df_coef = get_coef(model)
 
+    # Calculate RMSE
+    logger.info("Calculating RMSE")
+    # Optionally load in truth set if necessary
+    truth_df = None
+    if regmod_smooth_config.truth_set:
+        truth_df = dataif.load(regmod_smooth_config.truth_set)
+
+    rmse_df = calc_rmse(
+        predictions=df,
+        settings=global_config,
+        truth_set=truth_df,
+        truth_column=regmod_smooth_config.truth_column,
+    )
+
     # Save results
     dataif.dump_regmod_smooth(model, "model.pkl")
     dataif.dump_regmod_smooth(df_coef, "coef.csv")
     dataif.dump_regmod_smooth(df, "predictions.parquet")
+    dataif.dump_regmod_smooth(rmse_df, "rmse.csv")
 
 
 def main() -> None:

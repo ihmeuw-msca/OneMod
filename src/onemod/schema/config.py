@@ -1,13 +1,9 @@
 from typing import Optional
 
-import pandas as pd
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, FilePath, ValidationError, validator
 from pydantic.functional_validators import field_validator
 
 from modrover.globals import model_type_dict
-
-
-
 
 
 class ParametrizedBaseModel(BaseModel):
@@ -16,6 +12,7 @@ class ParametrizedBaseModel(BaseModel):
 
     def __getitem__(self, item):
         return getattr(self, item)
+
 
 class RoverConfiguration(ParametrizedBaseModel):
 
@@ -54,14 +51,23 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     inv_link: str
     coef_bounds: dict[str, list[float]] = {}
     lam: float = 0.0
+    # FilePath auto-validates that the path exists and is a file,
+    # but defaults are not validated.
+    truth_set: FilePath = ''
+
+    # If truth_set is provided and truth_column is not,
+    # no validation errors are raised here but the smoothing summarization step will fail.
+    truth_column: str = ''
 
     parent_args: dict = {}
 
     @field_validator("model_type")
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
-        assert model_type in model_type_dict, \
-            f"model_type must be one of {model_type_dict.keys()}"
+        if model_type not in model_type_dict:
+            raise ValidationError(
+                f"model_type must be one of {model_type_dict.keys()}"
+            )
         return model_type
 
 
@@ -82,7 +88,7 @@ class EnsembleConfiguration(ParametrizedBaseModel):
 
 class ParentConfiguration(ParametrizedBaseModel):
 
-    input_path: str
+    input_path: FilePath  # FilePath auto-validates that the path exists and is a file
     col_id: list[str]
     col_obs: str
     col_pred: str
