@@ -164,14 +164,10 @@ def _summarize_rmse(dataif: DataInterface, stage: str):
     predictions = load_func("predictions.parquet",
                             columns=[*settings.col_id, settings.col_pred, settings.col_obs, settings.col_test])
 
-    # input_data = dataif.load_data(columns=[*settings.col_id, settings.col_test, settings.col_obs])
-
     # apply filters
     for id_col in settings.col_id:
         if hasattr(settings, id_col):
             predictions = predictions.loc[predictions[id_col].isin(settings[id_col])]
-
-    # predictions = pd.merge(left=predictions, right=input_data, on=settings.col_id)
 
     if settings.truth_set:
         truth_set = dataif.load(settings.truth_set, columns=[*settings.col_id, settings.truth_column])
