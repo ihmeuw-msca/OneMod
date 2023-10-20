@@ -162,7 +162,16 @@ def _summarize_rmse(dataif: DataInterface, stage: str):
 
     load_func = getattr(dataif, f"load_{stage}")
     predictions = load_func("predictions.parquet",
-                            columns=[*settings.col_id, settings.col_pred, settings.col_test, settings.col_obs])
+                            columns=[*settings.col_id, settings.col_pred, settings.col_obs, settings.col_test])
+
+    # input_data = dataif.load_data(columns=[*settings.col_id, settings.col_test, settings.col_obs])
+
+    # apply filters
+    for id_col in settings.col_id:
+        if hasattr(settings, id_col):
+            predictions = predictions.loc[predictions[id_col].isin(settings[id_col])]
+
+    # predictions = pd.merge(left=predictions, right=input_data, on=settings.col_id)
 
     if settings.truth_set:
         truth_set = dataif.load(settings.truth_set, columns=[*settings.col_id, settings.truth_column])
@@ -171,7 +180,7 @@ def _summarize_rmse(dataif: DataInterface, stage: str):
         )
 
     # Fill NA's in test column
-    predictions.loc[predictions[settings.col_test].isna(), settings.col_test] = 1.0
+    predictions[settings.col_test].fillna(1, inplace=True)
 
     # Calculate in and outsample RMSE
     observation_column = settings.truth_column if settings.truth_set else settings.col_obs

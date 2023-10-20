@@ -8,7 +8,7 @@ from modrover.globals import model_type_dict
 
 class ParametrizedBaseModel(BaseModel):
     """An extension of BaseModel that supports __getitem__ and is configured."""
-    model_config = ConfigDict(frozen=False, validate_assignment=True)
+    model_config = ConfigDict(extra='allow', frozen=False, validate_assignment=True)
 
     def __getitem__(self, item):
         return getattr(self, item)

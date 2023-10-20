@@ -55,10 +55,10 @@ def get_residual_computation_function(
             pred=col_pred
         ),
         ("tobit", "exp"): partial(
-            lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
+            lambda row, obs, pred, sigma: row[col_obs] / row[pred] - 1
             if row[obs] > 0
-            else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-row[col_pred] / row["sigma"] + 1e-6j))
+            else (row[pred] / row[sigma])
+            * np.imag(norm.logcdf(-row[pred] / row["sigma"] + 1e-6j))
             / (1e-6),
             obs=col_obs,
             pred=col_pred,
@@ -200,6 +200,8 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     ]
 
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    if not selected_covs:
+        selected_covs = []
 
     logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
 
