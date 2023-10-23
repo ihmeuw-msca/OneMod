@@ -117,6 +117,7 @@ def _plot_regmod_smooth_results(
             alpha=0.5,
             label="regmod_smooth",
         )
+        ax.legend(fontsize = 'xx-small')
     return fig
 
 
