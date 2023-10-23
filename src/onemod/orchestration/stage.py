@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Union
 
+from onemod.orchestration.templates import create_task_template
 from onemod.schema.config import ParentConfiguration as GlobalConfig
 from onemod.utils import (
     get_rover_covsel_submodels,
@@ -277,130 +278,6 @@ class StageTemplate:
             " --experiment_dir {experiment_dir}",
             node_args=["stage_name"],
             task_args=["experiment_dir"],
-            op_args=["entrypoint"],
-            default_cluster_name=self.cluster_name,
-        )
-        if task_template_name in self.resources:
-            template.set_default_compute_resources_from_dict(
-                cluster_name=self.cluster_name,
-                compute_resources=self.resources[task_template_name][self.cluster_name],
-            )
-        return template
-
-    def create_modeling_template(self, task_template_name: str) -> TaskTemplate:
-        """Stage modeling template.
-
-        Parameters
-        ----------
-        task_template_name : str
-            The name of the task template.
-
-        Returns
-        -------
-        TaskTemplate
-            The task template for stage modeling.
-
-        """
-        template = self.tool.get_task_template(
-            template_name=task_template_name,
-            command_template="{entrypoint}"
-            " --experiment_dir {experiment_dir}"
-            " --submodel_id {submodel_id}",
-            node_args=["submodel_id"],
-            task_args=["experiment_dir"],
-            op_args=["entrypoint"],
-            default_cluster_name=self.cluster_name,
-        )
-        if task_template_name in self.resources:
-            template.set_default_compute_resources_from_dict(
-                cluster_name=self.cluster_name,
-                compute_resources=self.resources[task_template_name][self.cluster_name],
-            )
-        return template
-
-    @task_template_cache(task_template_name="collection_template")
-    def create_collection_template(self, task_template_name: str) -> TaskTemplate:
-        """Stage collection template.
-
-        Parameters
-        ----------
-        task_template_name : str
-            The name of the task template.
-
-        Returns
-        -------
-        TaskTemplate
-            The task template for stage collection.
-
-        """
-        template = self.tool.get_task_template(
-            template_name=task_template_name,
-            command_template="{entrypoint} {stage_name}"
-            " --experiment_dir {experiment_dir}",
-            node_args=["stage_name"],
-            task_args=["experiment_dir"],
-            op_args=["entrypoint"],
-            default_cluster_name=self.cluster_name,
-        )
-        if task_template_name in self.resources:
-            template.set_default_compute_resources_from_dict(
-                cluster_name=self.cluster_name,
-                compute_resources=self.resources[task_template_name][self.cluster_name],
-            )
-        return template
-
-    @task_template_cache(task_template_name="deletion_template")
-    def create_deletion_template(self, task_template_name: str) -> TaskTemplate:
-        """Stage deletion template.
-
-        Parameters
-        ----------
-        task_template_name : str
-            The name of the task template.
-
-        Returns
-        -------
-        TaskTemplate
-            The task template for stage deletion.
-
-        """
-        template = self.tool.get_task_template(
-            template_name=task_template_name,
-            command_template="{entrypoint} stage"
-            " --experiment_dir {experiment_dir}"
-            " --stage_name {stage_name}",
-            node_args=["stage_name"],
-            task_args=["experiment_dir"],
-            op_args=["entrypoint"],
-            default_cluster_name=self.cluster_name,
-        )
-        if task_template_name in self.resources:
-            template.set_default_compute_resources_from_dict(
-                cluster_name=self.cluster_name,
-                compute_resources=self.resources[task_template_name][self.cluster_name],
-            )
-        return template
-
-    def create_submodel_deletion_template(
-        self, task_template_name: str
-    ) -> TaskTemplate:
-        """Stage submodel deletion template.
-
-        Parameters
-        ----------
-        task_template_name : str
-            The name of the task template.
-
-        Returns
-        -------
-        TaskTemplate
-            The task template for stage submodel deletion.
-
-        """
-        template = self.tool.get_task_template(
-            template_name=task_template_name,
-            command_template="{entrypoint} result --result {result}",
-            node_args=["result"],
             op_args=["entrypoint"],
             default_cluster_name=self.cluster_name,
         )
