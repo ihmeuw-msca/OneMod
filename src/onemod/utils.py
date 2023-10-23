@@ -637,9 +637,8 @@ def get_data_interface(experiment_dir: str) -> DataInterface:
     dataif.add_dir("resources", resources_path)
 
     # add data
-    data_path = Path(dataif.load_settings()["input_path"])
-    if not data_path.exists():
-        raise FileNotFoundError(f"please provide a data file in {str(data_path)}")
+    # Initialization stage will ETL input data into a relative path
+    data_path = dataif.experiment / "data"  / "data.parquet"
     dataif.add_dir("data", data_path)
 
     # add results folders
