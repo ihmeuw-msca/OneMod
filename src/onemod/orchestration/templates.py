@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 @task_template_cache
-def create_task_template(
+def _create_task_template(
     tool: Tool,
     task_template_name: str,
     node_args: list[str],
@@ -49,21 +49,28 @@ def create_task_template(
     """
 
     command_template = ["{entrypoint}"]
+    if not op_args:
+        op_args = []
 
-    for node_arg in node_args:
-        # Rule: the CLI argument must match the name of the arg
-        command_template.append(f"{node_arg}")
-        command_template.append(f"--{{{node_arg}}}")
+    if node_args:
+        for node_arg in node_args:
+            # Rule: the CLI argument must match the name of the arg
+            command_template.append(f"{node_arg}")
+            command_template.append(f"--{{{node_arg}}}")
 
-    if task_args is not None:
+    if task_args:
         for task_arg in task_args:
             command_template.append(f"{task_arg}")
             command_template.append(f"--{{{task_arg}}}")
 
-    if op_args is not None:
+    if op_args:
         for op_arg in op_args:
             command_template.append(f"{op_arg}")
             command_template.append(f"--{{{op_arg}}}")
+
+    # Add in default op_arg
+    if "entrypoint" not in op_args:
+        op_args.append("entrypoint")
 
     joined_template = " ".join(command_template)
 
@@ -80,140 +87,109 @@ def create_task_template(
     return template
 
 
+def create_initialization_template(tool: Tool, resources_file: str | Path) -> TaskTemplate:
 
-# def create_modeling_template(tool: Tool, task_template_name: str, resources_path: str | Path) -> TaskTemplate:
-#     """Stage modeling template.
-
-#     Parameters
-#     ----------
-#     task_template_name : str
-#         The name of the task template.
-
-#     Returns
-#     -------
-#     TaskTemplate
-#         The task template for stage modeling.
-
-#     """
-#     template = _create_task_template(
-#         tool=tool,
-#         task_template_name=task_template_name,
-#         node_args=["submodel_id"],
-#         task_args=["experiment_dir"],
-#         op_args=["entrypoint"],
-#         resources_path=resources_path,
-#     )
+    template = _create_task_template(
+        tool=tool,
+        task_template_name="initialization_template",
+        node_args=["stages"],
+        task_args=["experiment_dir"],
+        resources_path=resources_file,
+    )
+    return template
 
 
-#     tool.get_task_template(
-#         template_name=task_template_name,
-#         command_template="{entrypoint}"
-#         " --experiment_dir {experiment_dir}"
-#         " --submodel_id {submodel_id}",
-#         node_args=["submodel_id"],
-#         task_args=["experiment_dir"],
-#         op_args=["entrypoint"],
-#         default_cluster_name=tool.default_cluster_name,
-#     )
+def create_modeling_template(
+    tool: Tool,
+    task_template_name: str,
+    resources_path: str | Path,
+    parallel: bool = True) -> TaskTemplate:
+    """Stage modeling template.
 
-#     template.set_default_compute_resources_from_yaml(
-#         default_cluster_name=tool.default_cluster_name,
-#         yaml_file=resources_path,
-#     )
-#     return template
-
-# @task_template_cache(task_template_name="collection_template")
-# def create_collection_template(self, task_template_name: str) -> TaskTemplate:
-#     """Stage collection template.
-
-#     Parameters
-#     ----------
-#     task_template_name : str
-#         The name of the task template.
-
-#     Returns
-#     -------
-#     TaskTemplate
-#         The task template for stage collection.
-
-#     """
-#     template = self.tool.get_task_template(
-#         template_name=task_template_name,
-#         command_template="{entrypoint} {stage_name}"
-#         " --experiment_dir {experiment_dir}",
-#         node_args=["stage_name"],
-#         task_args=["experiment_dir"],
-#         op_args=["entrypoint"],
-#         default_cluster_name=self.cluster_name,
-#     )
-#     if task_template_name in self.resources:
-#         template.set_default_compute_resources_from_dict(
-#             cluster_name=self.cluster_name,
-#             compute_resources=self.resources[task_template_name][self.cluster_name],
-#         )
-#     return template
-
-# @task_template_cache(task_template_name="deletion_template")
-# def create_deletion_template(self, task_template_name: str) -> TaskTemplate:
-#     """Stage deletion template.
-
-#     Parameters
-#     ----------
-#     task_template_name : str
-#         The name of the task template.
-
-#     Returns
-#     -------
-#     TaskTemplate
-#         The task template for stage deletion.
-
-#     """
-#     template = self.tool.get_task_template(
-#         template_name=task_template_name,
-#         command_template="{entrypoint} stage"
-#         " --experiment_dir {experiment_dir}"
-#         " --stage_name {stage_name}",
-#         node_args=["stage_name"],
-#         task_args=["experiment_dir"],
-#         op_args=["entrypoint"],
-#         default_cluster_name=self.cluster_name,
-#     )
-#     if task_template_name in self.resources:
-#         template.set_default_compute_resources_from_dict(
-#             cluster_name=self.cluster_name,
-#             compute_resources=self.resources[task_template_name][self.cluster_name],
-#         )
-#     return template
+    Parameters
+    ----------
+    tool : Tool
+        The Jobmon Tool instance to use for creating the task template.
+    task_template_name : str
+        The name of the task template.
+    resources_path : str or Path, optional
+        The path to the resources file to use for the task template, by default "".
 
 
+    Returns
+    -------
+    TaskTemplate
+        The task template for stage modeling.
+
+    """
+
+    # Tasks can be parallelized by an internal concept called submodels
+    node_args = []
+    if parallel:
+        node_args.append("submodel_id")
+
+    template = _create_task_template(
+        tool=tool,
+        task_template_name=task_template_name,
+        node_args=node_args,
+        task_args=["experiment_dir"],
+        resources_path=resources_path,
+    )
+
+    return template
 
 
-# def create_submodel_deletion_template(
-#     self, task_template_name: str
-# ) -> TaskTemplate:
-#     """Stage submodel deletion template.
+def create_collection_template(
+    tool: Tool, task_template_name: str, resources_path: str | Path
+) -> TaskTemplate:
+    """Stage collection template.
 
-#     Parameters
-#     ----------
-#     task_template_name : str
-#         The name of the task template.
+    Parameters
+    ----------
+    task_template_name : str
+        The name of the task template.
 
-#     Returns
-#     -------
-#     TaskTemplate
-#         The task template for stage submodel deletion.
+    Returns
+    -------
+    TaskTemplate
+        The task template for stage collection.
 
-#     """
-#     template = self.tool.get_task_template(
-#         template_name=task_template_name,
-#         command_template="{entrypoint} result --result {result}",
-#         node_args=["result"],
-#         op_args=["entrypoint"],
-#         default_cluster_name=self.cluster_name,
-#     )
-#     if task_template_name in self.resources:
-#         template.set_default_compute_resources_from_dict(
-#             cluster_name=self.cluster_name,
-#             compute_resources=self.resources[task_template_name][self.cluster_name],
-#         )
-#     return template
+    """
+
+    template = _create_task_template(
+        tool=tool,
+        task_template_name=task_template_name,
+        node_args=["stage_name"],
+        task_args=["experiment_dir"],
+        resources_path=resources_path,
+    )
+    return template
+
+
+def create_deletion_template(
+    tool: Tool, task_template_name: str, resources_path: str | Path
+) -> TaskTemplate:
+    """Stage deletion template.
+
+    Parameters
+    ----------
+    tool: Tool
+        The Jobmon Tool instance to use for creating the task template.
+    task_template_name : str
+        The name of the task template.
+    resources_path : str or Path, optional
+
+    Returns
+    -------
+    TaskTemplate
+        The task template for stage deletion.
+
+    """
+
+    template = _create_task_template(
+        tool=tool,
+        template_name=task_template_name,
+        node_args=["result"],
+        resources_path=resources_path,
+    )
+    return template

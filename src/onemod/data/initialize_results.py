@@ -2,7 +2,7 @@
 import shutil
 
 import fire
-from pplkit.interface import DataInterface
+from pplkit.data.interface import DataInterface
 
 from onemod.schema.config import ParentConfiguration
 from onemod.utils import (
@@ -50,11 +50,10 @@ def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
         (dataif.rover_covsel / sub_dir).mkdir(parents=True)
 
     # Create rover subsets
-    get_rover_covsel_submodels(experiment_dir, save_file=True)
+    get_rover_covsel_submodels(dataif.experiment, save_file=True)
 
 
 def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
-    dataif = get_data_interface(experiment_dir)
 
     # Initialize directories
     if dataif.regmod_smooth.exists():
@@ -62,9 +61,8 @@ def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
     dataif.regmod_smooth.mkdir(parents=True)
 
 
-def _initialize_swimr_results(experiment_dir: str) -> None:
+def _initialize_swimr_results(dataif: DataInterface) -> None:
     """Initialize swimr results."""
-    dataif = get_data_interface(experiment_dir)
 
     # Initialize directories
     if dataif.swimr.exists():
@@ -73,12 +71,11 @@ def _initialize_swimr_results(experiment_dir: str) -> None:
         (dataif.swimr / sub_dir).mkdir(parents=True)
 
     # Create swimr parameters and subsets
-    get_swimr_submodels(experiment_dir, save_files=True)
+    get_swimr_submodels(dataif.experiment, save_files=True)
 
 
-def _initialize_weave_results(experiment_dir: str) -> None:
+def _initialize_weave_results(dataif: DataInterface) -> None:
     """Initialize weave results."""
-    dataif = get_data_interface(experiment_dir)
 
     # Initialize directories
     if dataif.weave.exists():
@@ -86,12 +83,11 @@ def _initialize_weave_results(experiment_dir: str) -> None:
     (dataif.weave / "submodels").mkdir(parents=True)
 
     # Create weave parameters and subsets
-    get_weave_submodels(experiment_dir, save_files=True)
+    get_weave_submodels(dataif.experiment, save_files=True)
 
 
-def _initialize_ensemble_results(experiment_dir: str) -> None:
+def _initialize_ensemble_results(dataif: DataInterface) -> None:
     """Initialize ensemble results."""
-    dataif = get_data_interface(experiment_dir)
 
     # Initialize directory
     if dataif.ensemble.exists():

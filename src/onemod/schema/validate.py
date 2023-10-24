@@ -5,14 +5,24 @@ from onemod.schema.config import ParentConfiguration
 from onemod.utils import get_data_interface
 
 
-def validate_config(directory: str, stages: list[str]) -> None:
-    """Validate the configuration file according to the expected schema."""
+def validate_config(
+    stages: list[str],
+    directory: str,
+    config: ParentConfiguration | None = None,
+) -> None:
+    """Validate the configuration file according to the expected schema.
+
+    Either a configuration or a directory to load that configuration from must be provided.
+    """
 
     dataif = get_data_interface(directory)
-    settings = dataif.load_settings()
 
-    # Validation error raised if config fails
-    config = ParentConfiguration(**settings)
+    if not config:
+
+        settings = dataif.load_settings()
+
+        # Validation error raised if config fails
+        config = ParentConfiguration(**settings)
 
     # Validate against the dataset
     dataset = dataif.load_data()

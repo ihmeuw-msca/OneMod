@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from pplkit.data.interface import DataInterface
+import shutil
 from typing import Optional, TYPE_CHECKING, Union
 
 import fire
@@ -10,7 +12,8 @@ from pydantic import ValidationError
 
 from onemod.schema.config import ParentConfiguration
 from onemod.schema.validate import validate_config
-from onemod.stage import StageTemplate
+from onemod.orchestration.stage import StageTemplate
+from onemod.orchestration.templates import create_initialization_template
 from onemod.utils import as_list, get_data_interface
 
 try:
@@ -35,6 +38,7 @@ upstream_dict: dict[str, list] = {
 
 def create_workflow(
     directory: str,
+    config: ParentConfiguration,
     stages: list[str],
     save_intermediate: bool,
     cluster_name: str,
@@ -83,18 +87,38 @@ def create_workflow(
     workflow.set_default_cluster_name(cluster_name=cluster_name)
     workflow.set_default_max_attempts(value=1)
 
+    # Create the initialization task.
+    initialization_template = create_initialization_template(
+        tool=tool,
+        task_args=["experiment_dir"],
+        node_args=["stages"],
+        resources_path=resources_file,
+    )
+
+    initialization_task = initialization_template.create_task(
+        experiment_dir=experiment_dir,
+        # A quirk of Fire is that lists have to be in space-less comma separated format.
+        stages=f"[{','.join(stages)}]",
+        entrypoint=shutil.which("initialize_results"),
+    )
+
+    workflow.add_task(initialization_task)
+
     # Create stage tasks
     for stage, upstream_stages in upstream_dict.items():
         if stage in stages:
             stage_template = StageTemplate(
                 stage_name=stage,
+                config=config,
                 experiment_dir=experiment_dir,
                 save_intermediate=save_intermediate,
                 cluster_name=cluster_name,
                 resources_file=resources_file,
                 tool=tool,
             )
-            upstream_tasks = []
+            # Technically only the first stages needs to depend on the initialization task,
+            # but it's probably cleaner in code to make it a dependency for all stages.
+            upstream_tasks = [initialization_task]
             for upstream_stage in upstream_stages:
                 if upstream_stage in stages:
                     upstream_task = workflow.get_tasks_by_node_args(
@@ -110,7 +134,7 @@ def create_workflow(
 def run_pipeline(
     directory: str,
     stages: Optional[Union[list[str], str]] = None,
-    save_intermediate: bool = False,
+    save_intermediate: bool = True,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
 ) -> None:
@@ -138,10 +162,12 @@ def run_pipeline(
             raise ValueError(f"Invalid stage: {stage}")
 
     # Validate the configuration file
-    validate_config(directory, stages)
+    dataif = get_data_interface(directory)
+    config = _load_validated_config(dataif)
 
     workflow = create_workflow(
         directory=directory,
+        config=config,
         stages=as_list(stages),
         save_intermediate=save_intermediate,
         cluster_name=cluster_name,
@@ -150,6 +176,16 @@ def run_pipeline(
     status = workflow.run(configure_logging=True, seconds_until_timeout=24 * 60 * 60)
     if status != "D":
         raise ValueError(f"workflow {workflow.name} failed: {status}")
+
+
+def _load_validated_config(dataif: DataInterface, stages: list[str], experiment_dir: str):
+    settings = ParentConfiguration(**dataif.load_settings())
+    validate_config(
+        stages=stages,
+        directory=experiment_dir,
+        config=settings,
+    )
+    return settings
 
 
 def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
