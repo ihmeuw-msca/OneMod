@@ -124,7 +124,6 @@ def create_workflow(
                     )
                     upstream_tasks.extend(upstream_task)
             stage_tasks = stage_template.create_tasks(upstream_tasks=upstream_tasks)
-            breakpoint()
             workflow.add_tasks(stage_tasks)
     return workflow
 
