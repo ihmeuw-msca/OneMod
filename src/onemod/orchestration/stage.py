@@ -20,7 +20,7 @@ from onemod.utils import (
 
 if TYPE_CHECKING:
     from jobmon.client.api import Tool
-    from jobmon.client.task_template import TaskTemplate
+
     from jobmon.client.task import Task
 
 
@@ -51,7 +51,7 @@ class StageTemplate:
         save_intermediate: bool,
         cluster_name: str,
         resources_file: Union[Path, str],
-        tool: Tool,
+        tool: "Tool",
     ) -> None:
         """Create onemod stage template."""
         self.stage_name = stage_name
@@ -72,7 +72,7 @@ class StageTemplate:
         elif stage_name == "weave":
             self.submodel_ids = get_weave_submodels(experiment_dir)
 
-    def create_tasks(self, upstream_tasks: list[Task]) -> list[Task]:
+    def create_tasks(self, upstream_tasks: list["Task"]) -> list["Task"]:
         """Create stage tasks.
 
         Parameters
@@ -95,8 +95,7 @@ class StageTemplate:
             upstream_tasks=upstream_tasks,
             parallel=parallel
         )
-        # Ensemble and regmod_smooth aren't parallelized,
-        # so no need to implement collection or deletion tasks.
+        # Ensemble is the terminal stage so no collection task is needed.
         if self.stage_name in ["ensemble"]:
             return [modeling_tasks]
 
@@ -111,8 +110,8 @@ class StageTemplate:
         return tasks
 
     def create_modeling_tasks(
-        self, max_attempts: int, upstream_tasks: list[Task], parallel: bool
-    ) -> list[Task]:
+        self, max_attempts: int, upstream_tasks: list["Task"], parallel: bool
+    ) -> list["Task"]:
         """Create stage modeling tasks.
 
         Parameters
@@ -139,20 +138,27 @@ class StageTemplate:
 
         model_task_args = {
             "entrypoint": shutil.which(f"{self.stage_name}_model"),
-            "experiment_dir": self.experiment_dir,
+            "experiment_dir": str(self.experiment_dir),
         }
 
+        # TODO: Something that should be fixed in Jobmon, the create_tasks method returns an empty list if called with no node_args.
+        # Use create_task as a workaround in non parallel cases.
         if parallel:
             model_task_args["submodel_id"] = self.submodel_ids
+            create_tasks_callable = model_template.create_tasks
+        else:
+            # Wrap in a lambda function since create_task returns a Task, not a list. For type consistency we want a single valued list
+            create_tasks_callable = lambda **kwargs: [model_template.create_task(**kwargs)]
 
-        return model_template.create_tasks(
+        tasks = create_tasks_callable(
             name=f"{self.stage_name}_modeling_tasks",
             max_attempts=max_attempts,
             upstream_tasks=upstream_tasks,
             **model_task_args
         )
+        return tasks
 
-    def create_collection_task(self, upstream_tasks: list[Task]) -> Task:
+    def create_collection_task(self, upstream_tasks: list["Task"]) -> "Task":
         """Create stage collection task.
 
         Parameters
@@ -168,7 +174,7 @@ class StageTemplate:
         """
         collection_template = create_collection_template(
             tool=self.tool,
-            task_template_name=f"{self.stage_name}_collection_template",
+            task_template_name=f"collection_template",
             resources_path=self.resources_file,
         )
         return collection_template.create_task(
@@ -180,7 +186,7 @@ class StageTemplate:
             experiment_dir=self.experiment_dir,
         )
 
-    def create_deletion_tasks(self, upstream_tasks: list[Task]) -> list[Task]:
+    def create_deletion_tasks(self, upstream_tasks: list["Task"]) -> list["Task"]:
         """Create stage deletion tasks.
 
         Parameters
@@ -203,7 +209,7 @@ class StageTemplate:
 
         submodel_template = create_deletion_template(
             tool=self.tool,
-            task_template_name=f"{self.stage_name}_submodel_deletion_template",
+            task_template_name=f"submodel_deletion_template",
             resources_path=self.resources_file,
         )
         tasks.extend(

@@ -44,7 +44,7 @@ def create_workflow(
     cluster_name: str,
     configure_resources: bool,
     tool: Optional[Tool] = None,
-) -> Workflow:
+) -> "Workflow":
     """Create OneMod workflow.
 
     Parameters
@@ -90,9 +90,7 @@ def create_workflow(
     # Create the initialization task.
     initialization_template = create_initialization_template(
         tool=tool,
-        task_args=["experiment_dir"],
-        node_args=["stages"],
-        resources_path=resources_file,
+        resources_file=resources_file,
     )
 
     initialization_task = initialization_template.create_task(
@@ -125,9 +123,9 @@ def create_workflow(
                         "collection_template", stage_name=upstream_stage
                     )
                     upstream_tasks.extend(upstream_task)
-            workflow.add_tasks(
-                stage_template.create_tasks(upstream_tasks=upstream_tasks)
-            )
+            stage_tasks = stage_template.create_tasks(upstream_tasks=upstream_tasks)
+            breakpoint()
+            workflow.add_tasks(stage_tasks)
     return workflow
 
 
@@ -163,7 +161,7 @@ def run_pipeline(
 
     # Validate the configuration file
     dataif = get_data_interface(directory)
-    config = _load_validated_config(dataif)
+    config = _load_validated_config(dataif=dataif, stages=stages, experiment_dir=directory)
 
     workflow = create_workflow(
         directory=directory,

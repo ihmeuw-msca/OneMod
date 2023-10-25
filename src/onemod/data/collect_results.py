@@ -245,13 +245,19 @@ def collect_weave_results(experiment_dir: str) -> None:
         else:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
+def collect_results(stage_name: str, experiment_dir: str) -> None:
+    callable_map = {
+        'rover_covsel': collect_rover_covsel_results,
+        'regmod_smooth': collect_regmod_smooth_results,
+        'swimr': collect_swimr_results,
+        'weave': collect_weave_results,
+    }
+    try:
+        func = callable_map[stage_name]
+    except KeyError:
+        raise ValueError(f"Stage name {stage_name} is not valid.")
+
+    func(experiment_dir)
 
 def main() -> None:
-    fire.Fire(
-        {
-            "rover_covsel": collect_rover_covsel_results,
-            "regmod_smooth": collect_regmod_smooth_results,
-            "swimr": collect_swimr_results,
-            "weave": collect_weave_results,
-        }
-    )
+    fire.Fire(collect_results)

@@ -25,7 +25,7 @@ def validate_config(
         config = ParentConfiguration(**settings)
 
     # Validate against the dataset
-    dataset = dataif.load_data()
+    dataset = dataif.load(config.input_path)
     errors = []
 
     if "rover_covsel" in stages:

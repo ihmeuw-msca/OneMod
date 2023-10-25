@@ -1,3 +1,4 @@
+from loguru import logger
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,13 +12,13 @@ if TYPE_CHECKING:
 
 @task_template_cache
 def _create_task_template(
-    tool: Tool,
+    tool: "Tool",
     task_template_name: str,
     node_args: list[str],
     task_args: list[str] | None = None,
     op_args: list[str] | None = None,
     resources_path: str | Path | None = None,
-) -> TaskTemplate:
+) -> "TaskTemplate":
     """Create a Jobmon task template from provided arguments.
 
     This method creates a Jobmon task template using the provided arguments and returns it.
@@ -55,18 +56,18 @@ def _create_task_template(
     if node_args:
         for node_arg in node_args:
             # Rule: the CLI argument must match the name of the arg
-            command_template.append(f"{node_arg}")
-            command_template.append(f"--{{{node_arg}}}")
+            command_template.append(f"--{node_arg}")
+            command_template.append(f"{{{node_arg}}}")
 
     if task_args:
         for task_arg in task_args:
-            command_template.append(f"{task_arg}")
-            command_template.append(f"--{{{task_arg}}}")
+            command_template.append(f"--{task_arg}")
+            command_template.append(f"{{{task_arg}}}")
 
     if op_args:
         for op_arg in op_args:
-            command_template.append(f"{op_arg}")
-            command_template.append(f"--{{{op_arg}}}")
+            command_template.append(f"--{op_arg}")
+            command_template.append(f"{{{op_arg}}}")
 
     # Add in default op_arg
     if "entrypoint" not in op_args:
@@ -81,13 +82,20 @@ def _create_task_template(
         task_args=task_args,
         op_args=op_args,
         default_cluster_name=tool.default_cluster_name,
-        yaml_file=resources_path,
     )
+    try:
+        template.set_default_compute_resources_from_yaml(
+            default_cluster_name=tool.default_cluster_name,
+            yaml_file=resources_path
+        )
+    except Exception as e:
+        logger.warning(f"Could not set default compute resources from yaml file for template {task_template_name}"
+                       "Using default resources from tool")
 
     return template
 
 
-def create_initialization_template(tool: Tool, resources_file: str | Path) -> TaskTemplate:
+def create_initialization_template(tool: "Tool", resources_file: str | Path) -> "TaskTemplate":
 
     template = _create_task_template(
         tool=tool,
@@ -100,10 +108,10 @@ def create_initialization_template(tool: Tool, resources_file: str | Path) -> Ta
 
 
 def create_modeling_template(
-    tool: Tool,
+    tool: "Tool",
     task_template_name: str,
     resources_path: str | Path,
-    parallel: bool = True) -> TaskTemplate:
+    parallel: bool = True) -> "TaskTemplate":
     """Stage modeling template.
 
     Parameters
@@ -140,8 +148,8 @@ def create_modeling_template(
 
 
 def create_collection_template(
-    tool: Tool, task_template_name: str, resources_path: str | Path
-) -> TaskTemplate:
+    tool: "Tool", task_template_name: str, resources_path: str | Path
+) -> "TaskTemplate":
     """Stage collection template.
 
     Parameters
@@ -167,8 +175,8 @@ def create_collection_template(
 
 
 def create_deletion_template(
-    tool: Tool, task_template_name: str, resources_path: str | Path
-) -> TaskTemplate:
+    tool: "Tool", task_template_name: str, resources_path: str | Path
+) -> "TaskTemplate":
     """Stage deletion template.
 
     Parameters
