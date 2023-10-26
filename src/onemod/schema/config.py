@@ -88,6 +88,33 @@ class ModelCFG(CFG):
         ), f"{mtype=:} is not one of {model_type_dict.keys()}"
         return mtype
 
+    def to_args(self, obs: str, covs: list[str]) -> dict[str, Any]:
+        args = self.model_dump()
+
+        var_groups = args["var_groups"]
+        coef_bounds = args.pop("coef_bounds")
+        lam = args.pop("lam")
+
+        var_group_keys = [
+            (var_group["col"], var_group.get("dim")) for var_group in var_groups
+        ]
+
+        for cov in covs:
+            if (cov, "age_mid") not in var_group_keys:
+                var_groups.append(dict(col=cov, dim="age_mid"))
+
+        for var_group in var_groups:
+            cov = var_group["col"]
+            if "uprior" not in var_group:
+                var_group["uprior"] = tuple(
+                    map(float, coef_bounds.get(cov, [-100, 100]))
+                )
+            if "lam" not in var_group:
+                var_group["lam"] = lam
+
+        args["obs"] = obs
+        return args
+
 
 class RegmodSmoothCFG(StageCFG):
     model: ModelCFG

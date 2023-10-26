@@ -146,42 +146,10 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     regmod_smooth_config = config.regmod_smooth
 
-    # Create regmod smooth parameters
-    var_groups = regmod_smooth_config.var_groups
-    coef_bounds = regmod_smooth_config.coef_bounds
-    lam = regmod_smooth_config.lam
-
-    var_group_keys = [
-        (var_group["col"], var_group.get("dim")) for var_group in var_groups
-    ]
-
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
 
-    logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
-
-    # add selected covariates as var_group with age_mid as the dimension
-    for cov in selected_covs:
-        if (cov, "age_mid") not in var_group_keys:
-            var_groups.append(dict(col=cov, dim="age_mid"))
-
-    logger.info(f"{len(var_groups)} var_groups created for smoothing.")
-
-    # default settings for everyone
-    for var_group in var_groups:
-        cov = var_group["col"]
-        if "uprior" not in var_group:
-            var_group["uprior"] = tuple(map(float, coef_bounds.get(cov, [-100, 100])))
-        if "lam" not in var_group:
-            var_group["lam"] = lam
-
     # Create regmod smooth model
-    model = Model(
-        model_type=regmod_smooth_config.model_type,
-        obs=config.col_obs,
-        dims=regmod_smooth_config.dims,
-        var_groups=var_groups,
-        weights=regmod_smooth_config.weights,
-    )
+    model = Model(**config.regmod_smooth.model.to_args(config.col_obs, selected_covs))
 
     df = dataif.load(config.input_path)
     df_train = df.query(f"({config.col_test} == 0) & {config.col_obs}.notnull()")
@@ -195,13 +163,13 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     df[config.col_pred] = model.predict(df)
 
     residual_func = get_residual_computation_function(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.model.mtype,
         col_obs=config.col_obs,
         col_pred=config.col_pred,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.model.mtype,
         col_obs=config.col_obs,
         col_pred=config.col_pred,
     )
