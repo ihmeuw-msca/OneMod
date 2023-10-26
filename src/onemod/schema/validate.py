@@ -1,18 +1,14 @@
 import pandas as pd
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from onemod.schema.config import OneModCFG
-from onemod.utils import get_data_interface
+from onemod.utils import get_handle
 
 
 def validate_config(directory: str, stages: list[str]) -> None:
     """Validate the configuration file according to the expected schema."""
 
-    dataif = get_data_interface(directory)
-    settings = dataif.load_settings()
-
-    # Validation error raised if config fails
-    config = OneModCFG(**settings)
+    dataif, config = get_handle(directory)
 
     # Validate against the dataset
     dataset = dataif.load_data()
@@ -42,21 +38,21 @@ def validate_config(directory: str, stages: list[str]) -> None:
         raise ValidationError(f"Following errors were raised: {errors}")
 
 
-def validate_rover_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_rover_config(config: OneModCFG, dataset: pd.DataFrame) -> list[str]:
     return []  # TODO
 
 
-def validate_regmod_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_regmod_config(config: OneModCFG, dataset: pd.DataFrame) -> list[str]:
     return []  # TODO
 
 
-def validate_weave_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_weave_config(config: OneModCFG, dataset: pd.DataFrame) -> list[str]:
     return []  # TODO
 
 
-def validate_swimr_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_swimr_config(config: OneModCFG, dataset: pd.DataFrame) -> list[str]:
     return []  # TODO
 
 
-def validate_ensemble_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_ensemble_config(config: OneModCFG, dataset: pd.DataFrame) -> list[str]:
     return []  # TODO

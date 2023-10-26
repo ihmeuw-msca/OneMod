@@ -393,15 +393,13 @@ def get_rover_covsel_input(config: OneModCFG) -> pd.DataFrame:
 
 def get_smoother_input(
     smoother: str,
-    config: OneModCFG,
     experiment_dir: str,
     from_rover: Optional[bool] = False,
 ) -> pd.DataFrame:
     """Get input data for smoother model."""
-    experiment_dir = Path(experiment_dir)
-    interface = get_data_interface(experiment_dir)
+    dataif, config = get_handle(experiment_dir)
     if from_rover:
-        df_input = interface.load_regmod_smooth("predictions.parquet")
+        df_input = dataif.load_regmod_smooth("predictions.parquet")
         df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
         df_input = get_rover_covsel_input(config)
@@ -412,7 +410,7 @@ def get_smoother_input(
     columns = list(set(columns))
 
     if len(columns) > 0:
-        right = interface.load_data()
+        right = dataif.load_data()
         df_input = df_input.merge(
             right=right[columns].drop_duplicates(),
             on=config.col_id,
@@ -489,8 +487,7 @@ def get_rover_covsel_submodels(
     """Get rover submodel IDs and save subsets.
     TODO: merge this to the rover_covsel function to avoid confusion
     """
-    dataif = get_data_interface(experiment_dir)
-    config = OneModCFG(**dataif.load_settings())
+    dataif, config = get_handle(experiment_dir)
 
     # Create rover subsets and submodels
     df_input = get_rover_covsel_input(config)
@@ -507,8 +504,7 @@ def get_swimr_submodels(
     experiment_dir: str, save_files: Optional[bool] = False
 ) -> list[str]:
     """Get swimr submodel IDs; save parameters and subsets."""
-    dataif = get_data_interface(experiment_dir)
-    config = OneModCFG(**dataif.load_settings())
+    dataif, config = get_handle(experiment_dir)
 
     # Create swimr parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
@@ -538,8 +534,7 @@ def get_weave_submodels(
     experiment_dir: str, save_files: Optional[bool] = False
 ) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
-    dataif = get_data_interface(experiment_dir)
-    config = OneModCFG(**dataif.load_settings())
+    dataif, config = get_handle(experiment_dir)
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
@@ -599,7 +594,7 @@ def task_template_cache(task_template_name: str) -> Callable:
 
 
 @cache
-def get_data_interface(experiment_dir: str) -> DataInterface:
+def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
     """Get data interface for loading and dumping files. This object encoded the
     folder structure of the experiments, including where the configuration files
     data and results are stored.
@@ -607,8 +602,7 @@ def get_data_interface(experiment_dir: str) -> DataInterface:
     Example
     -------
     >>> experiment_dir = "/path/to/experiment"
-    >>> dataif = get_data_interface(experiment_dir)
-    >>> settings = dataif.load_settings()
+    >>> dataif, config = get_handle(experiment_dir)
     >>> df = dataif.load_data()
     >>> df_results = ...
     >>> dataif.dump_rover_covsel(df_results, "results.parquet")
@@ -646,4 +640,7 @@ def get_data_interface(experiment_dir: str) -> DataInterface:
     dataif.add_dir("weave", dataif.results / "weave")
     dataif.add_dir("swimr", dataif.results / "swimr")
     dataif.add_dir("ensemble", dataif.results / "ensemble")
-    return dataif
+
+    # create confiuration file
+    config = OneModCFG(**dataif.load_settings())
+    return dataif, config

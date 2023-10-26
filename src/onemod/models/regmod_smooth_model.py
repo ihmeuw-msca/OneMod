@@ -11,7 +11,7 @@ import pandas as pd
 from regmodsm.model import Model
 
 from onemod.schema.config import OneModCFG
-from onemod.utils import get_data_interface
+from onemod.utils import get_handle
 
 
 def get_residual_computation_function(
@@ -143,8 +143,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     predictions.parquet
         Predictions with residual information.
     """
-    dataif = get_data_interface(experiment_dir)
-    config = OneModCFG(**dataif.load_settings())
+    dataif, config = get_handle(experiment_dir)
 
     regmod_smooth_config = config.regmod_smooth
 

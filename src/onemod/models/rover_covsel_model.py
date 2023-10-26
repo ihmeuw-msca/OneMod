@@ -3,7 +3,7 @@ import fire
 from loguru import logger
 from modrover.api import Rover
 from onemod.schema.config import OneModCFG
-from onemod.utils import get_rover_covsel_input, Subsets, get_data_interface
+from onemod.utils import get_rover_covsel_input, Subsets, get_handle
 
 
 def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
@@ -30,8 +30,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
         Summary covariate coefficients from the ensemble model.
 
     """
-    dataif = get_data_interface(experiment_dir)
-    config = OneModCFG(**dataif.load_settings())
+    dataif, config = get_handle(experiment_dir)
 
     subsets = Subsets(
         "rover_covsel",

@@ -19,7 +19,7 @@ from onemod.utils import (
     get_smoother_input,
     Subsets,
     SwimrParams,
-    get_data_interface,
+    get_handle,
 )
 
 
@@ -111,15 +111,14 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
         The ID of the submodel to be processed.
 
     """
-    dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    dataif, config = get_handle(experiment_dir)
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]
     param_id = int(submodel_id.split("_")[1][5:])
     subset_id = int(submodel_id.split("_")[2][6:])
     holdout_id = submodel_id.split("_")[3]
-    model_settings = settings["swimr"]["models"][model_id]
+    model_settings = config["swimr"]["models"][model_id]
     params = SwimrParams(model_id, param_sets=dataif.load_swimr("parameters.csv"))
     subsets = Subsets(
         model_id, model_settings, subsets=dataif.load_swimr("subsets.csv")
@@ -127,10 +126,10 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Load data and filter by subset
     df_input = subsets.filter_subset(
-        get_smoother_input("swimr", settings, experiment_dir, from_rover=True),
+        get_smoother_input("swimr", experiment_dir, from_rover=True),
         subset_id,
     )
-    df_input["holdout"] = df_input[settings["col_test"]] != 0
+    df_input["holdout"] = df_input[config.col_test] != 0
     if (
         model_settings["model_type"] == "cascade"
         and model_settings["cascade_levels"] == "age__tmp,locid"
@@ -177,7 +176,7 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
         [
             "/ihme/singularity-images/rstudio/shells/execRscript.sh",
             "-i",
-            settings["swimr"]["singularity_image"],
+            config["swimr"]["singularity_image"],
             "-s",
             "/mnt/team/msca/priv/code/swimr/tasks/run_swimr.R",
             "--path_to_input_data",
@@ -187,13 +186,13 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
             "--path_to_model_specs",
             model_settings["working_dir"] + "settings.yml",
             "--path_to_age_metadata",
-            settings["swimr"]["age_metadata"],
+            config["swimr"]["age_metadata"],
             "--path_to_swimr_parentdir",
-            settings["swimr"]["swimr_parentdir"],
+            config["swimr"]["swimr_parentdir"],
             "--path_to_conda_binary",
-            settings["swimr"]["conda_binary"],
+            config["swimr"]["conda_binary"],
             "--conda_env_name",
-            settings["swimr"]["conda_env"],
+            config["swimr"]["conda_env"],
         ],
         check=True,
     )
@@ -215,22 +214,20 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Since we are merging on columns specified in the col_id list, ensure they are the correct
     # datatypes.
-    for id_col in settings["col_id"]:
+    for id_col in config.col_id:
         df_pred[id_col] = df_pred[id_col].astype(df_input[id_col].dtype)
 
     df_pred = df_pred.merge(
-        right=df_input[as_list(settings["col_id"]) + ["test", settings["col_pred"]]],
-        on=settings["col_id"],
+        right=df_input[as_list(config.col_id) + ["test", config.col_pred]],
+        on=config.col_id,
     )
-    df_pred[settings["col_pred"]] = df_pred.apply(
-        lambda row: get_prediction(
-            row, settings["col_pred"], settings["rover"]["model_type"]
-        ),
+    df_pred[config.col_pred] = df_pred.apply(
+        lambda row: get_prediction(row, config.col_pred, config.rover_covsel["mtype"]),
         axis=1,
     )
     df_pred = df_pred[
-        as_list(settings["col_id"])
-        + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
+        as_list(config.col_id)
+        + ["residual", config.col_pred, "model_id", "param_id", "holdout_id"]
     ]
     dataif.dump_swimr_preds(df_pred, "predictions.parquet")
 

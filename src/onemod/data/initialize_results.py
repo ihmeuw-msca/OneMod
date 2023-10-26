@@ -9,13 +9,13 @@ from onemod.utils import (
     get_swimr_submodels,
     get_weave_submodels,
     Subsets,
-    get_data_interface,
+    get_handle,
 )
 
 
 def initialize_rover_covsel_results(experiment_dir: str) -> None:
     """Initialize rover results."""
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
 
     # Initialize directories
     if dataif.rover_covsel.exists():
@@ -28,7 +28,7 @@ def initialize_rover_covsel_results(experiment_dir: str) -> None:
 
 
 def initialize_regmod_smooth_results(experiment_dir: str) -> None:
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
 
     # Initialize directories
     if dataif.regmod_smooth.exists():
@@ -38,7 +38,7 @@ def initialize_regmod_smooth_results(experiment_dir: str) -> None:
 
 def initialize_swimr_results(experiment_dir: str) -> None:
     """Initialize swimr results."""
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
 
     # Initialize directories
     if dataif.swimr.exists():
@@ -52,7 +52,7 @@ def initialize_swimr_results(experiment_dir: str) -> None:
 
 def initialize_weave_results(experiment_dir: str) -> None:
     """Initialize weave results."""
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
 
     # Initialize directories
     if dataif.weave.exists():
@@ -65,7 +65,7 @@ def initialize_weave_results(experiment_dir: str) -> None:
 
 def initialize_ensemble_results(experiment_dir: str) -> None:
     """Initialize ensemble results."""
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
 
     # Initialize directory
     if dataif.ensemble.exists():
