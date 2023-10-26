@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 from regmodsm.model import Model
 
-from onemod.schema.config import OneModCFG
 from onemod.utils import get_handle
 
 

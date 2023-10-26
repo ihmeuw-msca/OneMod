@@ -2,7 +2,6 @@
 import fire
 from loguru import logger
 from modrover.api import Rover
-from onemod.schema.config import OneModCFG
 from onemod.utils import get_rover_covsel_input, Subsets, get_handle
 
 
