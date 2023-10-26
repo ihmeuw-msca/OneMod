@@ -4,6 +4,8 @@ import numpy as np
 from weave.dimension import Dimension
 from weave.smoother import Smoother
 
+from onemod.schema.models.parent_config import ParentConfiguration
+
 from onemod.utils import (
     as_list,
     get_prediction,
@@ -32,7 +34,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     dataif = get_data_interface(experiment_dir)
     # experiment_dir = Path(experiment_dir)
     # weave_dir = experiment_dir / "results" / "weave"
-    settings = dataif.load_settings()
+    settings = ParentConfiguration(**dataif.load_settings())
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]
@@ -62,6 +64,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     # Create smoother objects
     dimensions = []
     for dim_name, dim_dict in model_settings["dimensions"].items():
+        dim_dict = dict(dim_dict)  # Base type is a pydantic model, so convert to dict
         if dim_dict["kernel"] != "identity":
             param = kernel_params[dim_dict["kernel"]]
             dim_dict[param] = params.get_param(f"{dim_name}_{param}", param_id)
@@ -88,7 +91,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     )
     df_pred[settings["col_pred"]] = df_pred.apply(
         lambda row: get_prediction(
-            row, settings["col_pred"], settings["rover_covsel"]["Rover"]["model_type"]
+            row, settings["col_pred"], settings["model_type"]
         ),
         axis=1,
     )

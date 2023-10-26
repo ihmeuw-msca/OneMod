@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.stats import norm
 from regmodsm.model import Model
 
-from onemod.schema.config import RegmodSmoothConfiguration, ParentConfiguration
+from onemod.schema.models.parent_config import ParentConfiguration
 from onemod.utils import get_data_interface
 
 
@@ -188,6 +188,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     global_config = ParentConfiguration(**settings)
     regmod_smooth_config = global_config.regmod_smooth
+    regmod_smooth_config.inherit()
 
     # Create regmod smooth parameters
     var_groups = regmod_smooth_config.var_groups

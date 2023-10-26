@@ -7,7 +7,7 @@ import fire
 from loguru import logger
 import pandas as pd
 
-from onemod.schema.config import ParentConfiguration
+from onemod.schema.models.parent_config import ParentConfiguration
 from onemod.utils import (
     as_list,
     get_rover_covsel_submodels,

@@ -13,7 +13,7 @@ import pandas as pd
 import yaml
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.config import ParentConfiguration
+from onemod.schema.models.parent_config import ParentConfiguration
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
@@ -196,14 +196,13 @@ class Subsets:
 
         """
         self.model_id = model_id
-        self.columns = settings.groupby
+        self.columns = settings["groupby"]
         if subsets is None:
             if data is None:
                 raise TypeError("Data cannot be None if subsets are not provided.")
-            self.columns = settings.groupby
-            max_batch_size = getattr(settings, "max_batch", None)
-            if not max_batch_size:
-                max_batch_size = settings.parent_args.get("max_batch")
+            self.columns = settings["groupby"]
+            settings.inherit()
+            max_batch_size = getattr(settings, "max_batch", -1)
             self.subsets = self._create_subsets(data, max_batch_size)
         else:
             self.subsets = subsets[subsets["model_id"] == model_id]
@@ -467,7 +466,7 @@ def _get_smoother_columns(smoother: str, settings: BaseModel) -> set:
         elif smoother == "weave":
             for dimension_settings in model_settings["dimensions"].values():
                 for key in ["name", "coordinates"]:
-                    if key in dimension_settings:
+                    if key in dimension_settings and dimension_settings[key] is not None:
                         columns.update(as_list(dimension_settings[key]))
     return columns
 

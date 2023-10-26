@@ -2,7 +2,7 @@
 import fire
 from loguru import logger
 from modrover.api import Rover
-from onemod.schema.config import ParentConfiguration, RoverConfiguration
+from onemod.schema.models.parent_config import ParentConfiguration
 from onemod.utils import get_rover_covsel_input, Subsets, get_data_interface
 
 
@@ -35,6 +35,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     global_config = ParentConfiguration(**settings)
     rover_config = global_config.rover_covsel
+    rover_config.inherit()
 
     subsets = Subsets(
         "rover_covsel",
@@ -61,6 +62,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Create rover objects
     rover_init_args = rover_config.model_dump(exclude={"fit_args", "groupby", "parent_args"})
+    breakpoint()
     rover = Rover(**rover_init_args)
 
     # Fit rover model
