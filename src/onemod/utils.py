@@ -4,7 +4,6 @@ from __future__ import annotations
 from functools import wraps, cache
 from itertools import product
 from pathlib import Path
-from pydantic import BaseModel
 from typing import Any, Callable, Optional, TYPE_CHECKING, Union
 import warnings
 
@@ -13,11 +12,10 @@ import pandas as pd
 import yaml
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.config import ParentConfiguration
+from onemod.schema.config import OneModCFG
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
-    from pydantic import BaseModel
 
 
 class Parameters:
@@ -44,8 +42,8 @@ class Parameters:
     def __init__(
         self,
         model_id: str,
-        settings: Optional[BaseModel] = None,
-        param_sets: Optional[pd.DataFrame] = None,
+        config: OneModCFG | None = None,
+        param_sets: pd.DataFrame | None = None,
     ) -> None:
         """Create Parameters object.
 
@@ -56,7 +54,7 @@ class Parameters:
         ----------
         model_id : str
             Smoother model ID.
-        settings : BaseModel, optional
+        config, optional
             Model specifications.
         param_sets : pandas.DataFrame, optional
             Parameter set data frame.
@@ -64,13 +62,13 @@ class Parameters:
         """
         self.model_id = model_id
         if param_sets is None:
-            if settings is None:
+            if config is None:
                 raise TypeError("Settings cannot be None if param_sets is None.")
-            self.param_sets = self._create_param_sets(settings)
+            self.param_sets = self._create_param_sets(config)
         else:
             self.param_sets = param_sets[param_sets["model_id"] == model_id]
 
-    def _create_param_sets(self, settings: BaseModel) -> pd.DataFrame:
+    def _create_param_sets(self, config: OneModCFG) -> pd.DataFrame:
         """Create parameter set data frame.
 
         Parameter set data frame contains parameter IDs and their
@@ -80,7 +78,7 @@ class Parameters:
 
         Parameters
         ----------
-        settings : BaseModel
+        config
             Model specifications.
 
         Returns
@@ -113,10 +111,11 @@ class SwimrParams(Parameters):
         "intercept_theta",
     )
 
-    def _create_param_sets(self, settings: BaseModel) -> pd.DataFrame:
+    def _create_param_sets(self, config: OneModCFG) -> pd.DataFrame:
         """Create parameter set data frame."""
+        swimr_config = config["swimr"]
         index = pd.MultiIndex.from_product(
-            iterables=[as_list(settings[param]) for param in self.params],
+            iterables=[as_list(swimr_config[param]) for param in self.params],
             names=self.params,
         )
         param_sets = pd.DataFrame(index=index).reset_index()
@@ -136,9 +135,10 @@ class WeaveParams(Parameters):
 
     params: tuple[str, ...] = ("radius", "exponent", "distance_dict")
 
-    def _create_param_sets(self, settings: BaseModel) -> pd.DataFrame:
+    def _create_param_sets(self, config: OneModCFG) -> pd.DataFrame:
         """Create parameter set data frame."""
-        dimensions = settings["dimensions"]
+        weave_config = config["weave"]
+        dimensions = weave_config["dimensions"]
         index = pd.MultiIndex.from_product(
             iterables=[
                 as_list(dimensions[dimension][param])
@@ -177,9 +177,9 @@ class Subsets:
     def __init__(
         self,
         model_id: str,
-        settings: BaseModel,
-        data: Optional[pd.DataFrame] = None,
-        subsets: Optional[pd.DataFrame] = None,
+        config: OneModCFG,
+        data: pd.DataFrame | None = None,
+        subsets: pd.DataFrame | None = None,
     ) -> None:
         """Create Subsets object.
 
@@ -187,7 +187,7 @@ class Subsets:
         ----------
         model_id : str
             Model ID.
-        settings : BaseModel
+        config
             Model specifications.
         data : pandas.DataFrame, optional
             Input data.
@@ -195,15 +195,14 @@ class Subsets:
             Subset data frame.
 
         """
+        stage_config = config[model_id]
         self.model_id = model_id
-        self.columns = settings.groupby
+        self.columns = stage_config.groupby
         if subsets is None:
             if data is None:
                 raise TypeError("Data cannot be None if subsets are not provided.")
-            self.columns = settings.groupby
-            max_batch_size = getattr(settings, "max_batch", None)
-            if not max_batch_size:
-                max_batch_size = settings.parent_args.get("max_batch")
+            self.columns = stage_config.groupby
+            max_batch_size = stage_config.max_batch
             self.subsets = self._create_subsets(data, max_batch_size)
         else:
             self.subsets = subsets[subsets["model_id"] == model_id]
@@ -362,7 +361,9 @@ def add_holdouts(
     return df
 
 
-def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True, as_model: bool = True) -> BaseModel | dict:
+def load_settings(
+    settings_file: Union[Path, str], raise_on_error: bool = True, as_model: bool = True
+) -> OneModCFG | dict:
     """Load settings file."""
     try:
         with open(settings_file, "r") as f:
@@ -376,23 +377,23 @@ def load_settings(settings_file: Union[Path, str], raise_on_error: bool = True, 
     if not as_model:
         # Return a raw dict, like for task template resources
         return settings
-    return ParentConfiguration(**settings)
+    return OneModCFG(**settings)
 
 
-def get_rover_covsel_input(settings: BaseModel) -> pd.DataFrame:
+def get_rover_covsel_input(config: OneModCFG) -> pd.DataFrame:
     """Get input data for rover model."""
-    interface = DataInterface(data=settings["input_path"])
+    interface = DataInterface(data=config.input_path)
     df_input = interface.load_data()
-    for dimension in settings["col_id"]:
-        if hasattr(settings, dimension):
+    for dimension in config.col_id:
+        if dimension in config:
             # Optionally filter data. Defaults to using all values in the dimension
-            df_input = df_input[df_input[dimension].isin(settings[dimension])]
+            df_input = df_input[df_input[dimension].isin(config[dimension])]
     return df_input
 
 
 def get_smoother_input(
     smoother: str,
-    settings: BaseModel,
+    config: OneModCFG,
     experiment_dir: str,
     from_rover: Optional[bool] = False,
 ) -> pd.DataFrame:
@@ -403,10 +404,10 @@ def get_smoother_input(
         df_input = interface.load_regmod_smooth("predictions.parquet")
         df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
-        df_input = get_rover_covsel_input(settings)
+        df_input = get_rover_covsel_input(config)
 
-    columns = _get_smoother_columns(smoother, settings).difference(df_input.columns)
-    columns = as_list(settings["col_id"]) + list(columns)
+    columns = _get_smoother_columns(smoother, config).difference(df_input.columns)
+    columns = as_list(config.col_id) + list(columns)
     # Deduplicate
     columns = list(set(columns))
 
@@ -414,11 +415,11 @@ def get_smoother_input(
         right = interface.load_data()
         df_input = df_input.merge(
             right=right[columns].drop_duplicates(),
-            on=settings["col_id"],
+            on=config.col_id,
         )
     if smoother == "weave":  # weave models can't have NaN data
-        df_input.loc[df_input[settings["col_obs"]].isna(), "residual_value"] = 1
-        df_input.loc[df_input[settings["col_obs"]].isna(), "residual_se"] = 1
+        df_input.loc[df_input[config.col_obs].isna(), "residual_value"] = 1
+        df_input.loc[df_input[config.col_obs].isna(), "residual_se"] = 1
     if smoother == "swimr":
         df_input["submodel_id"] = df_input["location_id"].astype(str)
         df_input["row_id"] = np.arange(len(df_input))
@@ -426,7 +427,8 @@ def get_smoother_input(
     return df_input
 
 
-def _get_smoother_columns(smoother: str, settings: BaseModel) -> set:
+# TODO: This need to be adjusted for the new change
+def _get_smoother_columns(smoother: str, config: OneModCFG) -> set:
     """Get column names needed for smoother model.
 
     Notes
@@ -444,10 +446,10 @@ def _get_smoother_columns(smoother: str, settings: BaseModel) -> set:
     }
 
     """
-    columns = set(as_list(settings["col_holdout"]) + as_list(settings["col_test"]))
+    columns = set(as_list(config.col_holdout) + as_list(config.col_test))
     if smoother not in ("swimr", "weave"):
         raise ValueError(f"Invalid smoother name: {smoother}")
-    for model_settings in settings[smoother]["models"].values():
+    for model_settings in config[smoother]["models"].values():
         columns.update(as_list(model_settings["groupby"]))
         if smoother == "swimr" and model_settings["model_type"] == "cascade":
             if "cascade_levels" in model_settings:
@@ -472,16 +474,12 @@ def _get_smoother_columns(smoother: str, settings: BaseModel) -> set:
     return columns
 
 
-def get_ensemble_input(settings: BaseModel) -> pd.DataFrame:
+def get_ensemble_input(config: OneModCFG) -> pd.DataFrame:
     """Get input data for ensemble model."""
     input_cols = set(
-        as_list(settings["col_id"])
-        + as_list(settings["col_holdout"])
-        + [settings["col_obs"]]
+        config.col_id + config.col_holdout + [config.col_obs] + config.ensemble.groupby
     )
-    if "groupby" in settings["ensemble"]:
-        input_cols.update(as_list(settings["ensemble"]["groupby"]))
-    rover_input = get_rover_covsel_input(settings)
+    rover_input = get_rover_covsel_input(config)
     return rover_input[list(input_cols)]
 
 
@@ -492,11 +490,11 @@ def get_rover_covsel_submodels(
     TODO: merge this to the rover_covsel function to avoid confusion
     """
     dataif = get_data_interface(experiment_dir)
-    settings = ParentConfiguration(**dataif.load_settings())
+    config = OneModCFG(**dataif.load_settings())
 
     # Create rover subsets and submodels
-    df_input = get_rover_covsel_input(settings)
-    subsets = Subsets("rover_covsel", settings["rover_covsel"], df_input)
+    df_input = get_rover_covsel_input(config)
+    subsets = Subsets("rover_covsel", config, df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
@@ -510,13 +508,13 @@ def get_swimr_submodels(
 ) -> list[str]:
     """Get swimr submodel IDs; save parameters and subsets."""
     dataif = get_data_interface(experiment_dir)
-    settings = ParentConfiguration(**dataif.load_settings())
+    config = OneModCFG(**dataif.load_settings())
 
     # Create swimr parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
 
-    df_input = get_smoother_input("swimr", settings, experiment_dir)
-    for model_id, model_settings in settings["swimr"]["models"].items():
+    df_input = get_smoother_input("swimr", config, experiment_dir)
+    for model_id, model_settings in config["swimr"]["models"].items():
         params = SwimrParams(model_id, model_settings)
         param_list.append(params.param_sets)
         subsets = Subsets(model_id, model_settings, df_input)
@@ -524,7 +522,7 @@ def get_swimr_submodels(
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
             subsets.get_subset_ids(),
-            as_list(settings["col_holdout"]) + ["full"],
+            as_list(config.col_holdout) + ["full"],
         ):
             submodel = f"{model_id}_param{param_id}_subset{subset_id}_{holdout_id}"
             submodels.append(submodel)
@@ -541,13 +539,13 @@ def get_weave_submodels(
 ) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
     dataif = get_data_interface(experiment_dir)
-    settings = ParentConfiguration(**dataif.load_settings())
+    config = OneModCFG(**dataif.load_settings())
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
 
-    df_input = get_smoother_input("weave", settings, experiment_dir)
-    for model_id, model_settings in settings["weave"]["models"].items():
+    df_input = get_smoother_input("weave", config, experiment_dir)
+    for model_id, model_settings in config["weave"]["models"].items():
         params = WeaveParams(model_id, model_settings)
         param_list.append(params.param_sets)
         subsets = Subsets(model_id, model_settings, df_input)
@@ -555,7 +553,7 @@ def get_weave_submodels(
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
             subsets.get_subset_ids(),
-            as_list(settings["col_holdout"]) + ["full"],
+            as_list(config.col_holdout) + ["full"],
         ):
             for batch_id in subsets.get_batch_ids(subset_id):
                 submodel = (

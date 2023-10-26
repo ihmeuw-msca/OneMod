@@ -7,7 +7,7 @@ import fire
 from loguru import logger
 import pandas as pd
 
-from onemod.schema.config import ParentConfiguration
+from onemod.schema.config import OneModCFG
 from onemod.utils import (
     as_list,
     get_rover_covsel_submodels,
@@ -56,7 +56,7 @@ def _plot_rover_covsel_results(
     """
 
     logger.info("Plotting coefficient magnitudes by age.")
-    settings = ParentConfiguration(**dataif.load_settings())
+    settings = OneModCFG(**dataif.load_settings())
 
     # add age_mid to summary
     df_age = dataif.load(
@@ -66,8 +66,9 @@ def _plot_rover_covsel_results(
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
-    logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
-
+    logger.info(
+        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
+    )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
@@ -117,7 +118,7 @@ def _plot_regmod_smooth_results(
             alpha=0.5,
             label="regmod_smooth",
         )
-        ax.legend(fontsize = 'xx-small')
+        ax.legend(fontsize="xx-small")
     return fig
 
 
@@ -155,7 +156,7 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
 def collect_swimr_results(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
     dataif = get_data_interface(experiment_dir)
-    settings = ParentConfiguration(**dataif.load_settings())
+    settings = OneModCFG(**dataif.load_settings())
 
     submodel_ids = get_swimr_submodels(experiment_dir)
     for holdout_id in settings.col_holdout + ["full"]:

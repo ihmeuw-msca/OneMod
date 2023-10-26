@@ -19,8 +19,11 @@ class CFG(BaseModel):
     def extra_fields(self) -> set[str]:
         return set(self.__dict__) - set(self.model_fields)
 
+    def __contains__(self, key: str) -> bool:
+        return key in self.model_fields
+
     def __getitem__(self, key: str) -> Any:
-        if key in self.model_fields:
+        if key in self:
             return getattr(self, key)
         raise KeyError(f"{key} is not in the {self.model_fields=:}")
 

@@ -2,7 +2,7 @@
 import fire
 from loguru import logger
 from modrover.api import Rover
-from onemod.schema.config import ParentConfiguration, RoverConfiguration
+from onemod.schema.config import OneModCFG
 from onemod.utils import get_rover_covsel_input, Subsets, get_data_interface
 
 
@@ -31,41 +31,36 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     """
     dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
-
-    global_config = ParentConfiguration(**settings)
-    rover_config = global_config.rover_covsel
+    config = OneModCFG(**dataif.load_settings())
 
     subsets = Subsets(
         "rover_covsel",
-        rover_config,
+        config,
         subsets=dataif.load_rover_covsel("subsets.csv"),
     )
 
     # Load and filter by subset
     subset_id = int(submodel_id[6:])
-    df_input = subsets.filter_subset(get_rover_covsel_input(settings), subset_id)
+    df_input = subsets.filter_subset(get_rover_covsel_input(config), subset_id)
     logger.info(f"Fitting rover for {subset_id=}")
 
     # Create a test column if not existing
     # TODO: Either move this to some data prep stage or make it persistent, needed in
     # other models
-    test_col = settings["col_test"]
-    if test_col not in df_input:
+    if config.col_test not in df_input:
         logger.warning("Test column not found, setting null observations as test rows.")
-        df_input[test_col] = df_input[settings["col_obs"]].isna().astype("int")
+        df_input[config.col_test] = df_input[config.col_obs].isna().astype("int")
 
-    df_train = df_input[df_input[settings["col_test"]] == 0]
+    df_train = df_input[df_input[config.col_test] == 0]
 
     dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
-    rover_init_args = rover_config.model_dump(exclude={"fit_args", "groupby", "parent_args"})
-    rover = Rover(**rover_init_args)
+    rover = Rover(**config.rover_covsel.rover.model_dump())
 
     # Fit rover model
-    logger.info(f"Fitting the rover model with options {rover_config.fit_args}")
-    rover.fit(data=df_train, **rover_config.fit_args)
+    logger.info(f"Fitting the rover model with options {config.rover_covsel.rover_fit}")
+    rover.fit(data=df_train, **config.rover_covsel.rover_fit)
 
     # Save results
     dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")

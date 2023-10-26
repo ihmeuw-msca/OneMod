@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Union
 
-from onemod.schema.config import ParentConfiguration as GlobalConfig
+from onemod.schema.config import OneModCFG as GlobalConfig
 from onemod.utils import (
     get_rover_covsel_submodels,
     get_swimr_submodels,
@@ -87,7 +87,9 @@ class StageTemplate:
             List of tasks representing the current stage.
 
         """
-        config = load_settings(self.experiment_dir / "config" / "settings.yml", as_model=True)
+        config = load_settings(
+            self.experiment_dir / "config" / "settings.yml", as_model=True
+        )
 
         # Create stage initialization tasks
         initialization_tasks = self.create_initialization_task()

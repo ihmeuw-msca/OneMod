@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.stats import norm
 from regmodsm.model import Model
 
-from onemod.schema.config import RegmodSmoothConfiguration, ParentConfiguration
+from onemod.schema.config import RegmodSmoothConfiguration, OneModCFG
 from onemod.utils import get_data_interface
 
 
@@ -49,9 +49,7 @@ def get_residual_computation_function(
             pred=col_pred,
         ),
         ("poisson", "exp"): partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1,
-            obs=col_obs,
-            pred=col_pred
+            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=col_obs, pred=col_pred
         ),
         ("tobit", "exp"): partial(
             lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
@@ -64,8 +62,7 @@ def get_residual_computation_function(
             sigma=sigma,
         ),
         ("gaussian", "identity"): partial(
-            lambda row, obs, pred: row[obs] - row[pred],
-            obs=col_obs, pred=col_pred
+            lambda row, obs, pred: row[obs] - row[pred], obs=col_obs, pred=col_pred
         ),
     }
 
@@ -113,7 +110,8 @@ def get_residual_se_function(
             lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
             if row[obs] > 0
             else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-row[col_pred] / row[sigma] + 1e-6j)) / (1e-6),
+            * np.imag(norm.logcdf(-row[col_pred] / row[sigma] + 1e-6j))
+            / (1e-6),
             obs=col_obs,
             pred=col_pred,
             sigma=sigma,
@@ -186,7 +184,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     dataif = get_data_interface(experiment_dir)
     settings = dataif.load_settings()
 
-    global_config = ParentConfiguration(**settings)
+    global_config = OneModCFG(**settings)
     regmod_smooth_config = global_config.regmod_smooth
 
     # Create regmod smooth parameters

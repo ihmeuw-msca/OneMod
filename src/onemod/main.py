@@ -8,7 +8,7 @@ import fire
 from jobmon.client.api import Tool
 from pydantic import ValidationError
 
-from onemod.schema.config import ParentConfiguration
+from onemod.schema.config import OneModCFG
 from onemod.schema.validate import validate_config
 from onemod.stage import StageTemplate
 from onemod.utils import as_list, get_data_interface
