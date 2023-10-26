@@ -7,7 +7,6 @@ import fire
 from loguru import logger
 import pandas as pd
 
-from onemod.schema.config import OneModCFG
 from onemod.utils import (
     get_rover_covsel_submodels,
     get_swimr_submodels,
@@ -55,12 +54,9 @@ def _plot_rover_covsel_results(
     """
 
     logger.info("Plotting coefficient magnitudes by age.")
-    settings = OneModCFG(**dataif.load_settings())
 
     # add age_mid to summary
-    df_age = dataif.load(
-        settings.input_path, columns=["age_group_id", "age_mid"]
-    ).drop_duplicates()
+    df_age = dataif.load_data(columns=["age_group_id", "age_mid"]).drop_duplicates()
 
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
