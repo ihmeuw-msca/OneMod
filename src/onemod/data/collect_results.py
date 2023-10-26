@@ -185,7 +185,7 @@ def collect_swimr_results(experiment_dir: str) -> None:
 def collect_weave_results(experiment_dir: str) -> None:
     """Collect weave submodel results."""
     dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    settings = ParentConfiguration(**dataif.load_settings())
 
     submodel_ids = get_weave_submodels(experiment_dir)
     for holdout_id in settings.col_holdout + ["full"]:

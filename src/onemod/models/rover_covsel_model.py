@@ -62,7 +62,6 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Create rover objects
     rover_init_args = rover_config.model_dump(exclude={"fit_args", "groupby", "parent_args"})
-    breakpoint()
     rover = Rover(**rover_init_args)
 
     # Fit rover model
