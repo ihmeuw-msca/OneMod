@@ -7,6 +7,7 @@ import fire
 from loguru import logger
 import pandas as pd
 
+from onemod.schema.config import ParentConfiguration
 from onemod.utils import (
     as_list,
     get_rover_covsel_submodels,
@@ -55,18 +56,18 @@ def _plot_rover_covsel_results(
     """
 
     logger.info("Plotting coefficient magnitudes by age.")
-    settings = dataif.load_settings()
+    settings = ParentConfiguration(**dataif.load_settings())
 
     # add age_mid to summary
     df_age = dataif.load(
-        settings["input_path"], columns=["age_group_id", "age_mid"]
+        settings.input_path, columns=["age_group_id", "age_mid"]
     ).drop_duplicates()
 
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
-
     logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
+
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
@@ -116,6 +117,7 @@ def _plot_regmod_smooth_results(
             alpha=0.5,
             label="regmod_smooth",
         )
+        ax.legend(fontsize = 'xx-small')
     return fig
 
 
@@ -153,10 +155,10 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
 def collect_swimr_results(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
     dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    settings = ParentConfiguration(**dataif.load_settings())
 
     submodel_ids = get_swimr_submodels(experiment_dir)
-    for holdout_id in as_list(settings["col_holdout"]) + ["full"]:
+    for holdout_id in settings.col_holdout + ["full"]:
         df_list = []
         for submodel_id in [
             submodel_id
@@ -170,9 +172,9 @@ def collect_swimr_results(experiment_dir: str) -> None:
             )
         df_pred = pd.pivot(
             data=pd.concat(df_list, ignore_index=True),
-            index=settings["col_id"],
+            index=settings.col_id,
             columns=["model_id", "param_id"],
-            values=["residual", settings["col_pred"]],
+            values=["residual", settings.col_pred],
         )
         if holdout_id == "full":
             dataif.dump_swimr(df_pred, "predictions.parquet")
@@ -186,7 +188,7 @@ def collect_weave_results(experiment_dir: str) -> None:
     settings = dataif.load_settings()
 
     submodel_ids = get_weave_submodels(experiment_dir)
-    for holdout_id in as_list(settings["col_holdout"]) + ["full"]:
+    for holdout_id in settings.col_holdout + ["full"]:
         df_pred = pd.concat(
             [
                 dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
@@ -201,7 +203,7 @@ def collect_weave_results(experiment_dir: str) -> None:
             data=df_pred,
             index=settings["col_id"],
             columns=["model_id", "param_id"],
-            values=["residual", settings["col_pred"]],
+            values=["residual", settings.col_pred],
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")

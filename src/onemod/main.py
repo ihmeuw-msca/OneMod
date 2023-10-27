@@ -6,9 +6,12 @@ from typing import Optional, TYPE_CHECKING, Union
 
 import fire
 from jobmon.client.api import Tool
+from pydantic import ValidationError
 
+from onemod.schema.config import ParentConfiguration
+from onemod.schema.validate import validate_config
 from onemod.stage import StageTemplate
-from onemod.utils import as_list
+from onemod.utils import as_list, get_data_interface
 
 try:
     # Import will fail until the next version of jobmon is released;
@@ -133,6 +136,10 @@ def run_pipeline(
     for stage in as_list(stages):
         if stage not in all_stages:
             raise ValueError(f"Invalid stage: {stage}")
+
+    # Validate the configuration file
+    validate_config(directory, stages)
+
     workflow = create_workflow(
         directory=directory,
         stages=as_list(stages),

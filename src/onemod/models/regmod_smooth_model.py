@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from regmodsm.model import Model
+
+from onemod.schema.config import RegmodSmoothConfiguration, ParentConfiguration
 from onemod.utils import get_data_interface
 
 
@@ -184,10 +186,13 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     dataif = get_data_interface(experiment_dir)
     settings = dataif.load_settings()
 
+    global_config = ParentConfiguration(**settings)
+    regmod_smooth_config = global_config.regmod_smooth
+
     # Create regmod smooth parameters
-    var_groups = settings["regmod_smooth"]["Model"].get("var_groups", [])
-    coef_bounds = settings["regmod_smooth"]["Model"].get("coef_bounds", {})
-    lam = settings["regmod_smooth"]["Model"].get("lam", 0.0)
+    var_groups = regmod_smooth_config.var_groups
+    coef_bounds = regmod_smooth_config.coef_bounds
+    lam = regmod_smooth_config.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
@@ -214,39 +219,39 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Create regmod smooth model
     model = Model(
-        model_type=settings["regmod_smooth"]["Model"]["model_type"],
-        obs=settings["regmod_smooth"]["Model"]["obs"],
-        dims=settings["regmod_smooth"]["Model"]["dims"],
+        model_type=regmod_smooth_config.model_type,
+        obs=global_config.col_obs,
+        dims=regmod_smooth_config.dims,
         var_groups=var_groups,
-        weights=settings["regmod_smooth"]["Model"]["weights"],
+        weights=regmod_smooth_config.weights,
     )
 
-    df = dataif.load(settings["input_path"])
+    df = dataif.load(global_config.input_path)
     df_train = df.query(
-        f"({settings['col_test']} == 0) & {settings['col_obs']}.notnull()"
+        f"({global_config.col_test} == 0) & {global_config.col_obs}.notnull()"
     )
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, **settings["regmod_smooth"]["Model.fit"])
+    model.fit(df_train, **regmod_smooth_config.fit_args)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[settings["col_pred"]] = model.predict(df)
     residual_func = get_residual_computation_function(
-        model_type=settings["rover_covsel"]["Rover"]["model_type"],
-        col_obs=settings["col_obs"],
-        col_pred=settings["col_pred"],
-        inv_link=settings["rover_covsel"]["inv_link"],
-        sigma=settings.get("col_sigma", ""),
+        model_type=regmod_smooth_config.model_type,
+        col_obs=global_config.col_obs,
+        col_pred=global_config.col_pred,
+        inv_link=regmod_smooth_config.inv_link,
+        sigma=global_config.col_sigma,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=settings["rover_covsel"]["Rover"]["model_type"],
-        col_obs=settings["col_obs"],
-        col_pred=settings["col_pred"],
-        inv_link=settings["rover_covsel"]["inv_link"],
-        sigma=settings.get("col_sigma", ""),
+        model_type=regmod_smooth_config.model_type,
+        col_obs=global_config.col_obs,
+        col_pred=global_config.col_pred,
+        inv_link=regmod_smooth_config.inv_link,
+        sigma=global_config.col_sigma,
     )
     df["residual"] = df.apply(
         residual_func,

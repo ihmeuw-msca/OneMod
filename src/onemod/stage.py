@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Union
 
+from onemod.schema.config import ParentConfiguration as GlobalConfig
 from onemod.utils import (
     get_rover_covsel_submodels,
     get_swimr_submodels,
@@ -56,7 +57,7 @@ class StageTemplate:
         self.tool = tool
 
         # Get task resources
-        resources = load_settings(resources_file, raise_on_error=False)
+        resources = load_settings(resources_file, raise_on_error=False, as_model=False)
         if "task_template_resources" in resources:
             self.resources = resources["task_template_resources"]
         else:
@@ -86,17 +87,18 @@ class StageTemplate:
             List of tasks representing the current stage.
 
         """
-        settings = load_settings(self.experiment_dir / "config" / "settings.yml")
+        config = load_settings(self.experiment_dir / "config" / "settings.yml", as_model=True)
 
         # Create stage initialization tasks
         initialization_tasks = self.create_initialization_task()
 
         # Create stage modeling tasks
         modeling_tasks = self.create_modeling_tasks(
-            max_attempts=settings[self.stage_name]["max_attempts"],
+            max_attempts=config.max_attempts,
             upstream_tasks=upstream_tasks + [initialization_tasks[-1]],
         )
-        # Ensemble and regmod_smooth aren't parallelized, so no need to implement collection or deletion tasks.
+        # Ensemble and regmod_smooth aren't parallelized,
+        # so no need to implement collection or deletion tasks.
         if self.stage_name in ["ensemble"]:
             return [*initialization_tasks, *modeling_tasks]
 
