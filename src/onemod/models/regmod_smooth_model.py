@@ -191,9 +191,9 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     regmod_smooth_config.inherit()
 
     # Create regmod smooth parameters
-    var_groups = regmod_smooth_config.var_groups
-    coef_bounds = regmod_smooth_config.coef_bounds
-    lam = regmod_smooth_config.lam
+    var_groups = regmod_smooth_config.Model.var_groups
+    coef_bounds = regmod_smooth_config.Model.coef_bounds
+    lam = regmod_smooth_config.Model.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
@@ -222,9 +222,9 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     model = Model(
         model_type=regmod_smooth_config.model_type,
         obs=global_config.col_obs,
-        dims=regmod_smooth_config.dims,
+        dims=regmod_smooth_config.Model.dims,
         var_groups=var_groups,
-        weights=regmod_smooth_config.weights,
+        weights=regmod_smooth_config.Model.weights,
     )
 
     df = dataif.load(global_config.input_path)

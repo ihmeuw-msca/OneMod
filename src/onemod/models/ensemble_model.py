@@ -270,7 +270,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     )
 
     # Load input data and smoother predictions
-    df_input = get_ensemble_input(settings)
+    df_input = get_ensemble_input(interface, settings)
     df_full = get_predictions(experiment_dir, "full", settings["col_pred"])
 
     # Get smoother out-of-sample performance by holdout set

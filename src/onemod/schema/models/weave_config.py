@@ -15,6 +15,7 @@ class WeaveModel(ParametrizedBaseModel):
     dimensions: dict[str, WeaveDimension] = {}
 
 class WeaveConfiguration(ParametrizedBaseModel):
+
     models: dict[str, WeaveModel] | None = None
 
     def inherit(self):

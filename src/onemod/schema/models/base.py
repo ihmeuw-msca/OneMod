@@ -25,3 +25,9 @@ class ParametrizedBaseModel(BaseModel):
         for key in keys:
             if not getattr(self, key, None) and key in self.parent_args:
                 setattr(self, key, self.parent_args.get(key))
+
+    def model_dump(self, *args, **kwargs):
+        """Exclude parent_args in model dump by default."""
+        exclude_keys = kwargs.pop('exclude', set())
+        exclude_keys.add('parent_args')
+        return super().model_dump(*args, exclude=exclude_keys, **kwargs)
