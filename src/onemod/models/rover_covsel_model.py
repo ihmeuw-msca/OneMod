@@ -3,7 +3,7 @@ import fire
 from loguru import logger
 from modrover.api import Rover
 from onemod.schema.models.parent_config import ParentConfiguration
-from onemod.utils import Subsets, get_data_interface
+from onemod.utils import Subsets, get_handle, get_rover_covsel_input
 
 
 def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
@@ -30,10 +30,8 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
         Summary covariate coefficients from the ensemble model.
 
     """
-    dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    dataif, global_config = get_handle(experiment_dir)
 
-    global_config = ParentConfiguration(**settings)
     rover_config = global_config.rover_covsel
     rover_config.inherit()
 
@@ -45,21 +43,18 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Load and filter by subset
     subset_id = int(submodel_id[6:])
-    df_input = subsets.filter_subset(dataif.load_data(), subset_id)
+    df_input = subsets.filter_subset(get_rover_covsel_input(global_config), subset_id)
     logger.info(f"Fitting rover for {subset_id=}")
 
     # Create a test column if not existing
     # TODO: Either move this to some data prep stage or make it persistent, needed in
     # other models
-    test_col = settings["col_test"]
+    test_col = global_config.col_test
     if test_col not in df_input:
         logger.warning("Test column not found, setting null observations as test rows.")
         df_input[test_col] = df_input[global_config["col_obs"]].isna().astype("int")
 
-    # TODO: Figure out null test rows
-    df_input[global_config.col_test] = df_input[global_config.col_test].fillna(0)
-    df_train = df_input[df_input[global_config["col_test"]] == 0]
-
+    df_train = df_input[df_input[global_config.col_test] == 0]
 
     dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 

@@ -1,6 +1,6 @@
 from modrover.globals import model_type_dict
 from pydantic import field_validator
-from typing import Optional
+from typing import Any, Optional
 
 from onemod.schema.models.base import ParametrizedBaseModel
 from onemod.schema.models.rover_config import RoverConfiguration
@@ -21,6 +21,7 @@ class ParentConfiguration(ParametrizedBaseModel):
     col_sigma: str = ''
     max_attempts: int = 3
     max_batch: int = -1
+    id_subsets: dict[str, list[Any]] = {}
     model_type: str # TODO: This clashes with pydantic naming conventions and will raise warnings
 
     rover_covsel: Optional[RoverConfiguration] = None
