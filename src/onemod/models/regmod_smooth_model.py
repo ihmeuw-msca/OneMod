@@ -18,8 +18,6 @@ def get_residual_computation_function(
     model_type: str,
     col_obs: str,
     col_pred: str,
-    inv_link: str,
-    sigma: str = "",
 ) -> Callable:
     """
     Calculate the residual for a given row based on the specified model type and inverse link function.
@@ -29,57 +27,43 @@ def get_residual_computation_function(
         model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
         col_obs (str): Column name for the observed values.
         col_pred (str): Column name for the predicted values.
-        inv_link (str): Inverse link function ('expit' for logistic, 'exp' for exponential, etc.).
 
     Returns:
         float: The calculated residual value.
 
     Raises:
-        ValueError: If the specified model_type and inv_link pair is unsupported.
+        ValueError: If the specified model_type is unsupported.
     """
 
     # TODO: can these be vectorized functions?
-    selection = (model_type, inv_link)
     callable_map = {
-        ("binomial", "expit"): partial(
+        "binomial": partial(
             lambda row, obs, pred: (row[obs] - row[pred])
             / (row[pred] * (1 - row[pred])),
             obs=col_obs,
             pred=col_pred,
         ),
-        ("poisson", "exp"): partial(
+        "poisson": partial(
             lambda row, obs, pred: row[obs] / row[pred] - 1,
             obs=col_obs,
             pred=col_pred
         ),
-        ("tobit", "exp"): partial(
-            lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
-            if row[obs] > 0
-            else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-row[col_pred] / row["sigma"] + 1e-6j))
-            / (1e-6),
-            obs=col_obs,
-            pred=col_pred,
-            sigma=sigma,
-        ),
-        ("gaussian", "identity"): partial(
+        "gaussian": partial(
             lambda row, obs, pred: row[obs] - row[pred],
             obs=col_obs, pred=col_pred
         ),
     }
 
     try:
-        return callable_map[selection]
+        return callable_map[model_type]
     except KeyError:
-        raise ValueError("Unsupported model_type and inv_link pair")
+        raise ValueError(f"Unsupported {model_type=}")
 
 
 def get_residual_se_function(
     model_type: str,
     col_obs: str,
     col_pred: str,
-    inv_link: str,
-    sigma: str = "",
 ) -> Callable:
     """
     Calculate the residual standard error for a given row based on the specified model type and inverse link function.
@@ -89,44 +73,30 @@ def get_residual_se_function(
         model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
         col_obs (str): Column name for the observed values.
         col_pred (str): Column name for the predicted values.
-        inv_link (str): Inverse link function ('expit' for logistic, 'exp' for exponential, etc.).
 
     Returns:
         float: The calculated residual standard error value.
 
     Raises:
-        ValueError: If the specified model_type and inv_link pair is unsupported.
+        ValueError: If the specified model_type is unsupported.
     """
 
-    selection = (model_type, inv_link)
     callable_map = {
-        ("binomial", "expit"): partial(
+        "binomial": partial(
             lambda row, obs, pred: 1 / np.sqrt(row[col_pred] * (1 - row[col_pred])),
             obs=col_obs,
             pred=col_pred,
         ),
-        ("poisson", "exp"): partial(
+        "poisson": partial(
             lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred
         ),
-        ("tobit", "exp"): partial(
-            lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
-            if row[obs] > 0
-            else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-row[col_pred] / row[sigma] + 1e-6j)) / (1e-6),
-            obs=col_obs,
-            pred=col_pred,
-            sigma=sigma,
-        ),
-        ("gaussian", "identity"): partial(
-            lambda row, sigma: row[sigma],
-            sigma=sigma,
-        ),
+        "gaussian": lambda *args, **kwargs: 1.0,
     }
 
     try:
-        return callable_map[selection]
+        return callable_map[model_type]
     except KeyError:
-        raise ValueError("Unsupported model_type and inv_link pair")
+        raise ValueError(f"Unsupported {model_type=}")
 
 
 def get_coef(model: Model) -> pd.DataFrame:
@@ -240,16 +210,12 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
         model_type=regmod_smooth_config.model_type,
         col_obs=global_config.col_obs,
         col_pred=global_config.col_pred,
-        inv_link=regmod_smooth_config.inv_link,
-        sigma=global_config.col_sigma,
     )
 
     residual_se_func = get_residual_se_function(
         model_type=regmod_smooth_config.model_type,
         col_obs=global_config.col_obs,
         col_pred=global_config.col_pred,
-        inv_link=regmod_smooth_config.inv_link,
-        sigma=global_config.col_sigma,
     )
     df["residual"] = df.apply(
         residual_func,

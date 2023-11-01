@@ -4,15 +4,13 @@ import numpy as np
 from weave.dimension import Dimension
 from weave.smoother import Smoother
 
-from onemod.schema.models.parent_config import ParentConfiguration
-
 from onemod.utils import (
     as_list,
     get_prediction,
     get_smoother_input,
     Subsets,
     WeaveParams,
-    get_data_interface,
+    get_handle,
 )
 
 # weave kernel parameters
@@ -31,10 +29,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
             experiment data.
         submodel_id (str): The ID of the submodel to be processed.
     """
-    dataif, _ = get_handle(experiment_dir)
-    # experiment_dir = Path(experiment_dir)
-    # weave_dir = experiment_dir / "results" / "weave"
-    settings = ParentConfiguration(**dataif.load_settings())
+    dataif, settings = get_handle(experiment_dir)
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]
