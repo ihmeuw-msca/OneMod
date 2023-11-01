@@ -31,7 +31,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
             experiment data.
         submodel_id (str): The ID of the submodel to be processed.
     """
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
     # experiment_dir = Path(experiment_dir)
     # weave_dir = experiment_dir / "results" / "weave"
     settings = ParentConfiguration(**dataif.load_settings())
@@ -50,7 +50,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input("weave", settings, experiment_dir, from_rover=True),
+        get_smoother_input("weave", config=settings, dataif=dataif, from_rover=True),
         subset_id,
         batch_id,
     ).rename(columns={"batch": "predict"})

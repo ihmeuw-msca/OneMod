@@ -2,17 +2,13 @@ import pandas as pd
 from pydantic import BaseModel, ValidationError
 
 from onemod.schema.models.parent_config import ParentConfiguration
-from onemod.utils import get_data_interface
+from onemod.utils import get_handle
 
 
 def validate_config(directory: str, stages: list[str]) -> None:
     """Validate the configuration file according to the expected schema."""
 
-    dataif = get_data_interface(directory)
-    settings = dataif.load_settings()
-
-    # Validation error raised if config fails
-    config = ParentConfiguration(**settings)
+    dataif, config = get_handle(directory)
 
     # Validate against the dataset
     dataset = dataif.load_data()

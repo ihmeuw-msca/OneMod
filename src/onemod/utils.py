@@ -137,7 +137,7 @@ class WeaveParams(Parameters):
 
     def _create_param_sets(self, config: OneModCFG) -> pd.DataFrame:
         """Create parameter set data frame."""
-        weave_config = config["weave"]
+        weave_config = config["weave"]["models"][self.model_id]
         dimensions = weave_config["dimensions"]
         index = pd.MultiIndex.from_product(
             iterables=[
@@ -195,15 +195,14 @@ class Subsets:
             Subset data frame.
 
         """
-        stage_config = config[model_id]
-        stage_config.inherit()
+
         self.model_id = model_id
         self.columns = config.groupby
         if subsets is None:
             if data is None:
                 raise TypeError("Data cannot be None if subsets are not provided.")
             self.columns = config.groupby
-            max_batch_size = stage_config.max_batch
+            max_batch_size = config.max_batch
             self.subsets = self._create_subsets(data, max_batch_size)
         else:
             self.subsets = subsets[subsets["model_id"] == model_id]
@@ -264,10 +263,8 @@ class Subsets:
         self, data: pd.DataFrame, subset_id: int, batch_id: int = 0
     ) -> pd.DataFrame:
         """Filter data by subset and batch."""
-        breakpoint()
         for column in self.columns:
             data = data[data[column] == self.get_column(column, subset_id)]
-        breakpoint()
         n_batch = self.get_column("n_batch", subset_id)
         max_batch = int(np.ceil(len(data) / n_batch))
         batch_start = batch_id * max_batch
@@ -396,11 +393,11 @@ def get_rover_covsel_input(config: OneModCFG) -> pd.DataFrame:
 
 def get_smoother_input(
     smoother: str,
-    experiment_dir: str,
+    config: OneModCFG,
+    dataif: DataInterface,
     from_rover: Optional[bool] = False,
 ) -> pd.DataFrame:
     """Get input data for smoother model."""
-    dataif, config = get_handle(experiment_dir)
     if from_rover:
         df_input = dataif.load_regmod_smooth("predictions.parquet")
         df_input = df_input.rename(columns={"residual": "residual_value"})
@@ -411,7 +408,6 @@ def get_smoother_input(
     columns = as_list(config.col_id) + list(columns)
     # Deduplicate
     columns = list(set(columns))
-
     if len(columns) > 0:
         right = dataif.load_data()
         df_input = df_input.merge(
@@ -470,8 +466,9 @@ def _get_smoother_columns(smoother: str, config: OneModCFG) -> set:
         elif smoother == "weave":
             for dimension_settings in model_settings["dimensions"].values():
                 for key in ["name", "coordinates"]:
-                    if key in dimension_settings:
-                        columns.update(as_list(dimension_settings[key]))
+                    key_val = dimension_settings.get(key)
+                    if key_val:
+                        columns.update(as_list(key_val))
     return columns
 
 
@@ -512,11 +509,12 @@ def get_swimr_submodels(
     # Create swimr parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
 
-    df_input = get_smoother_input("swimr", config, experiment_dir)
+    df_input = get_smoother_input("swimr", dataif=dataif, config=config)
     for model_id, model_settings in config["swimr"]["models"].items():
         params = SwimrParams(model_id, model_settings)
         param_list.append(params.param_sets)
-        subsets = Subsets(model_id, model_settings, df_input)
+        model_settings.inherit()
+        subsets = Subsets(model_id, config, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
@@ -542,11 +540,11 @@ def get_weave_submodels(
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
 
-    df_input = get_smoother_input("weave", config, experiment_dir)
+    df_input = get_smoother_input("weave", dataif=dataif, config=config)
     for model_id, model_settings in config["weave"]["models"].items():
-        params = WeaveParams(model_id, model_settings)
+        params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        subsets = Subsets(model_id, model_settings, df_input)
+        subsets = Subsets(model_id, config, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),

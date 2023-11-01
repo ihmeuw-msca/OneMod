@@ -13,7 +13,7 @@ from onemod.utils import (
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    get_data_interface,
+    get_handle,
 )
 
 
@@ -129,7 +129,7 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
     This step will save ``selected_covs.yaml`` with a list of selected
     covariates in the rover results folder.
     """
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
 
     selected_covs = _get_selected_covs(dataif)
     dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
@@ -145,7 +145,7 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
 
 def collect_regmod_smooth_results(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
     summaries = _get_rover_covsel_summaries(dataif)
     fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
@@ -154,8 +154,7 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
 
 def collect_swimr_results(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
-    dataif = get_data_interface(experiment_dir)
-    settings = ParentConfiguration(**dataif.load_settings())
+    dataif, settings = get_handle(experiment_dir)
 
     submodel_ids = get_swimr_submodels(experiment_dir)
     for holdout_id in settings.col_holdout + ["full"]:
@@ -184,8 +183,7 @@ def collect_swimr_results(experiment_dir: str) -> None:
 
 def collect_weave_results(experiment_dir: str) -> None:
     """Collect weave submodel results."""
-    dataif = get_data_interface(experiment_dir)
-    settings = ParentConfiguration(**dataif.load_settings())
+    dataif, settings = get_handle(experiment_dir)
 
     submodel_ids = get_weave_submodels(experiment_dir)
     for holdout_id in settings.col_holdout + ["full"]:

@@ -9,6 +9,9 @@ class ParametrizedBaseModel(BaseModel):
     model_config = ConfigDict(extra='allow', frozen=False, validate_assignment=True)
     parent_args: dict[str, Any] = {}
 
+    def get(self, item):
+        return self.__dict__.get(item)
+
     def __getitem__(self, item):
         return getattr(self, item)
 

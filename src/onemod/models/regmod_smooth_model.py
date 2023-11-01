@@ -11,8 +11,7 @@ import pandas as pd
 from scipy.stats import norm
 from regmodsm.model import Model
 
-from onemod.schema.models.parent_config import ParentConfiguration
-from onemod.utils import get_data_interface
+from onemod.utils import get_handle
 
 
 def get_residual_computation_function(
@@ -183,10 +182,8 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     predictions.parquet
         Predictions with residual information.
     """
-    dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    dataif, global_config = get_handle(experiment_dir)
 
-    global_config = ParentConfiguration(**settings)
     regmod_smooth_config = global_config.regmod_smooth
     regmod_smooth_config.inherit()
 
@@ -238,7 +235,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     model.fit(df_train, **regmod_smooth_config.fit_args)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
-    df[settings["col_pred"]] = model.predict(df)
+    df[global_config.col_pred] = model.predict(df)
     residual_func = get_residual_computation_function(
         model_type=regmod_smooth_config.model_type,
         col_obs=global_config.col_obs,

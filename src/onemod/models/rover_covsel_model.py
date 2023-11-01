@@ -71,10 +71,10 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Fit rover model
     logger.info(f"Fitting the rover model with options {rover_config.fit_args}")
-    breakpoint()
     rover.fit(data=df_train, **rover_config.fit_args.model_dump())
 
     # Save results
+    logger.info("Saving rover results after fitting")
     dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
     dataif.dump_rover_covsel(
         rover.learner_info, f"submodels/{submodel_id}/learner_info.csv"

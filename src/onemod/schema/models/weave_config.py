@@ -3,7 +3,6 @@ from onemod.schema.models.base import ParametrizedBaseModel
 
 class WeaveDimension(ParametrizedBaseModel):
     name: str
-    coordinates: str
     kernel: str
     radius: float = 0.0
     exponent: float = 0.0
@@ -14,9 +13,12 @@ class WeaveModel(ParametrizedBaseModel):
     groupby: list[str] = []
     dimensions: dict[str, WeaveDimension] = {}
 
+    def inherit(self):
+        super().inherit(keys=['groupby'])
+
 class WeaveConfiguration(ParametrizedBaseModel):
 
     models: dict[str, WeaveModel] | None = None
 
     def inherit(self):
-        super().inherit(keys=['max_batch', 'model_type'])
+        super().inherit(keys=['max_batch', 'model_type', 'max_batch'])

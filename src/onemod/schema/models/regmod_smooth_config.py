@@ -20,4 +20,4 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     Model: RegmodModelInit
 
     def inherit(self):
-        super().inherit(keys=['model_type', 'groupby', 'max_attempts'])
+        super().inherit(keys=['model_type', 'groupby', 'max_attempts', 'max_batch'])
