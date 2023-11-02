@@ -187,7 +187,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Create regmod smooth model
     model = Model(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.mtype,
         obs=global_config.col_obs,
         dims=regmod_smooth_config.Model.dims,
         var_groups=var_groups,
@@ -207,13 +207,13 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     logger.info("Model fit, calculating residuals")
     df[global_config.col_pred] = model.predict(df)
     residual_func = get_residual_computation_function(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.mtype,
         col_obs=global_config.col_obs,
         col_pred=global_config.col_pred,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.mtype,
         col_obs=global_config.col_obs,
         col_pred=global_config.col_pred,
     )

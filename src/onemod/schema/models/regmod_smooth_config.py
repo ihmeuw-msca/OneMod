@@ -3,13 +3,13 @@ from pydantic import Field
 
 
 class RegmodModelInit(ParametrizedBaseModel):
-    model_type: str = ""
+    mtype: str = Field("", alias="model_type")
     dims: list[dict] = []
     var_groups: list[dict] = []
     weights: str
 
     coef_bounds: dict[str, list[float]] = {}
-    lam: float = Field(0.0, alias='lambda')
+    lam: float = 0.0
 
 class RegmodSmoothConfiguration(ParametrizedBaseModel):
 
@@ -20,4 +20,4 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     Model: RegmodModelInit
 
     def inherit(self):
-        super().inherit(keys=['model_type', 'groupby', 'max_attempts', 'max_batch'])
+        super().inherit(keys=['mtype', 'groupby', 'max_attempts', 'max_batch'])

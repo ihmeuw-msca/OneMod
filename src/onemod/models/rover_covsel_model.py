@@ -62,7 +62,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     rover_init_args = rover_config.Rover
     rover = Rover(
         obs=global_config.col_obs,
-        model_type=global_config.model_type,
+        model_type=global_config.mtype,
         cov_fixed=rover_init_args.cov_fixed,
         cov_exploring=rover_init_args.cov_exploring,
         weights=rover_init_args.weights,

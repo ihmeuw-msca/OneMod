@@ -15,14 +15,14 @@ class RoverFitArgs(BaseModel):
     coef_bounds: tuple[float, float] | None = None
 
 
-class RoverConfiguration(ParametrizedBaseModel):
+class RoverCovselConfiguration(ParametrizedBaseModel):
 
     groupby: list[str] = []
-    model_type: str = ""
+    mtype: str = Field("", alias="model_type")
     max_attempts: int | None = None
     Rover: RoverInit
 
     fit_args: RoverFitArgs = Field(default_factory=RoverFitArgs)
 
     def inherit(self):
-        super().inherit(keys=['model_type', 'groupby', 'max_attempts', 'max_batch'])
+        super().inherit(keys=['mtype', 'groupby', 'max_attempts', 'max_batch'])

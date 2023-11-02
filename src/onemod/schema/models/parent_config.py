@@ -1,5 +1,5 @@
 from modrover.globals import model_type_dict
-from pydantic import field_validator
+from pydantic import field_validator, Field
 from typing import Any, Optional
 
 from onemod.schema.models.base import ParametrizedBaseModel
@@ -22,7 +22,7 @@ class ParentConfiguration(ParametrizedBaseModel):
     max_attempts: int = 3
     max_batch: int = -1
     id_subsets: dict[str, list[Any]] = {}
-    model_type: str # TODO: This clashes with pydantic naming conventions and will raise warnings
+    mtype: str = Field(alias="model_type")
 
     rover_covsel: Optional[RoverConfiguration] = None
     regmod_smooth: Optional[RegmodSmoothConfiguration] = None
@@ -43,7 +43,7 @@ class ParentConfiguration(ParametrizedBaseModel):
             "col_sigma": self.col_sigma,
             "max_attempts": self.max_attempts,
             "max_batch": self.max_batch,
-            "model_type": self.model_type
+            "mtype": self.mtype
         }
 
         child_models = [
@@ -63,7 +63,7 @@ class ParentConfiguration(ParametrizedBaseModel):
     def extra_fields(self) -> set[str]:
         return set(self.__dict__) - set(self.model_fields)
 
-    @field_validator("model_type")
+    @field_validator("mtype")
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
         assert model_type in model_type_dict, \
