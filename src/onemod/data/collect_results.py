@@ -1,19 +1,18 @@
 """Collect onemod stage submodel results."""
-import matplotlib.pyplot as plt
 from warnings import warn
-from pplkit.data.interface import DataInterface
 
 import fire
 from loguru import logger
+import matplotlib.pyplot as plt
 import pandas as pd
+from pplkit.data.interface import DataInterface
 
 from onemod.schema.models.parent_config import ParentConfiguration
 from onemod.utils import (
-    as_list,
+    get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    get_handle,
 )
 
 

@@ -6,11 +6,11 @@ from weave.smoother import Smoother
 
 from onemod.utils import (
     as_list,
+    get_handle,
     get_prediction,
     get_smoother_input,
     Subsets,
     WeaveParams,
-    get_handle,
 )
 
 # weave kernel parameters

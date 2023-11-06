@@ -5,7 +5,6 @@ from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Union
 
-from onemod.schema.models.parent_config import ParentConfiguration as GlobalConfig
 from onemod.utils import (
     get_rover_covsel_submodels,
     get_swimr_submodels,

@@ -1,13 +1,14 @@
-from modrover.globals import model_type_dict
-from pydantic import field_validator
 from typing import Any, Optional
 
+from modrover.globals import model_type_dict
+from pydantic import field_validator
+
 from onemod.schema.models.base import ParametrizedBaseModel
-from onemod.schema.models.rover_config import RoverConfiguration
-from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfiguration
-from onemod.schema.models.weave_config import WeaveConfiguration
-from onemod.schema.models.swimr_config import SwimrConfiguration
 from onemod.schema.models.ensemble_config import EnsembleConfiguration
+from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfiguration
+from onemod.schema.models.rover_config import RoverConfiguration
+from onemod.schema.models.swimr_config import SwimrConfiguration
+from onemod.schema.models.weave_config import WeaveConfiguration
 
 
 class ParentConfiguration(ParametrizedBaseModel):

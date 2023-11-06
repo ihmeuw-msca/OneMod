@@ -1,5 +1,6 @@
+from pydantic import BaseModel, Field
+
 from onemod.schema.models.base import ParametrizedBaseModel
-from pydantic import BaseModel, ConfigDict, Field
 
 
 class RoverInit(BaseModel):
@@ -23,5 +24,5 @@ class RoverConfiguration(ParametrizedBaseModel):
 
     fit_args: RoverFitArgs = Field(default_factory=RoverFitArgs)
 
-    def inherit(self):
+    def inherit(self) -> None:
         super().inherit(keys=["model_type", "groupby", "max_attempts", "max_batch"])

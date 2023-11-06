@@ -1,5 +1,6 @@
-from onemod.schema.models.base import ParametrizedBaseModel
 from pydantic import Field
+
+from onemod.schema.models.base import ParametrizedBaseModel
 
 
 class RegmodModelInit(ParametrizedBaseModel):
@@ -19,5 +20,5 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
 
     Model: RegmodModelInit
 
-    def inherit(self):
+    def inherit(self) -> None:
         super().inherit(keys=["model_type", "groupby", "max_attempts", "max_batch"])

@@ -14,12 +14,12 @@ class WeaveModel(ParametrizedBaseModel):
     groupby: list[str] = []
     dimensions: dict[str, WeaveDimension] = {}
 
-    def inherit(self):
+    def inherit(self) -> None:
         super().inherit(keys=["groupby"])
 
 
 class WeaveConfiguration(ParametrizedBaseModel):
     models: dict[str, WeaveModel] | None = None
 
-    def inherit(self):
+    def inherit(self) -> None:
         super().inherit(keys=["max_batch", "model_type", "max_batch"])
