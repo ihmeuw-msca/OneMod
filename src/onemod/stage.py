@@ -87,7 +87,9 @@ class StageTemplate:
             List of tasks representing the current stage.
 
         """
-        config = load_settings(self.experiment_dir / "config" / "settings.yml", as_model=True)
+        config = load_settings(
+            self.experiment_dir / "config" / "settings.yml", as_model=True
+        )
 
         # Create stage initialization tasks
         initialization_tasks = self.create_initialization_task()

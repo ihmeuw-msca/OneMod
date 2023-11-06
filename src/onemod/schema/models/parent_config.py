@@ -11,18 +11,17 @@ from onemod.schema.models.ensemble_config import EnsembleConfiguration
 
 
 class ParentConfiguration(ParametrizedBaseModel):
-
     input_path: str
     col_id: list[str]
     col_obs: str
     col_pred: str
     col_holdout: list[str]
     col_test: str
-    col_sigma: str = ''
+    col_sigma: str = ""
     max_attempts: int = 3
     max_batch: int = -1
     id_subsets: dict[str, list[Any]] = {}
-    model_type: str # TODO: This clashes with pydantic naming conventions and will raise warnings
+    model_type: str  # TODO: This clashes with pydantic naming conventions and will raise warnings
 
     rover_covsel: Optional[RoverConfiguration] = None
     regmod_smooth: Optional[RegmodSmoothConfiguration] = None
@@ -43,7 +42,7 @@ class ParentConfiguration(ParametrizedBaseModel):
             "col_sigma": self.col_sigma,
             "max_attempts": self.max_attempts,
             "max_batch": self.max_batch,
-            "model_type": self.model_type
+            "model_type": self.model_type,
         }
 
         child_models = [
@@ -51,7 +50,7 @@ class ParentConfiguration(ParametrizedBaseModel):
             self.regmod_smooth,
             self.weave,
             self.swimr,
-            self.ensemble
+            self.ensemble,
         ]
 
         for child_model in child_models:
@@ -66,6 +65,7 @@ class ParentConfiguration(ParametrizedBaseModel):
     @field_validator("model_type")
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
-        assert model_type in model_type_dict, \
-            f"model_type must be one of {model_type_dict.keys()}"
+        assert (
+            model_type in model_type_dict
+        ), f"model_type must be one of {model_type_dict.keys()}"
         return model_type

@@ -1,14 +1,14 @@
 from onemod.schema.models.base import ParametrizedBaseModel
 from pydantic import BaseModel, ConfigDict, Field
 
-class RoverInit(BaseModel):
 
+class RoverInit(BaseModel):
     cov_fixed: list[str] = []
     cov_exploring: list[str] = []
     weights: str
 
-class RoverFitArgs(BaseModel):
 
+class RoverFitArgs(BaseModel):
     strategies: list[str] = ["forward"]
     top_pct_score: float = 0.1
     top_pct_learner: float = 1.0
@@ -16,7 +16,6 @@ class RoverFitArgs(BaseModel):
 
 
 class RoverConfiguration(ParametrizedBaseModel):
-
     groupby: list[str] = []
     model_type: str = ""
     max_attempts: int | None = None
@@ -25,4 +24,4 @@ class RoverConfiguration(ParametrizedBaseModel):
     fit_args: RoverFitArgs = Field(default_factory=RoverFitArgs)
 
     def inherit(self):
-        super().inherit(keys=['model_type', 'groupby', 'max_attempts', 'max_batch'])
+        super().inherit(keys=["model_type", "groupby", "max_attempts", "max_batch"])

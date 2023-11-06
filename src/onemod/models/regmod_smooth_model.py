@@ -44,13 +44,10 @@ def get_residual_computation_function(
             pred=col_pred,
         ),
         "poisson": partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1,
-            obs=col_obs,
-            pred=col_pred
+            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=col_obs, pred=col_pred
         ),
         "gaussian": partial(
-            lambda row, obs, pred: row[obs] - row[pred],
-            obs=col_obs, pred=col_pred
+            lambda row, obs, pred: row[obs] - row[pred], obs=col_obs, pred=col_pred
         ),
     }
 
@@ -87,9 +84,7 @@ def get_residual_se_function(
             obs=col_obs,
             pred=col_pred,
         ),
-        "poisson": partial(
-            lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred
-        ),
+        "poisson": partial(lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred),
         "gaussian": lambda *args, **kwargs: 1.0,
     }
 

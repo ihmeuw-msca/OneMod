@@ -9,10 +9,10 @@ class RegmodModelInit(ParametrizedBaseModel):
     weights: str
 
     coef_bounds: dict[str, list[float]] = {}
-    lam: float = Field(0.0, alias='lambda')
+    lam: float = Field(0.0, alias="lambda")
+
 
 class RegmodSmoothConfiguration(ParametrizedBaseModel):
-
     max_attempts: int = 3
     groupby: list[str] = []
     fit_args: dict = {}
@@ -20,4 +20,4 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     Model: RegmodModelInit
 
     def inherit(self):
-        super().inherit(keys=['model_type', 'groupby', 'max_attempts', 'max_batch'])
+        super().inherit(keys=["model_type", "groupby", "max_attempts", "max_batch"])

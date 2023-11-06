@@ -59,7 +59,9 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     # Create smoother objects
     dimensions = []
     for dim_name, dim_dict in model_settings["dimensions"].items():
-        dim_dict = dim_dict.model_dump(exclude={'parent_args'})  # Base type is a pydantic model, so convert to dict
+        dim_dict = dim_dict.model_dump(
+            exclude={"parent_args"}
+        )  # Base type is a pydantic model, so convert to dict
         if dim_dict["kernel"] != "identity":
             param = kernel_params[dim_dict["kernel"]]
             dim_dict[param] = params.get_param(f"{dim_name}_{param}", param_id)
@@ -85,9 +87,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
         predict="predict",
     )
     df_pred[settings["col_pred"]] = df_pred.apply(
-        lambda row: get_prediction(
-            row, settings["col_pred"], settings["model_type"]
-        ),
+        lambda row: get_prediction(row, settings["col_pred"], settings["model_type"]),
         axis=1,
     )
     df_pred["model_id"] = model_id

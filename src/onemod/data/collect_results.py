@@ -66,8 +66,9 @@ def _plot_rover_covsel_results(
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
-    logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
-
+    logger.info(
+        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
+    )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
@@ -117,7 +118,7 @@ def _plot_regmod_smooth_results(
             alpha=0.5,
             label="regmod_smooth",
         )
-        ax.legend(fontsize = 'xx-small')
+        ax.legend(fontsize="xx-small")
     return fig
 
 

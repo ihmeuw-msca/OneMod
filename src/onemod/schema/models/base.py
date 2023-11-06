@@ -1,12 +1,14 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Any
 
+
 class ParametrizedBaseModel(BaseModel):
     """An extension of BaseModel that supports some dict-like dunder methods.
 
     This model has a base config to allow extra arguments and to validate attribute assignment post init,
     can be overriden after instantiation."""
-    model_config = ConfigDict(extra='allow', frozen=False, validate_assignment=True)
+
+    model_config = ConfigDict(extra="allow", frozen=False, validate_assignment=True)
     parent_args: dict[str, Any] = {}
 
     def get(self, item):
@@ -31,6 +33,6 @@ class ParametrizedBaseModel(BaseModel):
 
     def model_dump(self, *args, **kwargs):
         """Exclude parent_args in model dump by default."""
-        exclude_keys = kwargs.pop('exclude', set())
-        exclude_keys.add('parent_args')
+        exclude_keys = kwargs.pop("exclude", set())
+        exclude_keys.add("parent_args")
         return super().model_dump(*args, exclude=exclude_keys, **kwargs)
