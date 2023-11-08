@@ -12,7 +12,7 @@ import pandas as pd
 import yaml
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.models.parent_config import ParentConfiguration as OneModCFG
+from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate

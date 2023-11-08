@@ -17,7 +17,7 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     groupby: list[str] = []
     fit_args: dict = {}
 
-    Model: RegmodModelInit
+    model: RegmodModelInit
 
     def inherit(self):
         super().inherit(keys=['mtype', 'groupby', 'max_attempts', 'max_batch'])

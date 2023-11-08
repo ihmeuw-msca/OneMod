@@ -2,7 +2,6 @@
 import fire
 from loguru import logger
 from modrover.api import Rover
-from onemod.schema.models.parent_config import ParentConfiguration
 from onemod.utils import Subsets, get_handle, get_rover_covsel_input
 
 

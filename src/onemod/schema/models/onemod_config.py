@@ -10,7 +10,7 @@ from onemod.schema.models.swimr_config import SwimrConfiguration
 from onemod.schema.models.ensemble_config import EnsembleConfiguration
 
 
-class ParentConfiguration(ParametrizedBaseModel):
+class OneModConfig(ParametrizedBaseModel):
 
     input_path: str
     col_id: list[str]
