@@ -1,13 +1,14 @@
-from modrover.globals import model_type_dict
-from pydantic import field_validator, Field
 from typing import Any, Optional
 
+from modrover.globals import model_type_dict
+from pydantic import field_validator
+
 from onemod.schema.models.base import ParametrizedBaseModel
-from onemod.schema.models.rover_config import RoverConfiguration
-from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfiguration
-from onemod.schema.models.weave_config import WeaveConfiguration
-from onemod.schema.models.swimr_config import SwimrConfiguration
 from onemod.schema.models.ensemble_config import EnsembleConfiguration
+from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfiguration
+from onemod.schema.models.rover_config import RoverConfiguration
+from onemod.schema.models.swimr_config import SwimrConfiguration
+from onemod.schema.models.weave_config import WeaveConfiguration
 
 
 class OneModConfig(ParametrizedBaseModel):
@@ -18,7 +19,7 @@ class OneModConfig(ParametrizedBaseModel):
     col_pred: str
     col_holdout: list[str]
     col_test: str
-    col_sigma: str = ''
+    col_sigma: str = ""
     max_attempts: int = 3
     max_batch: int = -1
     id_subsets: dict[str, list[Any]] = {}
@@ -51,7 +52,7 @@ class OneModConfig(ParametrizedBaseModel):
             self.regmod_smooth,
             self.weave,
             self.swimr,
-            self.ensemble
+            self.ensemble,
         ]
 
         for child_model in child_models:
@@ -66,6 +67,7 @@ class OneModConfig(ParametrizedBaseModel):
     @field_validator("mtype")
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
-        assert model_type in model_type_dict, \
-            f"model_type must be one of {model_type_dict.keys()}"
+        assert (
+            model_type in model_type_dict
+        ), f"model_type must be one of {model_type_dict.keys()}"
         return model_type

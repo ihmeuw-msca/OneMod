@@ -8,7 +8,6 @@ import fire
 from loguru import logger
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 from regmodsm.model import Model
 
 from onemod.utils import get_handle
@@ -20,7 +19,7 @@ def get_residual_computation_function(
     col_pred: str,
 ) -> Callable:
     """
-    Calculate the residual for a given row based on the specified model type and inverse link function.
+    Calculate the residual for a given row based on the specified model type.
 
     Parameters:
         row (pd.Series): The row containing the observation and prediction data.
@@ -44,13 +43,10 @@ def get_residual_computation_function(
             pred=col_pred,
         ),
         "poisson": partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1,
-            obs=col_obs,
-            pred=col_pred
+            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=col_obs, pred=col_pred
         ),
         "gaussian": partial(
-            lambda row, obs, pred: row[obs] - row[pred],
-            obs=col_obs, pred=col_pred
+            lambda row, obs, pred: row[obs] - row[pred], obs=col_obs, pred=col_pred
         ),
     }
 
@@ -66,7 +62,7 @@ def get_residual_se_function(
     col_pred: str,
 ) -> Callable:
     """
-    Calculate the residual standard error for a given row based on the specified model type and inverse link function.
+    Calculate the residual standard error for a given row based on the specified model type.
 
     Parameters:
         row (pd.Series): The row containing the observation and prediction data.
@@ -87,9 +83,7 @@ def get_residual_se_function(
             obs=col_obs,
             pred=col_pred,
         ),
-        "poisson": partial(
-            lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred
-        ),
+        "poisson": partial(lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred),
         "gaussian": lambda *args, **kwargs: 1.0,
     }
 
@@ -107,7 +101,8 @@ def get_coef(model: Model) -> pd.DataFrame:
         model (Model): The statistical model object containing coefficient data.
 
     Returns:
-        pd.DataFrame: A DataFrame containing coefficient, dimension, and dimension value information.
+        pd.DataFrame: A DataFrame containing coefficient, dimension,
+            and dimension value information.
     """
     df_coef = []
     for var_group in model.var_groups:

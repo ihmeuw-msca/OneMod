@@ -1,19 +1,18 @@
 """Collect onemod stage submodel results."""
-import matplotlib.pyplot as plt
 from warnings import warn
-from pplkit.data.interface import DataInterface
 
 import fire
 from loguru import logger
+import matplotlib.pyplot as plt
 import pandas as pd
+from pplkit.data.interface import DataInterface
 
 from onemod.schema.models.parent_config import ParentConfiguration
 from onemod.utils import (
-    as_list,
+    get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    get_handle,
 )
 
 
@@ -66,8 +65,9 @@ def _plot_rover_covsel_results(
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
-    logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
-
+    logger.info(
+        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
+    )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
@@ -117,7 +117,7 @@ def _plot_regmod_smooth_results(
             alpha=0.5,
             label="regmod_smooth",
         )
-        ax.legend(fontsize = 'xx-small')
+        ax.legend(fontsize="xx-small")
     return fig
 
 

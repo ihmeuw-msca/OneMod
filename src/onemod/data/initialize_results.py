@@ -5,11 +5,11 @@ import fire
 
 from onemod.utils import (
     get_ensemble_input,
+    get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
     Subsets,
-    get_handle,
 )
 
 

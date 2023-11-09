@@ -1,7 +1,7 @@
 """Useful functions."""
 from __future__ import annotations
 
-from functools import wraps, cache
+from functools import cache, wraps
 from itertools import product
 from pathlib import Path
 from typing import Any, Callable, Optional, TYPE_CHECKING, Union
@@ -9,8 +9,8 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import yaml
 from pplkit.data.interface import DataInterface
+import yaml
 
 from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
 
