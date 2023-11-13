@@ -12,11 +12,17 @@ class ParametrizedBaseModel(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=False, validate_assignment=True)
     parent_args: dict[str, Any] = {}
 
+    def get(self, item: Any) -> Any:
+        try:
+            return self.__getitem__(item)
+        except AttributeError:
+            return None
+
     def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
 
     def __contains__(self, key: Any) -> bool:
-        return key in self.__dict__
+        return key in self.model_fields
 
     def __setitem__(self, key: Any, value: Any) -> None:
         setattr(self, key, value)

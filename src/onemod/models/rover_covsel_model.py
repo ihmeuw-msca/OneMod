@@ -60,7 +60,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
-    rover_init_args = rover_config.Rover
+    rover_init_args = rover_config.rover
     rover = Rover(
         obs=global_config.col_obs,
         model_type=global_config.mtype,
@@ -71,8 +71,8 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     )
 
     # Fit rover model
-    logger.info(f"Fitting the rover model with options {rover_config.fit_args}")
-    rover.fit(data=df_train, **rover_config.fit_args.model_dump())
+    logger.info(f"Fitting the rover model with options {rover_config.rover_fit}")
+    rover.fit(data=df_train, **rover_config.rover_fit.model_dump())
 
     # Save results
     logger.info("Saving rover results after fitting")

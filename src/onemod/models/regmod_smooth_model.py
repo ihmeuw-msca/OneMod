@@ -153,9 +153,9 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     regmod_smooth_config.inherit()
 
     # Create regmod smooth parameters
-    var_groups = regmod_smooth_config.Model.var_groups
-    coef_bounds = regmod_smooth_config.Model.coef_bounds
-    lam = regmod_smooth_config.Model.lam
+    var_groups = regmod_smooth_config.model.var_groups
+    coef_bounds = regmod_smooth_config.model.coef_bounds
+    lam = regmod_smooth_config.model.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
@@ -184,9 +184,9 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     model = Model(
         model_type=regmod_smooth_config.mtype,
         obs=global_config.col_obs,
-        dims=regmod_smooth_config.Model.dims,
+        dims=regmod_smooth_config.model.dims,
         var_groups=var_groups,
-        weights=regmod_smooth_config.Model.weights,
+        weights=regmod_smooth_config.model.weights,
     )
 
     df = dataif.load(global_config.input_path)
@@ -197,7 +197,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, **regmod_smooth_config.fit_args)
+    model.fit(df_train, **regmod_smooth_config.regmod_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[global_config.col_pred] = model.predict(df)

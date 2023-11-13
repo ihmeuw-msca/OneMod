@@ -16,7 +16,7 @@ class RegmodModelInit(ParametrizedBaseModel):
 class RegmodSmoothConfiguration(ParametrizedBaseModel):
     max_attempts: int = 3
     groupby: list[str] = []
-    fit_args: dict = {}
+    regmod_fit: dict = {}
 
     model: RegmodModelInit
 

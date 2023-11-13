@@ -403,7 +403,6 @@ def get_smoother_input(
         df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
         df_input = get_rover_covsel_input(config)
-
     columns = _get_smoother_columns(smoother, config).difference(df_input.columns)
     columns = as_list(config.col_id) + list(columns)
     # Deduplicate

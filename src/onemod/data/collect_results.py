@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.models.parent_config import ParentConfiguration
+from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
     get_handle,
     get_rover_covsel_submodels,
@@ -55,7 +55,7 @@ def _plot_rover_covsel_results(
     """
 
     logger.info("Plotting coefficient magnitudes by age.")
-    settings = ParentConfiguration(**dataif.load_settings())
+    settings = OneModConfig(**dataif.load_settings())
 
     # add age_mid to summary
     df_age = dataif.load(
