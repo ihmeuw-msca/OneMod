@@ -111,7 +111,7 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
         The ID of the submodel to be processed.
 
     """
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
     settings = dataif.load_settings()
 
     # Get submodel settings
@@ -127,7 +127,7 @@ def swimr_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Load data and filter by subset
     df_input = subsets.filter_subset(
-        get_smoother_input("swimr", settings, experiment_dir, from_rover=True),
+        get_smoother_input("swimr", config=settings, dataif=dataif, from_rover=True),
         subset_id,
     )
     df_input["holdout"] = df_input[settings["col_test"]] != 0
