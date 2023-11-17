@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
+from onemod.modeling.metric import Metric
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
     get_handle,
@@ -94,7 +95,7 @@ def _plot_regmod_smooth_results(
 ) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
-    if len(selected_covs) == 0:
+    if not selected_covs:
         warn("There are no covariates selected, skip `plot_regmod_smooth_results`")
         return None
 
@@ -150,6 +151,49 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
     fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
+
+    # Generate RMSE
+    # TODO: Add metric type key to config, for now use default of rmse
+    rmse_df = _summarize_rmse(dataif, stage='regmod_smooth')
+    rmse_df = rmse_df.to_frame(name="rmse").reset_index(names='test')
+    dataif.dump_regmod_smooth(rmse_df, "rmse.csv")
+
+
+def _summarize_rmse(
+    dataif: DataInterface, stage: str, metric_type: str = "rmse"
+) -> pd.DataFrame:
+    """Compare in and out of sample RMSE for a given stage."""
+    settings = ParentConfiguration(**dataif.load_settings())
+
+    load_func = getattr(dataif, f"load_{stage}")
+    predictions = load_func("predictions.parquet",
+                            columns=[*settings.col_id, settings.col_pred, settings.col_obs, settings.col_test])
+
+    # apply filters
+    for id_col in settings.col_id:
+        if hasattr(settings, id_col):
+            predictions = predictions.loc[predictions[id_col].isin(settings[id_col])]
+
+    if settings.truth_set:
+        truth_set = dataif.load(settings.truth_set, columns=[*settings.col_id, settings.truth_column])
+        predictions = pd.merge(
+            left=predictions, right=truth_set, on=settings.col_id, how="left"
+        )
+
+    # Fill NA's in test column
+    predictions[settings.col_test].fillna(1, inplace=True)
+
+    # Calculate in and outsample RMSE
+    metric = Metric(metric_type)
+    observation_column = settings.truth_column if settings.truth_set else settings.col_obs
+
+    rmse = metric(
+        df=predictions,
+        obs=observation_column,
+        pred=settings.col_pred,
+        by=settings.col_test,
+    )
+    return rmse
 
 
 def collect_swimr_results(experiment_dir: str) -> None:
