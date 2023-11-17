@@ -5,12 +5,11 @@ from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Union
 
-from onemod.schema.config import ParentConfiguration as GlobalConfig
 from onemod.utils import (
+    get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    load_settings,
     task_template_cache,
 )
 
@@ -56,8 +55,11 @@ class StageTemplate:
         self.cluster_name = cluster_name
         self.tool = tool
 
+        # Store the config and data interface
+        self.dataif, self.config = get_handle(self.experiment_dir)
+
         # Get task resources
-        resources = load_settings(resources_file, raise_on_error=False, as_model=False)
+        resources = self.dataif.load(resources_file)
         if "task_template_resources" in resources:
             self.resources = resources["task_template_resources"]
         else:
@@ -87,14 +89,13 @@ class StageTemplate:
             List of tasks representing the current stage.
 
         """
-        config = load_settings(self.experiment_dir / "config" / "settings.yml", as_model=True)
 
         # Create stage initialization tasks
         initialization_tasks = self.create_initialization_task()
 
         # Create stage modeling tasks
         modeling_tasks = self.create_modeling_tasks(
-            max_attempts=config.max_attempts,
+            max_attempts=self.config.max_attempts,
             upstream_tasks=upstream_tasks + [initialization_tasks[-1]],
         )
         # Ensemble and regmod_smooth aren't parallelized,

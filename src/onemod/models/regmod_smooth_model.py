@@ -8,126 +8,89 @@ import fire
 from loguru import logger
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 from regmodsm.model import Model
 
-from onemod.schema.config import RegmodSmoothConfiguration, ParentConfiguration
-from onemod.utils import get_data_interface
+from onemod.utils import get_handle
 
 
 def get_residual_computation_function(
     model_type: str,
     col_obs: str,
     col_pred: str,
-    inv_link: str,
-    sigma: str = "",
 ) -> Callable:
     """
-    Calculate the residual for a given row based on the specified model type and inverse link function.
+    Calculate the residual for a given row based on the specified model type.
 
     Parameters:
         row (pd.Series): The row containing the observation and prediction data.
         model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
         col_obs (str): Column name for the observed values.
         col_pred (str): Column name for the predicted values.
-        inv_link (str): Inverse link function ('expit' for logistic, 'exp' for exponential, etc.).
 
     Returns:
         float: The calculated residual value.
 
     Raises:
-        ValueError: If the specified model_type and inv_link pair is unsupported.
+        ValueError: If the specified model_type is unsupported.
     """
 
     # TODO: can these be vectorized functions?
-    selection = (model_type, inv_link)
     callable_map = {
-        ("binomial", "expit"): partial(
+        "binomial": partial(
             lambda row, obs, pred: (row[obs] - row[pred])
             / (row[pred] * (1 - row[pred])),
             obs=col_obs,
             pred=col_pred,
         ),
-        ("poisson", "exp"): partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1,
-            obs=col_obs,
-            pred=col_pred
+        "poisson": partial(
+            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=col_obs, pred=col_pred
         ),
-        ("tobit", "exp"): partial(
-            lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
-            if row[obs] > 0
-            else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-row[col_pred] / row["sigma"] + 1e-6j))
-            / (1e-6),
-            obs=col_obs,
-            pred=col_pred,
-            sigma=sigma,
-        ),
-        ("gaussian", "identity"): partial(
-            lambda row, obs, pred: row[obs] - row[pred],
-            obs=col_obs, pred=col_pred
+        "gaussian": partial(
+            lambda row, obs, pred: row[obs] - row[pred], obs=col_obs, pred=col_pred
         ),
     }
 
     try:
-        return callable_map[selection]
+        return callable_map[model_type]
     except KeyError:
-        raise ValueError("Unsupported model_type and inv_link pair")
+        raise ValueError(f"Unsupported {model_type=}")
 
 
 def get_residual_se_function(
     model_type: str,
     col_obs: str,
     col_pred: str,
-    inv_link: str,
-    sigma: str = "",
 ) -> Callable:
     """
-    Calculate the residual standard error for a given row based on the specified model type and inverse link function.
+    Calculate the residual standard error for a given row based on the specified model type.
 
     Parameters:
         row (pd.Series): The row containing the observation and prediction data.
         model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
         col_obs (str): Column name for the observed values.
         col_pred (str): Column name for the predicted values.
-        inv_link (str): Inverse link function ('expit' for logistic, 'exp' for exponential, etc.).
 
     Returns:
         float: The calculated residual standard error value.
 
     Raises:
-        ValueError: If the specified model_type and inv_link pair is unsupported.
+        ValueError: If the specified model_type is unsupported.
     """
 
-    selection = (model_type, inv_link)
     callable_map = {
-        ("binomial", "expit"): partial(
+        "binomial": partial(
             lambda row, obs, pred: 1 / np.sqrt(row[col_pred] * (1 - row[col_pred])),
             obs=col_obs,
             pred=col_pred,
         ),
-        ("poisson", "exp"): partial(
-            lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred
-        ),
-        ("tobit", "exp"): partial(
-            lambda row, obs, pred, sigma: row[col_obs] / row[col_pred] - 1
-            if row[obs] > 0
-            else (row[col_pred] / row[sigma])
-            * np.imag(norm.logcdf(-row[col_pred] / row[sigma] + 1e-6j)) / (1e-6),
-            obs=col_obs,
-            pred=col_pred,
-            sigma=sigma,
-        ),
-        ("gaussian", "identity"): partial(
-            lambda row, sigma: row[sigma],
-            sigma=sigma,
-        ),
+        "poisson": partial(lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred),
+        "gaussian": lambda *args, **kwargs: 1.0,
     }
 
     try:
-        return callable_map[selection]
+        return callable_map[model_type]
     except KeyError:
-        raise ValueError("Unsupported model_type and inv_link pair")
+        raise ValueError(f"Unsupported {model_type=}")
 
 
 def get_coef(model: Model) -> pd.DataFrame:
@@ -138,7 +101,8 @@ def get_coef(model: Model) -> pd.DataFrame:
         model (Model): The statistical model object containing coefficient data.
 
     Returns:
-        pd.DataFrame: A DataFrame containing coefficient, dimension, and dimension value information.
+        pd.DataFrame: A DataFrame containing coefficient, dimension,
+            and dimension value information.
     """
     df_coef = []
     for var_group in model.var_groups:
@@ -183,16 +147,15 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     predictions.parquet
         Predictions with residual information.
     """
-    dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    dataif, global_config = get_handle(experiment_dir)
 
-    global_config = ParentConfiguration(**settings)
     regmod_smooth_config = global_config.regmod_smooth
+    regmod_smooth_config.inherit()
 
     # Create regmod smooth parameters
-    var_groups = regmod_smooth_config.var_groups
-    coef_bounds = regmod_smooth_config.coef_bounds
-    lam = regmod_smooth_config.lam
+    var_groups = regmod_smooth_config.model.var_groups
+    coef_bounds = regmod_smooth_config.model.coef_bounds
+    lam = regmod_smooth_config.model.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
@@ -219,11 +182,11 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Create regmod smooth model
     model = Model(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.mtype,
         obs=global_config.col_obs,
-        dims=regmod_smooth_config.dims,
+        dims=regmod_smooth_config.model.dims,
         var_groups=var_groups,
-        weights=regmod_smooth_config.weights,
+        weights=regmod_smooth_config.model.weights,
     )
 
     df = dataif.load(global_config.input_path)
@@ -234,24 +197,20 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, **regmod_smooth_config.fit_args)
+    model.fit(df_train, **regmod_smooth_config.regmod_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
-    df[settings["col_pred"]] = model.predict(df)
+    df[global_config.col_pred] = model.predict(df)
     residual_func = get_residual_computation_function(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.mtype,
         col_obs=global_config.col_obs,
         col_pred=global_config.col_pred,
-        inv_link=regmod_smooth_config.inv_link,
-        sigma=global_config.col_sigma,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=regmod_smooth_config.model_type,
+        model_type=regmod_smooth_config.mtype,
         col_obs=global_config.col_obs,
         col_pred=global_config.col_pred,
-        inv_link=regmod_smooth_config.inv_link,
-        sigma=global_config.col_sigma,
     )
     df["residual"] = df.apply(
         residual_func,
