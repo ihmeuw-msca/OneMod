@@ -4,7 +4,7 @@ from onemod.schema.models.base import ParametrizedBaseModel
 
 
 class RegmodModelInit(ParametrizedBaseModel):
-    mtype: str = Field("", alias="model_type")
+
     dims: list[dict] = []
     var_groups: list[dict] = []
     weights: str
