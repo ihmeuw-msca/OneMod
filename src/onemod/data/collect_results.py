@@ -8,6 +8,7 @@ import fire
 from loguru import logger
 import pandas as pd
 
+from onemod.modeling.metric import Metric
 from onemod.schema.config import ParentConfiguration
 from onemod.utils import (
     get_rover_covsel_submodels,
@@ -151,12 +152,15 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
     # Generate RMSE
+    # TODO: Add metric type key to config, for now use default of rmse
     rmse_df = _summarize_rmse(dataif, stage='regmod_smooth')
     rmse_df = rmse_df.to_frame(name="rmse").reset_index(names='test')
     dataif.dump_regmod_smooth(rmse_df, "rmse.csv")
 
 
-def _summarize_rmse(dataif: DataInterface, stage: str):
+def _summarize_rmse(
+    dataif: DataInterface, stage: str, metric_type: str = "rmse"
+) -> pd.DataFrame:
     """Compare in and out of sample RMSE for a given stage."""
     settings = ParentConfiguration(**dataif.load_settings())
 
@@ -179,12 +183,16 @@ def _summarize_rmse(dataif: DataInterface, stage: str):
     predictions[settings.col_test].fillna(1, inplace=True)
 
     # Calculate in and outsample RMSE
+    metric = Metric(metric_type)
     observation_column = settings.truth_column if settings.truth_set else settings.col_obs
-    rmse = predictions.groupby(settings.col_test).apply(
-        lambda x: np.sqrt(np.mean((x[observation_column] - x[settings.col_pred]) ** 2))
+
+    rmse = metric(
+        df=predictions,
+        obs=observation_column,
+        pred=settings.col_pred,
+        by=settings.col_test,
     )
     return rmse
-
 
 
 def collect_swimr_results(experiment_dir: str) -> None:
