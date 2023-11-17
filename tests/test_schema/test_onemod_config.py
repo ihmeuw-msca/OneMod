@@ -1,17 +1,18 @@
-from onemod.schema.config import (
-    ParentConfiguration, RegmodSmoothConfiguration, RoverConfiguration
+from onemod.schema.models.api import (
+    OneModConfig,
+    RoverCovselConfiguration,
+    RegmodSmoothConfiguration,
 )
 
 
-def test_parent_config(sample_input_data, sample_config):
+def test_onemod_config(sample_config_file):
 
     # No validation error raised
-    parent_config = ParentConfiguration(**sample_config)
+    parent_config = OneModConfig(**sample_config_file)
 
-    # Assert we have an appropriate rover config object
+    # Assert we have an appropriate rover config and regmod config object
     assert hasattr(parent_config, 'rover_covsel')
-    assert isinstance(parent_config.rover_covsel, RoverConfiguration)
-    assert parent_config.rover_covsel.model_type == sample_config['rover_covsel']['model_type']
+    assert isinstance(parent_config.rover_covsel, RoverCovselConfiguration)
 
     assert hasattr(parent_config, 'regmod_smooth')
     assert isinstance(parent_config.regmod_smooth, RegmodSmoothConfiguration)

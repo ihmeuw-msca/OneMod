@@ -17,6 +17,7 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     max_attempts: int = 3
     groupby: list[str] = []
     regmod_fit: dict = {}
+    mtype: str = Field("", alias="model_type")
 
     model: RegmodModelInit
 

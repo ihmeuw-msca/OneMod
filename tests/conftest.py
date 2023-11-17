@@ -1,14 +1,16 @@
 import itertools
 from pathlib import Path
 
+from jobmon.client.api import Tool
 import numpy as np
+import pandas as pd
 import pytest
 import os
 import shutil
 import yaml
 
-from jobmon.client.api import Tool
-import pandas as pd
+
+from onemod.schema.models.api import OneModConfig
 
 
 @pytest.fixture(scope='session')
@@ -76,8 +78,13 @@ def sample_input_data(temporary_directory):
 
 
 @pytest.fixture(scope='session')
-def sample_config(temporary_directory):
+def sample_config_file(temporary_directory):
     yaml_path = temporary_directory / 'config/settings.yml'
     with open(yaml_path, 'r') as f:
         config = yaml.safe_load(f)
     return config
+
+
+@pytest.fixture
+def sample_config(sample_config_file):
+    return OneModConfig(**sample_config_file)
