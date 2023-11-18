@@ -1,19 +1,19 @@
 """Collect onemod stage submodel results."""
-import matplotlib.pyplot as plt
 from warnings import warn
-import numpy as np
-from pplkit.data.interface import DataInterface
 
 import fire
 from loguru import logger
+import matplotlib.pyplot as plt
 import pandas as pd
+from pplkit.data.interface import DataInterface
 
-from onemod.schema.config import ParentConfiguration
+from onemod.modeling.metric import Metric
+from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
+    get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    get_data_interface,
 )
 
 
@@ -56,7 +56,7 @@ def _plot_rover_covsel_results(
     """
 
     logger.info("Plotting coefficient magnitudes by age.")
-    settings = ParentConfiguration(**dataif.load_settings())
+    settings = OneModConfig(**dataif.load_settings())
 
     # add age_mid to summary
     df_age = dataif.load(
@@ -66,8 +66,9 @@ def _plot_rover_covsel_results(
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
-    logger.info(f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}")
-
+    logger.info(
+        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
+    )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     for i, cov in enumerate(covs):
@@ -117,6 +118,7 @@ def _plot_regmod_smooth_results(
             alpha=0.5,
             label="regmod_smooth",
         )
+        ax.legend(fontsize="xx-small")
     return fig
 
 
@@ -128,7 +130,7 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
     This step will save ``selected_covs.yaml`` with a list of selected
     covariates in the rover results folder.
     """
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
 
     selected_covs = _get_selected_covs(dataif)
     dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
@@ -144,19 +146,22 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
 
 def collect_regmod_smooth_results(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
     summaries = _get_rover_covsel_summaries(dataif)
     fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
     # Generate RMSE
+    # TODO: Add metric type key to config, for now use default of rmse
     rmse_df = _summarize_rmse(dataif, stage='regmod_smooth')
     rmse_df = rmse_df.to_frame(name="rmse").reset_index(names='test')
     dataif.dump_regmod_smooth(rmse_df, "rmse.csv")
 
 
-def _summarize_rmse(dataif: DataInterface, stage: str):
+def _summarize_rmse(
+    dataif: DataInterface, stage: str, metric_type: str = "rmse"
+) -> pd.DataFrame:
     """Compare in and out of sample RMSE for a given stage."""
     settings = ParentConfiguration(**dataif.load_settings())
 
@@ -179,18 +184,21 @@ def _summarize_rmse(dataif: DataInterface, stage: str):
     predictions[settings.col_test].fillna(1, inplace=True)
 
     # Calculate in and outsample RMSE
+    metric = Metric(metric_type)
     observation_column = settings.truth_column if settings.truth_set else settings.col_obs
-    rmse = predictions.groupby(settings.col_test).apply(
-        lambda x: np.sqrt(np.mean((x[observation_column] - x[settings.col_pred]) ** 2))
+
+    rmse = metric(
+        df=predictions,
+        obs=observation_column,
+        pred=settings.col_pred,
+        by=settings.col_test,
     )
     return rmse
 
 
-
 def collect_swimr_results(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
-    dataif = get_data_interface(experiment_dir)
-    settings = ParentConfiguration(**dataif.load_settings())
+    dataif, settings = get_handle(experiment_dir)
 
     submodel_ids = get_swimr_submodels(experiment_dir)
     for holdout_id in settings.col_holdout + ["full"]:
@@ -219,8 +227,7 @@ def collect_swimr_results(experiment_dir: str) -> None:
 
 def collect_weave_results(experiment_dir: str) -> None:
     """Collect weave submodel results."""
-    dataif = get_data_interface(experiment_dir)
-    settings = dataif.load_settings()
+    dataif, settings = get_handle(experiment_dir)
 
     submodel_ids = get_weave_submodels(experiment_dir)
     for holdout_id in settings.col_holdout + ["full"]:

@@ -4,14 +4,13 @@ import shutil
 import fire
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.config import ParentConfiguration
 from onemod.utils import (
     get_ensemble_input,
+    get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
     Subsets,
-    get_data_interface,
 )
 
 
@@ -25,14 +24,13 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
         "ensemble": _initialize_ensemble_results,
     }
 
-    dataif = get_data_interface(experiment_dir)
+    dataif, settings = get_handle(experiment_dir)
 
     for stage in stages:
         stage_init_map[stage](dataif)
 
     # ETL the input data into parquet format.
     # More compressible, faster IO, allows for partitioning
-    settings = ParentConfiguration(**dataif.load_settings())
     raw_input_path = settings.input_path
     data = dataif.load(raw_input_path)
 
@@ -63,7 +61,6 @@ def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
 
 def _initialize_swimr_results(dataif: DataInterface) -> None:
     """Initialize swimr results."""
-
     # Initialize directories
     if dataif.swimr.exists():
         shutil.rmtree(dataif.swimr)

@@ -41,7 +41,7 @@ def get_predictions(
     holdout_id = str(holdout_id)
     experiment_dir = Path(experiment_dir)
 
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
     if holdout_id == "full":
         swimr_file = "predictions.parquet"
         weave_file = "predictions.parquet"
@@ -259,7 +259,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
 
     """
     experiment_dir = Path(experiment_dir)
-    dataif = get_data_interface(experiment_dir)
+    dataif, _ = get_handle(experiment_dir)
     settings = dataif.load_settings()
     subsets_df = dataif.load_ensemble("subsets.csv")
 
@@ -270,7 +270,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     )
 
     # Load input data and smoother predictions
-    df_input = get_ensemble_input(settings)
+    df_input = get_ensemble_input(interface, settings)
     df_full = get_predictions(experiment_dir, "full", settings["col_pred"])
 
     # Get smoother out-of-sample performance by holdout set

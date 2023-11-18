@@ -8,13 +8,12 @@ from typing import Optional, TYPE_CHECKING, Union
 
 import fire
 from jobmon.client.api import Tool
-from pydantic import ValidationError
 
-from onemod.schema.config import ParentConfiguration
+from onemod.schema.models.onemod_config import OneModConfig
 from onemod.schema.validate import validate_config
 from onemod.orchestration.stage import StageTemplate
 from onemod.orchestration.templates import create_initialization_template
-from onemod.utils import as_list, get_data_interface
+from onemod.utils import as_list, get_handle
 
 try:
     # Import will fail until the next version of jobmon is released;
@@ -38,7 +37,7 @@ upstream_dict: dict[str, list] = {
 
 def create_workflow(
     directory: str,
-    config: ParentConfiguration,
+    config: OneModConfig,
     stages: list[str],
     save_intermediate: bool,
     cluster_name: str,
@@ -51,6 +50,8 @@ def create_workflow(
     ----------
     directory : str
         The experiment directory. It must contain config/settings.yml.
+    config: OneModConfig
+        The validated OneMod configuration, a Pydantic base model
     stages : list of str
         The pipeline stages to run.
     save_intermediate : bool
@@ -158,9 +159,13 @@ def run_pipeline(
         if stage not in all_stages:
             raise ValueError(f"Invalid stage: {stage}")
 
-    # Validate the configuration file
-    dataif = get_data_interface(directory)
-    config = _load_validated_config(dataif=dataif, stages=stages, experiment_dir=directory)
+    # Load and validate the configuration file
+    dataif, config = get_handle(directory)
+    validate_config(
+        stages=stages,
+        directory=directory,
+        config=config
+    )
 
     workflow = create_workflow(
         directory=directory,
@@ -173,16 +178,6 @@ def run_pipeline(
     status = workflow.run(configure_logging=True, seconds_until_timeout=24 * 60 * 60)
     if status != "D":
         raise ValueError(f"workflow {workflow.name} failed: {status}")
-
-
-def _load_validated_config(dataif: DataInterface, stages: list[str], experiment_dir: str):
-    settings = ParentConfiguration(**dataif.load_settings())
-    validate_config(
-        stages=stages,
-        directory=experiment_dir,
-        config=settings,
-    )
-    return settings
 
 
 def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
