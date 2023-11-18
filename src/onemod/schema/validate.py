@@ -1,16 +1,27 @@
 import pandas as pd
 from pydantic import BaseModel, ValidationError
 
+from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import get_handle
 
 
-def validate_config(directory: str, stages: list[str]) -> None:
-    """Validate the configuration file according to the expected schema."""
+def validate_config(
+    stages: list[str],
+    directory: str,
+    config: OneModConfig | None = None,
+) -> None:
+    """Validate the configuration file according to the expected schema.
 
-    dataif, config = get_handle(directory)
+    Either a configuration or a directory to load that configuration from must be provided.
+    """
+
+    dataif, settings = get_handle(directory)
+
+    if not config:
+        config = settings
 
     # Validate against the dataset
-    dataset = dataif.load_data()
+    dataset = dataif.load(config.input_path)
     errors = []
 
     if "rover_covsel" in stages:

@@ -128,7 +128,7 @@ def get_coef(model: Model) -> pd.DataFrame:
     return df_coef
 
 
-def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
+def regmod_smooth_model(experiment_dir: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
 
