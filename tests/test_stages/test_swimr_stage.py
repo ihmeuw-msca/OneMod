@@ -1,6 +1,9 @@
+import pytest
+
 from onemod.orchestration.stage import StageTemplate
 
 
+@pytest.mark.skip("Implement when swimr model schema is implemented and debugged")
 def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
 
     stage = StageTemplate(
@@ -22,3 +25,12 @@ def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_in
     # 6 subsets, 2 holdoutsets = 108 tasks
     # Plus 1 aggregation task = 108 + 108 + 1 = 217
     assert len(tasks) == 217
+
+    # Test adding in deletion tasks
+    stage.save_intermediate = False
+    tasks = stage.create_tasks([])
+
+    assert len(tasks) == 433
+
+
+

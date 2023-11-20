@@ -543,7 +543,8 @@ def get_weave_submodels(
     for model_id, model_settings in config["weave"]["models"].items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        subsets = Subsets(model_id, config, df_input)
+        model_settings.inherit()
+        subsets = Subsets(model_id, model_settings, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),

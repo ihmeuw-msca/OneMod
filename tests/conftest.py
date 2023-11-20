@@ -54,16 +54,24 @@ def sample_input_data(temporary_directory):
     values = list(itertools.product(
         super_region_id, location_ids, sex_ids, age_group_ids, year_ids)
     )
-    data = pd.DataFrame(values,
-                        columns=[
-                            'super_region_id', 'location_id',
-                            'sex_id', 'age_group_id', 'year_id'
-                        ])
+    data = pd.DataFrame(
+        values,
+        columns=[
+            'super_region_id', 'location_id',
+            'sex_id', 'age_group_id', 'year_id'
+        ]
+    )
+
+    # Mock an age mid column
+    data['age_mid'] = data['age_group_id']
 
     # Generate false holdout columns
-    data['holdout'] = 1
     data['holdout1'] = np.random.randint(0, 2, len(data))
     data['holdout2'] = np.random.randint(0, 2, len(data))
+    data['test'] = np.random.randint(0, 2, len(data))
+
+    # Generate an observations column, random from 0 to 1
+    data['obs_rate'] = np.random.rand(len(data))
 
     # Save to the temp directory
     os.mkdir(temporary_directory / 'data')
@@ -88,4 +96,10 @@ def sample_config_file(temporary_directory, sample_input_data):
 
 @pytest.fixture
 def sample_config(sample_config_file):
-    return OneModConfig(**sample_config_file)
+    config = OneModConfig(**sample_config_file)
+    config.rover_covsel.inherit()
+    config.regmod_smooth.inherit()
+    config.weave.inherit()
+    config.swimr.inherit()
+    config.ensemble.inherit()
+    return config

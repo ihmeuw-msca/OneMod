@@ -14,16 +14,26 @@ def test_weave_tasks(testing_tool, temporary_directory, sample_config, sample_in
     )
     tasks = stage.create_tasks([])
     # We expect 81 tasks.
-    # Breakdown: Model1 has 2 year_id parameters and 2 location parameters, for 4 total
-    # There are 6 unique combinations of the groupby parameters (sex, super region, age)
-    # and 2 holdout columns.
-    # 4 *6*2 = 48, and no batching multiplier means we have 24 tasks total.
+    # Breakdown: Model1 has 3 parameters - age, year, and year
+    # (in the settings.weave.models.model1.dimensions register).
 
-    # Model2 has 2 year parameters, 2 unique combinations of the groupby parameter sex_id,
-    # and 2 holdout columns.
-    # There are 12 rows per sex, and a batch size of 3 means we'll have 4 batches
-    # 2 * 2 * 4 * 2 = 32 tasks
+    # Each of the parameters has 3 unique values to iterate over; age and location have 3 values
+    # for radius and year has 3 values for exponent. 3*3*3 = 27 parameters.
 
-    # 48 + 32 = 80, plus 1 aggregation task makes 41
-    assert len(tasks) == 81
+    # There are 2 unique combinations of the groupby parameters (sex, super region)
+    # and 2 holdout columns plus a "full" holdout set.
+    # 27 * 2 * 3 = 162, and no batching multiplier means we have 162 tasks total for model1.
+
+    # Model2 has 2 parameters, year and location, and year has 3 values of exponent to form
+    # submodels from, making 3 * 1 = 3 parameter sets.
+
+    # As in model1 we have 2 subsets and 3 holdout columns, making 6 subsets in total, and 3
+    # holdout folds
+    # 3 * 6 * 3 = 54 tasks for model2.
+
+    # Additionally, since we have a max batch size of 3, we have to add an additional factor
+    # of 2 since each subset has to be split into two batches (6 // 3 = 2)
+
+    # 162 + 54 * 2 = 216, plus 1 aggregation task makes 217
+    assert len(tasks) == 271
 

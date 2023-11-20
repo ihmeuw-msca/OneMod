@@ -18,9 +18,10 @@ def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sampl
     # Inspecting the settings, we are grouping by sex and age. 3 ages + 2 sexes = 6 tasks
     assert len(tasks) == 7  # 6 modeling tasks plus aggregation task
     expected_agg_task = tasks.pop()
-    assert expected_agg_task.name == "rover_aggregation"
+    assert expected_agg_task.name == "rover_covsel_collection_task"
     assert len(expected_agg_task.upstream_tasks) == 6
-    assert "aggregate_results rover" in expected_agg_task.command
+    assert "collect_results" in expected_agg_task.command
+    assert "--stage_name rover_covsel" in expected_agg_task.command
 
     sample_model_task = tasks[0]
     assert not sample_model_task.upstream_tasks
@@ -32,7 +33,7 @@ def test_rover_tasks_with_deletion(testing_tool, temporary_directory,
         stage_name='rover_covsel',
         config=sample_config,
         experiment_dir=temporary_directory,
-        save_intermediate=True,
+        save_intermediate=False,
         resources_file=temporary_directory / 'resources.yml',
         tool=testing_tool,
         cluster_name='dummy',
@@ -41,11 +42,11 @@ def test_rover_tasks_with_deletion(testing_tool, temporary_directory,
     tasks = stage.create_tasks([])
 
     # Should be 13 tasks - 6 modeling, 1 agg, 6 deletion
+    breakpoint()
     assert len(tasks) == 13
-
-    aggregation_tasks = list(filter(lambda t: "aggregation" in t.name, tasks))
+    aggregation_tasks = list(filter(lambda t: "collection" in t.name, tasks))
     deletion_tasks = list(filter(lambda t: "deletion" in t.name, tasks))
-    modeling_tasks = list(filter(lambda t: "rover_model_task" in t.name, tasks))
+    modeling_tasks = list(filter(lambda t: "rover_covsel_model_task" in t.name, tasks))
 
     assert len(aggregation_tasks) == 1
     assert len(deletion_tasks) == 6
