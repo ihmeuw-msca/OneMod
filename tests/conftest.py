@@ -66,7 +66,8 @@ def sample_input_data(temporary_directory):
     data['holdout2'] = np.random.randint(0, 2, len(data))
 
     # Save to the temp directory
-    data_path = temporary_directory / 'data.parquet'
+    os.mkdir(temporary_directory / 'data')
+    data_path = temporary_directory / 'data' / 'data.parquet'
     data.to_parquet(data_path)
 
     # Update the data path key in the config with this value
@@ -78,7 +79,7 @@ def sample_input_data(temporary_directory):
 
 
 @pytest.fixture(scope='session')
-def sample_config_file(temporary_directory):
+def sample_config_file(temporary_directory, sample_input_data):
     yaml_path = temporary_directory / 'config/settings.yml'
     with open(yaml_path, 'r') as f:
         config = yaml.safe_load(f)

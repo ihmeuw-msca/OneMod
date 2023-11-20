@@ -1,18 +1,20 @@
-from pathlib import Path
-import sys
-
-from onemod.pipeline.rover_stage import RoverStage
+from onemod.orchestration.stage import StageTemplate
 
 
 def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sample_config):
 
     # Create a set of rover tasks. Check that the correct commands are generated
-    stage = RoverStage(testing_tool)
+    stage = StageTemplate(
+        stage_name='rover_covsel',
+        config=sample_config,
+        experiment_dir=temporary_directory,
+        save_intermediate=True,
+        resources_file=temporary_directory / 'resources.yml',
+        tool=testing_tool,
+        cluster_name='dummy'
+    )
 
-    tasks = stage.create_tasks(results_dir=temporary_directory, delete_intermediate=False,
-                               cluster_name='dummy', rover_settings=sample_config['rover'],
-                               input_data=sample_input_data)
-
+    tasks = stage.create_tasks(upstream_tasks=[])
     # Inspecting the settings, we are grouping by sex and age. 3 ages + 2 sexes = 6 tasks
     assert len(tasks) == 7  # 6 modeling tasks plus aggregation task
     expected_agg_task = tasks.pop()
@@ -26,12 +28,17 @@ def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sampl
 
 def test_rover_tasks_with_deletion(testing_tool, temporary_directory,
                                    sample_input_data, sample_config):
+    stage = StageTemplate(
+        stage_name='rover_covsel',
+        config=sample_config,
+        experiment_dir=temporary_directory,
+        save_intermediate=True,
+        resources_file=temporary_directory / 'resources.yml',
+        tool=testing_tool,
+        cluster_name='dummy',
+    )
 
-    stage = RoverStage(testing_tool)
-
-    tasks = stage.create_tasks(results_dir=temporary_directory, delete_intermediate=True,
-                               cluster_name='dummy', rover_settings=sample_config['rover'],
-                               input_data=sample_input_data)
+    tasks = stage.create_tasks([])
 
     # Should be 13 tasks - 6 modeling, 1 agg, 6 deletion
     assert len(tasks) == 13

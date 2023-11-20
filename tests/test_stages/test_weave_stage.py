@@ -1,18 +1,18 @@
-from onemod.pipeline.weave_stage import WeaveStage
+from onemod.orchestration.stage import StageTemplate
 
 
 def test_weave_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
 
-    stage = WeaveStage(testing_tool)
-    weave_settings = sample_config['weave']
-    holdout_cols = sample_config['col_holdout']
-    tasks = stage.create_tasks(
-        results_dir=temporary_directory,
-        cluster_name='dummy',
-        input_data=sample_input_data,
-        weave_settings=weave_settings,
-        holdout_cols=holdout_cols
+    stage = StageTemplate(
+        stage_name='weave',
+        config=sample_config,
+        experiment_dir=temporary_directory,
+        save_intermediate=True,
+        resources_file=temporary_directory / 'resources.yml',
+        tool=testing_tool,
+        cluster_name='dummy'
     )
+    tasks = stage.create_tasks([])
     # We expect 81 tasks.
     # Breakdown: Model1 has 2 year_id parameters and 2 location parameters, for 4 total
     # There are 6 unique combinations of the groupby parameters (sex, super region, age)

@@ -1,18 +1,18 @@
-from onemod.pipeline.swimr_stage import SwimrStage
+from onemod.orchestration.stage import StageTemplate
 
 
 def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
 
-    stage = SwimrStage(testing_tool)
-    swimr_settings = sample_config['swimr']
-    holdout_cols = sample_config['col_holdout']
-    tasks = stage.create_tasks(
-        results_dir=temporary_directory,
-        cluster_name='dummy',
-        input_data=sample_input_data,
-        swimr_settings=swimr_settings,
-        holdout_cols=holdout_cols,
+    stage = StageTemplate(
+        stage_name='swimr',
+        config=sample_config,
+        experiment_dir=temporary_directory,
+        save_intermediate=True,
+        resources_file=temporary_directory / 'resources.yml',
+        tool=testing_tool,
+        cluster_name='dummy'
     )
+    tasks = stage.create_tasks([])
 
     # Breakdown:
     # Model 1 - 9 different parameters - 3 internal knots, 3 similarity multipliers
