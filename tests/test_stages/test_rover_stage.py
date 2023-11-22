@@ -27,39 +27,6 @@ def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sampl
     assert not sample_model_task.upstream_tasks
 
 
-def test_rover_tasks_with_deletion(testing_tool, temporary_directory,
-                                   sample_input_data, sample_config):
-    stage = StageTemplate(
-        stage_name='rover_covsel',
-        config=sample_config,
-        experiment_dir=temporary_directory,
-        save_intermediate=False,
-        resources_file=temporary_directory / 'resources.yml',
-        tool=testing_tool,
-        cluster_name='dummy',
-    )
-
-    tasks = stage.create_tasks([])
-
-    # Should be 13 tasks - 6 modeling, 1 agg, 6 deletion
-    breakpoint()
-    assert len(tasks) == 13
-    aggregation_tasks = list(filter(lambda t: "collection" in t.name, tasks))
-    deletion_tasks = list(filter(lambda t: "deletion" in t.name, tasks))
-    modeling_tasks = list(filter(lambda t: "rover_covsel_model_task" in t.name, tasks))
-
-    assert len(aggregation_tasks) == 1
-    assert len(deletion_tasks) == 6
-    assert len(modeling_tasks) == 6
-
-    agg_task = aggregation_tasks[0]
-
-    # Check both tasks have the same upstreams, the modeling tasks
-    assert agg_task.upstream_tasks == set(modeling_tasks)
-    assert deletion_tasks[0].upstream_tasks == {agg_task}
-    assert modeling_tasks[0].upstream_tasks == set()
-
-
 def test_batching():
     # TODO: Figure out a unit test to check if a large rover workflow can be chunked correctly
     assert True

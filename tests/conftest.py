@@ -53,7 +53,7 @@ def sample_input_data(temporary_directory):
 
     values = list(itertools.product(
         super_region_id, location_ids, sex_ids, age_group_ids, year_ids)
-    )
+    ) * 3  # Generate at least 3 rows per group
     data = pd.DataFrame(
         values,
         columns=[
@@ -65,10 +65,17 @@ def sample_input_data(temporary_directory):
     # Mock an age mid column
     data['age_mid'] = data['age_group_id']
 
-    # Generate false holdout columns
-    data['holdout1'] = np.random.randint(0, 2, len(data))
-    data['holdout2'] = np.random.randint(0, 2, len(data))
-    data['test'] = np.random.randint(0, 2, len(data))
+    # Generate false holdout columns.
+    # Need at least one holdout and one non holdout row per group.
+    num_params = len(values) // 3
+    data['holdout1'] = [0] * num_params + [1] * num_params * 2
+    data['holdout2'] = data['holdout1']
+    data['test'] = [0] * num_params * 2 + [1] * num_params
+
+    # Generate fake covariate columns
+    data['cov1'] = np.random.rand(len(data))
+    data['cov2'] = np.random.rand(len(data))
+    data['cov3'] = np.random.rand(len(data))
 
     # Generate an observations column, random from 0 to 1
     data['obs_rate'] = np.random.rand(len(data))
@@ -94,7 +101,7 @@ def sample_config_file(temporary_directory, sample_input_data):
     return config
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def sample_config(sample_config_file):
     config = OneModConfig(**sample_config_file)
     config.rover_covsel.inherit()
