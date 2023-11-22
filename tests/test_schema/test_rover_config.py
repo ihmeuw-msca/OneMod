@@ -16,9 +16,3 @@ def test_rover_config(sample_config):
         modified_data = sample_config["rover_covsel"].model_dump()
         modified_data["rover"].pop("weights")
         RoverCovselConfiguration(**modified_data)
-
-    # Try a non recognized model type
-    with pytest.raises(ValidationError):
-        incorrect_model_type = sample_config.rover_covsel.model_dump()
-        incorrect_model_type['mtype'] = "not_a_model_type"
-        RoverCovselConfiguration(**incorrect_model_type)

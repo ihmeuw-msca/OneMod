@@ -8,8 +8,8 @@ from onemod.main import create_workflow
     [
         (['rover_covsel'], 8),
         (['rover_covsel', 'regmod_smooth'], 10),
-        (['weave', 272]),
-        (['regmod_smooth', 'weave'], 274)
+        (['weave', 488]),
+        (['regmod_smooth', 'weave'], 490)
     ]
 )
 def test_workflow_stage_creation(

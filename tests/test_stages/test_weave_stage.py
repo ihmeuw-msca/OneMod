@@ -31,9 +31,12 @@ def test_weave_tasks(testing_tool, temporary_directory, sample_config, sample_in
     # holdout folds
     # 3 * 6 * 3 = 54 tasks for model2.
 
-    # Additionally, since we have a max batch size of 3, we have to add an additional factor
-    # of 2 since each subset has to be split into two batches (6 // 3 = 2)
+    # Additionally, we have a max batch size of 3. In conftest.py, we have 3 rows per group
+    # to account for the various holdout sets, meaning we will an additional factor of 6.
+    # (6 subsets * 3 holdout folds / 3 batch size = 6)
 
-    # 162 + 54 * 2 = 216, plus 1 aggregation task makes 217
-    assert len(tasks) == 271
+    # This means we have
+
+    # 162 + 54 * 6 = 486, plus 1 aggregation task makes 487
+    assert len(tasks) == 487
 
