@@ -14,7 +14,7 @@ class Scheduler:
             generator = application.action_generator()
             yield from generator
 
-    def run(self, run_local: bool = False):
+    def run(self, run_local: bool):
         if run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
