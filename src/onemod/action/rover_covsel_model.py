@@ -8,7 +8,6 @@ from onemod.utils import get_handle, get_rover_covsel_input, Subsets
 
 
 
-@Action
 def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     """Run rover covariate selection model by submodel ID.
 
