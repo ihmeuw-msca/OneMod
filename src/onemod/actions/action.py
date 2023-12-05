@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 from onemod.utils import TaskTemplateFactory
 
+
 def callback(func_name):
     order_map = {
         'rover_covsel_model': ['initialize_results'],
@@ -23,12 +24,10 @@ def callback(func_name):
     return upstream_tasks
 
 
-
 class Action:
-    """Decorator for actions.
+    """Wrapper for actions.
 
     Allows local execution as well as instantiation of a Jobmon task.
-
 
     An action has 2 key use cases:
     1. Be run as a callable
@@ -40,24 +39,27 @@ class Action:
         self.args = args
         self.kwargs = kwargs
         self.callback = callback  # For setting upstreams
+        self._task = None  # Compute and store once
 
-    def task(
-        self,
-        **kwargs
-    ) -> "Task":
+    @property
+    def task(self) -> "Task":
         """Create a Jobmon task from this action."""
+        if self._task is not None:
+            return self._task
 
         # Unpack kwargs into a string for naming purposes
         task_template = TaskTemplateFactory.get_task_template(self.func.__name__)
-        kwargs_str = "_".join([f"{key}{value}" for key, value in kwargs.items()])
+        kwargs_str = "_".join([f"{key}{value}" for key, value in self.kwargs.items()])
         upstream_tasks = self.callback(self.func.__name__)
-        return task_template.create_task(
+        self._task = task_template.create_task(
             name=f"{self.func.__name__}_{kwargs_str}",
             upstream_tasks=upstream_tasks,
             # Requirement: entrypoints map exactly to function names
             entrypoint=shutil.which(self.func.__name__),
-            **kwargs
+            **self.kwargs
         )
+        return self._task
+
     def evaluate(self):
         """Evaluate the action."""
         return self.func(*self.args, **self.kwargs)

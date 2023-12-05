@@ -3,9 +3,7 @@ import fire
 from loguru import logger
 from modrover.api import Rover
 
-from onemod.action.action import Action
 from onemod.utils import get_handle, get_rover_covsel_input, Subsets
-
 
 
 def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
