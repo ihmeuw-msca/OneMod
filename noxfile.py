@@ -1,3 +1,6 @@
+import os
+import shutil
+
 import nox
 from nox.sessions import Session
 
@@ -58,3 +61,21 @@ def typecheck(session: Session) -> None:
     session.install("mypy", "types-PyYAML", "pandas-stubs")
     session.install("-e", ".")
     session.run("mypy", "--explicit-package-bases", *args)
+
+@nox.session(python=python, venv_backend="conda")
+def docs(session: Session) -> None:
+    session.conda_install("graphviz", "mysqlclient")
+    session.install(
+        "sphinx",
+        "sphinx-autodoc-typehints",
+        "sphinx_rtd_theme",
+        "sphinx_autoapi"
+    )
+
+    session.install(".")
+    output_dir = "out/_html"
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    session.run(
+        "sphinx-build", "docs", output_dir
+    )
