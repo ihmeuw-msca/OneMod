@@ -1,16 +1,22 @@
-import functools
 import shutil
 from typing import Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from jobmon.client.task_template import TaskTemplate
     from jobmon.client.task import Task
 
-from onemod.utils import TaskTemplateFactory
+from onemod.utils import TaskTemplateFactory, TaskRegistry
 
 
 def callback(func_name):
+    """
+    Idea: we will have a global data structure which is a dict of tasks by function names.
+    We will be able to look up known upstream tasks that have been added to the registry.
+
+    Assumes tasks are added in roughly the right dependency order, but that's a requirement
+    for local execution anyways.
+    """
     order_map = {
+        # TODO: Complete this order map
         'rover_covsel_model': ['initialize_results'],
         'collect_results': ['rover_covsel_model'],
     }
@@ -19,7 +25,7 @@ def callback(func_name):
 
     upstream_tasks = []
     for action in upstream_actions:
-        tasks = callback_dict[action]
+        tasks = TaskRegistry.get(action.name)
         upstream_tasks.extend(tasks)
     return upstream_tasks
 

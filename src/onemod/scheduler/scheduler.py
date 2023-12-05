@@ -1,17 +1,25 @@
+from typing import Generator
+
+from onemod.actions.action import Action
+
 
 class Scheduler:
 
-    def __init__(self, stages: list[str], run_local: bool = True):
-        self.run_local = run_local
+    def __init__(self, stages: list[str]):
         self.stages = stages
-        self.tool = None
-        if not self.run_local:
-            self.create_tool()
 
-    def run(self):
+    def parent_action_generator(self) -> Generator[Action, None, None]:
         for stage in self.stages:
-            application = get_application(stage)
-            if self.run_local:
-                tasks = list(application.action_generator(self.run_local))
-            else:
-                run_tasks(application.action_generator(self.run_local))
+            application = get_application(stage)  # TODO: A simple lookup table should suffice
+            generator = application.action_generator()
+            yield from generator
+
+    def run(self, run_local: bool = False):
+        if run_local:
+            for action in self.parent_action_generator():
+                action.evaluate()
+        else:
+            workflow = self.create_workflow()
+            tasks = [action.task for action in self.parent_action_generator()]
+            workflow.add_tasks(tasks)
+            workflow.run(configure_logging=True)
