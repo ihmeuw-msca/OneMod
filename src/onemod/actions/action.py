@@ -17,6 +17,10 @@ def callback(func_name):
     """
     order_map = {
         # TODO: Complete this order map
+        # For the first task of the stage, we need to be able to optionally lookup prior
+        # stages that may or may not be specified in the config.
+
+        # I.e. weave_model may not depend on regmod_smooth if we have stages=['weave']
         'rover_covsel_model': ['initialize_results'],
         'collect_results': ['rover_covsel_model'],
     }
@@ -48,22 +52,28 @@ class Action:
         self._task = None  # Compute and store once
 
     @property
+    def name(self) -> str:
+        return self.func.__name__
+
+    @property
     def task(self) -> "Task":
         """Create a Jobmon task from this action."""
         if self._task is not None:
             return self._task
 
         # Unpack kwargs into a string for naming purposes
-        task_template = TaskTemplateFactory.get_task_template(self.func.__name__)
+        task_template = TaskTemplateFactory.get_task_template(self.name)
         kwargs_str = "_".join([f"{key}{value}" for key, value in self.kwargs.items()])
-        upstream_tasks = self.callback(self.func.__name__)
+        upstream_tasks = self.callback(self.name)
         self._task = task_template.create_task(
-            name=f"{self.func.__name__}_{kwargs_str}",
+            name=f"{self.name}_{kwargs_str}",
             upstream_tasks=upstream_tasks,
             # Requirement: entrypoints map exactly to function names
-            entrypoint=shutil.which(self.func.__name__),
+            entrypoint=shutil.which(self.name),
             **self.kwargs
         )
+        # Store the task for later lookup
+        TaskRegistry.put(self.name, self._task)
         return self._task
 
     def evaluate(self):

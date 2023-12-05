@@ -652,7 +652,8 @@ class TaskTemplateFactory:
     A helper class to create task templates for each stage and cache the result.
     """
 
-    def get_task_template(self, task_template_name: str) -> TaskTemplate:
+    @classmethod
+    def get_task_template(cls, task_template_name: str) -> TaskTemplate:
         # TODO: Implement
         pass
 
