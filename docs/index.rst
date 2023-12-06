@@ -1,7 +1,8 @@
 OneMod
 ######
 
-![OneMod Pipeline](../pipeline.png)
+.. image:: ../pipeline.png
+
 
 In many applications in epidemiology, we need to estimate a single quantity (e.g., incidence or prevalence) by leveraging covariates and correlations across multiple dimensions (e.g., age, location, or year).
 This pipeline package estimates quantities using the following approach:
@@ -31,10 +32,11 @@ Table of Contents
 
     installation
     usage
-    examples
 
+.. toctree::
+    :maxdepth: 2
+    stages/index
 
-License
-#######
-
-This project uses the following license: [BSD 2-Clause](./LICENSE)
+.. toctree::
+    :maxdepth: 2
+    example/index
