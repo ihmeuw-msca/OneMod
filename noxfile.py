@@ -1,6 +1,3 @@
-import os
-import shutil
-
 import nox
 from nox.sessions import Session
 
@@ -74,8 +71,6 @@ def docs(session: Session) -> None:
 
     session.install(".")
     output_dir = "out/_html"
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
     session.run(
         "sphinx-build", "docs", output_dir
     )
