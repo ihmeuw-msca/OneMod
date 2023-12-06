@@ -32,11 +32,5 @@ Table of Contents
 
     installation
     usage
-
-.. toctree::
-    :maxdepth: 2
     stages/index
-
-.. toctree::
-    :maxdepth: 2
     example/index
