@@ -34,3 +34,4 @@ Table of Contents
     usage
     stages/index
     example/index
+    developer_guide

@@ -2,12 +2,8 @@
 Running the pipeline
 ####################
 
-OneMod is orchestrated with a tool called Jobmon. You can reference the full Jobmon documentation `here <https://jobmon.readthedocs.io/en/latest/>`_.
-
-The short version is that Jobmon allows us to define a modeling pipeline for distributing jobs on IHME's SLURM cluster.
-Jobs are run in parallel where possible, with automatic dependency management, so all you have to do is call the entrypoint
-and wait for results. An additional benefit of Jobmon is that if you have a data error or config error, you can fix it and
-resume from the last point of failure.
+OneMod is orchestrated with a tool called Jobmon. For a quick intro on Jobmon, refer to the :ref:`jobmon` section.
+The full Jobmon documentation lives `here <https://jobmon.readthedocs.io/en/latest/>`_
 
 +++++++++++++++++++++++++++++++
 Directory Setup
@@ -36,6 +32,8 @@ After setting up your experiment directory, running the pipeline is as easy as::
     onemod run_pipeline --directory {path/to/experiment/directory}
 
 The workflow will distribute and monitor jobs until either the workflow is complete, or a job fails.
+
+.. _jobmon-debugging:
 
 +++++++++++++++++++++++++++++++++++
 Debugging and resuming the pipeline
