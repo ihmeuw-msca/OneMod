@@ -19,7 +19,6 @@ class OneModConfig(ParametrizedBaseModel):
     col_pred: str
     col_holdout: list[str]
     col_test: str
-    col_sigma: str = ""
     max_attempts: int = 3
     max_batch: int = -1
     id_subsets: dict[str, list[Any]] = {}
@@ -41,7 +40,6 @@ class OneModConfig(ParametrizedBaseModel):
             "col_pred": self.col_pred,
             "col_holdout": self.col_holdout,
             "col_test": self.col_test,
-            "col_sigma": self.col_sigma,
             "max_attempts": self.max_attempts,
             "max_batch": self.max_batch,
             "mtype": self.mtype

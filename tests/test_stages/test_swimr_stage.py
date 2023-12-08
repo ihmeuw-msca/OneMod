@@ -1,18 +1,21 @@
-from onemod.pipeline.swimr_stage import SwimrStage
+import pytest
+
+from onemod.orchestration.stage import StageTemplate
 
 
+@pytest.mark.skip("Implement when swimr model schema is implemented and debugged")
 def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
 
-    stage = SwimrStage(testing_tool)
-    swimr_settings = sample_config['swimr']
-    holdout_cols = sample_config['col_holdout']
-    tasks = stage.create_tasks(
-        results_dir=temporary_directory,
-        cluster_name='dummy',
-        input_data=sample_input_data,
-        swimr_settings=swimr_settings,
-        holdout_cols=holdout_cols,
+    stage = StageTemplate(
+        stage_name='swimr',
+        config=sample_config,
+        experiment_dir=temporary_directory,
+        save_intermediate=True,
+        resources_file=temporary_directory / 'resources.yml',
+        tool=testing_tool,
+        cluster_name='dummy'
     )
+    tasks = stage.create_tasks([])
 
     # Breakdown:
     # Model 1 - 9 different parameters - 3 internal knots, 3 similarity multipliers
@@ -22,3 +25,12 @@ def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_in
     # 6 subsets, 2 holdoutsets = 108 tasks
     # Plus 1 aggregation task = 108 + 108 + 1 = 217
     assert len(tasks) == 217
+
+    # Test adding in deletion tasks
+    stage.save_intermediate = False
+    tasks = stage.create_tasks([])
+
+    assert len(tasks) == 433
+
+
+

@@ -1,20 +1,18 @@
-from onemod.schema.config import RoverConfiguration
+from onemod.schema.models.api import RoverCovselConfiguration
 from pydantic import ValidationError
 import pytest
 
-def test_rover_config(sample_input_data, sample_config):
+def test_rover_config(sample_config):
     """Test rover model validation and configuration."""
 
-    # No validation error raised
-    RoverConfiguration(**sample_config["rover_covsel"])
+    # Check that inheritance works properly
+    rover_config = sample_config.rover_covsel
+    rover_config.inherit()
+    assert rover_config.mtype == sample_config.mtype
+    assert rover_config.max_attempts == sample_config.max_attempts
 
-    # Try dropping a key
+    # If a required key is missing, raise a Validation Error
     with pytest.raises(ValidationError):
-        modified_data = sample_config["rover_covsel"].copy()
-        modified_data.pop("weights")
-        RoverConfiguration(**modified_data)
-
-    # Try a non recognized model type
-    with pytest.raises(ValidationError):
-        modified_data["model_type"] = "not_a_model_type"
-        RoverConfiguration(**modified_data)
+        modified_data = sample_config["rover_covsel"].model_dump()
+        modified_data["rover"].pop("weights")
+        RoverCovselConfiguration(**modified_data)

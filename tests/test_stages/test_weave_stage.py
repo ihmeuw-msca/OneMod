@@ -1,29 +1,42 @@
-from onemod.pipeline.weave_stage import WeaveStage
+from onemod.orchestration.stage import StageTemplate
 
 
 def test_weave_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
 
-    stage = WeaveStage(testing_tool)
-    weave_settings = sample_config['weave']
-    holdout_cols = sample_config['col_holdout']
-    tasks = stage.create_tasks(
-        results_dir=temporary_directory,
-        cluster_name='dummy',
-        input_data=sample_input_data,
-        weave_settings=weave_settings,
-        holdout_cols=holdout_cols
+    stage = StageTemplate(
+        stage_name='weave',
+        config=sample_config,
+        experiment_dir=temporary_directory,
+        save_intermediate=True,
+        resources_file=temporary_directory / 'resources.yml',
+        tool=testing_tool,
+        cluster_name='dummy'
     )
+    tasks = stage.create_tasks([])
     # We expect 81 tasks.
-    # Breakdown: Model1 has 2 year_id parameters and 2 location parameters, for 4 total
-    # There are 6 unique combinations of the groupby parameters (sex, super region, age)
-    # and 2 holdout columns.
-    # 4 *6*2 = 48, and no batching multiplier means we have 24 tasks total.
+    # Breakdown: Model1 has 3 parameters - age, year, and year
+    # (in the settings.weave.models.model1.dimensions register).
 
-    # Model2 has 2 year parameters, 2 unique combinations of the groupby parameter sex_id,
-    # and 2 holdout columns.
-    # There are 12 rows per sex, and a batch size of 3 means we'll have 4 batches
-    # 2 * 2 * 4 * 2 = 32 tasks
+    # Each of the parameters has 3 unique values to iterate over; age and location have 3 values
+    # for radius and year has 3 values for exponent. 3*3*3 = 27 parameters.
 
-    # 48 + 32 = 80, plus 1 aggregation task makes 41
-    assert len(tasks) == 81
+    # There are 2 unique combinations of the groupby parameters (sex, super region)
+    # and 2 holdout columns plus a "full" holdout set.
+    # 27 * 2 * 3 = 162, and no batching multiplier means we have 162 tasks total for model1.
+
+    # Model2 has 2 parameters, year and location, and year has 3 values of exponent to form
+    # submodels from, making 3 * 1 = 3 parameter sets.
+
+    # As in model1 we have 2 subsets and 3 holdout columns, making 6 subsets in total, and 3
+    # holdout folds
+    # 3 * 6 * 3 = 54 tasks for model2.
+
+    # Additionally, we have a max batch size of 3. In conftest.py, we have 3 rows per group
+    # to account for the various holdout sets, meaning we will an additional factor of 6.
+    # (6 subsets * 3 holdout folds / 3 batch size = 6)
+
+    # This means we have
+
+    # 162 + 54 * 6 = 486, plus 1 aggregation task makes 487
+    assert len(tasks) == 487
 
