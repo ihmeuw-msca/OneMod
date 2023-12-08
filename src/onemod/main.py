@@ -2,14 +2,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from pplkit.data.interface import DataInterface
+import shutil
 from typing import Optional, TYPE_CHECKING, Union
 
 import fire
 from jobmon.client.api import Tool
 
+from onemod.schema.models.onemod_config import OneModConfig
 from onemod.schema.validate import validate_config
-from onemod.stage import StageTemplate
-from onemod.utils import as_list
+from onemod.orchestration.stage import StageTemplate
+from onemod.orchestration.templates import create_initialization_template
+from onemod.utils import as_list, get_handle
 
 try:
     # Import will fail until the next version of jobmon is released;
@@ -33,18 +37,21 @@ upstream_dict: dict[str, list] = {
 
 def create_workflow(
     directory: str,
+    config: OneModConfig,
     stages: list[str],
     save_intermediate: bool,
     cluster_name: str,
     configure_resources: bool,
     tool: Optional[Tool] = None,
-) -> Workflow:
+) -> "Workflow":
     """Create OneMod workflow.
 
     Parameters
     ----------
     directory : str
         The experiment directory. It must contain config/settings.yml.
+    config: OneModConfig
+        The validated OneMod configuration, a Pydantic base model
     stages : list of str
         The pipeline stages to run.
     save_intermediate : bool
@@ -81,34 +88,51 @@ def create_workflow(
     workflow.set_default_cluster_name(cluster_name=cluster_name)
     workflow.set_default_max_attempts(value=1)
 
+    # Create the initialization task.
+    initialization_template = create_initialization_template(
+        tool=tool,
+        resources_file=resources_file,
+    )
+
+    initialization_task = initialization_template.create_task(
+        experiment_dir=experiment_dir,
+        # A quirk of Fire is that lists have to be in space-less comma separated format.
+        stages=f"[{','.join(stages)}]",
+        entrypoint=shutil.which("initialize_results"),
+    )
+
+    workflow.add_task(initialization_task)
+
     # Create stage tasks
     for stage, upstream_stages in upstream_dict.items():
         if stage in stages:
             stage_template = StageTemplate(
                 stage_name=stage,
+                config=config,
                 experiment_dir=experiment_dir,
                 save_intermediate=save_intermediate,
                 cluster_name=cluster_name,
                 resources_file=resources_file,
                 tool=tool,
             )
-            upstream_tasks = []
+            # Technically only the first stages needs to depend on the initialization task,
+            # but it's probably cleaner in code to make it a dependency for all stages.
+            upstream_tasks = [initialization_task]
             for upstream_stage in upstream_stages:
                 if upstream_stage in stages:
                     upstream_task = workflow.get_tasks_by_node_args(
                         "collection_template", stage_name=upstream_stage
                     )
                     upstream_tasks.extend(upstream_task)
-            workflow.add_tasks(
-                stage_template.create_tasks(upstream_tasks=upstream_tasks)
-            )
+            stage_tasks = stage_template.create_tasks(upstream_tasks=upstream_tasks)
+            workflow.add_tasks(stage_tasks)
     return workflow
 
 
 def run_pipeline(
     directory: str,
     stages: Optional[Union[list[str], str]] = None,
-    save_intermediate: bool = False,
+    save_intermediate: bool = True,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
 ) -> None:
@@ -135,11 +159,17 @@ def run_pipeline(
         if stage not in all_stages:
             raise ValueError(f"Invalid stage: {stage}")
 
-    # Validate the configuration file
-    validate_config(directory, stages)
+    # Load and validate the configuration file
+    dataif, config = get_handle(directory)
+    validate_config(
+        stages=stages,
+        directory=directory,
+        config=config
+    )
 
     workflow = create_workflow(
         directory=directory,
+        config=config,
         stages=as_list(stages),
         save_intermediate=save_intermediate,
         cluster_name=cluster_name,

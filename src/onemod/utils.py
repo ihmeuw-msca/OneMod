@@ -574,24 +574,23 @@ def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
     raise ValueError("Unsupported model_type")
 
 
-def task_template_cache(task_template_name: str) -> Callable:
-    """Generic cache of existing task templates by name."""
+def task_template_cache(func: Callable) -> Callable:
+    """Decorator to cache existing task templates by name."""
     cache: dict[str, TaskTemplate] = {}
 
-    def inner_decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def inner_func(*args: Any, **kwargs: Any) -> TaskTemplate:
-            if task_template_name in cache:
-                return cache[task_template_name]
+    @wraps(func)
+    def inner_func(*args: Any, **kwargs: Any) -> TaskTemplate:
+        task_template_name = kwargs.get("task_template_name")
+        if not task_template_name:
+            raise ValueError("task_template_name must be provided")
+        if task_template_name in cache:
+            return cache[task_template_name]
 
-            template = func(task_template_name=task_template_name, *args, **kwargs)
-            cache[task_template_name] = template
-            return template
+        template = func(*args, **kwargs)
+        cache[task_template_name] = template
+        return template
 
-        return inner_func
-
-    return inner_decorator
-
+    return inner_func
 
 @cache
 def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
@@ -629,9 +628,8 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
     dataif.add_dir("resources", resources_path)
 
     # add data
-    data_path = Path(dataif.load_settings()["input_path"])
-    if not data_path.exists():
-        raise FileNotFoundError(f"please provide a data file in {str(data_path)}")
+    # Initialization stage will ETL input data into a relative path
+    data_path = dataif.experiment / "data"  / "data.parquet"
     dataif.add_dir("data", data_path)
 
     # add results folders
