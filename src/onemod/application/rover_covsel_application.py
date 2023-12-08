@@ -32,3 +32,8 @@ class RoverCovselApplication(Application):
             )
             yield action
         yield Action(collect_rover_covsel_results, self.experiment_dir)
+
+    def run(self) -> None:
+        """Evaluate this application in memory."""
+        for action in self.action_generator():
+            action.evaluate()
