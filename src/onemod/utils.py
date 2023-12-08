@@ -1,6 +1,7 @@
 """Useful functions."""
 from __future__ import annotations
 
+from collections import defaultdict
 from functools import cache, wraps
 from itertools import product
 from pathlib import Path
@@ -16,6 +17,7 @@ from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
+    from jobmon.client.task import Task
 
 
 class Parameters:
@@ -643,3 +645,30 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
     # create confiuration file
     config = OneModCFG(**dataif.load_settings())
     return dataif, config
+
+
+class TaskTemplateFactory:
+    """
+    A helper class to create task templates for each stage and cache the result.
+    """
+
+    @classmethod
+    def get_task_template(cls, task_template_name: str) -> TaskTemplate:
+        # TODO: Implement
+        pass
+
+
+class TaskRegistry:
+    """
+    Register tasks on this registry to lookup for upstreams by the action callback.
+    """
+
+    registry: dict[str, set["Task"]] = defaultdict(set)  # Store on class for accessibility
+
+    @classmethod
+    def get(cls, function_name: str):
+        return list(cls.registry[function_name])
+
+    @classmethod
+    def put(cls, function_name: str, task: "Task"):
+        cls.registry[function_name].add(task)

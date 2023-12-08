@@ -196,6 +196,17 @@ def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
     )
 
 
+def run_scheduler(stages: list[str], run_local: bool = False):
+    """Main user entrypoint for interacting with onemod.
+
+    Parameters:
+        stages: list of stages to run
+        run_local: whether to run locally in memory or shard out with a Jobmon workflow
+    """
+    scheduler = Scheduler(stages)
+    scheduler.run(run_local=run_local)
+
+
 def main() -> None:
     """Entry point for running onemod pipeline using command-line interface.
 
