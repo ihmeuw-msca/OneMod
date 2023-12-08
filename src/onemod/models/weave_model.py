@@ -6,11 +6,11 @@ from weave.smoother import Smoother
 
 from onemod.utils import (
     as_list,
+    get_handle,
     get_prediction,
     get_smoother_input,
     Subsets,
     WeaveParams,
-    get_data_interface,
 )
 
 # weave kernel parameters
@@ -29,10 +29,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
             experiment data.
         submodel_id (str): The ID of the submodel to be processed.
     """
-    dataif = get_data_interface(experiment_dir)
-    # experiment_dir = Path(experiment_dir)
-    # weave_dir = experiment_dir / "results" / "weave"
-    settings = dataif.load_settings()
+    dataif, settings = get_handle(experiment_dir)
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]
@@ -48,7 +45,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input("weave", settings, experiment_dir, from_rover=True),
+        get_smoother_input("weave", config=settings, dataif=dataif, from_rover=True),
         subset_id,
         batch_id,
     ).rename(columns={"batch": "predict"})
@@ -62,6 +59,9 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     # Create smoother objects
     dimensions = []
     for dim_name, dim_dict in model_settings["dimensions"].items():
+        dim_dict = dim_dict.model_dump(
+            exclude={"parent_args"}
+        )  # Base type is a pydantic model, so convert to dict
         if dim_dict["kernel"] != "identity":
             param = kernel_params[dim_dict["kernel"]]
             dim_dict[param] = params.get_param(f"{dim_name}_{param}", param_id)
@@ -88,7 +88,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     )
     df_pred[settings["col_pred"]] = df_pred.apply(
         lambda row: get_prediction(
-            row, settings["col_pred"], settings["rover_covsel"]["Rover"]["model_type"]
+            row, settings["col_pred"], settings["mtype"]
         ),
         axis=1,
     )

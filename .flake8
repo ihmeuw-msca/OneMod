@@ -11,8 +11,14 @@
 select = ANN,B,B9,BLK,I,C,D,DAR,E,F,W
 max-complexity = 10
 ignore =
-    # Missing type annotation for self
+    # *args and **kwargs annotations can be ignored
+    ANN002,
+    ANN003,
+    # Missing type annotation for self and cls
     ANN101,
+    ANN102,
+    # Missing type annotation for init
+    ANN204,
     # Dynamically typed expressions (typing.Any) are disallowed
     ANN401,
     # Function is too complex
