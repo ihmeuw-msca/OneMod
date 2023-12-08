@@ -2,12 +2,13 @@
 the covariate coefficients across age groups.
 """
 from functools import partial
-from typing import Callable
+from typing import Callable, Optional
 
 import fire
 from loguru import logger
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 from regmodsm.model import Model
 
 from onemod.utils import get_handle
@@ -162,6 +163,8 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     ]
 
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    if not selected_covs:
+        selected_covs = []
 
     logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
 

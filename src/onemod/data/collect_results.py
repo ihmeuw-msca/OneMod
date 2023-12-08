@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
+from onemod.modeling.metric import Metric
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
     get_handle,
@@ -94,7 +95,7 @@ def _plot_regmod_smooth_results(
 ) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
-    if len(selected_covs) == 0:
+    if not selected_covs:
         warn("There are no covariates selected, skip `plot_regmod_smooth_results`")
         return None
 
