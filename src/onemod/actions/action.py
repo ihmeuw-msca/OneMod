@@ -18,15 +18,7 @@ class Action:
 
     @property
     def name(self) -> str:
-        func_name = self.func.__name__
-        # Might need to think of a better solution. But collect_results is a single action
-        # that runs at multiple points in the DAG, with different stage names.
-
-        # Need to append to the name for lookup.
-        if func_name == 'collect_results':
-            func_name += self.kwargs['stage_name']
-
-        return func_name
+        return self.func.__name__
 
     def evaluate(self):
         """Evaluate the action."""
