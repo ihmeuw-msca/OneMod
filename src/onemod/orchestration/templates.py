@@ -2,7 +2,7 @@ from loguru import logger
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from onemod.utils import task_template_cache
+from onemod.scheduler.scheduling_utils import task_template_cache
 
 
 if TYPE_CHECKING:

@@ -42,7 +42,7 @@ def task_template_cache(func: Callable) -> Callable:
     cache: dict[str, TaskTemplate] = {}
 
     @wraps(func)
-    def inner_func(*args: Any, **kwargs: Any) -> TaskTemplate:
+    def inner_func(*args: Any, **kwargs: Any) -> "TaskTemplate":
         task_template_name = kwargs.get("task_template_name")
         if not task_template_name:
             raise ValueError("task_template_name must be provided")
