@@ -1,12 +1,10 @@
-from functools import partial
-from typing import Generator, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from jobmon.client.task import Task
+from pathlib import Path
+from typing import Generator
 
 from onemod.actions.action import Action
-from onemod.actions.rover_covsel_model import rover_covsel_model
-from onemod.data.collect_results import collect_rover_covsel_results
+from onemod.actions.models.rover_covsel_model import rover_covsel_model
+from onemod.application.base import Application
+from onemod.actions.data.collect_results import collect_rover_covsel_results
 from onemod.utils import get_rover_covsel_submodels
 
 
@@ -32,8 +30,3 @@ class RoverCovselApplication(Application):
             )
             yield action
         yield Action(collect_rover_covsel_results, self.experiment_dir)
-
-    def run(self) -> None:
-        """Evaluate this application in memory."""
-        for action in self.action_generator():
-            action.evaluate()
