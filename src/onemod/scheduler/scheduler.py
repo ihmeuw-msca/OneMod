@@ -1,7 +1,13 @@
 from typing import Generator, TYPE_CHECKING
 
 from onemod.actions.action import Action
-from onemod.scheduler.scheduling_utils import callback, TaskRegistry, TaskTemplateFactory
+from onemod.scheduler.scheduling_utils import (
+    ParentTool,
+    TaskRegistry,
+    TaskTemplateFactory,
+    upstream_task_callback,
+)
+from onemod.schema.models.api import OneModConfig
 
 if TYPE_CHECKING:
     from jobmon.client.task import Task
@@ -9,8 +15,20 @@ if TYPE_CHECKING:
 
 class Scheduler:
 
-    def __init__(self, stages: list[str]):
+    def __init__(
+        self,
+        config: OneModConfig,
+        stages: list[str],
+        resources_yaml: str = "",
+        default_cluster_name: str = "slurm",
+        configure_resources: bool = True,
+    ):
+        self.config = config
         self.stages = stages
+        self.resources_yaml = resources_yaml
+        self.default_cluster_name = default_cluster_name
+        self.configure_resources = configure_resources
+        self._upstream_task_registry: dict[str, list["Task"]] = {}
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
         for stage in self.stages:

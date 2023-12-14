@@ -2,15 +2,12 @@ from loguru import logger
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from onemod.scheduler.scheduling_utils import task_template_cache
-
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
     from jobmon.client.api import Tool
 
 
-@task_template_cache
 def _create_task_template(
     tool: "Tool",
     task_template_name: str,
