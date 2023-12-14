@@ -1,11 +1,10 @@
 """Useful functions."""
 from __future__ import annotations
 
-from collections import defaultdict
-from functools import cache, wraps
+from functools import cache
 from itertools import product
 from pathlib import Path
-from typing import Any, Callable, Optional, TYPE_CHECKING, Union
+from typing import Any, Optional, TYPE_CHECKING, Union
 import warnings
 
 import numpy as np
@@ -14,10 +13,6 @@ from pplkit.data.interface import DataInterface
 import yaml
 
 from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
-
-if TYPE_CHECKING:
-    from jobmon.client.task_template import TaskTemplate
-    from jobmon.client.task import Task
 
 
 class Parameters:
@@ -577,24 +572,6 @@ def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
     raise ValueError("Unsupported model_type")
 
 
-def task_template_cache(func: Callable) -> Callable:
-    """Decorator to cache existing task templates by name."""
-    cache: dict[str, TaskTemplate] = {}
-
-    @wraps(func)
-    def inner_func(*args: Any, **kwargs: Any) -> TaskTemplate:
-        task_template_name = kwargs.get("task_template_name")
-        if not task_template_name:
-            raise ValueError("task_template_name must be provided")
-        if task_template_name in cache:
-            return cache[task_template_name]
-
-        template = func(*args, **kwargs)
-        cache[task_template_name] = template
-        return template
-
-    return inner_func
-
 @cache
 def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
     """Get data interface for loading and dumping files. This object encoded the
@@ -645,30 +622,3 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
     # create confiuration file
     config = OneModCFG(**dataif.load_settings())
     return dataif, config
-
-
-class TaskTemplateFactory:
-    """
-    A helper class to create task templates for each stage and cache the result.
-    """
-
-    @classmethod
-    def get_task_template(cls, task_template_name: str) -> TaskTemplate:
-        # TODO: Implement
-        pass
-
-
-class TaskRegistry:
-    """
-    Register tasks on this registry to lookup for upstreams by the action callback.
-    """
-
-    registry: dict[str, set["Task"]] = defaultdict(set)  # Store on class for accessibility
-
-    @classmethod
-    def get(cls, function_name: str):
-        return list(cls.registry[function_name])
-
-    @classmethod
-    def put(cls, function_name: str, task: "Task"):
-        cls.registry[function_name].add(task)
