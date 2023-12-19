@@ -10,6 +10,7 @@ import shutil
 import yaml
 
 
+from onemod.scheduler.scheduling_utils import TaskRegistry
 from onemod.schema.models.api import OneModConfig
 
 
@@ -110,3 +111,10 @@ def sample_config(sample_config_file):
     config.swimr.inherit()
     config.ensemble.inherit()
     return config
+
+
+@pytest.fixture(autouse=True)
+def cleanup_task_registry():
+    """Since the task registry is a global, clear it out between tests to prevent
+    state leakage."""
+    TaskRegistry.registry.clear()
