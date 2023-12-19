@@ -1,8 +1,5 @@
 from collections import defaultdict
-from functools import wraps
 from typing import Any, Callable, TYPE_CHECKING
-
-from onemod.actions.action import Action
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
@@ -15,7 +12,7 @@ class TaskTemplateFactory:
     """
 
     @classmethod
-    def get_task_template(cls, task_template_name: str) -> "TaskTemplate":
+    def get_task_template(cls, task_template_name: str) -> TaskTemplate:
         # TODO: Implement
         pass
 
@@ -25,8 +22,7 @@ class TaskRegistry:
     Register tasks on this registry to lookup for upstreams by the action callback.
     """
 
-    # Store on class for global accessibility
-    registry: dict[str, set["Task"]] = defaultdict(set)
+    registry: dict[str, set["Task"]] = defaultdict(set)  # Store on class for accessibility
 
     @classmethod
     def get(cls, function_name: str):
@@ -56,33 +52,28 @@ def task_template_cache(func: Callable) -> Callable:
     return inner_func
 
 
-def upstream_task_callback(action: Action) -> list["Task"]:
+def callback(action: Action):
     """
-    Given an action, we should know (based on the action name) what the relevant upstream tasks
-    are.
+    Idea: we will have a global data structure which is a dict of tasks by function names.
+    We will be able to look up known upstream tasks that have been added to the registry.
 
-    The algorithm: as tasks are created, we will add them to a global registry keyed by action
-    name. Actions should know exactly what their upstream tasks are.
-
-    Assumes tasks are added in the right dependency order, but that's a requirement
-    for local execution anyway.
+    Assumes tasks are added in roughly the right dependency order, but that's a requirement
+    for local execution anyways.
     """
-
     order_map = {
-        'initialize_results': [],
+        # TODO: Complete this order map
+        # For the first task of the stage, we need to be able to optionally lookup prior
+        # stages that may or may not be specified in the config.
+
+        # I.e. weave_model may not depend on regmod_smooth if we have stages=['weave']
         'rover_covsel_model': ['initialize_results'],
-        'collect_results_rover_covsel': ['rover_covsel_model'],
-        'regmod_smooth_model': ['collect_results_rover_covsel', 'initialize_results'],
-        'collect_results_regmod_smooth': ['regmod_smooth_model'],
-        'weave_model': ['collect_results_regmod_smooth', 'collect_results_rover_covsel', 'initialize_results'],
-        'collect_results_weave': ['weave_model'],
+        'collect_results': ['rover_covsel_model'],
     }
     func_name = action.name
-    upstream_action_names = order_map[func_name]
+    upstream_actions = order_map[func_name]
 
     upstream_tasks = []
-    for action_name in upstream_action_names:
-        tasks = TaskRegistry.get(action_name)
-        if any(tasks):
-            upstream_tasks.extend(tasks)
+    for action in upstream_actions:
+        tasks = TaskRegistry.get(action.name)
+        upstream_tasks.extend(tasks)
     return upstream_tasks
