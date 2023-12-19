@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from onemod.data.initialize_results import initialize_results
-from onemod.models.rover_covsel_model import rover_covsel_model
+from onemod.actions.data.initialize_results import initialize_results
+from onemod.actions.models.rover_covsel_model import rover_covsel_model
 
 
 def test_rover_model(sample_input_data, temporary_directory):

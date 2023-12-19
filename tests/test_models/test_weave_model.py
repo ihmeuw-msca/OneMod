@@ -1,8 +1,9 @@
 import numpy as np
 from pathlib import Path
 
-from onemod.models.weave_model import weave_model
+from onemod.actions.models.weave_model import weave_model
 from onemod.utils import get_weave_submodels
+
 
 def test_weave_model(sample_input_data, temporary_directory):
 
