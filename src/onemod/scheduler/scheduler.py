@@ -19,13 +19,13 @@ class Scheduler:
         self,
         config: OneModConfig,
         stages: list[str],
-        resources_yaml: str = "",
+        resources_path: str = "",
         default_cluster_name: str = "slurm",
         configure_resources: bool = True,
     ):
         self.config = config
         self.stages = stages
-        self.resources_yaml = resources_yaml
+        self.resources_path = resources_path
         self.default_cluster_name = default_cluster_name
         self.configure_resources = configure_resources
         self._upstream_task_registry: dict[str, list["Task"]] = {}
@@ -42,21 +42,26 @@ class Scheduler:
             for action in self.parent_action_generator():
                 action.evaluate()
         else:
-            ParentTool.initialize_tool()
+            ParentTool.initialize_tool(
+                resources_yaml=self.resources_path,
+                default_cluster_name=self.default_cluster_name
+            )
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
             tasks = [self.create_task(action) for action in self.parent_action_generator()]
             workflow.add_tasks(tasks)
             workflow.run(configure_logging=True)
 
-    @property
     def create_task(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""
 
         # Unpack kwargs into a string for naming purposes
-        task_template = TaskTemplateFactory.get_task_template(action.name)
+        task_template = TaskTemplateFactory.get_task_template(
+            action_name=action.name,
+            resources_path=self.resources_path
+        )
         kwargs_str = "_".join([f"{key}{value}" for key, value in action.kwargs.items()])
-        upstream_tasks = callback(action)
+        upstream_tasks = upstream_task_callback(action)
         task = task_template.create_task(
             name=f"{action.name}_{kwargs_str}",
             upstream_tasks=upstream_tasks,

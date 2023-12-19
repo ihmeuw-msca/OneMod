@@ -29,6 +29,8 @@ class RoverCovselApplication(Application):
                 submodel_id=submodel_id
             )
             yield action
-        yield Action(collect_rover_covsel_results,
-                     entrypoint="collect_results rover_covsel",
-                     experiment_dir=self.experiment_dir)
+        yield Action(
+            collect_rover_covsel_results,
+            entrypoint="collect_results",
+            experiment_dir=self.experiment_dir
+        )

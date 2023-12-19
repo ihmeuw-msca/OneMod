@@ -39,30 +39,26 @@ class ParentTool:
 
 class TaskTemplateFactory:
     """
-    A helper class to create task templates for each stage and cache the result.
+    A helper class to create task templates for each stage.
     """
-    cache: dict[str, "TaskTemplate"] = {}
 
     @classmethod
-    def get_task_template(cls, task_template_name: str) -> "TaskTemplate":
-        if task_template_name in cls.cache:
-            return cls.cache[task_template_name]
-        else:
-            task_template = cls._create_task_template(task_template_name)
-            cls.cache[task_template_name] = task_template
-            return task_template
+    def get_task_template(cls, action_name: str, resources_path: str = "") -> "TaskTemplate":
 
-    @classmethod
-    def _create_task_template(cls, action_name: str) -> "TaskTemplate":
         tool = ParentTool.get_tool()
-        if action_name == "initialization_template":
-            task_template = create_initialization_template(tool=tool)
-        elif action_name == "collection_template":
-            task_template = create_collection_template(tool=tool)
-        elif action_name == "deletion_template":
-            task_template = create_deletion_template(tool=tool)
-        elif action_name == "modeling_template":
-            task_template = create_modeling_template(tool=tool)
+
+        if action_name == "initialize_results":
+            task_template = create_initialization_template(tool=tool, resources_path=resources_path)
+        elif action_name == "collect_results":
+            task_template = create_collection_template(tool=tool, resources_path=resources_path)
+        elif action_name == "delete_results":
+            task_template = create_deletion_template(tool=tool, resources_path=resources_path)
+        elif "model" in action_name:
+            task_template = create_modeling_template(tool=tool, resources_path=resources_path)
+        else:
+            raise ValueError(f"Invalid action name: {action_name}")
+
+        return task_template
 
 class TaskRegistry:
     """
@@ -79,25 +75,6 @@ class TaskRegistry:
     @classmethod
     def put(cls, function_name: str, task: "Task"):
         cls.registry[function_name].add(task)
-
-
-def task_template_cache(func: Callable) -> Callable:
-    """Decorator to cache existing task templates by name."""
-    cache: dict[str, TaskTemplate] = {}
-
-    @wraps(func)
-    def inner_func(*args: Any, **kwargs: Any) -> "TaskTemplate":
-        task_template_name = kwargs.get("action_name")
-        if not task_template_name:
-            raise ValueError("action_name must be provided")
-        if task_template_name in cache:
-            return cache[task_template_name]
-
-        template = func(*args, **kwargs)
-        cache[task_template_name] = template
-        return template
-
-    return inner_func
 
 
 def upstream_task_callback(action: Action) -> list["Task"]:
