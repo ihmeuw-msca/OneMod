@@ -85,11 +85,13 @@ def _create_task_template(
     return template
 
 
-def create_initialization_template(tool: "Tool", resources_path: str) -> "TaskTemplate":
+def create_initialization_template(
+    tool: "Tool", task_template_name: str, resources_path: str
+) -> "TaskTemplate":
 
     template = _create_task_template(
         tool=tool,
-        task_template_name="initialization_template",
+        task_template_name=task_template_name,
         node_args=["stages"],
         task_args=["experiment_dir"],
         resources_path=resources_path,
@@ -101,7 +103,6 @@ def create_modeling_template(
     tool: "Tool",
     task_template_name: str,
     resources_path: str | Path,
-    parallel: bool = True
 ) -> "TaskTemplate":
     """Stage modeling template.
 
@@ -113,8 +114,6 @@ def create_modeling_template(
         The name of the task template.
     resources_path : str or Path, optional
         The path to the resources file to use for the task template, by default "".
-    parallel: bool, default True.
-        Whether this model has multiple tasks or not.
 
 
     Returns
@@ -126,7 +125,9 @@ def create_modeling_template(
 
     # Tasks can be parallelized by an internal concept called submodels
     node_args = []
-    if parallel:
+
+    # Assumption: only regmod_smooth is not paralle
+    if "regmod_smooth" not in task_template_name:
         node_args.append("submodel_id")
 
     template = _create_task_template(

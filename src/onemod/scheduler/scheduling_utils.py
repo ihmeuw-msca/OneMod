@@ -1,6 +1,5 @@
 from collections import defaultdict
-from functools import wraps
-from typing import Any, Callable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
@@ -48,17 +47,24 @@ class TaskTemplateFactory:
         tool = ParentTool.get_tool()
 
         if action_name == "initialize_results":
-            task_template = create_initialization_template(tool=tool, resources_path=resources_path)
+            task_template_callable = create_initialization_template
         elif action_name == "collect_results":
-            task_template = create_collection_template(tool=tool, resources_path=resources_path)
+            task_template_callable = create_collection_template
         elif action_name == "delete_results":
-            task_template = create_deletion_template(tool=tool, resources_path=resources_path)
+            task_template_callable = create_deletion_template
         elif "model" in action_name:
-            task_template = create_modeling_template(tool=tool, resources_path=resources_path)
+            task_template_callable = create_modeling_template
         else:
             raise ValueError(f"Invalid action name: {action_name}")
 
+        task_template = task_template_callable(
+            tool=tool,
+            task_template_name=action_name,
+            resources_path=resources_path,
+        )
+
         return task_template
+
 
 class TaskRegistry:
     """

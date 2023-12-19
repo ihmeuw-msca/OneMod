@@ -1,3 +1,4 @@
+import shutil
 from typing import Generator, TYPE_CHECKING
 
 from onemod.actions.action import Action
@@ -65,10 +66,9 @@ class Scheduler:
         task = task_template.create_task(
             name=f"{action.name}_{kwargs_str}",
             upstream_tasks=upstream_tasks,
-            # Requirement: entrypoints map exactly to function names
             entrypoint=shutil.which(action.name),
             **action.kwargs
         )
         # Store the task for later lookup
         TaskRegistry.put(action.name, task)
-        return action._task
+        return task
