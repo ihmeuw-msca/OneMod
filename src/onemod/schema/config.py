@@ -91,13 +91,6 @@ class ParentConfiguration(ParametrizedBaseModel):
     max_attempts: int = 3
     max_batch: int = -1
 
-    # Default arguments are not validated
-    truth_set: FilePath = ''
-
-    # If truth_set is provided and truth_column is not,
-    # no validation errors are raised here but the summarization steps will fail.
-    truth_column: str = ''
-
     rover_covsel: Optional[RoverConfiguration] = None
     regmod_smooth: Optional[RegmodSmoothConfiguration] = None
     weave: Optional[WeaveConfiguration] = None
