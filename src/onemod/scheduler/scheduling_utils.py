@@ -42,7 +42,6 @@ class TaskTemplateFactory:
     A helper class to create task templates for each stage and cache the result.
     """
     cache: dict[str, "TaskTemplate"] = {}
-    tool: Optional["Tool"] = None
 
     @classmethod
     def get_task_template(cls, task_template_name: str) -> "TaskTemplate":
@@ -54,9 +53,16 @@ class TaskTemplateFactory:
             return task_template
 
     @classmethod
-    def _create_task_template(cls, task_template_name: str) -> "TaskTemplate":
+    def _create_task_template(cls, action_name: str) -> "TaskTemplate":
         tool = ParentTool.get_tool()
-
+        if action_name == "initialization_template":
+            task_template = create_initialization_template(tool=tool)
+        elif action_name == "collection_template":
+            task_template = create_collection_template(tool=tool)
+        elif action_name == "deletion_template":
+            task_template = create_deletion_template(tool=tool)
+        elif action_name == "modeling_template":
+            task_template = create_modeling_template(tool=tool)
 
 class TaskRegistry:
     """
@@ -64,7 +70,7 @@ class TaskRegistry:
     """
     # Store on class for global accessibility
     # Keys are function (action) names, values are sets of tasks for that action
-    registry: dict[str, set["Task"]] = defaultdict(set)
+    registry: defaultdict[str, set["Task"]] = defaultdict(set)
 
     @classmethod
     def get(cls, function_name: str):
@@ -81,9 +87,9 @@ def task_template_cache(func: Callable) -> Callable:
 
     @wraps(func)
     def inner_func(*args: Any, **kwargs: Any) -> "TaskTemplate":
-        task_template_name = kwargs.get("task_template_name")
+        task_template_name = kwargs.get("action_name")
         if not task_template_name:
-            raise ValueError("task_template_name must be provided")
+            raise ValueError("action_name must be provided")
         if task_template_name in cache:
             return cache[task_template_name]
 

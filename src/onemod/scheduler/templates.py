@@ -92,7 +92,7 @@ def _create_task_template(
     return template
 
 
-def create_initialization_template(tool: "Tool", resources_file: str | Path) -> "TaskTemplate":
+def create_initialization_template(tool: "Tool") -> "TaskTemplate":
 
     template = _create_task_template(
         tool=tool,

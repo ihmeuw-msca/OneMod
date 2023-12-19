@@ -37,12 +37,15 @@ class Scheduler:
             yield from generator
 
     def run(self, run_local: bool):
+        # TODO: Add args for running with jobmon, i.e. resources file
         if run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
         else:
-            workflow = self.create_workflow()
-            tasks = [action.task for action in self.parent_action_generator()]
+            ParentTool.initialize_tool()
+            tool = ParentTool.get_tool()
+            workflow = tool.create_workflow()
+            tasks = [self.create_task(action) for action in self.parent_action_generator()]
             workflow.add_tasks(tasks)
             workflow.run(configure_logging=True)
 
