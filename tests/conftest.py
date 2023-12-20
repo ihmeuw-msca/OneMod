@@ -53,7 +53,7 @@ def sample_input_data(temporary_directory):
 
     values = list(itertools.product(
         super_region_id, location_ids, sex_ids, age_group_ids, year_ids)
-    ) * 3  # Generate at least 3 rows per group
+    )
     data = pd.DataFrame(
         values,
         columns=[
@@ -101,7 +101,7 @@ def sample_config_file(temporary_directory, sample_input_data):
     return config
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def sample_config(sample_config_file):
     config = OneModConfig(**sample_config_file)
     config.rover_covsel.inherit()
