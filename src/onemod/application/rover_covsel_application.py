@@ -4,7 +4,7 @@ from typing import Generator
 from onemod.actions.action import Action
 from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.base import Application
-from onemod.actions.data.collect_results import collect_rover_covsel_results
+from onemod.actions.data.collect_results import collect_results_rover_covsel
 from onemod.utils import get_rover_covsel_submodels
 
 
@@ -30,7 +30,8 @@ class RoverCovselApplication(Application):
             )
             yield action
         yield Action(
-            collect_rover_covsel_results,
+            collect_results_rover_covsel,
             entrypoint="collect_results",
+            stage_name="rover_covsel",
             experiment_dir=self.experiment_dir
         )

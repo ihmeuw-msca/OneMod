@@ -48,7 +48,7 @@ class TaskTemplateFactory:
 
         if action_name == "initialize_results":
             task_template_callable = create_initialization_template
-        elif action_name == "collect_results":
+        elif "collect" in action_name:
             task_template_callable = create_collection_template
         elif action_name == "delete_results":
             task_template_callable = create_deletion_template

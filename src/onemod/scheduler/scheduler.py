@@ -2,6 +2,8 @@ import shutil
 from typing import Generator, TYPE_CHECKING
 
 from onemod.actions.action import Action
+from onemod.actions.data.initialize_results import initialize_results
+from onemod.application.api import get_application_class
 from onemod.scheduler.scheduling_utils import (
     ParentTool,
     TaskRegistry,
@@ -18,12 +20,14 @@ class Scheduler:
 
     def __init__(
         self,
+        experiment_dir: str,
         config: OneModConfig,
         stages: list[str],
         resources_path: str = "",
         default_cluster_name: str = "slurm",
         configure_resources: bool = True,
     ):
+        self.experiment_dir = experiment_dir
         self.config = config
         self.stages = stages
         self.resources_path = resources_path
@@ -32,8 +36,11 @@ class Scheduler:
         self._upstream_task_registry: dict[str, list["Task"]] = {}
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
+        # The schedule always starts with an initialization action
+        yield Action(initialize_results, stages=self.stages, experiment_dir=self.experiment_dir)
         for stage in self.stages:
-            application = get_application(stage)  # TODO: A simple lookup table should suffice
+            application_class = get_application_class(stage)
+            application = application_class(experiment_dir=self.experiment_dir)
             generator = application.action_generator()
             yield from generator
 
@@ -61,12 +68,11 @@ class Scheduler:
             action_name=action.name,
             resources_path=self.resources_path
         )
-        kwargs_str = "_".join([f"{key}{value}" for key, value in action.kwargs.items()])
         upstream_tasks = upstream_task_callback(action)
         task = task_template.create_task(
-            name=f"{action.name}_{kwargs_str}",
+            name=action.name,
             upstream_tasks=upstream_tasks,
-            entrypoint=shutil.which(action.name),
+            entrypoint=shutil.which(action.entrypoint),
             **action.kwargs
         )
         # Store the task for later lookup
