@@ -11,8 +11,6 @@ def test_end_to_end_local(testing_tool, temporary_directory, sample_input_data, 
         # TODO: Add weave
         # stages=['rover_covsel', 'regmod_smooth', 'weave'],
         stages=['rover_covsel', 'regmod_smooth'],
-        default_cluster_name='sequential',
-        configure_resources=False,
     )
 
     # First run the schedule in memory
@@ -35,6 +33,7 @@ def test_end_to_end_remote(testing_tool, temporary_directory, sample_input_data,
         # stages=['rover_covsel', 'regmod_smooth', 'weave'],
         stages=['rover_covsel', 'regmod_smooth'],
         default_cluster_name='sequential',
+        resources_path=temporary_directory / 'config' / 'resources.yml',
         configure_resources=False,
     )
 
