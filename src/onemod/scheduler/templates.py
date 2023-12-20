@@ -46,6 +46,10 @@ def _create_task_template(
         The Jobmon task template created using the provided arguments.
     """
 
+    # TODO: This whole method could probably be simplified dramatically by simply
+    #  passing in an action and using the stored kwargs to build the command template.
+    #  Consider everything besides entrypoint a node_arg for simplicity
+
     command_template = ["{entrypoint}"]
     if not op_args:
         op_args = []
@@ -126,7 +130,7 @@ def create_modeling_template(
     # Tasks can be parallelized by an internal concept called submodels
     node_args = []
 
-    # Assumption: only regmod_smooth is not paralle
+    # Assumption: only regmod_smooth is not parallel
     if "regmod_smooth" not in task_template_name:
         node_args.append("submodel_id")
 

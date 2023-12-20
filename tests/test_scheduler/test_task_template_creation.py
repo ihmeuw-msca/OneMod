@@ -30,4 +30,12 @@ def test_task_template_factory(testing_tool):
     assert (task_template.active_task_template_version.command_template ==
             "{entrypoint} --submodel_id {submodel_id} --experiment_dir {experiment_dir}")
 
+    task_template = TaskTemplateFactory.get_task_template(
+        action_name="regmod_smooth_model",
+        resources_path="",
+    )
+    assert task_template.template_name == "regmod_smooth_model"
+    assert (task_template.active_task_template_version.command_template ==
+            "{entrypoint} --experiment_dir {experiment_dir}")
+
 

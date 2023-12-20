@@ -52,13 +52,18 @@ class Scheduler:
         else:
             ParentTool.initialize_tool(
                 resources_yaml=self.resources_path,
-                default_cluster_name=self.default_cluster_name
+                default_cluster_name=self.default_cluster_name,
+                configure_resources=self.configure_resources
             )
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
             tasks = [self.create_task(action) for action in self.parent_action_generator()]
             workflow.add_tasks(tasks)
-            workflow.run(configure_logging=True)
+            status = workflow.run(configure_logging=True)
+
+            if status != "D":
+                # TODO: Summarize errors in workflow
+                raise ValueError(f"workflow {workflow.name} failed: {status}")
 
     def create_task(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""

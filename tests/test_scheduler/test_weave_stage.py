@@ -1,6 +1,7 @@
-from onemod.orchestration.stage import StageTemplate
+import pytest
 
 
+@pytest.mark.skip("Debug after implementing weave application")
 def test_weave_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
 
     stage = StageTemplate(

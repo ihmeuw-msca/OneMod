@@ -9,8 +9,9 @@ from onemod.scheduler.templates import (
     create_modeling_template,
 )
 
+from jobmon.client.api import Tool
+
 if TYPE_CHECKING:
-    from jobmon.client.api import Tool
     from jobmon.client.task_template import TaskTemplate
     from jobmon.client.task import Task
 
@@ -21,13 +22,19 @@ class ParentTool:
     tool: Optional["Tool"] = None
 
     @classmethod
-    def initialize_tool(cls, resources_yaml: str, default_cluster_name: str) -> None:
+    def initialize_tool(
+        cls,
+        resources_yaml: str,
+        default_cluster_name: str,
+        configure_resources: bool = False
+    ) -> None:
         if cls.tool is None:
             cls.tool = Tool(name="onemod_tool")
-            cls.tool.set_default_compute_resources_from_yaml(
-                default_cluster_name=default_cluster_name,
-                yaml_file=resources_yaml,
-            )
+            if configure_resources:
+                cls.tool.set_default_compute_resources_from_yaml(
+                    default_cluster_name=default_cluster_name,
+                    yaml_file=resources_yaml,
+                )
 
     @classmethod
     def get_tool(cls) -> "Tool":

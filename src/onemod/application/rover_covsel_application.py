@@ -4,7 +4,7 @@ from typing import Generator
 from onemod.actions.action import Action
 from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.base import Application
-from onemod.actions.data.collect_results import collect_results_rover_covsel
+from onemod.actions.data.collect_results import collect_results
 from onemod.utils import get_rover_covsel_submodels
 
 
@@ -17,11 +17,7 @@ class RoverCovselApplication(Application):
         self.submodels = get_rover_covsel_submodels(experiment_dir)
 
     def action_generator(self) -> Generator[Action, None, None]:
-        """A generator to return actions to be run, with the correct dependencies.
-
-        If run_local is True, returns a generator of partial functions.
-        If false, return a generator of Jobmon tasks.
-        """
+        """A generator to return actions to be run."""
         for submodel_id in self.submodels:
             action = Action(
                 rover_covsel_model,
@@ -30,8 +26,7 @@ class RoverCovselApplication(Application):
             )
             yield action
         yield Action(
-            collect_results_rover_covsel,
-            entrypoint="collect_results",
+            collect_results,
             stage_name="rover_covsel",
             experiment_dir=self.experiment_dir
         )
