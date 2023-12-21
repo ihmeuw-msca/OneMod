@@ -90,9 +90,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     )
     logger.info(f"Completed fitting, predicting for {submodel_id=}")
     df_pred[settings["col_pred"]] = df_pred.apply(
-        lambda row: get_prediction(
-            row, settings["col_pred"], settings["mtype"]
-        ),
+        lambda row: get_prediction(row, settings["col_pred"], settings["mtype"]),
         axis=1,
     )
     df_pred["model_id"] = model_id

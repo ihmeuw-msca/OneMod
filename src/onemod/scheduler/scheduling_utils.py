@@ -49,9 +49,11 @@ class TaskTemplateFactory:
 
     @classmethod
     def get_task_template(
-        cls, action_name: str, resources_path: str = "", configure_resources: bool = True
+        cls,
+        action_name: str,
+        resources_path: str = "",
+        configure_resources: bool = True,
     ) -> "TaskTemplate":
-
         tool = ParentTool.get_tool()
 
         if action_name == "initialize_results":
@@ -69,7 +71,7 @@ class TaskTemplateFactory:
             tool=tool,
             task_template_name=action_name,
             resources_path=resources_path,
-            configure_resources=configure_resources
+            configure_resources=configure_resources,
         )
 
         return task_template
@@ -79,6 +81,7 @@ class TaskRegistry:
     """
     Register tasks on this registry to lookup for upstreams by the action callback.
     """
+
     # Store on class for global accessibility
     # Keys are function (action) names, values are sets of tasks for that action
     registry: defaultdict[str, set["Task"]] = defaultdict(set)
@@ -103,18 +106,17 @@ def upstream_task_callback(action: Action) -> list["Task"]:
     """
 
     order_map = {
-        'initialize_results': [],
-        'rover_covsel_model': ['initialize_results'],
-        'regmod_smooth_model': ['collect_results', 'initialize_results'],
-        'weave_model': ['collect_results', 'collect_results', 'initialize_results'],
+        "initialize_results": [],
+        "rover_covsel_model": ["initialize_results"],
+        "regmod_smooth_model": ["collect_results", "initialize_results"],
+        "weave_model": ["collect_results", "collect_results", "initialize_results"],
         # Logic for collect results: set all modeling tasks as dependencies.
         # Due to traversal order of the generator, the rover collection task must be created
         # prior to weave modeling tasks being instantiated, therefore this is
         # theoretically safe to do.
-
         # Vice versa: when regmod_smooth_model's task is created, there can be at most one
         # previously created collect task (for rover)
-        'collect_results': ['rover_covsel_model', 'regmod_smooth_model', 'weave_model'],
+        "collect_results": ["rover_covsel_model", "regmod_smooth_model", "weave_model"],
     }
     func_name = action.name
     upstream_action_names = order_map[func_name]

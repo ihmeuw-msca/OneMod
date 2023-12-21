@@ -12,8 +12,7 @@ class Action:
     """
 
     def __init__(
-        self, func: Callable, entrypoint: Optional[str] = None,
-        *args, **kwargs
+        self, func: Callable, entrypoint: Optional[str] = None, *args, **kwargs
     ) -> None:
         self.func = func
         self._entrypoint = entrypoint

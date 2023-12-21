@@ -8,14 +8,14 @@ from modrover.globals import model_type_dict
 
 class ParametrizedBaseModel(BaseModel):
     """An extension of BaseModel that supports __getitem__ and is configured."""
-    model_config = ConfigDict(extra='allow', frozen=False, validate_assignment=True)
+
+    model_config = ConfigDict(extra="allow", frozen=False, validate_assignment=True)
 
     def __getitem__(self, item):
         return getattr(self, item)
 
 
 class RoverConfiguration(ParametrizedBaseModel):
-
     groupby: list[str] = []
     model_type: str  # TODO: This clashes with pydantic naming conventions and will raise warnings
     cov_fixed: list[str] = []
@@ -29,8 +29,9 @@ class RoverConfiguration(ParametrizedBaseModel):
     @field_validator("model_type")
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
-        assert model_type in model_type_dict, \
-            f"model_type must be one of {model_type_dict.keys()}"
+        assert (
+            model_type in model_type_dict
+        ), f"model_type must be one of {model_type_dict.keys()}"
         return model_type
 
     @field_validator("fit_args")
@@ -42,7 +43,6 @@ class RoverConfiguration(ParametrizedBaseModel):
 
 
 class RegmodSmoothConfiguration(ParametrizedBaseModel):
-
     model_type: str
     dims: list[dict] = []
     var_groups: list[dict] = []
@@ -58,9 +58,7 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     @classmethod
     def valid_model_type(cls, model_type: str) -> str:
         if model_type not in model_type_dict:
-            raise ValidationError(
-                f"model_type must be one of {model_type_dict.keys()}"
-            )
+            raise ValidationError(f"model_type must be one of {model_type_dict.keys()}")
         return model_type
 
 
@@ -80,14 +78,13 @@ class EnsembleConfiguration(ParametrizedBaseModel):
 
 
 class ParentConfiguration(ParametrizedBaseModel):
-
     input_path: FilePath  # FilePath auto-validates that the path exists and is a file
     col_id: list[str]
     col_obs: str
     col_pred: str
     col_holdout: list[str]
     col_test: str
-    col_sigma: str = ''
+    col_sigma: str = ""
     max_attempts: int = 3
     max_batch: int = -1
 
@@ -117,7 +114,7 @@ class ParentConfiguration(ParametrizedBaseModel):
             self.regmod_smooth,
             self.weave,
             self.swimr,
-            self.ensemble
+            self.ensemble,
         ]
 
         for child_model in child_models:

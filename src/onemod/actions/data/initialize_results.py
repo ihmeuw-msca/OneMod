@@ -15,7 +15,6 @@ from onemod.utils import (
 
 
 def initialize_results(experiment_dir: str, stages: list[str]) -> None:
-
     stage_init_map: dict[str, callable] = {
         "rover_covsel": _initialize_rover_covsel_results,
         "regmod_smooth": _initialize_regmod_smooth_results,
@@ -52,7 +51,6 @@ def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
 
 
 def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
-
     # Initialize directories
     if dataif.regmod_smooth.exists():
         shutil.rmtree(dataif.regmod_smooth)

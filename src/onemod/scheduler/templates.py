@@ -91,10 +91,11 @@ def _create_task_template(
 
 
 def create_initialization_template(
-    tool: "Tool", task_template_name: str, resources_path: str,
-    configure_resources: bool = True
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
-
     template = _create_task_template(
         tool=tool,
         task_template_name=task_template_name,
@@ -151,8 +152,10 @@ def create_modeling_template(
 
 
 def create_collection_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path,
-    configure_resources: bool = True
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str | Path,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
     """Stage collection template.
 
@@ -180,8 +183,10 @@ def create_collection_template(
 
 
 def create_deletion_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path,
-    configure_resources: bool = True
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str | Path,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
     """Stage deletion template.
 

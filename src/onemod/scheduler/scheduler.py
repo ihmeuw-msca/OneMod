@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 
 class Scheduler:
-
     def __init__(
         self,
         experiment_dir: str,
@@ -37,7 +36,9 @@ class Scheduler:
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
         # The schedule always starts with an initialization action
-        yield Action(initialize_results, stages=self.stages, experiment_dir=self.experiment_dir)
+        yield Action(
+            initialize_results, stages=self.stages, experiment_dir=self.experiment_dir
+        )
         for stage in self.stages:
             application_class = get_application_class(stage)
             application = application_class(experiment_dir=self.experiment_dir)
@@ -56,7 +57,9 @@ class Scheduler:
             )
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
-            tasks = [self.create_task(action) for action in self.parent_action_generator()]
+            tasks = [
+                self.create_task(action) for action in self.parent_action_generator()
+            ]
             workflow.add_tasks(tasks)
             status = workflow.run(configure_logging=True)
 
@@ -86,7 +89,7 @@ class Scheduler:
             name=action.name,
             upstream_tasks=upstream_tasks,
             entrypoint=shutil.which(action.entrypoint),
-            **action.kwargs
+            **action.kwargs,
         )
         # Store the task for later lookup
         TaskRegistry.put(action.name, task)

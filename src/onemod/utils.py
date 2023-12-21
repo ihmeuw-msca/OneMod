@@ -609,7 +609,7 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
 
     # add data
     # Initialization stage will ETL input data into a relative path
-    data_path = dataif.experiment / "data"  / "data.parquet"
+    data_path = dataif.experiment / "data" / "data.parquet"
     dataif.add_dir("data", data_path)
 
     # add results folders

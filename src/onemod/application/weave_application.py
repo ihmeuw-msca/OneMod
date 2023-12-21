@@ -19,13 +19,9 @@ class WeaveApplication(Application):
         """A generator to return actions to be run."""
         for submodel_id in self.submodels:
             action = Action(
-                weave_model,
-                experiment_dir=self.experiment_dir,
-                submodel_id=submodel_id
+                weave_model, experiment_dir=self.experiment_dir, submodel_id=submodel_id
             )
             yield action
         yield Action(
-            collect_results,
-            stage_name="weave",
-            experiment_dir=self.experiment_dir
+            collect_results, stage_name="weave", experiment_dir=self.experiment_dir
         )

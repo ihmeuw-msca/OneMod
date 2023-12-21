@@ -6,8 +6,8 @@ from onemod.application.weave_application import WeaveApplication
 def get_application_class(stage_name: str):
     # TODO: Complete this map when more applications are implemented
     application_map = {
-        'rover_covsel': RoverCovselApplication,
-        'regmod_smooth': RegmodSmoothApplication,
-        'weave': WeaveApplication,
+        "rover_covsel": RoverCovselApplication,
+        "regmod_smooth": RegmodSmoothApplication,
+        "weave": WeaveApplication,
     }
     return application_map[stage_name]

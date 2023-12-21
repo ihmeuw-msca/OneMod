@@ -22,11 +22,11 @@ class RoverCovselApplication(Application):
             action = Action(
                 rover_covsel_model,
                 experiment_dir=self.experiment_dir,
-                submodel_id=submodel_id
+                submodel_id=submodel_id,
             )
             yield action
         yield Action(
             collect_results,
             stage_name="rover_covsel",
-            experiment_dir=self.experiment_dir
+            experiment_dir=self.experiment_dir,
         )

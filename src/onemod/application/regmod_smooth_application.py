@@ -28,5 +28,5 @@ class RegmodSmoothApplication(Application):
         yield Action(
             collect_results,
             stage_name="regmod_smooth",
-            experiment_dir=self.experiment_dir
+            experiment_dir=self.experiment_dir,
         )
