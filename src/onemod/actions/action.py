@@ -33,6 +33,6 @@ class Action:
         else:
             return self.name
 
-    def evaluate(self):
+    def evaluate(self) -> None:
         """Evaluate the action."""
         return self.func(*self.args, **self.kwargs)

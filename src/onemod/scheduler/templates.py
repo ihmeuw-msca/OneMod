@@ -1,4 +1,3 @@
-from loguru import logger
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -21,7 +20,7 @@ def _create_task_template(
 
     This method creates a Jobmon task template using the provided arguments and returns it.
     Every single task template has a default op_arg that is the entrypoint of the task,
-    and keyword args passed to the individual tasks must match what is set on the task template.
+    and keyword args passed to the individual tasks must match what is set on the task template
 
     Ex. invalid command template:
         {entrypoint} --experiment_dir {directory_name}

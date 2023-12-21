@@ -45,7 +45,7 @@ class Scheduler:
             generator = application.action_generator()
             yield from generator
 
-    def run(self, run_local: bool):
+    def run(self, run_local: bool) -> None:
         # TODO: Add args for running with jobmon, i.e. resources file
         if run_local:
             for action in self.parent_action_generator():

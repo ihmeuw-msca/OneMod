@@ -1,9 +1,8 @@
-from typing import Optional
-
-from pydantic import BaseModel, ConfigDict, FilePath, ValidationError, validator
-from pydantic.functional_validators import field_validator
+from typing import Any, Optional
 
 from modrover.globals import model_type_dict
+from pydantic import BaseModel, ConfigDict, FilePath, ValidationError
+from pydantic.functional_validators import field_validator
 
 
 class ParametrizedBaseModel(BaseModel):
@@ -11,13 +10,14 @@ class ParametrizedBaseModel(BaseModel):
 
     model_config = ConfigDict(extra="allow", frozen=False, validate_assignment=True)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
 
 
 class RoverConfiguration(ParametrizedBaseModel):
     groupby: list[str] = []
-    model_type: str  # TODO: This clashes with pydantic naming conventions and will raise warnings
+    # TODO: This clashes with pydantic naming conventions and will raise warnings
+    model_type: str
     cov_fixed: list[str] = []
     cov_exploring: list[str] = []
     weights: str
@@ -36,7 +36,7 @@ class RoverConfiguration(ParametrizedBaseModel):
 
     @field_validator("fit_args")
     @classmethod
-    def valid_fit_args(cls, fit_args: dict):
+    def valid_fit_args(cls, fit_args: dict) -> dict:
         # TODO: Necessary or not to import and validate?
         # Could import Rover.fit and inspect the args
         return fit_args

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
-from onemod.modeling.metric import Metric
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
     get_handle,

@@ -4,7 +4,7 @@ from __future__ import annotations
 from functools import cache
 from itertools import product
 from pathlib import Path
-from typing import Any, Optional, TYPE_CHECKING, Union
+from typing import Any, Optional, Union
 import warnings
 
 import numpy as np

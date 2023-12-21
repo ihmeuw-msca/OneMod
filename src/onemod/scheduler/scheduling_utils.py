@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import Optional, TYPE_CHECKING
 
+from jobmon.client.api import Tool
+
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
     create_collection_template,
@@ -9,7 +11,6 @@ from onemod.scheduler.templates import (
     create_modeling_template,
 )
 
-from jobmon.client.api import Tool
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
@@ -87,11 +88,11 @@ class TaskRegistry:
     registry: defaultdict[str, set["Task"]] = defaultdict(set)
 
     @classmethod
-    def get(cls, function_name: str):
+    def get(cls, function_name: str) -> set["Task"]:
         return list(cls.registry[function_name])
 
     @classmethod
-    def put(cls, function_name: str, task: "Task"):
+    def put(cls, function_name: str, task: "Task") -> None:
         cls.registry[function_name].add(task)
 
 
