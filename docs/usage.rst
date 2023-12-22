@@ -61,3 +61,119 @@ Once your errors are fixed, you can resume an existing OneMod pipeline with::
 
 
 Both entrypoints (run_pipeline and resume_pipeline) have standard help pages you can access by suffixing the command with -h.
+
+
++++++++++++++++++++++++++++++++++++
+Output files
++++++++++++++++++++++++++++++++++++
+
+OneMod creates a lot of output files. After running, the experiment directory should look something like this:
+
+.. code-block:: text
+
+    directory/
+    |--- config/
+    |    |--- settings.yml
+    |    |--- resources.yml
+    |--- data/
+    |    |--- data.parquet
+    |--- results/
+    |    |--- rover_covsel/
+    |    |    |--- coef.pdf
+    |    |    |--- selected_covs.yaml
+    |    |    |--- subsets.csv
+    |    |    |--- summaries.csv
+    |    |    |--- submodels/
+    |    |    |    |--- subset0/
+    |    |    |    |    |--- learner_info.csv
+    |    |    |    |    |--- rover.pkl
+    |    |    |    |    |--- summary.csv
+                    ...
+    |    |--- regmod_smooth/
+    |    |    |--- coef.csv
+    |    |    |--- model.pkl
+    |    |    |--- predictions.parquet
+    |    |    |--- smooth_coef.pdf
+    |    |--- weave/
+    |    |    |--- parameters.csv
+    |    |    |--- submodels/
+    |    |    |    |--- all-age_param0_subset0_holdout1_batch0.parquet
+                        ...
+    |    |    |--- predictions_holdout0.parquet
+    |    |    |--- predictions_holdout1.parquet
+    |    |    |    ...
+
+Rover Covsel Files
+------------------
+
+The rover_covsel directory contains the output of the covariate selection step.
+
+* selected_covs.yaml
+
+A yaml file containing the covariates selected by the covariate selection step.
+Covariates that are significant in at least 50% of submodels are selected in this step for consideration in
+the smoothing stage.
+
+* subsets.csv
+
+A csv file indicating what parameters a given subset ID maps to.
+Since we can have a large number of groupby parameters, the orchestration layer condenses this to a single
+submodel_id parameter. The individual modeling job then reads in subsets.csv to determine what slice of the
+data it should be modeling.
+
+* summaries.csv
+
+Covariate coefficients, standard deviation, and overall significance, by subset ID. This is an aggregate of
+each submodel summary.csv file.
+
+* coef.pdf
+
+A pdf file containing plots of the selected covariate coefficients. Currently always plotted across age on the x axis.
+
+* submodels/<submodel_id>/learner_info.csv
+
+A serialization of all component learners fit in a single rover submodel. Contains the full set of covariate combinations
+explored by that particular rover model, and the scores/weights/coefficient magnitudes for every combination.
+
+* submodels/<submodel_id>/rover.pkl
+
+A fit rover model, containing all explored covariate combinations and their scores.
+
+* submodels/<submodel_id>/summary.csv
+
+Covariate coefficients, standard deviation, and overall significance, by subset ID.
+
+Regmod Smooth Files
+-------------------
+
+* coef.csv
+
+Covariate coefficients and standard deviation by smoothing dimension.
+
+* model.pkl
+
+A fit regmod model, containing all explored smoothing dimensions and their scores.
+
+* predictions.parquet
+
+A parquet file containing the predictions of the regmod model.
+
+* smooth_coef.pdf
+
+A pdf file containing plots of the selected covariate coefficients. Currently always plotted across age on the x axis.
+Stacks the post-smoothing curves against the pre-smoothing curves from Rover.
+
+Weave Files
+-----------
+
+* parameters.csv
+
+A csv file containing the cross product of specified parameters used to fit the weave model.
+
+* predictions_holdout<holdout_id>.parquet
+
+Predictions for a given holdout slice.
+
+* results/weave/submodels/*.parquet
+
+These files contain predictions by subset/parameter/holdout/batch. These are aggregated in the collection stage.
