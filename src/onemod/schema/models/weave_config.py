@@ -4,8 +4,8 @@ from onemod.schema.models.base import ParametrizedBaseModel
 class WeaveDimension(ParametrizedBaseModel):
     name: str
     kernel: str
-    radius: list[float] = [0.0]
-    exponent: list[float] = [0.0]
+    radius: float | list[float] = [0.0]
+    exponent: float | list[float] = [0.0]
     coordinates: str | list[str] | None = None
 
 

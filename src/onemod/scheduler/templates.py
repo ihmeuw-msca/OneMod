@@ -83,6 +83,7 @@ def _create_task_template(
         task_args=task_args,
         op_args=op_args,
         default_cluster_name=tool.default_cluster_name,
+        default_resource_scales={'memory': .5, 'runtime': .5},
         yaml_file=resources_path if configure_resources else None,
     )
 
