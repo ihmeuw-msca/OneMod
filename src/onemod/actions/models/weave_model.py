@@ -1,5 +1,6 @@
 """Run weave model."""
 import fire
+from loguru import logger
 import numpy as np
 from weave.dimension import Dimension
 from weave.smoother import Smoother
@@ -78,6 +79,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     # Assume that missing numbers for holdouts are implicit 1's (i.e. used for testing anyways)
     df_input.fillna(1, inplace=True)
     # Get predictions
+    logger.info(f"Fitting smoother for {submodel_id=}")
     df_pred = smoother(
         data=df_input,
         observed="residual_value",
@@ -86,6 +88,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
         fit="fit",
         predict="predict",
     )
+    logger.info(f"Completed fitting, predicting for {submodel_id=}")
     df_pred[settings["col_pred"]] = df_pred.apply(
         lambda row: get_prediction(
             row, settings["col_pred"], settings["mtype"]

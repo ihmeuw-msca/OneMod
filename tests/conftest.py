@@ -51,9 +51,14 @@ def sample_input_data(temporary_directory):
     age_group_ids = config['age_group_id']
     year_ids = config['year_id']
 
+    # TODO: Think of a better data schema.
+    #   If we have duplicate values per row, as here, weave collection will break.
+    #   If we don't, there isn't enough data for some earlier regmod/rover tasks
+
+    # For now, accept that weave collection won't work as part of e2e tests
     values = list(itertools.product(
         super_region_id, location_ids, sex_ids, age_group_ids, year_ids)
-    ) * 3  # Generate at least 3 rows per group
+    ) * 3
     data = pd.DataFrame(
         values,
         columns=[
@@ -101,7 +106,7 @@ def sample_config_file(temporary_directory, sample_input_data):
     return config
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def sample_config(sample_config_file):
     config = OneModConfig(**sample_config_file)
     config.rover_covsel.inherit()

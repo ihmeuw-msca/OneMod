@@ -197,7 +197,7 @@ def collect_results_weave(experiment_dir: str) -> None:
                 if submodel_id.split("_")[3] == holdout_id
             ],
             ignore_index=True,
-        )
+        ).drop_duplicates()
         df_pred = pd.pivot(
             data=df_pred,
             index=settings["col_id"],
