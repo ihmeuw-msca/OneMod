@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
-from onemod.modeling.metric import Metric
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
     get_handle,
@@ -212,10 +211,10 @@ def collect_results_weave(experiment_dir: str) -> None:
 
 def collect_results(stage_name: str, experiment_dir: str) -> None:
     callable_map = {
-        'rover_covsel': collect_results_rover_covsel,
-        'regmod_smooth': collect_results_regmod_smooth,
-        'swimr': collect_results_swimr,
-        'weave': collect_results_weave,
+        "rover_covsel": collect_results_rover_covsel,
+        "regmod_smooth": collect_results_regmod_smooth,
+        "swimr": collect_results_swimr,
+        "weave": collect_results_weave,
     }
     try:
         func = callable_map[stage_name]

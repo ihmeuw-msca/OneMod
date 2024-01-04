@@ -1,4 +1,3 @@
-from loguru import logger
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -21,7 +20,7 @@ def _create_task_template(
 
     This method creates a Jobmon task template using the provided arguments and returns it.
     Every single task template has a default op_arg that is the entrypoint of the task,
-    and keyword args passed to the individual tasks must match what is set on the task template.
+    and keyword args passed to the individual tasks must match what is set on the task template
 
     Ex. invalid command template:
         {entrypoint} --experiment_dir {directory_name}
@@ -91,10 +90,11 @@ def _create_task_template(
 
 
 def create_initialization_template(
-    tool: "Tool", task_template_name: str, resources_path: str,
-    configure_resources: bool = True
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
-
     template = _create_task_template(
         tool=tool,
         task_template_name=task_template_name,
@@ -151,8 +151,10 @@ def create_modeling_template(
 
 
 def create_collection_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path,
-    configure_resources: bool = True
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str | Path,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
     """Stage collection template.
 
@@ -180,8 +182,10 @@ def create_collection_template(
 
 
 def create_deletion_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path,
-    configure_resources: bool = True
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str | Path,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
     """Stage deletion template.
 

@@ -5,7 +5,6 @@ from onemod.actions.action import Action
 
 
 class Application:
-
     @abstractmethod
     def action_generator(self) -> Generator[Action, None, None]:
         pass

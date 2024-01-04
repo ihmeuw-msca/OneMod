@@ -4,7 +4,6 @@ from onemod.schema.models.base import ParametrizedBaseModel
 
 
 class RegmodModelInit(ParametrizedBaseModel):
-
     dims: list[dict] = []
     var_groups: list[dict] = []
     weights: str
@@ -22,4 +21,4 @@ class RegmodSmoothConfiguration(ParametrizedBaseModel):
     model: RegmodModelInit
 
     def inherit(self) -> None:
-        super().inherit(keys=['mtype', 'groupby', 'max_attempts', 'max_batch'])
+        super().inherit(keys=["mtype", "groupby", "max_attempts", "max_batch"])

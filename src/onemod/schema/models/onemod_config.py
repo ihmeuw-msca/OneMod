@@ -12,7 +12,6 @@ from onemod.schema.models.weave_config import WeaveConfiguration
 
 
 class OneModConfig(ParametrizedBaseModel):
-
     input_path: str
     col_id: list[str]
     col_obs: str
@@ -42,7 +41,7 @@ class OneModConfig(ParametrizedBaseModel):
             "col_test": self.col_test,
             "max_attempts": self.max_attempts,
             "max_batch": self.max_batch,
-            "mtype": self.mtype
+            "mtype": self.mtype,
         }
 
         child_models = [

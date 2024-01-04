@@ -18,7 +18,7 @@ def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sampl
 
     init_task, model_task, agg_task = tasks
 
-    assert agg_task.name == "collect_results_regmod_smooth"
+    assert agg_task.name == "collect_results"
     assert agg_task.upstream_tasks == {model_task}
     assert model_task.upstream_tasks == {init_task}
     assert init_task.upstream_tasks == set()

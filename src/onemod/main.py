@@ -161,11 +161,7 @@ def run_pipeline(
 
     # Load and validate the configuration file
     dataif, config = get_handle(directory)
-    validate_config(
-        stages=stages,
-        directory=directory,
-        config=config
-    )
+    validate_config(stages=stages, directory=directory, config=config)
 
     workflow = create_workflow(
         directory=directory,

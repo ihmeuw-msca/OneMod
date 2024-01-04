@@ -2,13 +2,12 @@
 the covariate coefficients across age groups.
 """
 from functools import partial
-from typing import Callable, Optional
+from typing import Callable
 
 import fire
 from loguru import logger
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 from regmodsm.model import Model
 
 from onemod.utils import get_handle
