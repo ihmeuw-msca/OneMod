@@ -122,7 +122,7 @@ def _plot_regmod_smooth_results(
     return fig
 
 
-def collect_rover_covsel_results(experiment_dir: str) -> None:
+def collect_results_rover_covsel(experiment_dir: str) -> None:
     """Collect rover covariate selection results. Process all the significant
     covariates for each sub group. If a covaraite is significant across more
     than half of the subgroups if will be selected.
@@ -144,7 +144,7 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
-def collect_regmod_smooth_results(experiment_dir: str) -> None:
+def collect_results_regmod_smooth(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
     dataif, _ = get_handle(experiment_dir)
     summaries = _get_rover_covsel_summaries(dataif)
@@ -153,7 +153,7 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
 
-def collect_swimr_results(experiment_dir: str) -> None:
+def collect_results_swimr(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
     dataif, settings = get_handle(experiment_dir)
 
@@ -182,7 +182,7 @@ def collect_swimr_results(experiment_dir: str) -> None:
             dataif.dump_swimr(df_pred, f"predictions_{holdout_id}.parquet")
 
 
-def collect_weave_results(experiment_dir: str) -> None:
+def collect_results_weave(experiment_dir: str) -> None:
     """Collect weave submodel results."""
     dataif, settings = get_handle(experiment_dir)
 
@@ -209,12 +209,13 @@ def collect_weave_results(experiment_dir: str) -> None:
         else:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
+
 def collect_results(stage_name: str, experiment_dir: str) -> None:
     callable_map = {
-        'rover_covsel': collect_rover_covsel_results,
-        'regmod_smooth': collect_regmod_smooth_results,
-        'swimr': collect_swimr_results,
-        'weave': collect_weave_results,
+        'rover_covsel': collect_results_rover_covsel,
+        'regmod_smooth': collect_results_regmod_smooth,
+        'swimr': collect_results_swimr,
+        'weave': collect_results_weave,
     }
     try:
         func = callable_map[stage_name]
@@ -222,6 +223,7 @@ def collect_results(stage_name: str, experiment_dir: str) -> None:
         raise ValueError(f"Stage name {stage_name} is not valid.")
 
     func(experiment_dir)
+
 
 def main() -> None:
     fire.Fire(collect_results)

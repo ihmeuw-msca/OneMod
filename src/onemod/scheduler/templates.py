@@ -2,15 +2,12 @@ from loguru import logger
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from onemod.scheduler.scheduling_utils import task_template_cache
-
 
 if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
     from jobmon.client.api import Tool
 
 
-@task_template_cache
 def _create_task_template(
     tool: "Tool",
     task_template_name: str,
@@ -82,27 +79,22 @@ def _create_task_template(
         task_args=task_args,
         op_args=op_args,
         default_cluster_name=tool.default_cluster_name,
+        yaml_file=resources_path
     )
-    try:
-        template.set_default_compute_resources_from_yaml(
-            default_cluster_name=tool.default_cluster_name,
-            yaml_file=resources_path
-        )
-    except Exception as e:
-        logger.warning(f"Could not set default compute resources from yaml file for template {task_template_name}"
-                       "Using default resources from tool")
 
     return template
 
 
-def create_initialization_template(tool: "Tool", resources_file: str | Path) -> "TaskTemplate":
+def create_initialization_template(
+    tool: "Tool", task_template_name: str, resources_path: str
+) -> "TaskTemplate":
 
     template = _create_task_template(
         tool=tool,
-        task_template_name="initialization_template",
+        task_template_name=task_template_name,
         node_args=["stages"],
         task_args=["experiment_dir"],
-        resources_path=resources_file,
+        resources_path=resources_path,
     )
     return template
 
@@ -111,7 +103,7 @@ def create_modeling_template(
     tool: "Tool",
     task_template_name: str,
     resources_path: str | Path,
-    parallel: bool = True) -> "TaskTemplate":
+) -> "TaskTemplate":
     """Stage modeling template.
 
     Parameters
@@ -133,7 +125,9 @@ def create_modeling_template(
 
     # Tasks can be parallelized by an internal concept called submodels
     node_args = []
-    if parallel:
+
+    # Assumption: only regmod_smooth is not paralle
+    if "regmod_smooth" not in task_template_name:
         node_args.append("submodel_id")
 
     template = _create_task_template(
@@ -196,7 +190,7 @@ def create_deletion_template(
 
     template = _create_task_template(
         tool=tool,
-        template_name=task_template_name,
+        task_template_name=task_template_name,
         node_args=["result"],
         resources_path=resources_path,
     )
