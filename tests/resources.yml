@@ -1,39 +1,44 @@
 tool_resources:
   # Base resources used by all tasks unless over-written
+  sequential:
+    queue: null.q
   dummy:
-    queue: all.q
-    cores: 1
-    memory: 1G
-    runtime: (60 * 10)
-    project: proj_mscm
+    queue: null.q
 
 task_template_resources:
   # TODO: decide what resource values need to be updated
-  rover_model_template:
+  initialize_results:
+    sequential:
+      queue: null.q
     dummy:
-      queue: all.q
-      cores: 1
-      memory: 1G
-      runtime: (60 * 10)
-      project: proj_mscm
-  swimr:
+      queue: null.q
+  collect_results:
+    sequential:
+      queue: null.q
     dummy:
-      queue: all.q
-      cores: 1
-      memory: 1G
-      runtime: (60 * 10)
-      project: proj_mscm
-  weave_model_template:
+      queue: null.q
+  rover_covsel_model:
+    sequential:
+      queue: null.q
     dummy:
-      queue: all.q
-      cores: 1
-      memory: 1G
-      runtime: (60 * 10)
-      project: proj_mscm
-  ensemble_model_template:
+      queue: null.q
+  swimr_model:
+    sequential:
+      queue: null.q
     dummy:
-      queue: all.q
-      cores: 1
-      memory: 1G
-      runtime: 00:10:00
-      project: proj_mscm
+      queue: null.q
+  weave_model:
+    sequential:
+      queue: null.q
+    dummy:
+      queue: null.q
+  ensemble_model:
+    sequential:
+      queue: null.q
+    dummy:
+      queue: null.q
+  regmod_smooth_model:
+    sequential:
+      queue: null.q
+    dummy:
+      queue: null.q

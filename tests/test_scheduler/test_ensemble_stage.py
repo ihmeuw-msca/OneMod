@@ -1,7 +1,5 @@
 import pytest
 
-from onemod.orchestration.stage import StageTemplate
-
 
 @pytest.mark.skip("Not implemented yet")
 def test_ensemble_tasks(testing_tool, temporary_directory, sample_config):

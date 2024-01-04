@@ -52,13 +52,17 @@ class Scheduler:
         else:
             ParentTool.initialize_tool(
                 resources_yaml=self.resources_path,
-                default_cluster_name=self.default_cluster_name
+                default_cluster_name=self.default_cluster_name,
             )
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
             tasks = [self.create_task(action) for action in self.parent_action_generator()]
             workflow.add_tasks(tasks)
-            workflow.run(configure_logging=True)
+            status = workflow.run(configure_logging=True)
+
+            if status != "D":
+                # TODO: Summarize errors in workflow
+                raise ValueError(f"workflow {workflow.name} failed: {status}")
 
     def create_task(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""
@@ -66,9 +70,18 @@ class Scheduler:
         # Unpack kwargs into a string for naming purposes
         task_template = TaskTemplateFactory.get_task_template(
             action_name=action.name,
-            resources_path=self.resources_path
+            resources_path=self.resources_path,
+            configure_resources=self.configure_resources,
         )
         upstream_tasks = upstream_task_callback(action)
+
+        # Quick type coercion: the Fire library has strange handling of lists.
+        # Force to a string without any spaces
+        # This is a catch-all solution but technically only affects initialize_results
+        for arg, value in action.kwargs.items():
+            if isinstance(value, list):
+                action.kwargs[arg] = f"[{','.join(value)}]"
+
         task = task_template.create_task(
             name=action.name,
             upstream_tasks=upstream_tasks,

@@ -14,6 +14,7 @@ def _create_task_template(
     node_args: list[str],
     task_args: list[str] | None = None,
     op_args: list[str] | None = None,
+    configure_resources: bool = True,
     resources_path: str | Path | None = None,
 ) -> "TaskTemplate":
     """Create a Jobmon task template from provided arguments.
@@ -45,6 +46,10 @@ def _create_task_template(
     TaskTemplate
         The Jobmon task template created using the provided arguments.
     """
+
+    # TODO: This whole method could probably be simplified dramatically by simply
+    #  passing in an action and using the stored kwargs to build the command template.
+    #  Consider everything besides entrypoint a node_arg for simplicity
 
     command_template = ["{entrypoint}"]
     if not op_args:
@@ -79,14 +84,15 @@ def _create_task_template(
         task_args=task_args,
         op_args=op_args,
         default_cluster_name=tool.default_cluster_name,
-        yaml_file=resources_path
+        yaml_file=resources_path if configure_resources else None,
     )
 
     return template
 
 
 def create_initialization_template(
-    tool: "Tool", task_template_name: str, resources_path: str
+    tool: "Tool", task_template_name: str, resources_path: str,
+    configure_resources: bool = True
 ) -> "TaskTemplate":
 
     template = _create_task_template(
@@ -95,6 +101,7 @@ def create_initialization_template(
         node_args=["stages"],
         task_args=["experiment_dir"],
         resources_path=resources_path,
+        configure_resources=configure_resources,
     )
     return template
 
@@ -103,6 +110,7 @@ def create_modeling_template(
     tool: "Tool",
     task_template_name: str,
     resources_path: str | Path,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
     """Stage modeling template.
 
@@ -126,7 +134,7 @@ def create_modeling_template(
     # Tasks can be parallelized by an internal concept called submodels
     node_args = []
 
-    # Assumption: only regmod_smooth is not paralle
+    # Assumption: only regmod_smooth is not parallel
     if "regmod_smooth" not in task_template_name:
         node_args.append("submodel_id")
 
@@ -136,13 +144,15 @@ def create_modeling_template(
         node_args=node_args,
         task_args=["experiment_dir"],
         resources_path=resources_path,
+        configure_resources=configure_resources,
     )
 
     return template
 
 
 def create_collection_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path
+    tool: "Tool", task_template_name: str, resources_path: str | Path,
+    configure_resources: bool = True
 ) -> "TaskTemplate":
     """Stage collection template.
 
@@ -164,12 +174,14 @@ def create_collection_template(
         node_args=["stage_name"],
         task_args=["experiment_dir"],
         resources_path=resources_path,
+        configure_resources=configure_resources,
     )
     return template
 
 
 def create_deletion_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path
+    tool: "Tool", task_template_name: str, resources_path: str | Path,
+    configure_resources: bool = True
 ) -> "TaskTemplate":
     """Stage deletion template.
 
@@ -193,5 +205,6 @@ def create_deletion_template(
         task_template_name=task_template_name,
         node_args=["result"],
         resources_path=resources_path,
+        configure_resources=configure_resources,
     )
     return template

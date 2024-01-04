@@ -9,8 +9,9 @@ from onemod.scheduler.templates import (
     create_modeling_template,
 )
 
+from jobmon.client.api import Tool
+
 if TYPE_CHECKING:
-    from jobmon.client.api import Tool
     from jobmon.client.task_template import TaskTemplate
     from jobmon.client.task import Task
 
@@ -21,9 +22,14 @@ class ParentTool:
     tool: Optional["Tool"] = None
 
     @classmethod
-    def initialize_tool(cls, resources_yaml: str, default_cluster_name: str) -> None:
+    def initialize_tool(
+        cls,
+        resources_yaml: str,
+        default_cluster_name: str,
+    ) -> None:
         if cls.tool is None:
             cls.tool = Tool(name="onemod_tool")
+            cls.tool.set_default_cluster_name(default_cluster_name)
             cls.tool.set_default_compute_resources_from_yaml(
                 default_cluster_name=default_cluster_name,
                 yaml_file=resources_yaml,
@@ -42,7 +48,9 @@ class TaskTemplateFactory:
     """
 
     @classmethod
-    def get_task_template(cls, action_name: str, resources_path: str = "") -> "TaskTemplate":
+    def get_task_template(
+        cls, action_name: str, resources_path: str = "", configure_resources: bool = True
+    ) -> "TaskTemplate":
 
         tool = ParentTool.get_tool()
 
@@ -61,6 +69,7 @@ class TaskTemplateFactory:
             tool=tool,
             task_template_name=action_name,
             resources_path=resources_path,
+            configure_resources=configure_resources
         )
 
         return task_template
@@ -96,11 +105,16 @@ def upstream_task_callback(action: Action) -> list["Task"]:
     order_map = {
         'initialize_results': [],
         'rover_covsel_model': ['initialize_results'],
-        'collect_results_rover_covsel': ['rover_covsel_model'],
-        'regmod_smooth_model': ['collect_results_rover_covsel', 'initialize_results'],
-        'collect_results_regmod_smooth': ['regmod_smooth_model'],
-        'weave_model': ['collect_results_regmod_smooth', 'collect_results_rover_covsel', 'initialize_results'],
-        'collect_results_weave': ['weave_model'],
+        'regmod_smooth_model': ['collect_results', 'initialize_results'],
+        'weave_model': ['collect_results', 'collect_results', 'initialize_results'],
+        # Logic for collect results: set all modeling tasks as dependencies.
+        # Due to traversal order of the generator, the rover collection task must be created
+        # prior to weave modeling tasks being instantiated, therefore this is
+        # theoretically safe to do.
+
+        # Vice versa: when regmod_smooth_model's task is created, there can be at most one
+        # previously created collect task (for rover)
+        'collect_results': ['rover_covsel_model', 'regmod_smooth_model', 'weave_model'],
     }
     func_name = action.name
     upstream_action_names = order_map[func_name]

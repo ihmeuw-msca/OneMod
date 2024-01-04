@@ -1,7 +1,5 @@
 import pytest
 
-from onemod.orchestration.stage import StageTemplate
-
 
 @pytest.mark.skip("Implement when swimr model schema is implemented and debugged")
 def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
