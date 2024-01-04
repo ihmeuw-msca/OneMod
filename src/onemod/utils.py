@@ -405,7 +405,12 @@ def get_smoother_input(
     # Deduplicate
     columns = list(set(columns))
     if len(columns) > 0:
-        right = dataif.load_data()
+        try:
+            # The data path only exists if the initialzie_results action has already been run. Fallback to
+            # raw datapath if creating submodels prior to workflow run.
+            right = dataif.load_data()
+        except FileNotFoundError:
+            right = dataif.load_raw_data()
         df_input = df_input.merge(
             right=right[columns].drop_duplicates(),
             on=config.col_id,
@@ -621,4 +626,8 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
 
     # create confiuration file
     config = OneModCFG(**dataif.load_settings())
+
+    # For pre-workflow use of data, add raw data path
+    dataif.add_dir("raw_data", config.input_path)
+
     return dataif, config

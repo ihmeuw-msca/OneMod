@@ -88,7 +88,7 @@ class TaskRegistry:
     registry: defaultdict[str, set["Task"]] = defaultdict(set)
 
     @classmethod
-    def get(cls, function_name: str) -> set["Task"]:
+    def get(cls, function_name: str) -> list["Task"]:
         return list(cls.registry[function_name])
 
     @classmethod

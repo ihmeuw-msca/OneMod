@@ -1,3 +1,4 @@
+from pathlib import Path
 import shutil
 from typing import Generator, TYPE_CHECKING
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 class Scheduler:
     def __init__(
         self,
-        experiment_dir: str,
+        experiment_dir: str | Path,
         config: OneModConfig,
         stages: list[str],
         resources_path: str = "",
