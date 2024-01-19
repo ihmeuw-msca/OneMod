@@ -2,13 +2,18 @@ from onemod.scheduler.scheduler import Scheduler
 from onemod.scheduler.scheduling_utils import ParentTool, TaskRegistry
 
 
-def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sample_config):
-
+def test_rover_tasks(
+    testing_tool, temporary_directory, sample_input_data, sample_config
+):
     ParentTool.tool = testing_tool
     TaskRegistry.registry.clear()
 
     # Create a set of regmod tasks. Check that the correct commands are generated
-    scheduler = Scheduler(experiment_dir=temporary_directory, config=sample_config, stages=['regmod_smooth'])
+    scheduler = Scheduler(
+        experiment_dir=temporary_directory,
+        config=sample_config,
+        stages=["regmod_smooth"],
+    )
 
     tasks = [
         scheduler.create_task(action) for action in scheduler.parent_action_generator()

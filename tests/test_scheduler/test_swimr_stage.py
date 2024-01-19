@@ -2,16 +2,17 @@ import pytest
 
 
 @pytest.mark.skip("Implement when swimr model schema is implemented and debugged")
-def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_input_data):
-
+def test_swimr_tasks(
+    testing_tool, temporary_directory, sample_config, sample_input_data
+):
     stage = StageTemplate(
-        stage_name='swimr',
+        stage_name="swimr",
         config=sample_config,
         experiment_dir=temporary_directory,
         save_intermediate=True,
-        resources_file=temporary_directory / 'resources.yml',
+        resources_file=temporary_directory / "resources.yml",
         tool=testing_tool,
-        cluster_name='dummy'
+        cluster_name="dummy",
     )
     tasks = stage.create_tasks([])
 
@@ -29,6 +30,3 @@ def test_swimr_tasks(testing_tool, temporary_directory, sample_config, sample_in
     tasks = stage.create_tasks([])
 
     assert len(tasks) == 433
-
-
-
