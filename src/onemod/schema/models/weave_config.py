@@ -1,12 +1,12 @@
 from onemod.schema.models.base import ParametrizedBaseModel
-
+from typing import Union
 
 class WeaveDimension(ParametrizedBaseModel):
     name: str
     coordinates: str
     kernel: str
-    radius: float = 0.0
-    exponent: float = 0.0
+    radius: Union[float,list] = 0.0
+    exponent: Union[float,list] = 0.0
     coordinates: str | list[str] | None = None
 
 class WeaveModel(ParametrizedBaseModel):

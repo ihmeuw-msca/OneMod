@@ -21,7 +21,7 @@ class ParentConfiguration(ParametrizedBaseModel):
     col_sigma: str = ''
     max_attempts: int = 3
     max_batch: int = -1
-    model_type: str # TODO: This clashes with pydantic naming conventions and will raise warnings
+    model_type: str = 'binomial' # TODO: This clashes with pydantic naming conventions and will raise warnings
 
     rover_covsel: Optional[RoverConfiguration] = None
     regmod_smooth: Optional[RegmodSmoothConfiguration] = None

@@ -214,7 +214,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     for var_group in var_groups:
         cov = var_group["col"]
         if "uprior" not in var_group:
-            var_group["uprior"] = tuple(map(float, coef_bounds.get(cov, [-100, 100])))
+            var_group["uprior"] = tuple(map(float, coef_bounds.get(cov, [-np.inf, np.inf])))
         if "lam" not in var_group:
             var_group["lam"] = lam
 
@@ -235,7 +235,7 @@ def regmod_smooth_model(experiment_dir: str, submodel_id: str) -> None:
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, **regmod_smooth_config.fit_args)
+    model.fit(df_train,dim_val_data = df, **regmod_smooth_config.fit_args)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[settings["col_pred"]] = model.predict(df)

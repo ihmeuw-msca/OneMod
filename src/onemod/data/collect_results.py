@@ -37,15 +37,22 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
 
 def _get_selected_covs(dataif: DataInterface) -> list[str]:
     summaries = _get_rover_covsel_summaries(dataif)
-    selected_covs = (
-        summaries.groupby("cov")["significant"]
+
+    summaries['abs_t_stat']=(summaries['coef']/summaries['coef_sd']).abs()
+    t_threshold = dataif.load_settings().get('rover_t_threshold', 2)
+    #TODO also add fixed feature count option
+
+
+    selected_t_covs = (
+        summaries.groupby("cov")["abs_t_stat"]
         .mean()
         .reset_index()
-        .query("significant >= 0.5")["cov"]
+        .query(f"abs_t_stat >= {t_threshold}")["cov"]
         .tolist()
     )
-    logger.info(f"Selected covariates: {selected_covs}")
-    return selected_covs
+
+    logger.info(f"Selected covariates: {selected_t_covs}")
+    return selected_t_covs
 
 
 def _plot_rover_covsel_results(
