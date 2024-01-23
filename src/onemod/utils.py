@@ -550,6 +550,8 @@ def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
     if model_type == "binomial":
         update = row["residual"] * row[col_pred] * (1 - row[col_pred])
         return row[col_pred] + update
+    if model_type == "gaussian":
+        return row[col_pred] + row["residual"]
     if model_type in ("poisson", "tobit"):
         return (row["residual"] + 1) * row[col_pred]
     raise ValueError("Unsupported model_type")
