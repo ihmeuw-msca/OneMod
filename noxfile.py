@@ -58,3 +58,19 @@ def typecheck(session: Session) -> None:
     session.install("mypy", "types-PyYAML", "pandas-stubs")
     session.install("-e", ".")
     session.run("mypy", "--explicit-package-bases", *args)
+
+@nox.session(python=python, venv_backend="conda")
+def docs(session: Session) -> None:
+    session.conda_install("graphviz", "mysqlclient")
+    session.install(
+        "sphinx",
+        "sphinx-autodoc-typehints",
+        "sphinx_rtd_theme",
+        "sphinx_autoapi"
+    )
+
+    session.install(".")
+    output_dir = "out/_html"
+    session.run(
+        "sphinx-build", "docs", output_dir
+    )
