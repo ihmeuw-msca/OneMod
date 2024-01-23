@@ -31,13 +31,13 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     summaries = summaries.merge(
         subsets.drop("subset_id", axis=1), on="submodel_id", how="left"
     )
-    summaries["abs_t_stat"] = summaries.eval("(coef / coef_sd).abs()")
+    summaries["abs_t_stat"] = summaries.eval("abs(coef / coef_sd)")
     return summaries
 
 
 def _get_selected_covs(dataif: DataInterface) -> list[str]:
     summaries = _get_rover_covsel_summaries(dataif)
-    t_threshold = dataif.load_settings["rover_covsel"]["t_threshold"]
+    t_threshold = dataif.load_settings()["rover_covsel"]["t_threshold"]
 
     selected_covs = (
         summaries.groupby("cov")["abs_t_stat"]
