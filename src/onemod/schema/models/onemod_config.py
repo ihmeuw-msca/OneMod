@@ -12,7 +12,6 @@ from onemod.schema.models.weave_config import WeaveConfiguration
 
 
 class OneModConfig(ParametrizedBaseModel):
-
     input_path: str
     col_id: list[str]
     col_obs: str
@@ -42,7 +41,7 @@ class OneModConfig(ParametrizedBaseModel):
             "col_test": self.col_test,
             "max_attempts": self.max_attempts,
             "max_batch": self.max_batch,
-            "mtype": self.mtype
+            "mtype": self.mtype,
         }
 
         child_models = [
@@ -57,6 +56,7 @@ class OneModConfig(ParametrizedBaseModel):
             if child_model:
                 # Store parent args on the child models, can be accessed if necessary
                 child_model.parent_args = global_vals
+                child_model.inherit()
 
     @property
     def extra_fields(self) -> set[str]:

@@ -17,13 +17,14 @@ class RoverFitArgs(BaseModel):
 
 
 class RoverCovselConfiguration(ParametrizedBaseModel):
-
     groupby: list[str] = []
     mtype: str = Field("")
     max_attempts: int | None = None
+    max_batch: int | None = None
     rover: RoverInit
+    t_threshold: float = 1.0
 
     rover_fit: RoverFitArgs = Field(default_factory=RoverFitArgs)
 
     def inherit(self) -> None:
-        super().inherit(keys=['mtype', 'groupby', 'max_attempts', 'max_batch'])
+        super().inherit(keys=["mtype", "groupby", "max_attempts", "max_batch"])

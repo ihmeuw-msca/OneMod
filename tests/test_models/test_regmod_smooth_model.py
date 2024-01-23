@@ -2,11 +2,10 @@ from pathlib import Path
 import yaml
 
 # from onemod.data.initialize_results import initialize_results
-from onemod.models.regmod_smooth_model import regmod_smooth_model
+from onemod.actions.models.regmod_smooth_model import regmod_smooth_model
 
 
 def test_regmod_smooth(temporary_directory, sample_input_data):
-
     # Mock the rover output - selected_covs.yaml
     # initialize_results(experiment_dir=temporary_directory,
     #                    stages=["rover_covsel", "regmod_smooth"])

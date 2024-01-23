@@ -1,10 +1,10 @@
 """Useful functions."""
 from __future__ import annotations
 
-from functools import cache, wraps
+from functools import cache
 from itertools import product
 from pathlib import Path
-from typing import Any, Callable, Optional, TYPE_CHECKING, Union
+from typing import Any, Optional, Union
 import warnings
 
 import numpy as np
@@ -13,9 +13,6 @@ from pplkit.data.interface import DataInterface
 import yaml
 
 from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
-
-if TYPE_CHECKING:
-    from jobmon.client.task_template import TaskTemplate
 
 
 class Parameters:
@@ -380,17 +377,6 @@ def load_settings(
     return OneModCFG(**settings)
 
 
-def get_rover_covsel_input(config: OneModCFG) -> pd.DataFrame:
-    """Get input data for rover model."""
-    interface = DataInterface(data=config.input_path)
-    df_input = interface.load_data()
-    for dimension in config.col_id:
-        if dimension in config.id_subsets:
-            # Optionally filter data. Defaults to using all values in the dimension
-            df_input = df_input[df_input[dimension].isin(config.id_subsets[dimension])]
-    return df_input
-
-
 def get_smoother_input(
     smoother: str,
     config: OneModCFG,
@@ -402,13 +388,18 @@ def get_smoother_input(
         df_input = dataif.load_regmod_smooth("predictions.parquet")
         df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
-        df_input = get_rover_covsel_input(config)
+        df_input = dataif.load_data()
     columns = _get_smoother_columns(smoother, config).difference(df_input.columns)
     columns = as_list(config.col_id) + list(columns)
     # Deduplicate
     columns = list(set(columns))
     if len(columns) > 0:
-        right = dataif.load_data()
+        try:
+            # The data path only exists if the initialzie_results action has already been run. Fallback to
+            # raw datapath if creating submodels prior to workflow run.
+            right = dataif.load_data()
+        except FileNotFoundError:
+            right = dataif.load_raw_data()
         df_input = df_input.merge(
             right=right[columns].drop_duplicates(),
             on=config.col_id,
@@ -471,15 +462,6 @@ def _get_smoother_columns(smoother: str, config: OneModCFG) -> set:
     return columns
 
 
-def get_ensemble_input(config: OneModCFG) -> pd.DataFrame:
-    """Get input data for ensemble model."""
-    input_cols = set(
-        config.col_id + config.col_holdout + [config.col_obs] + config.ensemble.groupby
-    )
-    rover_input = get_rover_covsel_input(config)
-    return rover_input[list(input_cols)]
-
-
 def get_rover_covsel_submodels(
     experiment_dir: str, save_file: bool = False
 ) -> list[str]:
@@ -489,8 +471,8 @@ def get_rover_covsel_submodels(
     dataif, config = get_handle(experiment_dir)
 
     # Create rover subsets and submodels
-    df_input = get_rover_covsel_input(config)
-    subsets = Subsets("rover_covsel", config, df_input)
+    df_input = dataif.load_data()
+    subsets = Subsets("rover_covsel", config["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
@@ -512,7 +494,6 @@ def get_swimr_submodels(
     for model_id, model_settings in config["swimr"]["models"].items():
         params = SwimrParams(model_id, model_settings)
         param_list.append(params.param_sets)
-        model_settings.inherit()
         subsets = Subsets(model_id, config, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
@@ -543,7 +524,6 @@ def get_weave_submodels(
     for model_id, model_settings in config["weave"]["models"].items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        model_settings.inherit()
         subsets = Subsets(model_id, model_settings, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
@@ -570,28 +550,12 @@ def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
     if model_type == "binomial":
         update = row["residual"] * row[col_pred] * (1 - row[col_pred])
         return row[col_pred] + update
+    if model_type == "gaussian":
+        return row[col_pred] + row["residual"]
     if model_type in ("poisson", "tobit"):
         return (row["residual"] + 1) * row[col_pred]
     raise ValueError("Unsupported model_type")
 
-
-def task_template_cache(func: Callable) -> Callable:
-    """Decorator to cache existing task templates by name."""
-    cache: dict[str, TaskTemplate] = {}
-
-    @wraps(func)
-    def inner_func(*args: Any, **kwargs: Any) -> TaskTemplate:
-        task_template_name = kwargs.get("task_template_name")
-        if not task_template_name:
-            raise ValueError("task_template_name must be provided")
-        if task_template_name in cache:
-            return cache[task_template_name]
-
-        template = func(*args, **kwargs)
-        cache[task_template_name] = template
-        return template
-
-    return inner_func
 
 @cache
 def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
@@ -630,7 +594,7 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
 
     # add data
     # Initialization stage will ETL input data into a relative path
-    data_path = dataif.experiment / "data"  / "data.parquet"
+    data_path = dataif.experiment / "data" / "data.parquet"
     dataif.add_dir("data", data_path)
 
     # add results folders
@@ -642,4 +606,8 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
 
     # create confiuration file
     config = OneModCFG(**dataif.load_settings())
+
+    # For pre-workflow use of data, add raw data path
+    dataif.add_dir("raw_data", config.input_path)
+
     return dataif, config

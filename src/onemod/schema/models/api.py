@@ -1,3 +1,4 @@
+# flake8: noqa
 from onemod.schema.models.ensemble_config import EnsembleConfiguration
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfiguration

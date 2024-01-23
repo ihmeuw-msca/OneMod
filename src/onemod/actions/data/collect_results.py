@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
-from onemod.modeling.metric import Metric
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
     get_handle,
@@ -32,16 +31,19 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     summaries = summaries.merge(
         subsets.drop("subset_id", axis=1), on="submodel_id", how="left"
     )
+    summaries["abs_t_stat"] = summaries.eval("abs(coef / coef_sd)")
     return summaries
 
 
 def _get_selected_covs(dataif: DataInterface) -> list[str]:
     summaries = _get_rover_covsel_summaries(dataif)
+    t_threshold = dataif.load_settings()["rover_covsel"]["t_threshold"]
+
     selected_covs = (
-        summaries.groupby("cov")["significant"]
+        summaries.groupby("cov")["abs_t_stat"]
         .mean()
         .reset_index()
-        .query("significant >= 0.5")["cov"]
+        .query(f"abs_t_stat >= {t_threshold}")["cov"]
         .tolist()
     )
     logger.info(f"Selected covariates: {selected_covs}")
@@ -122,7 +124,7 @@ def _plot_regmod_smooth_results(
     return fig
 
 
-def collect_rover_covsel_results(experiment_dir: str) -> None:
+def collect_results_rover_covsel(experiment_dir: str) -> None:
     """Collect rover covariate selection results. Process all the significant
     covariates for each sub group. If a covaraite is significant across more
     than half of the subgroups if will be selected.
@@ -144,7 +146,7 @@ def collect_rover_covsel_results(experiment_dir: str) -> None:
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
-def collect_regmod_smooth_results(experiment_dir: str) -> None:
+def collect_results_regmod_smooth(experiment_dir: str) -> None:
     """This step is used for creating diagnostics."""
     dataif, _ = get_handle(experiment_dir)
     summaries = _get_rover_covsel_summaries(dataif)
@@ -153,7 +155,7 @@ def collect_regmod_smooth_results(experiment_dir: str) -> None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
 
-def collect_swimr_results(experiment_dir: str) -> None:
+def collect_results_swimr(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
     dataif, settings = get_handle(experiment_dir)
 
@@ -182,7 +184,7 @@ def collect_swimr_results(experiment_dir: str) -> None:
             dataif.dump_swimr(df_pred, f"predictions_{holdout_id}.parquet")
 
 
-def collect_weave_results(experiment_dir: str) -> None:
+def collect_results_weave(experiment_dir: str) -> None:
     """Collect weave submodel results."""
     dataif, settings = get_handle(experiment_dir)
 
@@ -197,7 +199,7 @@ def collect_weave_results(experiment_dir: str) -> None:
                 if submodel_id.split("_")[3] == holdout_id
             ],
             ignore_index=True,
-        )
+        ).drop_duplicates()
         df_pred = pd.pivot(
             data=df_pred,
             index=settings["col_id"],
@@ -209,12 +211,13 @@ def collect_weave_results(experiment_dir: str) -> None:
         else:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
+
 def collect_results(stage_name: str, experiment_dir: str) -> None:
     callable_map = {
-        'rover_covsel': collect_rover_covsel_results,
-        'regmod_smooth': collect_regmod_smooth_results,
-        'swimr': collect_swimr_results,
-        'weave': collect_weave_results,
+        "rover_covsel": collect_results_rover_covsel,
+        "regmod_smooth": collect_results_regmod_smooth,
+        "swimr": collect_results_swimr,
+        "weave": collect_results_weave,
     }
     try:
         func = callable_map[stage_name]
@@ -222,6 +225,7 @@ def collect_results(stage_name: str, experiment_dir: str) -> None:
         raise ValueError(f"Stage name {stage_name} is not valid.")
 
     func(experiment_dir)
+
 
 def main() -> None:
     fire.Fire(collect_results)

@@ -2,13 +2,12 @@
 the covariate coefficients across age groups.
 """
 from functools import partial
-from typing import Callable, Optional
+from typing import Callable
 
 import fire
 from loguru import logger
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 from regmodsm.model import Model
 
 from onemod.utils import get_handle
@@ -151,7 +150,6 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     dataif, global_config = get_handle(experiment_dir)
 
     regmod_smooth_config = global_config.regmod_smooth
-    regmod_smooth_config.inherit()
 
     # Create regmod smooth parameters
     var_groups = regmod_smooth_config.model.var_groups
@@ -179,7 +177,7 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     for var_group in var_groups:
         cov = var_group["col"]
         if "uprior" not in var_group:
-            var_group["uprior"] = tuple(map(float, coef_bounds.get(cov, [-100, 100])))
+            var_group["uprior"] = tuple(map(float, coef_bounds.get(cov, [-np.inf, np.inf])))
         if "lam" not in var_group:
             var_group["lam"] = lam
 
@@ -200,7 +198,7 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, **regmod_smooth_config.regmod_fit)
+    model.fit(df_train, data_dim_vals=df, **regmod_smooth_config.regmod_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[global_config.col_pred] = model.predict(df)

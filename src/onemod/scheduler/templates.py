@@ -1,8 +1,5 @@
-from loguru import logger
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-from onemod.utils import task_template_cache
 
 
 if TYPE_CHECKING:
@@ -10,20 +7,20 @@ if TYPE_CHECKING:
     from jobmon.client.api import Tool
 
 
-@task_template_cache
 def _create_task_template(
     tool: "Tool",
     task_template_name: str,
     node_args: list[str],
     task_args: list[str] | None = None,
     op_args: list[str] | None = None,
+    configure_resources: bool = True,
     resources_path: str | Path | None = None,
 ) -> "TaskTemplate":
     """Create a Jobmon task template from provided arguments.
 
     This method creates a Jobmon task template using the provided arguments and returns it.
     Every single task template has a default op_arg that is the entrypoint of the task,
-    and keyword args passed to the individual tasks must match what is set on the task template.
+    and keyword args passed to the individual tasks must match what is set on the task template
 
     Ex. invalid command template:
         {entrypoint} --experiment_dir {directory_name}
@@ -48,6 +45,10 @@ def _create_task_template(
     TaskTemplate
         The Jobmon task template created using the provided arguments.
     """
+
+    # TODO: This whole method could probably be simplified dramatically by simply
+    #  passing in an action and using the stored kwargs to build the command template.
+    #  Consider everything besides entrypoint a node_arg for simplicity
 
     command_template = ["{entrypoint}"]
     if not op_args:
@@ -82,27 +83,26 @@ def _create_task_template(
         task_args=task_args,
         op_args=op_args,
         default_cluster_name=tool.default_cluster_name,
+        default_resource_scales={'memory': .5, 'runtime': .5},
+        yaml_file=resources_path if configure_resources else None,
     )
-    try:
-        template.set_default_compute_resources_from_yaml(
-            default_cluster_name=tool.default_cluster_name,
-            yaml_file=resources_path
-        )
-    except Exception as e:
-        logger.warning(f"Could not set default compute resources from yaml file for template {task_template_name}"
-                       "Using default resources from tool")
 
     return template
 
 
-def create_initialization_template(tool: "Tool", resources_file: str | Path) -> "TaskTemplate":
-
+def create_initialization_template(
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str,
+    configure_resources: bool = True,
+) -> "TaskTemplate":
     template = _create_task_template(
         tool=tool,
-        task_template_name="initialization_template",
+        task_template_name=task_template_name,
         node_args=["stages"],
         task_args=["experiment_dir"],
-        resources_path=resources_file,
+        resources_path=resources_path,
+        configure_resources=configure_resources,
     )
     return template
 
@@ -111,7 +111,8 @@ def create_modeling_template(
     tool: "Tool",
     task_template_name: str,
     resources_path: str | Path,
-    parallel: bool = True) -> "TaskTemplate":
+    configure_resources: bool = True,
+) -> "TaskTemplate":
     """Stage modeling template.
 
     Parameters
@@ -133,7 +134,9 @@ def create_modeling_template(
 
     # Tasks can be parallelized by an internal concept called submodels
     node_args = []
-    if parallel:
+
+    # Assumption: only regmod_smooth is not parallel
+    if "regmod_smooth" not in task_template_name:
         node_args.append("submodel_id")
 
     template = _create_task_template(
@@ -142,13 +145,17 @@ def create_modeling_template(
         node_args=node_args,
         task_args=["experiment_dir"],
         resources_path=resources_path,
+        configure_resources=configure_resources,
     )
 
     return template
 
 
 def create_collection_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str | Path,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
     """Stage collection template.
 
@@ -170,12 +177,16 @@ def create_collection_template(
         node_args=["stage_name"],
         task_args=["experiment_dir"],
         resources_path=resources_path,
+        configure_resources=configure_resources,
     )
     return template
 
 
 def create_deletion_template(
-    tool: "Tool", task_template_name: str, resources_path: str | Path
+    tool: "Tool",
+    task_template_name: str,
+    resources_path: str | Path,
+    configure_resources: bool = True,
 ) -> "TaskTemplate":
     """Stage deletion template.
 
@@ -196,8 +207,9 @@ def create_deletion_template(
 
     template = _create_task_template(
         tool=tool,
-        template_name=task_template_name,
+        task_template_name=task_template_name,
         node_args=["result"],
         resources_path=resources_path,
+        configure_resources=configure_resources,
     )
     return template

@@ -106,29 +106,20 @@ weave:
           name: age_group_id
           coordinates: age_mid
           kernel: exponential
-          radius: [0.75, 1, 1.25]
-        year:
-          name: year_id
-          kernel: tricubic
-          exponent: [0.5, 1, 1.5]
+          radius: [0.75]
         location:
           name: location_id
-          coordinates: [super_region_id, location_id]
+          coordinates: [location_id]
           kernel: depth
-          radius: [0.7, 0.8, 0.9]
+          radius: [0.7, 0.8]
     model2:
       groupby: [age_group_id, sex_id]
-      max_batch: 3
+      max_batch: 12
       dimensions:
         year:
           name: year_id
           kernel: tricubic
-          exponent: [0.5, 1, 1.5]
-        location:
-          name: location_id
-          kernel: identity
-          distance: dictionary
-          distance_dict: [/path/to/distance_dict1.parquet, /path/to/distance_dict2.parquet]
+          exponent: [0.5]
 
 # Ensemble settings
 ensemble:
