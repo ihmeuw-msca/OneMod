@@ -22,6 +22,7 @@ class RoverCovselConfiguration(ParametrizedBaseModel):
     max_attempts: int | None = None
     max_batch: int | None = None
     rover: RoverInit
+    t_threshold: float = 1.0
 
     rover_fit: RoverFitArgs = Field(default_factory=RoverFitArgs)
 
