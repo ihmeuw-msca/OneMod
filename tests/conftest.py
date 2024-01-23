@@ -44,10 +44,10 @@ def sample_input_data(temporary_directory):
         config = yaml.safe_load(f)
 
     super_region_id = [1]
-    location_ids = config["location_id"]
-    sex_ids = config["sex_id"]
-    age_group_ids = config["age_group_id"]
-    year_ids = config["year_id"]
+    location_ids = config["id_subsets"]["location_id"]
+    sex_ids = config["id_subsets"]["sex_id"]
+    age_group_ids = config["id_subsets"]["age_group_id"]
+    year_ids = config["id_subsets"]["year_id"]
 
     # TODO: Think of a better data schema.
     #   If we have duplicate values per row, as here, weave collection will break.

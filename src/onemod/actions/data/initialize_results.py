@@ -33,11 +33,15 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
     data = dataif.load(raw_input_path)
 
     # subset data with col_id
-    data = data.query(
-        " & ".join(
-            [f"{key}.isin({value})" for key, value in settings["id_subsets"].items()]
-        )
-    ).reset_index(drop=True)
+    if settings["id_subsets"]:
+        data = data.query(
+            " & ".join(
+                [
+                    f"{key}.isin({value})"
+                    for key, value in settings["id_subsets"].items()
+                ]
+            )
+        ).reset_index(drop=True)
 
     # Saves to $experiment_dir/data/data.parquet
     dataif.dump_data(data)
