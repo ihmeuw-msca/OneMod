@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from onemod.modeling.metric import Metric
-from onemod.utils import as_list, get_data_interface, get_ensemble_input, Subsets
+from onemod.utils import as_list, get_handle, Subsets
 
 
 def get_predictions(
@@ -269,7 +269,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     )
 
     # Load input data and smoother predictions
-    df_input = get_ensemble_input(interface, settings)
+    df_input = dataif.load_data()
     df_full = get_predictions(experiment_dir, "full", settings["col_pred"])
 
     # Get smoother out-of-sample performance by holdout set

@@ -377,17 +377,6 @@ def load_settings(
     return OneModCFG(**settings)
 
 
-def get_rover_covsel_input(config: OneModCFG) -> pd.DataFrame:
-    """Get input data for rover model."""
-    interface = DataInterface(data=config.input_path)
-    df_input = interface.load_data()
-    for dimension in config.col_id:
-        if dimension in config.id_subsets:
-            # Optionally filter data. Defaults to using all values in the dimension
-            df_input = df_input[df_input[dimension].isin(config.id_subsets[dimension])]
-    return df_input
-
-
 def get_smoother_input(
     smoother: str,
     config: OneModCFG,
@@ -399,7 +388,7 @@ def get_smoother_input(
         df_input = dataif.load_regmod_smooth("predictions.parquet")
         df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
-        df_input = get_rover_covsel_input(config)
+        df_input = dataif.load_data()
     columns = _get_smoother_columns(smoother, config).difference(df_input.columns)
     columns = as_list(config.col_id) + list(columns)
     # Deduplicate
@@ -473,15 +462,6 @@ def _get_smoother_columns(smoother: str, config: OneModCFG) -> set:
     return columns
 
 
-def get_ensemble_input(config: OneModCFG) -> pd.DataFrame:
-    """Get input data for ensemble model."""
-    input_cols = set(
-        config.col_id + config.col_holdout + [config.col_obs] + config.ensemble.groupby
-    )
-    rover_input = get_rover_covsel_input(config)
-    return rover_input[list(input_cols)]
-
-
 def get_rover_covsel_submodels(
     experiment_dir: str, save_file: bool = False
 ) -> list[str]:
@@ -491,8 +471,8 @@ def get_rover_covsel_submodels(
     dataif, config = get_handle(experiment_dir)
 
     # Create rover subsets and submodels
-    df_input = get_rover_covsel_input(config)
-    subsets = Subsets("rover_covsel", config, df_input)
+    df_input = dataif.load_data()
+    subsets = Subsets("rover_covsel", config["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
@@ -514,7 +494,6 @@ def get_swimr_submodels(
     for model_id, model_settings in config["swimr"]["models"].items():
         params = SwimrParams(model_id, model_settings)
         param_list.append(params.param_sets)
-        model_settings.inherit()
         subsets = Subsets(model_id, config, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
@@ -545,7 +524,6 @@ def get_weave_submodels(
     for model_id, model_settings in config["weave"]["models"].items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        model_settings.inherit()
         subsets = Subsets(model_id, model_settings, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(

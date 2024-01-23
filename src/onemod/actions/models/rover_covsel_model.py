@@ -3,7 +3,7 @@ import fire
 from loguru import logger
 from modrover.api import Rover
 
-from onemod.utils import get_handle, get_rover_covsel_input, Subsets
+from onemod.utils import get_handle, Subsets
 
 
 def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
@@ -33,17 +33,16 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     dataif, global_config = get_handle(experiment_dir)
 
     rover_config = global_config.rover_covsel
-    rover_config.inherit()
 
     subsets = Subsets(
         "rover_covsel",
-        global_config,
+        global_config["rover_covsel"],
         subsets=dataif.load_rover_covsel("subsets.csv"),
     )
 
     # Load and filter by subset
     subset_id = int(submodel_id[6:])
-    df_input = subsets.filter_subset(get_rover_covsel_input(global_config), subset_id)
+    df_input = subsets.filter_subset(dataif.load_data(), subset_id)
     logger.info(f"Fitting rover for {subset_id=}")
 
     # Create a test column if not existing

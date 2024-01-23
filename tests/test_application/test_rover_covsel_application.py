@@ -2,7 +2,6 @@ from onemod.application.rover_covsel_application import RoverCovselApplication
 
 
 def test_rover_covsel_application(temporary_directory, sample_input_data):
-
     # Check that the correct actions are generated.
     rover_covsel_app = RoverCovselApplication(temporary_directory)
 

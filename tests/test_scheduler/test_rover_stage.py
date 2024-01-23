@@ -2,13 +2,18 @@ from onemod.scheduler.scheduler import Scheduler
 from onemod.scheduler.scheduling_utils import ParentTool, TaskRegistry
 
 
-def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sample_config):
-
+def test_rover_tasks(
+    testing_tool, temporary_directory, sample_input_data, sample_config
+):
     ParentTool.tool = testing_tool
     TaskRegistry.registry.clear()
 
     # Create a set of rover tasks. Check that the correct commands are generated
-    scheduler = Scheduler(experiment_dir=temporary_directory, config=sample_config, stages=['rover_covsel'])
+    scheduler = Scheduler(
+        experiment_dir=temporary_directory,
+        config=sample_config,
+        stages=["rover_covsel"],
+    )
 
     tasks = [
         scheduler.create_task(action) for action in scheduler.parent_action_generator()
@@ -25,7 +30,9 @@ def test_rover_tasks(testing_tool, temporary_directory, sample_input_data, sampl
     assert len(init_task.upstream_tasks) == 0
 
     sample_model_task = tasks[-1]
-    assert sample_model_task.upstream_tasks == {init_task}  # One initialization task as upstream
+    assert sample_model_task.upstream_tasks == {
+        init_task
+    }  # One initialization task as upstream
 
 
 def test_batching():

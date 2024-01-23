@@ -56,6 +56,7 @@ class OneModConfig(ParametrizedBaseModel):
             if child_model:
                 # Store parent args on the child models, can be accessed if necessary
                 child_model.parent_args = global_vals
+                child_model.inherit()
 
     @property
     def extra_fields(self) -> set[str]:

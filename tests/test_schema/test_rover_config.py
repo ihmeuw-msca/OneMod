@@ -2,6 +2,7 @@ from onemod.schema.models.api import RoverCovselConfiguration
 from pydantic import ValidationError
 import pytest
 
+
 def test_rover_config(sample_config):
     """Test rover model validation and configuration."""
 

@@ -150,7 +150,6 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     dataif, global_config = get_handle(experiment_dir)
 
     regmod_smooth_config = global_config.regmod_smooth
-    regmod_smooth_config.inherit()
 
     # Create regmod smooth parameters
     var_groups = regmod_smooth_config.model.var_groups
@@ -199,7 +198,7 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, **regmod_smooth_config.regmod_fit)
+    model.fit(df_train, data_dim_vals=df, **regmod_smooth_config.regmod_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[global_config.col_pred] = model.predict(df)
