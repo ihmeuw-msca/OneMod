@@ -33,11 +33,10 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
     dataif, global_config = get_handle(experiment_dir)
 
     rover_config = global_config.rover_covsel
-    rover_config.inherit()
 
     subsets = Subsets(
         "rover_covsel",
-        global_config,
+        global_config["rover_covsel"],
         subsets=dataif.load_rover_covsel("subsets.csv"),
     )
 

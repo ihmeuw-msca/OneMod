@@ -492,7 +492,7 @@ def get_rover_covsel_submodels(
 
     # Create rover subsets and submodels
     df_input = get_rover_covsel_input(config)
-    subsets = Subsets("rover_covsel", config, df_input)
+    subsets = Subsets("rover_covsel", config["rover_covsel"], df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
@@ -514,7 +514,6 @@ def get_swimr_submodels(
     for model_id, model_settings in config["swimr"]["models"].items():
         params = SwimrParams(model_id, model_settings)
         param_list.append(params.param_sets)
-        model_settings.inherit()
         subsets = Subsets(model_id, config, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
@@ -545,7 +544,6 @@ def get_weave_submodels(
     for model_id, model_settings in config["weave"]["models"].items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        model_settings.inherit()
         subsets = Subsets(model_id, model_settings, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(

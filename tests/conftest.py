@@ -108,10 +108,4 @@ def sample_config_file(temporary_directory, sample_input_data):
 
 @pytest.fixture
 def sample_config(sample_config_file):
-    config = OneModConfig(**sample_config_file)
-    config.rover_covsel.inherit()
-    config.regmod_smooth.inherit()
-    config.weave.inherit()
-    config.swimr.inherit()
-    config.ensemble.inherit()
-    return config
+    return OneModConfig(**sample_config_file)

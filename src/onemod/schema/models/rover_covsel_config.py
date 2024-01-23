@@ -20,6 +20,7 @@ class RoverCovselConfiguration(ParametrizedBaseModel):
     groupby: list[str] = []
     mtype: str = Field("")
     max_attempts: int | None = None
+    max_batch: int | None = None
     rover: RoverInit
 
     rover_fit: RoverFitArgs = Field(default_factory=RoverFitArgs)
