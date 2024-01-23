@@ -31,16 +31,19 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     summaries = summaries.merge(
         subsets.drop("subset_id", axis=1), on="submodel_id", how="left"
     )
+    summaries["abs_t_stat"] = summaries.eval("abs(coef / coef_sd)")
     return summaries
 
 
 def _get_selected_covs(dataif: DataInterface) -> list[str]:
     summaries = _get_rover_covsel_summaries(dataif)
+    t_threshold = dataif.load_settings()["rover_covsel"]["t_threshold"]
+
     selected_covs = (
-        summaries.groupby("cov")["significant"]
+        summaries.groupby("cov")["abs_t_stat"]
         .mean()
         .reset_index()
-        .query("significant >= 0.5")["cov"]
+        .query(f"abs_t_stat >= {t_threshold}")["cov"]
         .tolist()
     )
     logger.info(f"Selected covariates: {selected_covs}")
