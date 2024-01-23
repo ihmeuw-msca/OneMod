@@ -5,7 +5,6 @@ import fire
 from pplkit.data.interface import DataInterface
 
 from onemod.utils import (
-    get_ensemble_input,
     get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
@@ -32,6 +31,13 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
     # More compressible, faster IO, allows for partitioning
     raw_input_path = settings.input_path
     data = dataif.load(raw_input_path)
+
+    # subset data with col_id
+    data = data.query(
+        " & ".join(
+            [f"{key}.isin({value})" for key, value in settings["id_subsets"].items()]
+        )
+    ).reset_index(drop=True)
 
     # Saves to $experiment_dir/data/data.parquet
     dataif.dump_data(data)
@@ -93,7 +99,9 @@ def _initialize_ensemble_results(dataif: DataInterface) -> None:
     settings = dataif.load_settings()
     if "groupby" in settings["ensemble"]:
         Subsets(
-            "ensemble", settings["ensemble"], get_ensemble_input(settings)
+            "ensemble",
+            settings["ensemble"],
+            dataif.load_data(),
         ).subsets.to_csv(dataif.ensemble / "subsets.csv", index=False)
 
 
