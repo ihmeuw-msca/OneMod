@@ -24,9 +24,6 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
 
     dataif, settings = get_handle(experiment_dir)
 
-    for stage in stages:
-        stage_init_map[stage](dataif)
-
     # ETL the input data into parquet format.
     # More compressible, faster IO, allows for partitioning
     raw_input_path = settings.input_path
@@ -45,6 +42,10 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
 
     # Saves to $experiment_dir/data/data.parquet
     dataif.dump_data(data)
+
+    for stage in stages:
+        stage_init_map[stage](dataif)
+
 
 
 def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
