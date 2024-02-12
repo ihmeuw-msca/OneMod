@@ -1,6 +1,7 @@
 """Run regmod smooth model, currently the main goal of this step is to smooth
 the covariate coefficients across age groups.
 """
+
 from functools import partial
 from typing import Callable
 
@@ -58,8 +59,8 @@ def get_residual_computation_function(
 
 def get_residual_se_function(
     model_type: str,
-    col_obs: str,
     col_pred: str,
+    col_weights: str,
 ) -> Callable:
     """
     Calculate the residual standard error for a given row based on the specified model type.
@@ -67,8 +68,8 @@ def get_residual_se_function(
     Parameters:
         row (pd.Series): The row containing the observation and prediction data.
         model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-        col_obs (str): Column name for the observed values.
         col_pred (str): Column name for the predicted values.
+        col_weights (str): Column name for the weights.
 
     Returns:
         float: The calculated residual standard error value.
@@ -79,12 +80,19 @@ def get_residual_se_function(
 
     callable_map = {
         "binomial": partial(
-            lambda row, obs, pred: 1 / np.sqrt(row[col_pred] * (1 - row[col_pred])),
-            obs=col_obs,
+            lambda row, pred, weights: 1
+            / np.sqrt(row[weights] * row[pred] * (1 - row[pred])),
             pred=col_pred,
+            weights=col_weights,
         ),
-        "poisson": partial(lambda row, pred: 1 / np.sqrt(row[col_pred]), pred=col_pred),
-        "gaussian": lambda *args, **kwargs: 1.0,
+        "poisson": partial(
+            lambda row, pred, weights: 1 / np.sqrt(row[weights] * row[pred]),
+            pred=col_pred,
+            weights=col_weights,
+        ),
+        "gaussian": partial(
+            lambda row, weights: 1 / np.sqrt(row[weights]), weights=col_weights
+        ),
     }
 
     try:
@@ -177,7 +185,9 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     for var_group in var_groups:
         cov = var_group["col"]
         if "uprior" not in var_group:
-            var_group["uprior"] = tuple(map(float, coef_bounds.get(cov, [-np.inf, np.inf])))
+            var_group["uprior"] = tuple(
+                map(float, coef_bounds.get(cov, [-np.inf, np.inf]))
+            )
         if "lam" not in var_group:
             var_group["lam"] = lam
 
@@ -210,8 +220,8 @@ def regmod_smooth_model(experiment_dir: str) -> None:
 
     residual_se_func = get_residual_se_function(
         model_type=regmod_smooth_config.mtype,
-        col_obs=global_config.col_obs,
         col_pred=global_config.col_pred,
+        col_weights=regmod_smooth_config.model.weights,
     )
     df["residual"] = df.apply(
         residual_func,
