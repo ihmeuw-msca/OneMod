@@ -30,7 +30,7 @@ dependencies = [
     "pydantic",
     "scipy",
     "regmod == 0.1.1",
-    "weighted-average == 1.1.1",
+    "weighted-average == 1.1.2",
 ]
 
 [project.optional-dependencies]
