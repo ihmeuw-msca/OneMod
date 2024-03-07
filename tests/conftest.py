@@ -85,6 +85,9 @@ def sample_input_data(temporary_directory):
     # Generate an observations column, random from 0 to 1
     data["obs_rate"] = np.random.rand(len(data))
 
+    # Add population for residual uncertainty computation
+    data["population"] = 1.0
+
     # Save to the temp directory
     os.mkdir(temporary_directory / "data")
     data_path = temporary_directory / "data" / "data.parquet"
