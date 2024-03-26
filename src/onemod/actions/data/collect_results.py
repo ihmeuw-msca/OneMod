@@ -204,7 +204,7 @@ def collect_results_weave(experiment_dir: str) -> None:
             data=df_pred,
             index=settings["col_id"],
             columns=["model_id", "param_id"],
-            values=["residual", settings.col_pred],
+            values=["residual", settings.col_pred,"weave_result_variance"],
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")

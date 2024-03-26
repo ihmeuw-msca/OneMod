@@ -99,7 +99,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     df_pred["holdout_id"] = holdout_id
     df_pred = df_pred[
         as_list(settings["col_id"])
-        + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
+        + ["residual","weave_result_variance", settings["col_pred"], "model_id", "param_id", "holdout_id"]
     ]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
