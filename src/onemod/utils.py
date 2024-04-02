@@ -547,7 +547,7 @@ def get_weave_submodels(
 
 
 def get_ensemble_submodels(experiment_dir: str, save_file: bool = False) -> list[str]:
-    """Get rover submodel IDs and save subsets.
+    """Get ensemble submodel IDs and save subsets.
     TODO: merge this to the rover_covsel function to avoid confusion
     """
     dataif, config = get_handle(experiment_dir)
