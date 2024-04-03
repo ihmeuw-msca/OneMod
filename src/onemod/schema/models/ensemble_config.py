@@ -4,6 +4,7 @@ from onemod.schema.models.base import ParametrizedBaseModel
 class EnsembleConfiguration(ParametrizedBaseModel):
     groupby: list[str] = []
     max_attempts: int | None = None
+    max_batch: int = -1
     metric: str = "rmse"
     score: str = "neg_exp"
     top_pct_score: float = 1.0
