@@ -52,7 +52,7 @@ def get_predictions(
     try:
         df_smoother = dataif.load_weave(weave_file)
         # Use concat to add a level to the column multi-index
-        df_smoother = pd.concat([df_smoother[col_pred]], axis=1, keys="weave")
+        df_smoother = pd.concat([df_smoother[col_pred]], axis=1, keys=["weave"])
     except FileNotFoundError:
         # No weave smoother results, initialize empty df
         warnings.warn("No weave predictions found for ensemble stage.")
@@ -60,7 +60,7 @@ def get_predictions(
 
     try:
         swimr_df = dataif.load_swimr(swimr_file)
-        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys="swimr")
+        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys=["swimr"])
         if df_smoother.empty:
             df_smoother = swimr_df
         else:
