@@ -547,12 +547,10 @@ def get_weave_submodels(
 
 
 def get_ensemble_submodels(experiment_dir: str, save_file: bool = False) -> list[str]:
-    """Get ensemble submodel IDs and save subsets.
-    TODO: merge this to the rover_covsel function to avoid confusion
-    """
+    """Get ensemble submodel IDs and save subsets."""
     dataif, config = get_handle(experiment_dir)
 
-    # Create rover subsets and submodels
+    # Create ensemble subsets and submodels
     subsets = Subsets("ensemble", config["ensemble"], dataif.load_data())
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
