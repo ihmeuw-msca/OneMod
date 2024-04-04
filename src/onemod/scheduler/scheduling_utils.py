@@ -111,6 +111,7 @@ def upstream_task_callback(action: Action) -> list["Task"]:
         "rover_covsel_model": ["initialize_results"],
         "regmod_smooth_model": ["collect_results", "initialize_results"],
         "weave_model": ["collect_results", "collect_results", "initialize_results"],
+        "ensemble_model": 3 * ["collect_results"] + ["initialize_results"],
         # Logic for collect results: set all modeling tasks as dependencies.
         # Due to traversal order of the generator, the rover collection task must be created
         # prior to weave modeling tasks being instantiated, therefore this is

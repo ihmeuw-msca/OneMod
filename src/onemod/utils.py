@@ -1,16 +1,17 @@
 """Useful functions."""
+
 from __future__ import annotations
 
+import warnings
 from functools import cache
 from itertools import product
 from pathlib import Path
 from typing import Any, Optional, Union
-import warnings
 
 import numpy as np
 import pandas as pd
-from pplkit.data.interface import DataInterface
 import yaml
+from pplkit.data.interface import DataInterface
 
 from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
 
@@ -117,9 +118,9 @@ class SwimrParams(Parameters):
         )
         param_sets = pd.DataFrame(index=index).reset_index()
         for param in ["similarity_matrix", "similarity_multiplier"]:
-            param_sets.loc[
-                param_sets["use_similarity_matrix"] == 0, param
-            ] = param_sets[param].unique()[0]
+            param_sets.loc[param_sets["use_similarity_matrix"] == 0, param] = (
+                param_sets[param].unique()[0]
+            )
         param_sets.drop_duplicates(inplace=True, ignore_index=True)
         param_cols = list(param_sets.columns)
         param_sets["model_id"] = self.model_id
@@ -542,6 +543,20 @@ def get_weave_submodels(
     if save_files:
         dataif.dump_weave(pd.concat(param_list), "parameters.csv")
         dataif.dump_weave(pd.concat(subset_list), "subsets.csv")
+    return submodels
+
+
+def get_ensemble_submodels(experiment_dir: str, save_file: bool = False) -> list[str]:
+    """Get ensemble submodel IDs and save subsets."""
+    dataif, config = get_handle(experiment_dir)
+
+    # Create ensemble subsets and submodels
+    subsets = Subsets("ensemble", config["ensemble"], dataif.load_data())
+    submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
+
+    # Save file
+    if save_file:
+        dataif.dump_ensemble(subsets.subsets, "subsets.csv")
     return submodels
 
 

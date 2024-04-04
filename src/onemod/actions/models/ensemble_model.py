@@ -1,15 +1,16 @@
 """Run ensemble model."""
+
+import warnings
 from functools import reduce
 from pathlib import Path
 from typing import Any, Optional
-import warnings
 
 import fire
 import numpy as np
 import pandas as pd
 
 from onemod.modeling.metric import Metric
-from onemod.utils import as_list, get_handle, Subsets
+from onemod.utils import Subsets, as_list, get_handle
 
 
 def get_predictions(
@@ -51,7 +52,7 @@ def get_predictions(
     try:
         df_smoother = dataif.load_weave(weave_file)
         # Use concat to add a level to the column multi-index
-        df_smoother = pd.concat([df_smoother[col_pred]], axis=1, keys="weave")
+        df_smoother = pd.concat([df_smoother[col_pred]], axis=1, keys=["weave"])
     except FileNotFoundError:
         # No weave smoother results, initialize empty df
         warnings.warn("No weave predictions found for ensemble stage.")
@@ -59,7 +60,7 @@ def get_predictions(
 
     try:
         swimr_df = dataif.load_swimr(swimr_file)
-        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys="swimr")
+        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys=["swimr"])
         if df_smoother.empty:
             df_smoother = swimr_df
         else:
@@ -82,7 +83,7 @@ def get_performance(
     row: pd.Series,
     df_holdout: pd.DataFrame,
     subsets: Optional[Subsets],
-    metric: str,
+    metric_name: str,
     col_obs: str,
     **kwargs,
 ) -> float:
@@ -96,7 +97,7 @@ def get_performance(
         Dataframe containing the holdout data.
     subsets : Optional[Subsets]
         Subsets object containing the subset data.
-    metric : str
+    metric_name : str
         Performance metric to be used (e.g., "rmse").
     col_obs : str
         Column name for the observed values.
@@ -112,15 +113,12 @@ def get_performance(
         If an invalid performance metric is provided.
 
     """
-    df_holdout = df_holdout[
-        (df_holdout[row["holdout_id"]] == 1)
-        & (df_holdout["param_id"] == row["param_id"])
-    ]
+    df_holdout = df_holdout[df_holdout[row["holdout_id"]] == 1]
     if subsets is not None:
         df_holdout = subsets.filter_subset(df_holdout, row["subset_id"])
 
-    metric = Metric(metric)
-    return metric(df_holdout, col_obs, row.model_id, **kwargs)
+    metric = Metric(metric_name)
+    return metric(df_holdout, col_obs, tuple(row[:3]), **kwargs)
 
 
 def get_weights(
@@ -253,62 +251,54 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
 
     Parameters
     ----------
-    experiment_dir : Union[Path, str]
+    experiment_dir : str
         Path to the experiment directory.
 
     """
-    experiment_dir = Path(experiment_dir)
-    dataif, _ = get_handle(experiment_dir)
-    settings = dataif.load_settings()
-    subsets_df = dataif.load_ensemble("subsets.csv")
+    dataif, global_config = get_handle(experiment_dir)
+
+    ensemble_config = global_config.ensemble
 
     subsets = Subsets(
         "ensemble",
-        settings["ensemble"],
-        subsets=subsets_df,
+        ensemble_config,
+        subsets=dataif.load_ensemble("subsets.csv"),
     )
 
     # Load input data and smoother predictions
     df_input = dataif.load_data()
-    df_full = get_predictions(experiment_dir, "full", settings["col_pred"])
+    df_full = get_predictions(experiment_dir, "full", global_config.col_pred)
 
     # Get smoother out-of-sample performance by holdout set
     df_performance = pd.merge(
         left=df_full.columns.to_frame(index=False),
-        right=pd.Series(as_list(settings["col_holdout"]), name="holdout_id"),
+        right=pd.Series(as_list(global_config.col_holdout), name="holdout_id"),
         how="cross",
     )
-    if "groupby" in settings["ensemble"]:
-        df_performance = df_performance.merge(
-            right=pd.Series(subsets.get_subset_ids(), name="subset_id"),
-            how="cross",
-        )
+    df_performance = df_performance.merge(
+        right=pd.Series(subsets.get_subset_ids(), name="subset_id"),
+        how="cross",
+    )
     df_list = []
-    id_cols = settings["col_id"]
+    id_cols = as_list(global_config.col_id)
 
     for holdout_id, df in df_performance.groupby("holdout_id"):
-        predictions = get_predictions(experiment_dir, holdout_id, settings["col_pred"])
-        # Iteratively merge on prediction columns
-        df_holdout = reduce(
-            lambda df, smoother: pd.merge(
-                left=df,
-                right=predictions.loc[:, smoother].stack().reset_index(),
-                how="right",
-                on=id_cols + ["param_id"],
-            ),
-            predictions.columns.get_level_values("smoother_id"),
-            pd.DataFrame(columns=id_cols + ["param_id"]),
+        predictions = get_predictions(
+            experiment_dir, holdout_id, global_config.col_pred
         )
-        df_holdout = pd.merge(df_holdout, df_input, on=id_cols)
-
-        # Select holdout ids, and calc rmse by subset
-        df[settings["ensemble"]["metric"]] = df.apply(
+        predictions.columns = predictions.columns.to_flat_index()
+        df_holdout = pd.merge(
+            left=df_input[id_cols + [global_config.col_obs, holdout_id]],
+            right=predictions,
+            on=id_cols,
+        )
+        df[ensemble_config.metric] = df.apply(
             lambda row: get_performance(
                 row,
                 df_holdout,
                 subsets,
-                settings["ensemble"]["metric"],
-                settings["col_obs"],
+                ensemble_config.metric,
+                global_config.col_obs,
                 **kwargs,
             ),
             axis=1,
@@ -316,66 +306,48 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
         df_list.append(df)
 
     # Get smoother weights
-    columns = ["smoother_id", "model_id", "param_id"]
-    if "groupby" in settings["ensemble"]:
-        columns += ["subset_id"]
-
-    metric = settings["ensemble"]["metric"]
-    full_df = pd.concat(df_list)
+    columns = ["smoother_id", "model_id", "param_id", "subset_id"]
+    metric_name = ensemble_config.metric
+    groups = pd.concat(df_list).groupby(columns)
     mean = (
-        full_df.groupby(columns)
+        groups
         .mean(numeric_only=True)
-        .rename({metric: f"{metric}_mean"}, axis=1)
+        .rename({metric_name: f"{metric_name}_mean"}, axis=1)
     )
     std = (
-        full_df.groupby(columns)
+        groups
         .std(numeric_only=True)
-        .rename({metric: f"{metric}_std"}, axis=1)
+        .rename({metric_name: f"{metric_name}_std"}, axis=1)
     )
     df_performance = pd.concat([mean, std], axis=1)
-    if settings["ensemble"]["score"] == "avg":
-        df_performance["weight"] = get_weights(
-            df_performance,
-            subsets,
-            settings["ensemble"]["metric"],
-            settings["ensemble"]["score"],
-        )
-    else:
-        df_performance["weight"] = get_weights(
-            df_performance,
-            subsets,
-            metric,
-            settings["ensemble"]["score"],
-            settings["ensemble"]["top_pct_score"],
-            settings["ensemble"]["top_pct_model"],
-        )
-    dataif.dump_ensemble(df_performance.T, "performance.csv")
+    df_performance["weight"] = get_weights(
+        df_performance,
+        subsets,
+        ensemble_config.metric,
+        ensemble_config.score,
+        ensemble_config.top_pct_score,
+        ensemble_config.top_pct_model,
+    )
+    dataif.dump_ensemble(df_performance, "performance.csv")
 
     # Get ensemble predictions
-    if "groupby" in settings["ensemble"]:
-        df_list = []
-        for subset_id in subsets.get_subset_ids():
-            indices = [
-                tuple(index)
-                for index in subsets.filter_subset(df_input, subset_id)[
-                    as_list(settings["col_id"])
-                ].values
-            ]
-            df_subset = df_full.loc[indices]
-            df_list.append(
-                (df_subset * df_performance["weight"][:, :, :, subset_id])
-                .T.sum()
-                .reset_index()
-                .rename(columns={0: settings["col_pred"]})
-            )
-        df_pred = pd.concat(df_list)
-    else:
-        df_pred = (
-            (df_full * df_performance.loc["weight"])
+    df_list = []
+    for subset_id in subsets.get_subset_ids():
+        indices = [
+            tuple(index)
+            for index in subsets.filter_subset(df_input, subset_id)[
+                as_list(global_config.col_id)
+            ].values
+        ]
+        df_subset = df_full.loc[indices]
+        df_list.append(
+            (df_subset * df_performance["weight"][:, :, :, subset_id])
             .T.sum()
             .reset_index()
-            .rename(columns={0: settings["col_pred"]})
+            .rename(columns={0: global_config.col_pred})
         )
+    df_pred = pd.concat(df_list)
+
     dataif.dump_ensemble(df_pred, "predictions.parquet")
 
 

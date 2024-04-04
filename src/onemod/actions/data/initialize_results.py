@@ -1,15 +1,16 @@
 """Initialize onemod stage results."""
+
 import shutil
 
 import fire
 from pplkit.data.interface import DataInterface
 
 from onemod.utils import (
+    get_ensemble_submodels,
     get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    Subsets,
 )
 
 
@@ -45,7 +46,6 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
 
     for stage in stages:
         stage_init_map[stage](dataif)
-
 
 
 def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
@@ -101,13 +101,7 @@ def _initialize_ensemble_results(dataif: DataInterface) -> None:
     dataif.ensemble.mkdir(parents=True)
 
     # Create ensemble subsets
-    settings = dataif.load_settings()
-    if "groupby" in settings["ensemble"]:
-        Subsets(
-            "ensemble",
-            settings["ensemble"],
-            dataif.load_data(),
-        ).subsets.to_csv(dataif.ensemble / "subsets.csv", index=False)
+    get_ensemble_submodels(dataif.experiment, save_file=True)
 
 
 def main() -> None:
