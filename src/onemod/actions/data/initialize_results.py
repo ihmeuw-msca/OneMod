@@ -101,7 +101,7 @@ def _initialize_ensemble_results(dataif: DataInterface) -> None:
     dataif.ensemble.mkdir(parents=True)
 
     # Create ensemble subsets
-    get_ensemble_submodels(dataif.experiment, save_files=True)
+    get_ensemble_submodels(dataif.experiment, save_file=True)
 
 
 def main() -> None:
