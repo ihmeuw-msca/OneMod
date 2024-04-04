@@ -134,9 +134,7 @@ def create_modeling_template(
 
     # Tasks can be parallelized by an internal concept called submodels
     node_args = []
-
-    # Assumption: only regmod_smooth is not parallel
-    if "regmod_smooth" not in task_template_name:
+    if task_template_name in ["rover_covsel", "weave", "swimr"]:
         node_args.append("submodel_id")
 
     template = _create_task_template(
