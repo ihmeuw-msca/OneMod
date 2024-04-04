@@ -113,7 +113,7 @@ def get_performance(
         If an invalid performance metric is provided.
 
     """
-    df_holdout = df_holdout[df_holdout[row["holdout_id"] == 1]]
+    df_holdout = df_holdout[df_holdout[row["holdout_id"]] == 1]
     if subsets is not None:
         df_holdout = subsets.filter_subset(df_holdout, row["subset_id"])
 
