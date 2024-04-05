@@ -207,9 +207,18 @@ def collect_results_weave(experiment_dir: str) -> None:
             values=["residual", settings.col_pred,"weave_result_variance"],
         )
         if holdout_id == "full":
+            if global_config['mtype'] == 'binomial':
+                regmod_preds = dataif.load_regmod_smooth("predictions.parquet").set_index(df_pred.index.names)
+                df_pred['regmod_logit_SE'] = regmod_preds["regmod_logit_SE"]
+                df_pred['obs'] = regmod_preds["obs"]
+                df_pred['sample_size'] = regmod_preds["sample_size"]
+
             dataif.dump_weave(df_pred, "predictions.parquet")
+
         else:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
+    
+    regmod_preds
 
 
 def collect_results(stage_name: str, experiment_dir: str) -> None:
