@@ -5,12 +5,10 @@ from __future__ import annotations
 import warnings
 from functools import cache
 from itertools import product
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
-import yaml
 from pplkit.data.interface import DataInterface
 
 from onemod.schema.models.onemod_config import OneModConfig
@@ -357,25 +355,6 @@ def add_holdouts(
             how="left",
         )
     return df
-
-
-def load_settings(
-    settings_file: str | Path, raise_on_error: bool = True, as_model: bool = True
-) -> OneModConfig | dict:
-    """Load settings file."""
-    try:
-        with open(settings_file, "r") as f:
-            settings = yaml.full_load(f)
-    except FileNotFoundError:
-        if not raise_on_error:
-            warnings.warn("Settings file not found; using a null dictionary")
-            settings = {}
-        else:
-            raise
-    if not as_model:
-        # Return a raw dict, like for task template resources
-        return settings
-    return OneModConfig(**settings)
 
 
 def get_smoother_input(
