@@ -1,6 +1,6 @@
 from onemod.schema.models.base import ParametrizedBaseModel
 
 
-class SwimrConfiguration(ParametrizedBaseModel):
+class SwimrConfig(ParametrizedBaseModel):
     # TODO
     pass

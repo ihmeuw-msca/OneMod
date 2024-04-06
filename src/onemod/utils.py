@@ -13,7 +13,7 @@ import pandas as pd
 import yaml
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
+from onemod.schema.models.onemod_config import OneModConfig
 
 
 class Parameters:
@@ -40,7 +40,7 @@ class Parameters:
     def __init__(
         self,
         model_id: str,
-        config: OneModCFG | None = None,
+        config: OneModConfig | None = None,
         param_sets: pd.DataFrame | None = None,
     ) -> None:
         """Create Parameters object.
@@ -66,7 +66,7 @@ class Parameters:
         else:
             self.param_sets = param_sets[param_sets["model_id"] == model_id]
 
-    def _create_param_sets(self, config: OneModCFG) -> pd.DataFrame:
+    def _create_param_sets(self, config: OneModConfig) -> pd.DataFrame:
         """Create parameter set data frame.
 
         Parameter set data frame contains parameter IDs and their
@@ -109,7 +109,7 @@ class SwimrParams(Parameters):
         "intercept_theta",
     )
 
-    def _create_param_sets(self, config: OneModCFG) -> pd.DataFrame:
+    def _create_param_sets(self, config: OneModConfig) -> pd.DataFrame:
         """Create parameter set data frame."""
         swimr_config = config["swimr"]
         index = pd.MultiIndex.from_product(
@@ -133,7 +133,7 @@ class WeaveParams(Parameters):
 
     params: tuple[str, ...] = ("radius", "exponent", "distance_dict")
 
-    def _create_param_sets(self, config: OneModCFG) -> pd.DataFrame:
+    def _create_param_sets(self, config: OneModConfig) -> pd.DataFrame:
         """Create parameter set data frame."""
         weave_config = config["weave"]["models"][self.model_id]
         dimensions = weave_config["dimensions"]
@@ -175,7 +175,7 @@ class Subsets:
     def __init__(
         self,
         model_id: str,
-        config: OneModCFG,
+        config: OneModConfig,
         data: pd.DataFrame | None = None,
         subsets: pd.DataFrame | None = None,
     ) -> None:
@@ -361,7 +361,7 @@ def add_holdouts(
 
 def load_settings(
     settings_file: str | Path, raise_on_error: bool = True, as_model: bool = True
-) -> OneModCFG | dict:
+) -> OneModConfig | dict:
     """Load settings file."""
     try:
         with open(settings_file, "r") as f:
@@ -375,12 +375,12 @@ def load_settings(
     if not as_model:
         # Return a raw dict, like for task template resources
         return settings
-    return OneModCFG(**settings)
+    return OneModConfig(**settings)
 
 
 def get_smoother_input(
     smoother: str,
-    config: OneModCFG,
+    config: OneModConfig,
     dataif: DataInterface,
     from_rover: bool | None = False,
 ) -> pd.DataFrame:
@@ -416,7 +416,7 @@ def get_smoother_input(
 
 
 # TODO: This need to be adjusted for the new change
-def _get_smoother_columns(smoother: str, config: OneModCFG) -> set:
+def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
     """Get column names needed for smoother model.
 
     Notes
@@ -573,7 +573,7 @@ def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
 
 
 @cache
-def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
+def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModConfig]:
     """Get data interface for loading and dumping files. This object encoded the
     folder structure of the experiments, including where the configuration files
     data and results are stored.
@@ -620,7 +620,7 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
     dataif.add_dir("ensemble", dataif.results / "ensemble")
 
     # create confiuration file
-    config = OneModCFG(**dataif.load_settings())
+    config = OneModConfig(**dataif.load_settings())
 
     # For pre-workflow use of data, add raw data path
     dataif.add_dir("raw_data", config.input_path)

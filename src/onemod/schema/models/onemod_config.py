@@ -2,11 +2,11 @@ from typing import Any
 
 from modrover.globals import model_type_dict
 from onemod.schema.models.base import ParametrizedBaseModel
-from onemod.schema.models.ensemble_config import EnsembleConfiguration
-from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfiguration
-from onemod.schema.models.rover_covsel_config import RoverCovselConfiguration
-from onemod.schema.models.swimr_config import SwimrConfiguration
-from onemod.schema.models.weave_config import WeaveConfiguration
+from onemod.schema.models.ensemble_config import EnsembleConfig
+from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfig
+from onemod.schema.models.rover_covsel_config import RoverCovselConfig
+from onemod.schema.models.swimr_config import SwimrConfig
+from onemod.schema.models.weave_config import WeaveConfig
 from pydantic import field_validator
 
 
@@ -22,11 +22,11 @@ class OneModConfig(ParametrizedBaseModel):
     id_subsets: dict[str, list[Any]] = {}
     mtype: str
 
-    rover_covsel: RoverCovselConfiguration | None = None
-    regmod_smooth: RegmodSmoothConfiguration | None = None
-    weave: WeaveConfiguration | None = None
-    swimr: SwimrConfiguration | None = None
-    ensemble: EnsembleConfiguration | None = None
+    rover_covsel: RoverCovselConfig | None = None
+    regmod_smooth: RegmodSmoothConfig | None = None
+    weave: WeaveConfig | None = None
+    swimr: SwimrConfig | None = None
+    ensemble: EnsembleConfig | None = None
 
     def __init__(self, **data):
         super().__init__(**data)

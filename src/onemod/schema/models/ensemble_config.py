@@ -1,7 +1,7 @@
 from onemod.schema.models.base import ParametrizedBaseModel
 
 
-class EnsembleConfiguration(ParametrizedBaseModel):
+class EnsembleConfig(ParametrizedBaseModel):
     groupby: list[str] = []
     max_attempts: int | None = None
     max_batch: int = -1
