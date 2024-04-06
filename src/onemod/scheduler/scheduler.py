@@ -11,7 +11,7 @@ from onemod.scheduler.scheduling_utils import (
     TaskTemplateFactory,
     upstream_task_callback,
 )
-from onemod.schema.models.api import OneModConfig
+from onemod.schema import OneModConfig
 
 if TYPE_CHECKING:
     from jobmon.client.task import Task

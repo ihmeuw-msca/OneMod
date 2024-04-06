@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.models.onemod_config import OneModConfig
+from onemod.schema import OneModConfig
 
 
 class Parameters:
