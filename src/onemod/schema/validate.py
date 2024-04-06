@@ -1,8 +1,7 @@
 import pandas as pd
-from pydantic import BaseModel, ValidationError
-
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import get_handle
+from pydantic import BaseModel, ValidationError
 
 
 def validate_config(
@@ -15,10 +14,9 @@ def validate_config(
     Either a configuration or a directory to load that configuration from must be provided.
     """
 
-    dataif, settings = get_handle(directory)
-
-    if not config:
-        config = settings
+    dataif, config_other = get_handle(directory)
+    if config is None:
+        config = config_other
 
     # Validate against the dataset
     dataset = dataif.load(config.input_path)
