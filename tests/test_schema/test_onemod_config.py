@@ -1,9 +1,6 @@
 import pytest
-from onemod.schema.models.api import (
-    OneModConfig,
-    RegmodSmoothConfig,
-    RoverCovselConfig,
-)
+from onemod.schema import OneModConfig
+from onemod.schema.stages import RegmodSmoothConfig, RoverCovselConfig
 from pydantic import ValidationError
 
 

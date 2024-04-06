@@ -1,5 +1,5 @@
 import pytest
-from onemod.schema.models.api import RoverCovselConfig
+from onemod.schema.stages.api import RoverCovselConfig
 from pydantic import ValidationError
 
 

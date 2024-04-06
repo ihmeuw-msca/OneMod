@@ -8,7 +8,7 @@ import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.models.onemod_config import OneModConfig
+from onemod.schema import OneModConfig
 from onemod.utils import (
     get_handle,
     get_rover_covsel_submodels,

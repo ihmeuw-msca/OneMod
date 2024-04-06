@@ -1,16 +1,14 @@
 import itertools
+import os
+import shutil
 from pathlib import Path
 
-from jobmon.client.api import Tool
 import numpy as np
 import pandas as pd
 import pytest
-import os
-import shutil
 import yaml
-
-
-from onemod.schema.models.api import OneModConfig
+from jobmon.client.api import Tool
+from onemod.schema import OneModConfig
 
 
 @pytest.fixture(scope="session")
