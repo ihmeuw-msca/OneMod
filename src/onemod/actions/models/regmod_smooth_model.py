@@ -22,17 +22,25 @@ def get_residual_computation_function(
     """
     Calculate the residual for a given row based on the specified model type.
 
-    Parameters:
-        row (pd.Series): The row containing the observation and prediction data.
-        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-        col_obs (str): Column name for the observed values.
-        col_pred (str): Column name for the predicted values.
+    Parameters
+    ----------
+    model_type
+        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+    col_obs
+        Column name for the observed values.
+    col_pred
+        Column name for the predicted values.
 
-    Returns:
-        float: The calculated residual value.
+    Returns
+    -------
+    float
+        The calculated residual value.
 
-    Raises:
-        ValueError: If the specified model_type is unsupported.
+    Raises
+    ------
+    ValueError
+        If the specified model_type is unsupported.
+
     """
 
     # TODO: can these be vectorized functions?
@@ -65,17 +73,25 @@ def get_residual_se_function(
     """
     Calculate the residual standard error for a given row based on the specified model type.
 
-    Parameters:
-        row (pd.Series): The row containing the observation and prediction data.
-        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-        col_pred (str): Column name for the predicted values.
-        col_weights (str): Column name for the weights.
+    Parameters
+    ----------
+    model_type
+        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+    col_pred
+        Column name for the predicted values.
+    col_weights
+        Column name for the weights.
 
-    Returns:
-        float: The calculated residual standard error value.
+    Returns
+    -------
+    float
+        The calculated residual standard error value.
 
-    Raises:
-        ValueError: If the specified model_type is unsupported.
+    Raises
+    ------
+    ValueError
+        If the specified model_type is unsupported.
+
     """
 
     callable_map = {
@@ -105,12 +121,16 @@ def get_coef(model: Model) -> pd.DataFrame:
     """
     Get coefficient information from the specified model.
 
-    Parameters:
-        model (Model): The statistical model object containing coefficient data.
+    Parameters
+    ----------
+    model
+        The statistical model object containing coefficient data.
 
-    Returns:
-        pd.DataFrame: A DataFrame containing coefficient, dimension,
-            and dimension value information.
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing coefficient, dimension, and dimension value information.
+
     """
     df_coef = []
     for var_group in model.var_groups:
