@@ -376,13 +376,11 @@ def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
     return columns
 
 
-def get_rover_covsel_submodels(
-    experiment_dir: str, save_file: bool = False
-) -> list[str]:
+def get_rover_covsel_submodels(directory: str, save_file: bool = False) -> list[str]:
     """Get rover submodel IDs and save subsets.
     TODO: merge this to the rover_covsel function to avoid confusion
     """
-    dataif, config = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
     # Create rover subsets and submodels
     df_input = dataif.load_data()
@@ -395,11 +393,9 @@ def get_rover_covsel_submodels(
     return submodels
 
 
-def get_weave_submodels(
-    experiment_dir: str, save_files: bool | None = False
-) -> list[str]:
+def get_weave_submodels(directory: str, save_files: bool | None = False) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
-    dataif, config = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
@@ -429,9 +425,9 @@ def get_weave_submodels(
     return submodels
 
 
-def get_ensemble_submodels(experiment_dir: str, save_file: bool = False) -> list[str]:
+def get_ensemble_submodels(directory: str, save_file: bool = False) -> list[str]:
     """Get ensemble submodel IDs and save subsets."""
-    dataif, config = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
     # Create ensemble subsets and submodels
     subsets = Subsets("ensemble", config["ensemble"], dataif.load_data())
@@ -456,21 +452,21 @@ def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
 
 
 @cache
-def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModConfig]:
+def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
     """Get data interface for loading and dumping files. This object encoded the
     folder structure of the experiments, including where the configuration files
     data and results are stored.
 
     Example
     -------
-    >>> experiment_dir = "/path/to/experiment"
-    >>> dataif, config = get_handle(experiment_dir)
+    >>> directory = "/path/to/experiment"
+    >>> dataif, config = get_handle(directory)
     >>> df = dataif.load_data()
     >>> df_results = ...
     >>> dataif.dump_rover_covsel(df_results, "results.parquet")
 
     """
-    dataif = DataInterface(experiment=experiment_dir)
+    dataif = DataInterface(experiment=directory)
     dataif.add_dir("config", dataif.experiment / "config")
     dataif.add_dir("results", dataif.experiment / "results")
 

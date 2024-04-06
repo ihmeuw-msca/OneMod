@@ -10,7 +10,7 @@ def test_rover_tasks(
 
     # Create a set of rover tasks. Check that the correct commands are generated
     scheduler = Scheduler(
-        experiment_dir=temporary_directory, config=sample_config, stages=["weave"]
+        directory=temporary_directory, config=sample_config, stages=["weave"]
     )
 
     tasks = [

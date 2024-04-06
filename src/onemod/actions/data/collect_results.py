@@ -124,7 +124,7 @@ def _plot_regmod_smooth_results(
     return fig
 
 
-def collect_results_rover_covsel(experiment_dir: str) -> None:
+def collect_results_rover_covsel(directory: str) -> None:
     """Collect rover covariate selection results. Process all the significant
     covariates for each sub group. If a covaraite is significant across more
     than half of the subgroups if will be selected.
@@ -132,7 +132,7 @@ def collect_results_rover_covsel(experiment_dir: str) -> None:
     This step will save ``selected_covs.yaml`` with a list of selected
     covariates in the rover results folder.
     """
-    dataif, _ = get_handle(experiment_dir)
+    dataif, _ = get_handle(directory)
 
     selected_covs = _get_selected_covs(dataif)
     dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
@@ -146,20 +146,20 @@ def collect_results_rover_covsel(experiment_dir: str) -> None:
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
-def collect_results_regmod_smooth(experiment_dir: str) -> None:
+def collect_results_regmod_smooth(directory: str) -> None:
     """This step is used for creating diagnostics."""
-    dataif, _ = get_handle(experiment_dir)
+    dataif, _ = get_handle(directory)
     summaries = _get_rover_covsel_summaries(dataif)
     fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
 
-def collect_results_weave(experiment_dir: str) -> None:
+def collect_results_weave(directory: str) -> None:
     """Collect weave submodel results."""
-    dataif, config = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
-    submodel_ids = get_weave_submodels(experiment_dir)
+    submodel_ids = get_weave_submodels(directory)
     for holdout_id in config.col_holdout + ["full"]:
         df_pred = pd.concat(
             [
@@ -183,7 +183,7 @@ def collect_results_weave(experiment_dir: str) -> None:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
 
-def collect_results(stage_name: str, experiment_dir: str) -> None:
+def collect_results(stage_name: str, directory: str) -> None:
     callable_map = {
         "rover_covsel": collect_results_rover_covsel,
         "regmod_smooth": collect_results_regmod_smooth,
@@ -194,7 +194,7 @@ def collect_results(stage_name: str, experiment_dir: str) -> None:
     except KeyError:
         raise ValueError(f"Stage name {stage_name} is not valid.")
 
-    func(experiment_dir)
+    func(directory)
 
 
 def main() -> None:

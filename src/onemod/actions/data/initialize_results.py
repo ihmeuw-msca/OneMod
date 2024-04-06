@@ -13,7 +13,7 @@ from onemod.utils import (
 )
 
 
-def initialize_results(experiment_dir: str, stages: list[str]) -> None:
+def initialize_results(directory: str, stages: list[str]) -> None:
     stage_init_map: dict[str, callable] = {
         "rover_covsel": _initialize_rover_covsel_results,
         "regmod_smooth": _initialize_regmod_smooth_results,
@@ -21,7 +21,7 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
         "ensemble": _initialize_ensemble_results,
     }
 
-    dataif, config = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
     # ETL the input data into parquet format.
     # More compressible, faster IO, allows for partitioning
@@ -36,7 +36,7 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
             )
         ).reset_index(drop=True)
 
-    # Saves to $experiment_dir/data/data.parquet
+    # Saves to $directory/data/data.parquet
     dataif.dump_data(data)
 
     for stage in stages:

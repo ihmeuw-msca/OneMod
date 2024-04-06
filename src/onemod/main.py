@@ -56,7 +56,7 @@ def run_pipeline(
     # Create the scheduler and run it
     scheduler = Scheduler(
         stages=stages,
-        experiment_dir=directory,
+        directory=directory,
         config=config,
         resources_path=resources_file,
         default_cluster_name=cluster_name,
