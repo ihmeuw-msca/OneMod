@@ -4,9 +4,9 @@ Assumes sex_id in groupby setting (i.e., each model has a unique sex_id)
 because sex_id is not included in SWiMR output.
 
 """
-from pathlib import Path
+
 import subprocess
-from typing import Union
+from pathlib import Path
 
 import fire
 import numpy as np
@@ -14,12 +14,12 @@ import pandas as pd
 import yaml
 
 from onemod.utils import (
-    as_list,
-    get_prediction,
-    get_smoother_input,
     Subsets,
     SwimrParams,
-    get_data_interface,
+    as_list,
+    get_handle,
+    get_prediction,
+    get_smoother_input,
 )
 
 
@@ -34,7 +34,7 @@ def quoted_presenter(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
 yaml.add_representer(Quoted, quoted_presenter)
 
 
-def get_str(id_list: Union[list, np.ndarray]) -> str:
+def get_str(id_list: list | np.ndarray) -> str:
     """Format list of IDs as a str.
 
     Output settings files from pyyaml did not include quotes around

@@ -1,12 +1,12 @@
 """Delete onemod stage results."""
-from pathlib import Path
+
 import shutil
-from typing import Union
+from pathlib import Path
 
 import fire
 
 
-def delete_result(result: Union[Path, str]) -> None:
+def delete_result(result: str | Path) -> None:
     """Delete result directory or file."""
     result = Path(result)
     if result.is_dir():
