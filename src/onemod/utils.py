@@ -6,7 +6,7 @@ import warnings
 from functools import cache
 from itertools import product
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -91,7 +91,7 @@ class Parameters:
         """Get list of parameter IDs."""
         return self.param_sets["param_id"].tolist()
 
-    def get_param(self, param: str, param_id: Union[int, str]) -> Any:
+    def get_param(self, param: str, param_id: int | str) -> Any:
         """Get submodel parameter."""
         params = self.param_sets[self.param_sets["param_id"] == param_id]
         return params[param].item()
@@ -272,7 +272,7 @@ class Subsets:
         return data
 
 
-def as_list(values: Union[Any, list]) -> list:
+def as_list(values: Any | list) -> list:
     """Cast values as list if not already."""
     if isinstance(values, (list, tuple, set, dict, np.ndarray)):
         return list(values)
@@ -283,8 +283,8 @@ def add_holdouts(
     df: pd.DataFrame,
     n_holdout: int,
     p_holdout: float,
-    column: Optional[str] = None,
-    seed: Optional[int] = None,
+    column: str | None = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """Add holdout sets to data frame.
 
@@ -360,7 +360,7 @@ def add_holdouts(
 
 
 def load_settings(
-    settings_file: Union[Path, str], raise_on_error: bool = True, as_model: bool = True
+    settings_file: str | Path, raise_on_error: bool = True, as_model: bool = True
 ) -> OneModCFG | dict:
     """Load settings file."""
     try:
@@ -382,7 +382,7 @@ def get_smoother_input(
     smoother: str,
     config: OneModCFG,
     dataif: DataInterface,
-    from_rover: Optional[bool] = False,
+    from_rover: bool | None = False,
 ) -> pd.DataFrame:
     """Get input data for smoother model."""
     if from_rover:
@@ -483,7 +483,7 @@ def get_rover_covsel_submodels(
 
 
 def get_swimr_submodels(
-    experiment_dir: str, save_files: Optional[bool] = False
+    experiment_dir: str, save_files: bool | None = False
 ) -> list[str]:
     """Get swimr submodel IDs; save parameters and subsets."""
     dataif, config = get_handle(experiment_dir)
@@ -513,7 +513,7 @@ def get_swimr_submodels(
 
 
 def get_weave_submodels(
-    experiment_dir: str, save_files: Optional[bool] = False
+    experiment_dir: str, save_files: bool | None = False
 ) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
     dataif, config = get_handle(experiment_dir)

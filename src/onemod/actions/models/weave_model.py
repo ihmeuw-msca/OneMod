@@ -1,17 +1,18 @@
 """Run weave model."""
+
 import fire
-from loguru import logger
 import numpy as np
+from loguru import logger
 from weave.dimension import Dimension
 from weave.smoother import Smoother
 
 from onemod.utils import (
+    Subsets,
+    WeaveParams,
     as_list,
     get_handle,
     get_prediction,
     get_smoother_input,
-    Subsets,
-    WeaveParams,
 )
 
 # weave kernel parameters
@@ -26,10 +27,13 @@ kernel_params = {
 def weave_model(experiment_dir: str, submodel_id: str) -> None:
     """Run weave model by submodel ID.
 
-    Args:
-        experiment_dir (Union[Path, str]): The path to the directory containing the
-            experiment data.
-        submodel_id (str): The ID of the submodel to be processed.
+    Parameters
+    ----------
+    experiment_dir
+        The path to the directory containing the experiment data.
+    submodel_id (str)
+        The ID of the submodel to be processed.
+
     """
     dataif, settings = get_handle(experiment_dir)
 

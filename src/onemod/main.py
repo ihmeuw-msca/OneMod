@@ -1,8 +1,8 @@
 """Run onemod pipeline."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
 
 import fire
 from jobmon.client.status_commands import resume_workflow_from_id
@@ -14,7 +14,7 @@ from onemod.utils import as_list, get_handle
 
 def run_pipeline(
     directory: str,
-    stages: Optional[Union[list[str], str]] = None,
+    stages: str | list[str] | None = None,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
     run_local: bool = False,
