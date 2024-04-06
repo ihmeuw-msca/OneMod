@@ -18,7 +18,7 @@ class WeaveModel(ParametrizedBaseModel):
         super().inherit(keys=["groupby", "max_batch"])
 
 
-class WeaveConfiguration(ParametrizedBaseModel):
+class WeaveConfig(ParametrizedBaseModel):
     models: dict[str, WeaveModel] | None = None
 
     def inherit(self) -> None:
