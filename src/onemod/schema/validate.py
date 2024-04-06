@@ -1,7 +1,7 @@
 import pandas as pd
 from pydantic import BaseModel, ValidationError
 
-from onemod.schema.models.onemod_config import OneModConfig
+from onemod.schema.onemod import OneModConfig
 from onemod.utils import get_handle
 
 

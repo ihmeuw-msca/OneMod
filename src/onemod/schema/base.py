@@ -3,7 +3,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 
-class ParametrizedBaseModel(BaseModel):
+class Config(BaseModel):
     """An extension of BaseModel that supports some dict-like dunder methods.
 
     This model has a base config to allow extra arguments and to validate attribute assignment

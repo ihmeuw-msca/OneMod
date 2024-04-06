@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from onemod.schema.models.base import ParametrizedBaseModel
+from onemod.schema.base import Config
 
 
 class RoverInit(BaseModel):
@@ -16,7 +16,7 @@ class RoverFitArgs(BaseModel):
     coef_bounds: tuple[float, float] | None = None
 
 
-class RoverCovselConfig(ParametrizedBaseModel):
+class RoverCovselConfig(Config):
     groupby: list[str] = []
     mtype: str = Field("")
     max_attempts: int | None = None
