@@ -1,10 +1,11 @@
 """Collect onemod stage submodel results."""
+
 from warnings import warn
 
 import fire
-from loguru import logger
 import matplotlib.pyplot as plt
 import pandas as pd
+from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from onemod.schema.models.onemod_config import OneModConfig
@@ -58,11 +59,11 @@ def _plot_rover_covsel_results(
     """
 
     logger.info("Plotting coefficient magnitudes by age.")
-    settings = OneModConfig(**dataif.load_settings())
+    config = OneModConfig(**dataif.load_settings())
 
     # add age_mid to summary
     df_age = dataif.load(
-        settings.input_path, columns=["age_group_id", "age_mid"]
+        config.input_path, columns=["age_group_id", "age_mid"]
     ).drop_duplicates()
 
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
@@ -157,10 +158,10 @@ def collect_results_regmod_smooth(experiment_dir: str) -> None:
 
 def collect_results_swimr(experiment_dir: str) -> None:
     """Collect swimr submodel results."""
-    dataif, settings = get_handle(experiment_dir)
+    dataif, config = get_handle(experiment_dir)
 
     submodel_ids = get_swimr_submodels(experiment_dir)
-    for holdout_id in settings.col_holdout + ["full"]:
+    for holdout_id in config.col_holdout + ["full"]:
         df_list = []
         for submodel_id in [
             submodel_id
@@ -174,9 +175,9 @@ def collect_results_swimr(experiment_dir: str) -> None:
             )
         df_pred = pd.pivot(
             data=pd.concat(df_list, ignore_index=True),
-            index=settings.col_id,
+            index=config.col_id,
             columns=["model_id", "param_id"],
-            values=["residual", settings.col_pred],
+            values=["residual", config.col_pred],
         )
         if holdout_id == "full":
             dataif.dump_swimr(df_pred, "predictions.parquet")
@@ -186,10 +187,10 @@ def collect_results_swimr(experiment_dir: str) -> None:
 
 def collect_results_weave(experiment_dir: str) -> None:
     """Collect weave submodel results."""
-    dataif, settings = get_handle(experiment_dir)
+    dataif, config = get_handle(experiment_dir)
 
     submodel_ids = get_weave_submodels(experiment_dir)
-    for holdout_id in settings.col_holdout + ["full"]:
+    for holdout_id in config.col_holdout + ["full"]:
         df_pred = pd.concat(
             [
                 dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
@@ -202,9 +203,9 @@ def collect_results_weave(experiment_dir: str) -> None:
         ).drop_duplicates()
         df_pred = pd.pivot(
             data=df_pred,
-            index=settings["col_id"],
+            index=config.col_id,
             columns=["model_id", "param_id"],
-            values=["residual", settings.col_pred],
+            values=["residual", config.col_pred],
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")

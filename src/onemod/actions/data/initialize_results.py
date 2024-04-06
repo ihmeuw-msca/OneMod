@@ -23,21 +23,18 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
         "ensemble": _initialize_ensemble_results,
     }
 
-    dataif, settings = get_handle(experiment_dir)
+    dataif, config = get_handle(experiment_dir)
 
     # ETL the input data into parquet format.
     # More compressible, faster IO, allows for partitioning
-    raw_input_path = settings.input_path
+    raw_input_path = config.input_path
     data = dataif.load(raw_input_path)
 
     # subset data with col_id
-    if settings["id_subsets"]:
+    if config.id_subsets:
         data = data.query(
             " & ".join(
-                [
-                    f"{key}.isin({value})"
-                    for key, value in settings["id_subsets"].items()
-                ]
+                [f"{key}.isin({value})" for key, value in config.id_subsets.items()]
             )
         ).reset_index(drop=True)
 
