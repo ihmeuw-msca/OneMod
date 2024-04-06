@@ -1,7 +1,6 @@
 """Run ensemble model."""
 
 import warnings
-from functools import reduce
 from pathlib import Path
 from typing import Any, Optional
 
@@ -43,10 +42,8 @@ def get_predictions(
 
     dataif, _ = get_handle(experiment_dir)
     if holdout_id == "full":
-        swimr_file = "predictions.parquet"
         weave_file = "predictions.parquet"
     else:
-        swimr_file = f"predictions_{holdout_id}.parquet"
         weave_file = f"predictions_{holdout_id}.parquet"
 
     try:
@@ -57,18 +54,6 @@ def get_predictions(
         # No weave smoother results, initialize empty df
         warnings.warn("No weave predictions found for ensemble stage.")
         df_smoother = pd.DataFrame()
-
-    try:
-        swimr_df = dataif.load_swimr(swimr_file)
-        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys=["swimr"])
-        if df_smoother.empty:
-            df_smoother = swimr_df
-        else:
-            df_smoother = pd.merge(
-                df_smoother, swimr_df, left_index=True, right_index=True
-            )
-    except FileNotFoundError:
-        warnings.warn("No swimr predictions found for ensemble stage.")
 
     if df_smoother.empty:
         raise FileNotFoundError("Smoother results do not exist")
@@ -309,15 +294,11 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     columns = ["smoother_id", "model_id", "param_id", "subset_id"]
     metric_name = ensemble_config.metric
     groups = pd.concat(df_list).groupby(columns)
-    mean = (
-        groups
-        .mean(numeric_only=True)
-        .rename({metric_name: f"{metric_name}_mean"}, axis=1)
+    mean = groups.mean(numeric_only=True).rename(
+        {metric_name: f"{metric_name}_mean"}, axis=1
     )
-    std = (
-        groups
-        .std(numeric_only=True)
-        .rename({metric_name: f"{metric_name}_std"}, axis=1)
+    std = groups.std(numeric_only=True).rename(
+        {metric_name: f"{metric_name}_std"}, axis=1
     )
     df_performance = pd.concat([mean, std], axis=1)
     df_performance["weight"] = get_weights(

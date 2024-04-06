@@ -9,7 +9,6 @@ from onemod.utils import (
     get_ensemble_submodels,
     get_handle,
     get_rover_covsel_submodels,
-    get_swimr_submodels,
     get_weave_submodels,
 )
 
@@ -18,7 +17,6 @@ def initialize_results(experiment_dir: str, stages: list[str]) -> None:
     stage_init_map: dict[str, callable] = {
         "rover_covsel": _initialize_rover_covsel_results,
         "regmod_smooth": _initialize_regmod_smooth_results,
-        "swimr": _initialize_swimr_results,
         "weave": _initialize_weave_results,
         "ensemble": _initialize_ensemble_results,
     }
@@ -63,18 +61,6 @@ def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
     if dataif.regmod_smooth.exists():
         shutil.rmtree(dataif.regmod_smooth)
     dataif.regmod_smooth.mkdir(parents=True)
-
-
-def _initialize_swimr_results(dataif: DataInterface) -> None:
-    """Initialize swimr results."""
-    # Initialize directories
-    if dataif.swimr.exists():
-        shutil.rmtree(dataif.swimr)
-    for sub_dir in ["data", "submodels"]:
-        (dataif.swimr / sub_dir).mkdir(parents=True)
-
-    # Create swimr parameters and subsets
-    get_swimr_submodels(dataif.experiment, save_files=True)
 
 
 def _initialize_weave_results(dataif: DataInterface) -> None:

@@ -17,10 +17,6 @@ task_template_resources:
     slurm:
       memory: 10G
       runtime: 20m
-  swimr_modeling_template:
-    slurm:
-      memory: 10G
-      runtime: 10m
   weave_modeling_template:
     slurm:
       memory: 10G
