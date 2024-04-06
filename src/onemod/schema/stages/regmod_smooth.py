@@ -1,9 +1,9 @@
 from pydantic import Field
 
-from onemod.schema.models.base import ParametrizedBaseModel
+from onemod.schema.base import Config
 
 
-class RegmodModelInit(ParametrizedBaseModel):
+class RegmodModelInit(Config):
     dims: list[dict] = []
     var_groups: list[dict] = []
     weights: str
@@ -12,7 +12,7 @@ class RegmodModelInit(ParametrizedBaseModel):
     lam: float = 0.0
 
 
-class RegmodSmoothConfig(ParametrizedBaseModel):
+class RegmodSmoothConfig(Config):
     max_attempts: int = 3
     groupby: list[str] = []
     regmod_fit: dict = {}
