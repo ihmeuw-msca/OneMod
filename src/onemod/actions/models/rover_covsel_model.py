@@ -1,20 +1,21 @@
 """Run rover covariate selection model."""
+
 import fire
 from loguru import logger
 from modrover.api import Rover
 
-from onemod.utils import get_handle, Subsets
+from onemod.utils import Subsets, get_handle
 
 
-def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
+def rover_covsel_model(directory: str, submodel_id: str) -> None:
     """Run rover covariate selection model by submodel ID.
 
     Parameters
     ----------
-    experiment_dir
+    directory
         Parent folder where the experiment is run.
-        - ``experiment_dir / config / settings.yaml`` contains rover modeling settings
-        - ``experiment_dir / results / rover_covsel`` stores all rover results
+        - ``directory / config / settings.yaml`` contains rover modeling settings
+        - ``directory / results / rover_covsel`` stores all rover results
     submodel_id
         Example of ``submodel_id`` can be written as ``'subset0'``. In this case
         the numbered id ``0`` will be used to lookup the corresponding subsets
@@ -30,7 +31,7 @@ def rover_covsel_model(experiment_dir: str, submodel_id: str) -> None:
         Summary covariate coefficients from the ensemble model.
 
     """
-    dataif, global_config = get_handle(experiment_dir)
+    dataif, global_config = get_handle(directory)
 
     rover_config = global_config.rover_covsel
 

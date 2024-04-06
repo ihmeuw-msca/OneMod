@@ -5,8 +5,8 @@ from onemod.actions.models.rover_covsel_model import rover_covsel_model
 
 
 def test_rover_model(temporary_directory):
-    initialize_results(experiment_dir=temporary_directory, stages=["rover_covsel"])
-    rover_covsel_model(experiment_dir=temporary_directory, submodel_id="subset0")
+    initialize_results(directory=temporary_directory, stages=["rover_covsel"])
+    rover_covsel_model(directory=temporary_directory, submodel_id="subset0")
 
     expected_data_path = Path(
         temporary_directory

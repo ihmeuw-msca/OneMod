@@ -24,18 +24,18 @@ kernel_params = {
 }
 
 
-def weave_model(experiment_dir: str, submodel_id: str) -> None:
+def weave_model(directory: str, submodel_id: str) -> None:
     """Run weave model by submodel ID.
 
     Parameters
     ----------
-    experiment_dir
+    directory
         The path to the directory containing the experiment data.
     submodel_id (str)
         The ID of the submodel to be processed.
 
     """
-    dataif, config = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]

@@ -22,7 +22,7 @@ def _create_task_template(
     and keyword args passed to the individual tasks must match what is set on the task template
 
     Ex. invalid command template:
-        {entrypoint} --experiment_dir {directory_name}
+        {entrypoint} --directory {directory_name}
 
     Parameters
     ----------
@@ -99,7 +99,7 @@ def create_initialization_template(
         tool=tool,
         task_template_name=task_template_name,
         node_args=["stages"],
-        task_args=["experiment_dir"],
+        task_args=["directory"],
         resources_path=resources_path,
         configure_resources=configure_resources,
     )
@@ -140,7 +140,7 @@ def create_modeling_template(
         tool=tool,
         task_template_name=task_template_name,
         node_args=node_args,
-        task_args=["experiment_dir"],
+        task_args=["directory"],
         resources_path=resources_path,
         configure_resources=configure_resources,
     )
@@ -172,7 +172,7 @@ def create_collection_template(
         tool=tool,
         task_template_name=task_template_name,
         node_args=["stage_name"],
-        task_args=["experiment_dir"],
+        task_args=["directory"],
         resources_path=resources_path,
         configure_resources=configure_resources,
     )

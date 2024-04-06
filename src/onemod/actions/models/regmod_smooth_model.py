@@ -6,9 +6,9 @@ from functools import partial
 from typing import Callable
 
 import fire
-from loguru import logger
 import numpy as np
 import pandas as pd
+from loguru import logger
 from regmodsm.model import Model
 
 from onemod.utils import get_handle
@@ -135,16 +135,16 @@ def get_coef(model: Model) -> pd.DataFrame:
     return df_coef
 
 
-def regmod_smooth_model(experiment_dir: str) -> None:
+def regmod_smooth_model(directory: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
 
     Parameters
     ----------
-    experiment_dir
+    directory
         Parent folder where the experiment is run.
-        - ``experiment_dir / config / settings.yaml`` contains rover modeling settings
-        - ``experiment_dir / results / rover`` stores all rover results
+        - ``directory / config / settings.yaml`` contains rover modeling settings
+        - ``directory / results / rover`` stores all rover results
 
     Outputs
     -------
@@ -155,7 +155,7 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     predictions.parquet
         Predictions with residual information.
     """
-    dataif, global_config = get_handle(experiment_dir)
+    dataif, global_config = get_handle(directory)
 
     regmod_smooth_config = global_config.regmod_smooth
 
