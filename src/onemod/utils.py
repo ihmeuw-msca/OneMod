@@ -95,37 +95,6 @@ class Parameters:
         return params[param].item()
 
 
-class SwimrParams(Parameters):
-    """Helper class for creating swimr parameter sets."""
-
-    params: tuple[str, ...] = (
-        "n_internal_knots_year",
-        "similarity_matrix",
-        "similarity_multiplier",
-        "use_similarity_matrix",
-        "theta",
-        "intercept_theta",
-    )
-
-    def _create_param_sets(self, config: OneModConfig) -> pd.DataFrame:
-        """Create parameter set data frame."""
-        swimr_config = config["swimr"]
-        index = pd.MultiIndex.from_product(
-            iterables=[as_list(swimr_config[param]) for param in self.params],
-            names=self.params,
-        )
-        param_sets = pd.DataFrame(index=index).reset_index()
-        for param in ["similarity_matrix", "similarity_multiplier"]:
-            param_sets.loc[param_sets["use_similarity_matrix"] == 0, param] = (
-                param_sets[param].unique()[0]
-            )
-        param_sets.drop_duplicates(inplace=True, ignore_index=True)
-        param_cols = list(param_sets.columns)
-        param_sets["model_id"] = self.model_id
-        param_sets["param_id"] = param_sets.index
-        return param_sets[["model_id", "param_id"] + param_cols]
-
-
 class WeaveParams(Parameters):
     """Helper class for creating weave parameter sets."""
 
@@ -387,53 +356,18 @@ def get_smoother_input(
     if smoother == "weave":  # weave models can't have NaN data
         df_input.loc[df_input[config.col_obs].isna(), "residual_value"] = 1
         df_input.loc[df_input[config.col_obs].isna(), "residual_se"] = 1
-    if smoother == "swimr":
-        df_input["submodel_id"] = df_input["location_id"].astype(str)
-        df_input["row_id"] = np.arange(len(df_input))
-        df_input["imputed"] = 0
     return df_input
 
 
 # TODO: This need to be adjusted for the new change
 def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
-    """Get column names needed for smoother model.
-
-    Notes
-    -----
-    In swimr package function standardize_dataset() from module functions_dataprep.R, it
-    seems that the columns super_region_id and region_id will only be retained if both
-    are present in the input data. While we may not need both columns for the cascade
-    model, we need to make sure both are present if one is needed (e.g., if either
-    column is included in the groupby or cascade_level settings):
-
-    if (keep_region_variables & all(c("super_region_id", "region_id") %in% names(df_full)) ) {
-      keep_variables <- c("super_region_id", "region_id")
-      analytic_vars <- c(analytic_vars, keep_variables)
-      new_varnames <- c(new_varnames, keep_variables)
-    }
-
-    """
+    """Get column names needed for smoother model."""
     columns = set(as_list(config.col_holdout) + as_list(config.col_test))
-    if smoother not in ("swimr", "weave"):
+    if smoother != "weave":
         raise ValueError(f"Invalid smoother name: {smoother}")
     for model_settings in config[smoother]["models"].values():
         columns.update(as_list(model_settings["groupby"]))
-        if smoother == "swimr" and model_settings["model_type"] == "cascade":
-            if "cascade_levels" in model_settings:
-                columns.update(as_list(model_settings["cascade_levels"].split(",")))
-                for key, value in {
-                    "locid": "location_id",
-                    "sex__tmp": "sex_id",
-                    "age__tmp": "age_group_id",
-                }.items():
-                    if key in columns:
-                        columns.remove(key)
-                        columns.add(value)
-                if np.any([col in columns for col in ["super_region_id", "region_id"]]):
-                    columns.update(["super_region_id", "region_id"])
-            else:
-                columns.add("location_id")  # swimr default cascade_levels is locid
-        elif smoother == "weave":
+        if smoother == "weave":
             for dimension_settings in model_settings["dimensions"].values():
                 for key in ["name", "coordinates"]:
                     key_val = dimension_settings.get(key)
@@ -458,36 +392,6 @@ def get_rover_covsel_submodels(
     # Save file
     if save_file:
         dataif.dump_rover_covsel(subsets.subsets, "subsets.csv")
-    return submodels
-
-
-def get_swimr_submodels(
-    experiment_dir: str, save_files: bool | None = False
-) -> list[str]:
-    """Get swimr submodel IDs; save parameters and subsets."""
-    dataif, config = get_handle(experiment_dir)
-
-    # Create swimr parameters, subsets, and submodels
-    param_list, subset_list, submodels = [], [], []
-
-    df_input = get_smoother_input("swimr", dataif=dataif, config=config)
-    for model_id, model_settings in config["swimr"]["models"].items():
-        params = SwimrParams(model_id, model_settings)
-        param_list.append(params.param_sets)
-        subsets = Subsets(model_id, config, df_input)
-        subset_list.append(subsets.subsets)
-        for param_id, subset_id, holdout_id in product(
-            params.get_param_ids(),
-            subsets.get_subset_ids(),
-            as_list(config.col_holdout) + ["full"],
-        ):
-            submodel = f"{model_id}_param{param_id}_subset{subset_id}_{holdout_id}"
-            submodels.append(submodel)
-
-    # Save files
-    if save_files:
-        dataif.dump_swimr(pd.concat(param_list), "parameters.csv")
-        dataif.dump_swimr(pd.concat(subset_list), "subsets.csv")
     return submodels
 
 
@@ -595,7 +499,6 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModConfig]:
     dataif.add_dir("rover_covsel", dataif.results / "rover_covsel")
     dataif.add_dir("regmod_smooth", dataif.results / "regmod_smooth")
     dataif.add_dir("weave", dataif.results / "weave")
-    dataif.add_dir("swimr", dataif.results / "swimr")
     dataif.add_dir("ensemble", dataif.results / "ensemble")
 
     # create confiuration file

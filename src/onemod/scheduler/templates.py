@@ -1,10 +1,9 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
-    from jobmon.client.task_template import TaskTemplate
     from jobmon.client.api import Tool
+    from jobmon.client.task_template import TaskTemplate
 
 
 def _create_task_template(
@@ -83,7 +82,7 @@ def _create_task_template(
         task_args=task_args,
         op_args=op_args,
         default_cluster_name=tool.default_cluster_name,
-        default_resource_scales={'memory': .5, 'runtime': .5},
+        default_resource_scales={"memory": 0.5, "runtime": 0.5},
         yaml_file=resources_path if configure_resources else None,
     )
 

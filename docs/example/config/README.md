@@ -69,7 +69,7 @@ The optional [resources](resources.yml) file contains OneMod stage cluster resou
 
 Parameters:
 - `tool_resources` (required) - Default resources for all pipeline tasks.
-- `initialization_template`, `rover_submodel_initialization_template`, `swimr_submodel_initialization_template` (optional) - Resources for stage initialization tasks (i.e., deleting previous results and initializing result directories).
-- `rover_modeling_template`, `swimr_modeling_template`, `weave_modeling_template`, `ensemble_modeling_template` (optional) - Resources for stage modeling tasks.
+- `initialization_template`, `rover_submodel_initialization_template`, (optional) - Resources for stage initialization tasks (i.e., deleting previous results and initializing result directories).
+- `rover_modeling_template`, `weave_modeling_template`, `ensemble_modeling_template` (optional) - Resources for stage modeling tasks.
 - `collection_template` (optional) - Resources for stage collection tasks (i.e., collecting submodel results).
-- `deletion_template`, `rover_submodel_deletion_template`, `swimr_submodel_deletion_template` (optional) - Resources for stage deletion tasks (i.e., deleting intermediate results if `save_intermediate` is False).
+- `deletion_template`, `rover_submodel_deletion_template`, (optional) - Resources for stage deletion tasks (i.e., deleting intermediate results if `save_intermediate` is False).

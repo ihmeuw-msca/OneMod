@@ -22,11 +22,6 @@ task_template_resources:
       queue: null.q
     dummy:
       queue: null.q
-  swimr_model:
-    sequential:
-      queue: null.q
-    dummy:
-      queue: null.q
   weave_model:
     sequential:
       queue: null.q

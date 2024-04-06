@@ -12,7 +12,6 @@ from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
     get_handle,
     get_rover_covsel_submodels,
-    get_swimr_submodels,
     get_weave_submodels,
 )
 
@@ -156,35 +155,6 @@ def collect_results_regmod_smooth(experiment_dir: str) -> None:
         fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
 
 
-def collect_results_swimr(experiment_dir: str) -> None:
-    """Collect swimr submodel results."""
-    dataif, config = get_handle(experiment_dir)
-
-    submodel_ids = get_swimr_submodels(experiment_dir)
-    for holdout_id in config.col_holdout + ["full"]:
-        df_list = []
-        for submodel_id in [
-            submodel_id
-            for submodel_id in submodel_ids
-            if submodel_id.split("_")[3] == holdout_id
-        ]:
-            df_list.append(
-                dataif.load_swimr(
-                    f"submodels/{submodel_id}/predictions.parquet"
-                ).astype({"param_id": str})
-            )
-        df_pred = pd.pivot(
-            data=pd.concat(df_list, ignore_index=True),
-            index=config.col_id,
-            columns=["model_id", "param_id"],
-            values=["residual", config.col_pred],
-        )
-        if holdout_id == "full":
-            dataif.dump_swimr(df_pred, "predictions.parquet")
-        else:
-            dataif.dump_swimr(df_pred, f"predictions_{holdout_id}.parquet")
-
-
 def collect_results_weave(experiment_dir: str) -> None:
     """Collect weave submodel results."""
     dataif, config = get_handle(experiment_dir)
@@ -217,7 +187,6 @@ def collect_results(stage_name: str, experiment_dir: str) -> None:
     callable_map = {
         "rover_covsel": collect_results_rover_covsel,
         "regmod_smooth": collect_results_regmod_smooth,
-        "swimr": collect_results_swimr,
         "weave": collect_results_weave,
     }
     try:
