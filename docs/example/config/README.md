@@ -6,11 +6,11 @@ The [settings](settings.yml) file contains the OneMod stage model settings.
 
 Parameters:
 - `input_path` (str) - Path to input data. Must be a parquet file.
-- `col_id` (str or list of str) - Column name(s) for point IDs. For example, age_group_id, location_id, sex_id, and/or year_id, etc. To run a OneMod pipeline on a subset of the input data, include a list or lists of the ID values to use in the model.
-- `col_obs` (str) - Column name for input observations.
-- `col_pred` (str) - Column name for OneMod predictions.
-- `col_holdout` (str or list or str) - Column name(s) for OneMod stage out-of-sample performance. Values can be either 0 (training data), 1 (holdout data), or NaN (missing input observations).
-- `col_test` (str) - Column name for OneMod pipeline out-of-sample performance. Values can be either 0 (training data), 1 (testing data), or NaN (missing input observations).
+- `ids` (str or list of str) - Column name(s) for point IDs. For example, age_group_id, location_id, sex_id, and/or year_id, etc. To run a OneMod pipeline on a subset of the input data, include a list or lists of the ID values to use in the model.
+- `obs` (str) - Column name for input observations.
+- `pred` (str) - Column name for OneMod predictions.
+- `holdouts` (str or list or str) - Column name(s) for OneMod stage out-of-sample performance. Values can be either 0 (training data), 1 (holdout data), or NaN (missing input observations).
+- `test` (str) - Column name for OneMod pipeline out-of-sample performance. Values can be either 0 (training data), 1 (testing data), or NaN (missing input observations).
 
 ### OneMod stage settings
 
@@ -24,7 +24,7 @@ See the [ModRover documentation](https://ihmeuw-msca.github.io/modrover/) for a 
 
 Optional parameters:
 - `col_offset` (str, optional) - Column name for model offset values. If not specified, default offset value is 0.
-- `col_weights` (str, optional) - Column name for model weight values. If not specified, default weight value is 1.
+- `weights` (str, optional) - Column name for model weight values. If not specified, default weight value is 1.
 
 **WeAve settings**
 
