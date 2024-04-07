@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from onemod.modeling.metric import Metric
-from onemod.utils import Subsets, as_list, get_handle
+from onemod.utils import Subsets, get_handle
 
 
 def get_predictions(directory: str, holdout_id: Any, pred: str) -> pd.DataFrame:
@@ -255,7 +255,7 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     # Get smoother out-of-sample performance by holdout set
     df_performance = pd.merge(
         left=df_full.columns.to_frame(index=False),
-        right=pd.Series(as_list(config.holdouts), name="holdout_id"),
+        right=pd.Series(config.holdouts, name="holdout_id"),
         how="cross",
     )
     df_performance = df_performance.merge(
@@ -263,15 +263,14 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
         how="cross",
     )
     df_list = []
-    id_cols = as_list(config.ids)
 
     for holdout_id, df in df_performance.groupby("holdout_id"):
         predictions = get_predictions(directory, holdout_id, config.pred)
         predictions.columns = predictions.columns.to_flat_index()
         df_holdout = pd.merge(
-            left=df_input[id_cols + [config.obs, holdout_id]],
+            left=df_input[config.ids + [config.obs, holdout_id]],
             right=predictions,
-            on=id_cols,
+            on=config.ids,
         )
         df[ensemble_config.metric] = df.apply(
             lambda row: get_performance(
@@ -312,9 +311,7 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     for subset_id in subsets.get_subset_ids():
         indices = [
             tuple(index)
-            for index in subsets.filter_subset(df_input, subset_id)[
-                as_list(config.ids)
-            ].values
+            for index in subsets.filter_subset(df_input, subset_id)[config.ids].values
         ]
         df_subset = df_full.loc[indices]
         df_list.append(

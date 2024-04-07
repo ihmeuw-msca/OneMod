@@ -9,7 +9,6 @@ from weave.smoother import Smoother
 from onemod.utils import (
     Subsets,
     WeaveParams,
-    as_list,
     get_handle,
     get_prediction,
     get_smoother_input,
@@ -63,7 +62,7 @@ def weave_model(directory: str, submodel_id: str) -> None:
     if holdout_id != "full":
         df_input["fit"] = df_input["fit"] & (df_input[holdout_id] == 0)
     df_input = df_input[df_input["fit"] | df_input["predict"]].drop(
-        columns=as_list(config.test) + as_list(config.holdouts)
+        columns=[config.test] + config.holdouts
     )
 
     # Create smoother objects
@@ -106,8 +105,7 @@ def weave_model(directory: str, submodel_id: str) -> None:
     df_pred["param_id"] = param_id
     df_pred["holdout_id"] = holdout_id
     df_pred = df_pred[
-        as_list(config.ids)
-        + ["residual", config.pred, "model_id", "param_id", "holdout_id"]
+        config.ids + ["residual", config.pred, "model_id", "param_id", "holdout_id"]
     ]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
