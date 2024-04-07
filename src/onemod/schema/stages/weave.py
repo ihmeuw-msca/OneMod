@@ -1,25 +1,21 @@
-from onemod.schema.base import Config
+from onemod.schema.base import Config, StageConfig
 
 
-class WeaveDimension(Config):
+class DimensionInit(Config):
+    """Weave dimension creation configuration."""
+
     name: str
-    kernel: str
+    coordinates: str | list[str] | None = None
+    kernel: str = "identity"
+    distance: str | None = None
     radius: float | list[float] = [0.0]
     exponent: float | list[float] = [0.0]
-    coordinates: str | list[str] | None = None
+    version: str | None = None
+    distance_dict: str | list[str] | None = None
 
 
-class WeaveModel(Config):
+class WeaveConfig(StageConfig):
+    """Configuration for the WeAve stage."""
+
     max_batch: int = 5000
-    groupby: list[str] = []
-    dimensions: dict[str, WeaveDimension] = {}
-
-    def inherit(self) -> None:
-        super().inherit(keys=["groupby", "max_batch"])
-
-
-class WeaveConfig(Config):
-    models: dict[str, WeaveModel] | None = None
-
-    def inherit(self) -> None:
-        super().inherit(keys=["max_attempts", "model_type", "max_batch"])
+    dimensions: dict[str, DimensionInit] = {}

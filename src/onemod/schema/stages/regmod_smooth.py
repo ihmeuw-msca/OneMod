@@ -1,24 +1,22 @@
-from pydantic import Field
-
-from onemod.schema.base import Config
+from onemod.schema.base import Config, StageConfig
 
 
-class RegmodModelInit(Config):
+class ModelInit(Config):
+    """Arguments for initialiation of a regmodsm model."""
+
     dims: list[dict] = []
     var_groups: list[dict] = []
     weights: str
 
-    coef_bounds: dict[str, list[float]] = {}
+    coef_bounds: dict[str, tuple[float, float]] = {}
     lam: float = 0.0
 
 
-class RegmodSmoothConfig(Config):
-    max_attempts: int = 3
-    groupby: list[str] = []
-    regmod_fit: dict = {}
-    mtype: str = Field("", alias="model_type")
+class RegmodSmoothConfig(StageConfig):
+    """RegmodSmooth stage configuration class. Will need the `mtype` form the
+    upper level to initialize a regmodsm model.
 
-    model: RegmodModelInit
+    """
 
-    def inherit(self) -> None:
-        super().inherit(keys=["mtype", "groupby", "max_attempts", "max_batch"])
+    model: ModelInit
+    model_fit: dict = {}

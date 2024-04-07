@@ -31,13 +31,12 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
         Summary covariate coefficients from the ensemble model.
 
     """
-    dataif, global_config = get_handle(directory)
-
-    rover_config = global_config.rover_covsel
+    dataif, config = get_handle(directory)
+    stage_config = config.rover_covsel
 
     subsets = Subsets(
         "rover_covsel",
-        global_config["rover_covsel"],
+        config["rover_covsel"],
         subsets=dataif.load_rover_covsel("subsets.csv"),
     )
 
@@ -49,35 +48,33 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     # Create a test column if not existing
     # TODO: Either move this to some data prep stage or make it persistent, needed in
     # other models
-    test_col = global_config.col_test
+    test_col = config.col_test
     if test_col not in df_input:
         logger.warning(
             "Test column not found, setting null observations as test rows."
         )
-        df_input[test_col] = (
-            df_input[global_config["col_obs"]].isna().astype("int")
-        )
+        df_input[test_col] = df_input[config.col_obs].isna().astype("int")
 
-    df_train = df_input[df_input[global_config.col_test] == 0]
+    df_train = df_input[df_input[config.col_test] == 0]
 
     dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
-    rover_init_args = rover_config.rover
+    rover_init = stage_config.rover
     rover = Rover(
-        obs=global_config.col_obs,
-        model_type=global_config.mtype,
-        cov_fixed=rover_init_args.cov_fixed,
-        cov_exploring=rover_init_args.cov_exploring,
-        weights=rover_init_args.weights,
-        holdouts=global_config.col_holdout,
+        obs=config.col_obs,
+        model_type=config.mtype,
+        cov_fixed=rover_init.cov_fixed,
+        cov_exploring=rover_init.cov_exploring,
+        weights=config.weights,
+        holdouts=config.col_holdout,
     )
 
     # Fit rover model
     logger.info(
-        f"Fitting the rover model with options {rover_config.rover_fit}"
+        f"Fitting the rover model with options {stage_config.rover_fit}"
     )
-    rover.fit(data=df_train, **rover_config.rover_fit.model_dump())
+    rover.fit(data=df_train, **stage_config.rover_fit.model_dump())
 
     # Save results
     logger.info("Saving rover results after fitting")
