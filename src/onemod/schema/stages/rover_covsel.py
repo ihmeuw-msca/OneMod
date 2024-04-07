@@ -1,30 +1,25 @@
-from pydantic import BaseModel, Field
-
-from onemod.schema.base import Config
+from onemod.schema.base import Config, StageConfig
 
 
-class RoverInit(BaseModel):
-    cov_fixed: list[str] = []
+class RoverInit(Config):
+    """Rover class initialization arguments."""
+
+    cov_fixed: list[str] = ["intercept"]
     cov_exploring: list[str] = []
-    weights: str
 
 
-class RoverFitArgs(BaseModel):
+class RoverFit(Config):
+    """Rover fit function arguments."""
+
     strategies: list[str] = ["forward"]
     top_pct_score: float = 0.1
     top_pct_learner: float = 1.0
-    coef_bounds: tuple[float, float] | None = None
+    coef_bounds: dict[str, tuple[float, float]] = {}
 
 
-class RoverCovselConfig(Config):
-    groupby: list[str] = []
-    mtype: str = Field("")
-    max_attempts: int | None = None
-    max_batch: int | None = None
-    rover: RoverInit
+class RoverCovselConfig(StageConfig):
+    """Rover covariate selection stage configurations."""
+
+    rover: RoverInit = RoverInit()
+    rover_fit: RoverFit = RoverFit()
     t_threshold: float = 1.0
-
-    rover_fit: RoverFitArgs = Field(default_factory=RoverFitArgs)
-
-    def inherit(self) -> None:
-        super().inherit(keys=["mtype", "groupby", "max_attempts", "max_batch"])
