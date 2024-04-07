@@ -1,7 +1,4 @@
-from typing import Any
-
-from modrover.globals import model_type_dict
-from pydantic import field_validator
+from typing import Any, Literal
 
 from onemod.schema.base import Config
 from onemod.schema.stages import (
@@ -16,7 +13,7 @@ class OneModConfig(Config):
     input_path: str
     ids: list[str]
     obs: str
-    mtype: str
+    mtype: Literal["binomial", "gaussian", "poisson"]
     weights: str
     pred: str
     holdouts: list[str]
@@ -27,11 +24,3 @@ class OneModConfig(Config):
     regmod_smooth: RegmodSmoothConfig | None = None
     weave: dict[str, WeaveConfig] | None = None
     ensemble: EnsembleConfig | None = None
-
-    @field_validator("mtype")
-    @classmethod
-    def valid_model_type(cls, model_type: str) -> str:
-        assert (
-            model_type in model_type_dict
-        ), f"model_type must be one of {model_type_dict.keys()}"
-        return model_type
