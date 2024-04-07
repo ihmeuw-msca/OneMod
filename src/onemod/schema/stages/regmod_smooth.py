@@ -6,7 +6,6 @@ class ModelInit(Config):
 
     dims: list[dict] = []
     var_groups: list[dict] = []
-    weights: str
 
     coef_bounds: dict[str, tuple[float, float]] = {}
     lam: float = 0.0
