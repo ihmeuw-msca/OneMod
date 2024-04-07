@@ -8,7 +8,6 @@ import fire
 from jobmon.client.status_commands import resume_workflow_from_id
 
 from onemod.scheduler.scheduler import Scheduler
-from onemod.schema.validate import validate_config
 from onemod.utils import as_list, get_handle
 
 
@@ -44,7 +43,6 @@ def run_pipeline(
 
     # Load and validate the configuration file
     dataif, config = get_handle(directory)
-    validate_config(stages=stages, directory=directory, config=config)
 
     directory = Path(directory)
 
