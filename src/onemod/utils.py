@@ -355,7 +355,7 @@ def get_smoother_input(
     columns = _get_smoother_columns(smoother, config).difference(
         df_input.columns
     )
-    columns = as_list(config.col_id) + list(columns)
+    columns = as_list(config.ids) + list(columns)
     # Deduplicate
     columns = list(set(columns))
     if len(columns) > 0:
@@ -367,18 +367,18 @@ def get_smoother_input(
             right = dataif.load_raw_data()
         df_input = df_input.merge(
             right=right[columns].drop_duplicates(),
-            on=config.col_id,
+            on=config.ids,
         )
     if smoother == "weave":  # weave models can't have NaN data
-        df_input.loc[df_input[config.col_obs].isna(), "residual_value"] = 1
-        df_input.loc[df_input[config.col_obs].isna(), "residual_se"] = 1
+        df_input.loc[df_input[config.obs].isna(), "residual_value"] = 1
+        df_input.loc[df_input[config.obs].isna(), "residual_se"] = 1
     return df_input
 
 
 # TODO: This need to be adjusted for the new change
 def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
     """Get column names needed for smoother model."""
-    columns = set(as_list(config.col_holdout) + as_list(config.col_test))
+    columns = set(as_list(config.holdouts) + as_list(config.test))
     if smoother != "weave":
         raise ValueError(f"Invalid smoother name: {smoother}")
     for model_settings in config[smoother]["models"].values():
@@ -429,7 +429,7 @@ def get_weave_submodels(
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
             subsets.get_subset_ids(),
-            as_list(config.col_holdout) + ["full"],
+            as_list(config.holdouts) + ["full"],
         ):
             for batch_id in subsets.get_batch_ids(subset_id):
                 submodel = (
@@ -461,15 +461,15 @@ def get_ensemble_submodels(
     return submodels
 
 
-def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
+def get_prediction(row: pd.Series, pred: str, model_type: str) -> float:
     """Get smoother prediction."""
     if model_type == "binomial":
-        update = row["residual"] * row[col_pred] * (1 - row[col_pred])
-        return row[col_pred] + update
+        update = row["residual"] * row[pred] * (1 - row[pred])
+        return row[pred] + update
     if model_type == "gaussian":
-        return row[col_pred] + row["residual"]
+        return row[pred] + row["residual"]
     if model_type in ("poisson", "tobit"):
-        return (row["residual"] + 1) * row[col_pred]
+        return (row["residual"] + 1) * row[pred]
     raise ValueError("Unsupported model_type")
 
 

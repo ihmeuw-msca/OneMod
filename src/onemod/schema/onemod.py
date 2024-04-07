@@ -14,15 +14,14 @@ from onemod.schema.stages import (
 
 class OneModConfig(Config):
     input_path: str
-    col_id: list[str]
-    col_obs: str
-    col_pred: str
-    col_holdout: list[str]
-    col_test: str
-    id_subsets: dict[str, list[Any]] = {}
-
+    ids: list[str]
+    obs: str
     mtype: str
     weights: str
+    pred: str
+    holdouts: list[str]
+    test: str
+    id_subsets: dict[str, list[Any]] = {}
 
     rover_covsel: RoverCovselConfig | None = None
     regmod_smooth: RegmodSmoothConfig | None = None

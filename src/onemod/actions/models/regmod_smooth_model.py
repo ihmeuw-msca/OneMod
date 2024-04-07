@@ -15,9 +15,7 @@ from onemod.utils import get_handle
 
 
 def get_residual_computation_function(
-    model_type: str,
-    col_obs: str,
-    col_pred: str,
+    model_type: str, obs: str, pred: str
 ) -> Callable:
     """
     Calculate the residual for a given row based on the specified model type.
@@ -26,9 +24,9 @@ def get_residual_computation_function(
     ----------
     model_type
         Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-    col_obs
+    obs
         Column name for the observed values.
-    col_pred
+    pred
         Column name for the predicted values.
 
     Returns
@@ -48,18 +46,14 @@ def get_residual_computation_function(
         "binomial": partial(
             lambda row, obs, pred: (row[obs] - row[pred])
             / (row[pred] * (1 - row[pred])),
-            obs=col_obs,
-            pred=col_pred,
+            obs=obs,
+            pred=pred,
         ),
         "poisson": partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1,
-            obs=col_obs,
-            pred=col_pred,
+            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=obs, pred=pred
         ),
         "gaussian": partial(
-            lambda row, obs, pred: row[obs] - row[pred],
-            obs=col_obs,
-            pred=col_pred,
+            lambda row, obs, pred: row[obs] - row[pred], obs=obs, pred=pred
         ),
     }
 
@@ -70,9 +64,7 @@ def get_residual_computation_function(
 
 
 def get_residual_se_function(
-    model_type: str,
-    col_pred: str,
-    col_weights: str,
+    model_type: str, pred: str, weights: str
 ) -> Callable:
     """
     Calculate the residual standard error for a given row based on the specified model type.
@@ -81,9 +73,9 @@ def get_residual_se_function(
     ----------
     model_type
         Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-    col_pred
+    pred
         Column name for the predicted values.
-    col_weights
+    weights
         Column name for the weights.
 
     Returns
@@ -102,16 +94,16 @@ def get_residual_se_function(
         "binomial": partial(
             lambda row, pred, weights: 1
             / np.sqrt(row[weights] * row[pred] * (1 - row[pred])),
-            pred=col_pred,
-            weights=col_weights,
+            pred=pred,
+            weights=weights,
         ),
         "poisson": partial(
             lambda row, pred, weights: 1 / np.sqrt(row[weights] * row[pred]),
-            pred=col_pred,
-            weights=col_weights,
+            pred=pred,
+            weights=weights,
         ),
         "gaussian": partial(
-            lambda row, weights: 1 / np.sqrt(row[weights]), weights=col_weights
+            lambda row, weights: 1 / np.sqrt(row[weights]), weights=weights
         ),
     }
 
@@ -217,14 +209,14 @@ def regmod_smooth_model(directory: str) -> None:
     # Create regmod smooth model
     model = Model(
         model_type=config.mtype,
-        obs=config.col_obs,
+        obs=config.obs,
         dims=stage_config.model.dims,
         var_groups=var_groups,
         weights=config.weights,
     )
 
     df = dataif.load(config.input_path)
-    df_train = df.query(f"({config.col_test} == 0) & {config.col_obs}.notnull()")
+    df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
@@ -232,17 +224,17 @@ def regmod_smooth_model(directory: str) -> None:
     model.fit(df_train, data_dim_vals=df, **stage_config.regmod_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
-    df[config.col_pred] = model.predict(df)
+    df[config.pred] = model.predict(df)
     residual_func = get_residual_computation_function(
         model_type=stage_config.mtype,
-        col_obs=config.col_obs,
-        col_pred=config.col_pred,
+        obs=config.obs,
+        pred=config.pred,
     )
 
     residual_se_func = get_residual_se_function(
         model_type=config.mtype,
-        col_pred=config.col_pred,
-        col_weights=config.weights,
+        pred=config.pred,
+        weights=config.weights,
     )
     df["residual"] = df.apply(
         residual_func,

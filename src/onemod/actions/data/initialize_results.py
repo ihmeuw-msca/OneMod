@@ -28,7 +28,7 @@ def initialize_results(directory: str, stages: list[str]) -> None:
     raw_input_path = config.input_path
     data = dataif.load(raw_input_path)
 
-    # subset data with col_id
+    # subset data with ids
     if config.id_subsets:
         data = data.query(
             " & ".join(

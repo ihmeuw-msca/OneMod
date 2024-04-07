@@ -170,7 +170,7 @@ def collect_results_weave(directory: str) -> None:
     dataif, config = get_handle(directory)
 
     submodel_ids = get_weave_submodels(directory)
-    for holdout_id in config.col_holdout + ["full"]:
+    for holdout_id in config.holdouts + ["full"]:
         df_pred = pd.concat(
             [
                 dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
@@ -183,9 +183,9 @@ def collect_results_weave(directory: str) -> None:
         ).drop_duplicates()
         df_pred = pd.pivot(
             data=df_pred,
-            index=config.col_id,
+            index=config.ids,
             columns=["model_id", "param_id"],
-            values=["residual", config.col_pred],
+            values=["residual", config.pred],
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")

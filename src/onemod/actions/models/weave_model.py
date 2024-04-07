@@ -59,11 +59,11 @@ def weave_model(directory: str, submodel_id: str) -> None:
         subset_id,
         batch_id,
     ).rename(columns={"batch": "predict"})
-    df_input["fit"] = df_input[config.col_test] == 0
+    df_input["fit"] = df_input[config.test] == 0
     if holdout_id != "full":
         df_input["fit"] = df_input["fit"] & (df_input[holdout_id] == 0)
     df_input = df_input[df_input["fit"] | df_input["predict"]].drop(
-        columns=as_list(config.col_test) + as_list(config.col_holdout)
+        columns=as_list(config.test) + as_list(config.holdouts)
     )
 
     # Create smoother objects
@@ -98,16 +98,16 @@ def weave_model(directory: str, submodel_id: str) -> None:
         predict="predict",
     )
     logger.info(f"Completed fitting, predicting for {submodel_id=}")
-    df_pred[config.col_pred] = df_pred.apply(
-        lambda row: get_prediction(row, config.col_pred, config.mtype),
+    df_pred[config.pred] = df_pred.apply(
+        lambda row: get_prediction(row, config.pred, config.mtype),
         axis=1,
     )
     df_pred["model_id"] = model_id
     df_pred["param_id"] = param_id
     df_pred["holdout_id"] = holdout_id
     df_pred = df_pred[
-        as_list(config.col_id)
-        + ["residual", config.col_pred, "model_id", "param_id", "holdout_id"]
+        as_list(config.ids)
+        + ["residual", config.pred, "model_id", "param_id", "holdout_id"]
     ]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 

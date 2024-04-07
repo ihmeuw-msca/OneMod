@@ -48,26 +48,26 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     # Create a test column if not existing
     # TODO: Either move this to some data prep stage or make it persistent, needed in
     # other models
-    test_col = config.col_test
+    test_col = config.test
     if test_col not in df_input:
         logger.warning(
             "Test column not found, setting null observations as test rows."
         )
-        df_input[test_col] = df_input[config.col_obs].isna().astype("int")
+        df_input[test_col] = df_input[config.obs].isna().astype("int")
 
-    df_train = df_input[df_input[config.col_test] == 0]
+    df_train = df_input[df_input[config.test] == 0]
 
     dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
     # Create rover objects
     rover_init = stage_config.rover
     rover = Rover(
-        obs=config.col_obs,
+        obs=config.obs,
         model_type=config.mtype,
         cov_fixed=rover_init.cov_fixed,
         cov_exploring=rover_init.cov_exploring,
         weights=config.weights,
-        holdouts=config.col_holdout,
+        holdouts=config.holdouts,
     )
 
     # Fit rover model
