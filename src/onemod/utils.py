@@ -355,7 +355,7 @@ def get_smoother_input(
     columns = _get_smoother_columns(smoother, config).difference(
         df_input.columns
     )
-    columns = as_list(config.ids) + list(columns)
+    columns = config.ids + list(columns)
     # Deduplicate
     columns = list(set(columns))
     if len(columns) > 0:
@@ -378,11 +378,11 @@ def get_smoother_input(
 # TODO: This need to be adjusted for the new change
 def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
     """Get column names needed for smoother model."""
-    columns = set(as_list(config.holdouts) + as_list(config.test))
+    columns = set(config.holdouts + [config.test])
     if smoother != "weave":
         raise ValueError(f"Invalid smoother name: {smoother}")
     for model_settings in config[smoother]["models"].values():
-        columns.update(as_list(model_settings["groupby"]))
+        columns.update(model_settings["groupby"])
         if smoother == "weave":
             for dimension_settings in model_settings["dimensions"].values():
                 for key in ["name", "coordinates"]:
@@ -429,7 +429,7 @@ def get_weave_submodels(
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
             subsets.get_subset_ids(),
-            as_list(config.holdouts) + ["full"],
+            config.holdouts + ["full"],
         ):
             for batch_id in subsets.get_batch_ids(subset_id):
                 submodel = (
