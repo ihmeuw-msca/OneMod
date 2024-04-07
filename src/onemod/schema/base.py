@@ -12,7 +12,7 @@ class Config(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     def get(self, key: str, default: Any = None) -> Any:
-        if self.__contains__(key):
+        if not self.__contains__(key):
             return default
         return self.__getitem__(key)
 
