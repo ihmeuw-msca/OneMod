@@ -10,6 +10,11 @@ from onemod.schema.stages import (
 
 
 class OneModConfig(Config):
+    """OneMod configuration class. It holds global information about the run. And
+    each stage configuration is stored in a separate class.
+
+    """
+
     input_path: str
     ids: list[str]
     obs: str
