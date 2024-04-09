@@ -328,7 +328,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
         ensemble_config.top_pct_score,
         ensemble_config.top_pct_model,
     )
-    dataif.dump_ensemble(df_performance, "performance.csv")
+    dataif.dump_ensemble(df_performance, "performance.csv", index=True)
 
     # Get ensemble predictions
     df_list = []
