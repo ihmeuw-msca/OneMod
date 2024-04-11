@@ -22,4 +22,6 @@ class WeaveApplication(Application):
                 weave_model, directory=self.directory, submodel_id=submodel_id
             )
             yield action
-        yield Action(collect_results, stage_name="weave", directory=self.directory)
+        yield Action(
+            collect_results, stage_name="weave", directory=self.directory
+        )

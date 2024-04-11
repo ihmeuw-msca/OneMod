@@ -9,7 +9,9 @@ class ParametrizedBaseModel(BaseModel):
     This model has a base config to allow extra arguments and to validate attribute assignment
     post init, can be overriden after instantiation."""
 
-    model_config = ConfigDict(extra="allow", frozen=False, validate_assignment=True)
+    model_config = ConfigDict(
+        extra="allow", frozen=False, validate_assignment=True
+    )
     parent_args: dict[str, Any] = {}
 
     def get(self, item: Any) -> Any:

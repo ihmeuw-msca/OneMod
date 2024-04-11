@@ -43,17 +43,25 @@ def validate_config(
         raise ValidationError(f"Following errors were raised: {errors}")
 
 
-def validate_rover_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_rover_config(
+    config: BaseModel, dataset: pd.DataFrame
+) -> list[str]:
     return []  # TODO
 
 
-def validate_regmod_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_regmod_config(
+    config: BaseModel, dataset: pd.DataFrame
+) -> list[str]:
     return []  # TODO
 
 
-def validate_weave_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_weave_config(
+    config: BaseModel, dataset: pd.DataFrame
+) -> list[str]:
     return []  # TODO
 
 
-def validate_ensemble_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
+def validate_ensemble_config(
+    config: BaseModel, dataset: pd.DataFrame
+) -> list[str]:
     return []  # TODO

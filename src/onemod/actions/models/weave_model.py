@@ -44,14 +44,18 @@ def weave_model(directory: str, submodel_id: str) -> None:
     holdout_id = submodel_id.split("_")[3]
     batch_id = int(submodel_id.split("_")[4][5:])
     model_settings = config["weave"]["models"][model_id]
-    params = WeaveParams(model_id, param_sets=dataif.load_weave("parameters.csv"))
+    params = WeaveParams(
+        model_id, param_sets=dataif.load_weave("parameters.csv")
+    )
     subsets = Subsets(
         model_id, model_settings, subsets=dataif.load_weave("subsets.csv")
     )
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input("weave", config=config, dataif=dataif, from_rover=True),
+        get_smoother_input(
+            "weave", config=config, dataif=dataif, from_rover=True
+        ),
         subset_id,
         batch_id,
     ).rename(columns={"batch": "predict"})
