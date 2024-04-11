@@ -6,7 +6,7 @@ def test_ensemble_tasks(testing_tool, temporary_directory, sample_config):
     stage = StageTemplate(
         stage_name="ensemble",
         config=sample_config,
-        experiment_dir=temporary_directory,
+        directory=temporary_directory,
         save_intermediate=True,
         resources_file=temporary_directory / "resources.yml",
         tool=testing_tool,

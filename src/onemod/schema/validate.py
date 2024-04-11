@@ -15,10 +15,9 @@ def validate_config(
     Either a configuration or a directory to load that configuration from must be provided.
     """
 
-    dataif, settings = get_handle(directory)
-
-    if not config:
-        config = settings
+    dataif, config_other = get_handle(directory)
+    if config is None:
+        config = config_other
 
     # Validate against the dataset
     dataset = dataif.load(config.input_path)
@@ -35,10 +34,6 @@ def validate_config(
     if "weave" in stages:
         weave_errors = validate_weave_config(config, dataset)
         errors.extend(weave_errors)
-
-    if "swimr" in stages:
-        swimr_errors = validate_swimr_config(config, dataset)
-        errors.extend(swimr_errors)
 
     if "ensemble" in stages:
         ensemble_errors = validate_ensemble_config(config, dataset)
@@ -57,10 +52,6 @@ def validate_regmod_config(config: BaseModel, dataset: pd.DataFrame) -> list[str
 
 
 def validate_weave_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
-    return []  # TODO
-
-
-def validate_swimr_config(config: BaseModel, dataset: pd.DataFrame) -> list[str]:
     return []  # TODO
 
 

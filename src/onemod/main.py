@@ -1,8 +1,8 @@
 """Run onemod pipeline."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
 
 import fire
 from jobmon.client.status_commands import resume_workflow_from_id
@@ -14,7 +14,7 @@ from onemod.utils import as_list, get_handle
 
 def run_pipeline(
     directory: str,
-    stages: Optional[Union[list[str], str]] = None,
+    stages: str | list[str] | None = None,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
     run_local: bool = False,
@@ -26,7 +26,7 @@ def run_pipeline(
     directory : str
         The experiment directory. It must contain config/settings.yml.
     stages : list of str or str, optional
-        The pipeline stages to run. Default is ['rover', 'swimr', 'weave', 'ensemble'].
+        The pipeline stages to run. Default is ['rover_covsel', 'weave', 'ensemble'].
     save_intermediate : bool, optional
         Whether to save intermediate stage results. Default is False.
     cluster_name : str, optional
@@ -35,7 +35,7 @@ def run_pipeline(
         Whether to configure resources in directory/config/resources.yml. Default is True.
 
     """
-    all_stages = ["rover_covsel", "regmod_smooth", "swimr", "weave", "ensemble"]
+    all_stages = ["rover_covsel", "regmod_smooth", "weave", "ensemble"]
     if stages is None:
         stages = all_stages
     for stage in as_list(stages):
@@ -56,7 +56,7 @@ def run_pipeline(
     # Create the scheduler and run it
     scheduler = Scheduler(
         stages=stages,
-        experiment_dir=directory,
+        directory=directory,
         config=config,
         resources_path=resources_file,
         default_cluster_name=cluster_name,

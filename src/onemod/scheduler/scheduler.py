@@ -1,6 +1,6 @@
-from pathlib import Path
 import shutil
-from typing import Generator, TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Generator
 
 from onemod.actions.action import Action
 from onemod.actions.data.initialize_results import initialize_results
@@ -20,14 +20,14 @@ if TYPE_CHECKING:
 class Scheduler:
     def __init__(
         self,
-        experiment_dir: str | Path,
+        directory: str | Path,
         config: OneModConfig,
         stages: list[str],
         resources_path: str = "",
         default_cluster_name: str = "slurm",
         configure_resources: bool = True,
     ):
-        self.experiment_dir = experiment_dir
+        self.directory = directory
         self.config = config
         self.stages = stages
         self.resources_path = resources_path
@@ -37,12 +37,10 @@ class Scheduler:
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
         # The schedule always starts with an initialization action
-        yield Action(
-            initialize_results, stages=self.stages, experiment_dir=self.experiment_dir
-        )
+        yield Action(initialize_results, stages=self.stages, directory=self.directory)
         for stage in self.stages:
             application_class = get_application_class(stage)
-            application = application_class(experiment_dir=self.experiment_dir)
+            application = application_class(directory=self.directory)
             generator = application.action_generator()
             yield from generator
 

@@ -1,8 +1,7 @@
 from collections import defaultdict
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from jobmon.client.api import Tool
-
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
     create_collection_template,
@@ -11,16 +10,15 @@ from onemod.scheduler.templates import (
     create_modeling_template,
 )
 
-
 if TYPE_CHECKING:
-    from jobmon.client.task_template import TaskTemplate
     from jobmon.client.task import Task
+    from jobmon.client.task_template import TaskTemplate
 
 
 class ParentTool:
     """Singleton implementation of a single tool used across OneMod for scheduling."""
 
-    tool: Optional["Tool"] = None
+    tool: Tool | None = None
 
     @classmethod
     def initialize_tool(

@@ -16,7 +16,7 @@ class RoverFitArgs(BaseModel):
     coef_bounds: tuple[float, float] | None = None
 
 
-class RoverCovselConfiguration(ParametrizedBaseModel):
+class RoverCovselConfig(ParametrizedBaseModel):
     groupby: list[str] = []
     mtype: str = Field("")
     max_attempts: int | None = None

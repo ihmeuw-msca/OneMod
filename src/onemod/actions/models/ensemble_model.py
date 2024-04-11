@@ -1,7 +1,6 @@
 """Run ensemble model."""
 
 import warnings
-from functools import reduce
 from pathlib import Path
 from typing import Any, Optional
 
@@ -13,14 +12,12 @@ from onemod.modeling.metric import Metric
 from onemod.utils import Subsets, as_list, get_handle
 
 
-def get_predictions(
-    experiment_dir: str, holdout_id: Any, col_pred: str
-) -> pd.DataFrame:
+def get_predictions(directory: str, holdout_id: Any, col_pred: str) -> pd.DataFrame:
     """Load available smoother predictions.
 
     Parameters
     ----------
-    experiment_dir
+    directory
         Path to the experiment directory.
     holdout_id
         Holdout ID for which predictions are requested.
@@ -39,14 +36,12 @@ def get_predictions(
 
     """
     holdout_id = str(holdout_id)
-    experiment_dir = Path(experiment_dir)
+    directory = Path(directory)
 
-    dataif, _ = get_handle(experiment_dir)
+    dataif, _ = get_handle(directory)
     if holdout_id == "full":
-        swimr_file = "predictions.parquet"
         weave_file = "predictions.parquet"
     else:
-        swimr_file = f"predictions_{holdout_id}.parquet"
         weave_file = f"predictions_{holdout_id}.parquet"
 
     try:
@@ -57,18 +52,6 @@ def get_predictions(
         # No weave smoother results, initialize empty df
         warnings.warn("No weave predictions found for ensemble stage.")
         df_smoother = pd.DataFrame()
-
-    try:
-        swimr_df = dataif.load_swimr(swimr_file)
-        swimr_df = pd.concat([swimr_df[col_pred]], axis=1, keys=["swimr"])
-        if df_smoother.empty:
-            df_smoother = swimr_df
-        else:
-            df_smoother = pd.merge(
-                df_smoother, swimr_df, left_index=True, right_index=True
-            )
-    except FileNotFoundError:
-        warnings.warn("No swimr predictions found for ensemble stage.")
 
     if df_smoother.empty:
         raise FileNotFoundError("Smoother results do not exist")
@@ -246,16 +229,16 @@ def get_subset_weights(
     raise ValueError(f"Invalid weight score: {score}")
 
 
-def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
+def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     """Run ensemble model on smoother predictions.
 
     Parameters
     ----------
-    experiment_dir : str
+    directory : str
         Path to the experiment directory.
 
     """
-    dataif, global_config = get_handle(experiment_dir)
+    dataif, global_config = get_handle(directory)
 
     ensemble_config = global_config.ensemble
 
@@ -267,7 +250,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
 
     # Load input data and smoother predictions
     df_input = dataif.load_data()
-    df_full = get_predictions(experiment_dir, "full", global_config.col_pred)
+    df_full = get_predictions(directory, "full", global_config.col_pred)
 
     # Get smoother out-of-sample performance by holdout set
     df_performance = pd.merge(
@@ -283,9 +266,7 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     id_cols = as_list(global_config.col_id)
 
     for holdout_id, df in df_performance.groupby("holdout_id"):
-        predictions = get_predictions(
-            experiment_dir, holdout_id, global_config.col_pred
-        )
+        predictions = get_predictions(directory, holdout_id, global_config.col_pred)
         predictions.columns = predictions.columns.to_flat_index()
         df_holdout = pd.merge(
             left=df_input[id_cols + [global_config.col_obs, holdout_id]],
@@ -309,15 +290,11 @@ def ensemble_model(experiment_dir: str, *args: Any, **kwargs: Any) -> None:
     columns = ["smoother_id", "model_id", "param_id", "subset_id"]
     metric_name = ensemble_config.metric
     groups = pd.concat(df_list).groupby(columns)
-    mean = (
-        groups
-        .mean(numeric_only=True)
-        .rename({metric_name: f"{metric_name}_mean"}, axis=1)
+    mean = groups.mean(numeric_only=True).rename(
+        {metric_name: f"{metric_name}_mean"}, axis=1
     )
-    std = (
-        groups
-        .std(numeric_only=True)
-        .rename({metric_name: f"{metric_name}_std"}, axis=1)
+    std = groups.std(numeric_only=True).rename(
+        {metric_name: f"{metric_name}_std"}, axis=1
     )
     df_performance = pd.concat([mean, std], axis=1)
     df_performance["weight"] = get_weights(

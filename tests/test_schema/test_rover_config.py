@@ -1,6 +1,6 @@
-from onemod.schema.models.api import RoverCovselConfiguration
-from pydantic import ValidationError
 import pytest
+from onemod.schema.models.api import RoverCovselConfig
+from pydantic import ValidationError
 
 
 def test_rover_config(sample_config):
@@ -16,4 +16,4 @@ def test_rover_config(sample_config):
     with pytest.raises(ValidationError):
         modified_data = sample_config["rover_covsel"].model_dump()
         modified_data["rover"].pop("weights")
-        RoverCovselConfiguration(**modified_data)
+        RoverCovselConfig(**modified_data)

@@ -1,17 +1,18 @@
 """Run weave model."""
+
 import fire
-from loguru import logger
 import numpy as np
+from loguru import logger
 from weave.dimension import Dimension
 from weave.smoother import Smoother
 
 from onemod.utils import (
+    Subsets,
+    WeaveParams,
     as_list,
     get_handle,
     get_prediction,
     get_smoother_input,
-    Subsets,
-    WeaveParams,
 )
 
 # weave kernel parameters
@@ -23,15 +24,18 @@ kernel_params = {
 }
 
 
-def weave_model(experiment_dir: str, submodel_id: str) -> None:
+def weave_model(directory: str, submodel_id: str) -> None:
     """Run weave model by submodel ID.
 
-    Args:
-        experiment_dir (Union[Path, str]): The path to the directory containing the
-            experiment data.
-        submodel_id (str): The ID of the submodel to be processed.
+    Parameters
+    ----------
+    directory
+        The path to the directory containing the experiment data.
+    submodel_id (str)
+        The ID of the submodel to be processed.
+
     """
-    dataif, settings = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
     # Get submodel settings
     model_id = submodel_id.split("_")[0]
@@ -39,7 +43,7 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
     subset_id = int(submodel_id.split("_")[2][6:])
     holdout_id = submodel_id.split("_")[3]
     batch_id = int(submodel_id.split("_")[4][5:])
-    model_settings = settings["weave"]["models"][model_id]
+    model_settings = config["weave"]["models"][model_id]
     params = WeaveParams(model_id, param_sets=dataif.load_weave("parameters.csv"))
     subsets = Subsets(
         model_id, model_settings, subsets=dataif.load_weave("subsets.csv")
@@ -47,15 +51,15 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input("weave", config=settings, dataif=dataif, from_rover=True),
+        get_smoother_input("weave", config=config, dataif=dataif, from_rover=True),
         subset_id,
         batch_id,
     ).rename(columns={"batch": "predict"})
-    df_input["fit"] = df_input[settings["col_test"]] == 0
+    df_input["fit"] = df_input[config.col_test] == 0
     if holdout_id != "full":
         df_input["fit"] = df_input["fit"] & (df_input[holdout_id] == 0)
     df_input = df_input[df_input["fit"] | df_input["predict"]].drop(
-        columns=as_list(settings["col_test"]) + as_list(settings["col_holdout"])
+        columns=as_list(config.col_test) + as_list(config.col_holdout)
     )
 
     # Create smoother objects
@@ -90,16 +94,16 @@ def weave_model(experiment_dir: str, submodel_id: str) -> None:
         predict="predict",
     )
     logger.info(f"Completed fitting, predicting for {submodel_id=}")
-    df_pred[settings["col_pred"]] = df_pred.apply(
-        lambda row: get_prediction(row, settings["col_pred"], settings["mtype"]),
+    df_pred[config.col_pred] = df_pred.apply(
+        lambda row: get_prediction(row, config.col_pred, config.mtype),
         axis=1,
     )
     df_pred["model_id"] = model_id
     df_pred["param_id"] = param_id
     df_pred["holdout_id"] = holdout_id
     df_pred = df_pred[
-        as_list(settings["col_id"])
-        + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
+        as_list(config.col_id)
+        + ["residual", config.col_pred, "model_id", "param_id", "holdout_id"]
     ]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 

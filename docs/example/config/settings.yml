@@ -47,52 +47,6 @@ regmod_smooth:
       verbose: false
       m_scale: 0.1
 
-# SWiMR settings
-swimr:
-  max_attempts: 1
-  singularity_image: /ihme/singularity-images/rstudio/ihme_rstudio_4201.img
-  age_metadata: /mnt/team/msca/priv/projects/openmod/data/age_metadata.csv
-  swimr_parentdir: /ihme/scratch/users/rsoren/projects/swimr_dev_tmp/
-  conda_binary: /ihme/code/mscm/miniconda3/bin/conda
-  conda_env: mrtool_0.0.2
-  models:
-    model1:
-      model_type: noncascade
-      groupby: [age_group_id, sex_id]
-      similarity_matrix: [/path/to/similarity_matrix1.parquet, /path/to/similarity_matrix2.parquet]
-      similarity_multiplier: [0.01, 0.1, 1]
-      use_similarity_matrix: [0, 1]
-      n_internal_knots_year: [2, 3, 4]
-      n_internal_knots_age: .na
-      theta: .na
-      intercept_theta: .na
-      ranef_variable: loc__tmp
-      gamma_uprior_lower: 0
-      gamma_uprior_upper: 0
-      overwrite: 1
-      save_input_data: 0
-      save_fitted_models: 0
-      save_similarity_matrix: 0
-    model2:
-      model_type: cascade
-      cascade_levels: age__tmp,locid
-      cascade_hierarchy_csv_path: /path/to/cascade_hierarchy.csv
-      groupby: sex_id
-      similarity_matrix: /path/to/similarity_matrix.parquet
-      similarity_multiplier: 1
-      use_similarity_matrix: 0
-      n_internal_knots_year: 3
-      n_internal_knots_age: .na
-      theta: ['0.1,0.1', '1,1', '10,10']
-      intercept_theta: ['0.1,0.1', '1,1', '10,10']
-      ranef_variable: submodel_id__tmp
-      gamma_uprior_lower: .na
-      gamma_uprior_upper: .na
-      overwrite: 1
-      save_input_data: 0
-      save_fitted_models: 0
-      save_similarity_matrix: 0
-
 # WeAve settings
 weave:
   max_attempts: 1

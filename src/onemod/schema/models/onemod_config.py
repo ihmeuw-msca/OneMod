@@ -1,14 +1,13 @@
-from typing import Any, Optional
+from typing import Any
 
 from modrover.globals import model_type_dict
 from pydantic import field_validator
 
 from onemod.schema.models.base import ParametrizedBaseModel
-from onemod.schema.models.ensemble_config import EnsembleConfiguration
-from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfiguration
-from onemod.schema.models.rover_covsel_config import RoverCovselConfiguration
-from onemod.schema.models.swimr_config import SwimrConfiguration
-from onemod.schema.models.weave_config import WeaveConfiguration
+from onemod.schema.models.ensemble_config import EnsembleConfig
+from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfig
+from onemod.schema.models.rover_covsel_config import RoverCovselConfig
+from onemod.schema.models.weave_config import WeaveConfig
 
 
 class OneModConfig(ParametrizedBaseModel):
@@ -23,11 +22,10 @@ class OneModConfig(ParametrizedBaseModel):
     id_subsets: dict[str, list[Any]] = {}
     mtype: str
 
-    rover_covsel: Optional[RoverCovselConfiguration] = None
-    regmod_smooth: Optional[RegmodSmoothConfiguration] = None
-    weave: Optional[WeaveConfiguration] = None
-    swimr: Optional[SwimrConfiguration] = None
-    ensemble: Optional[EnsembleConfiguration] = None
+    rover_covsel: RoverCovselConfig | None = None
+    regmod_smooth: RegmodSmoothConfig | None = None
+    weave: WeaveConfig | None = None
+    ensemble: EnsembleConfig | None = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -48,7 +46,6 @@ class OneModConfig(ParametrizedBaseModel):
             self.rover_covsel,
             self.regmod_smooth,
             self.weave,
-            self.swimr,
             self.ensemble,
         ]
 

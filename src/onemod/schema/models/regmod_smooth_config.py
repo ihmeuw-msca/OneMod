@@ -12,7 +12,7 @@ class RegmodModelInit(ParametrizedBaseModel):
     lam: float = 0.0
 
 
-class RegmodSmoothConfiguration(ParametrizedBaseModel):
+class RegmodSmoothConfig(ParametrizedBaseModel):
     max_attempts: int = 3
     groupby: list[str] = []
     regmod_fit: dict = {}

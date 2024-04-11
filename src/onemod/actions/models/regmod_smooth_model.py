@@ -6,9 +6,9 @@ from functools import partial
 from typing import Callable
 
 import fire
-from loguru import logger
 import numpy as np
 import pandas as pd
+from loguru import logger
 from regmodsm.model import Model
 
 from onemod.utils import get_handle
@@ -22,17 +22,25 @@ def get_residual_computation_function(
     """
     Calculate the residual for a given row based on the specified model type.
 
-    Parameters:
-        row (pd.Series): The row containing the observation and prediction data.
-        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-        col_obs (str): Column name for the observed values.
-        col_pred (str): Column name for the predicted values.
+    Parameters
+    ----------
+    model_type
+        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+    col_obs
+        Column name for the observed values.
+    col_pred
+        Column name for the predicted values.
 
-    Returns:
-        float: The calculated residual value.
+    Returns
+    -------
+    float
+        The calculated residual value.
 
-    Raises:
-        ValueError: If the specified model_type is unsupported.
+    Raises
+    ------
+    ValueError
+        If the specified model_type is unsupported.
+
     """
 
     # TODO: can these be vectorized functions?
@@ -65,17 +73,25 @@ def get_residual_se_function(
     """
     Calculate the residual standard error for a given row based on the specified model type.
 
-    Parameters:
-        row (pd.Series): The row containing the observation and prediction data.
-        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-        col_pred (str): Column name for the predicted values.
-        col_weights (str): Column name for the weights.
+    Parameters
+    ----------
+    model_type
+        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+    col_pred
+        Column name for the predicted values.
+    col_weights
+        Column name for the weights.
 
-    Returns:
-        float: The calculated residual standard error value.
+    Returns
+    -------
+    float
+        The calculated residual standard error value.
 
-    Raises:
-        ValueError: If the specified model_type is unsupported.
+    Raises
+    ------
+    ValueError
+        If the specified model_type is unsupported.
+
     """
 
     callable_map = {
@@ -105,12 +121,16 @@ def get_coef(model: Model) -> pd.DataFrame:
     """
     Get coefficient information from the specified model.
 
-    Parameters:
-        model (Model): The statistical model object containing coefficient data.
+    Parameters
+    ----------
+    model
+        The statistical model object containing coefficient data.
 
-    Returns:
-        pd.DataFrame: A DataFrame containing coefficient, dimension,
-            and dimension value information.
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing coefficient, dimension, and dimension value information.
+
     """
     df_coef = []
     for var_group in model.var_groups:
@@ -135,16 +155,16 @@ def get_coef(model: Model) -> pd.DataFrame:
     return df_coef
 
 
-def regmod_smooth_model(experiment_dir: str) -> None:
+def regmod_smooth_model(directory: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
 
     Parameters
     ----------
-    experiment_dir
+    directory
         Parent folder where the experiment is run.
-        - ``experiment_dir / config / settings.yaml`` contains rover modeling settings
-        - ``experiment_dir / results / rover`` stores all rover results
+        - ``directory / config / settings.yaml`` contains rover modeling settings
+        - ``directory / results / rover`` stores all rover results
 
     Outputs
     -------
@@ -155,7 +175,7 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     predictions.parquet
         Predictions with residual information.
     """
-    dataif, global_config = get_handle(experiment_dir)
+    dataif, global_config = get_handle(directory)
 
     regmod_smooth_config = global_config.regmod_smooth
 
