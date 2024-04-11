@@ -59,7 +59,9 @@ class Parameters:
         self.model_id = model_id
         if param_sets is None:
             if config is None:
-                raise TypeError("Settings cannot be None if param_sets is None.")
+                raise TypeError(
+                    "Settings cannot be None if param_sets is None."
+                )
             self.param_sets = self._create_param_sets(config)
         else:
             self.param_sets = param_sets[param_sets["model_id"] == model_id]
@@ -165,14 +167,18 @@ class Subsets:
         self.columns = config.groupby
         if subsets is None:
             if data is None:
-                raise TypeError("Data cannot be None if subsets are not provided.")
+                raise TypeError(
+                    "Data cannot be None if subsets are not provided."
+                )
             self.columns = config.groupby
             max_batch_size = config.max_batch
             self.subsets = self._create_subsets(data, max_batch_size)
         else:
             self.subsets = subsets[subsets["model_id"] == model_id]
 
-    def _create_subsets(self, data: pd.DataFrame, max_batch: int) -> pd.DataFrame:
+    def _create_subsets(
+        self, data: pd.DataFrame, max_batch: int
+    ) -> pd.DataFrame:
         """Create subset data frame.
 
         Parameters
@@ -189,7 +195,9 @@ class Subsets:
             Subset data frame.
 
         """
-        subsets: dict[str, list] = {column: [] for column in self.columns + ["n_batch"]}
+        subsets: dict[str, list] = {
+            column: [] for column in self.columns + ["n_batch"]
+        }
         # TODO: use a different name distinguish column name and column value
         # to improve readibility
 
@@ -203,7 +211,9 @@ class Subsets:
             else:
                 for idx, column in enumerate(self.columns):
                     subsets[column].append(columns[idx])
-            n_batch = 1 if max_batch == -1 else int(np.ceil(len(df) / max_batch))
+            n_batch = (
+                1 if max_batch == -1 else int(np.ceil(len(df) / max_batch))
+            )
             subsets["n_batch"].append(n_batch)
         subsets_df: pd.DataFrame = pd.DataFrame(subsets)
         subsets_df["model_id"] = self.model_id
@@ -216,7 +226,9 @@ class Subsets:
 
     def get_batch_ids(self, subset_id: int) -> list:
         """Get list of batch IDs."""
-        n_batch = self.subsets[self.subsets["subset_id"] == subset_id]["n_batch"].item()
+        n_batch = self.subsets[self.subsets["subset_id"] == subset_id][
+            "n_batch"
+        ].item()
         return np.arange(n_batch).tolist()
 
     def get_column(self, column: str, subset_id: int) -> Any:
@@ -315,7 +327,9 @@ def add_holdouts(
             df_list.append(df1)
         if c_holdout / len(df) < p_holdout:
             p_heldout = c_holdout / len(df)
-            warnings.warn(f"Percent held out {p_heldout:.2f} less than {p_holdout}")
+            warnings.warn(
+                f"Percent held out {p_heldout:.2f} less than {p_holdout}"
+            )
         df = df.merge(
             right=pd.concat(df_list)[
                 ["age_group_id", "location_id", "sex_id", "year_id", holdout]
@@ -338,7 +352,9 @@ def get_smoother_input(
         df_input = df_input.rename(columns={"residual": "residual_value"})
     else:
         df_input = dataif.load_data()
-    columns = _get_smoother_columns(smoother, config).difference(df_input.columns)
+    columns = _get_smoother_columns(smoother, config).difference(
+        df_input.columns
+    )
     columns = as_list(config.col_id) + list(columns)
     # Deduplicate
     columns = list(set(columns))
@@ -376,7 +392,9 @@ def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
     return columns
 
 
-def get_rover_covsel_submodels(directory: str, save_file: bool = False) -> list[str]:
+def get_rover_covsel_submodels(
+    directory: str, save_file: bool = False
+) -> list[str]:
     """Get rover submodel IDs and save subsets.
     TODO: merge this to the rover_covsel function to avoid confusion
     """
@@ -393,7 +411,9 @@ def get_rover_covsel_submodels(directory: str, save_file: bool = False) -> list[
     return submodels
 
 
-def get_weave_submodels(directory: str, save_files: bool | None = False) -> list[str]:
+def get_weave_submodels(
+    directory: str, save_files: bool | None = False
+) -> list[str]:
     """Get weave submodel IDs; save parameters and subsets."""
     dataif, config = get_handle(directory)
 
@@ -425,7 +445,9 @@ def get_weave_submodels(directory: str, save_files: bool | None = False) -> list
     return submodels
 
 
-def get_ensemble_submodels(directory: str, save_file: bool = False) -> list[str]:
+def get_ensemble_submodels(
+    directory: str, save_file: bool = False
+) -> list[str]:
     """Get ensemble submodel IDs and save subsets."""
     dataif, config = get_handle(directory)
 

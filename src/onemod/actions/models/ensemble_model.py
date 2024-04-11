@@ -12,7 +12,9 @@ from onemod.modeling.metric import Metric
 from onemod.utils import Subsets, as_list, get_handle
 
 
-def get_predictions(directory: str, holdout_id: Any, col_pred: str) -> pd.DataFrame:
+def get_predictions(
+    directory: str, holdout_id: Any, col_pred: str
+) -> pd.DataFrame:
     """Load available smoother predictions.
 
     Parameters
@@ -266,7 +268,9 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     id_cols = as_list(global_config.col_id)
 
     for holdout_id, df in df_performance.groupby("holdout_id"):
-        predictions = get_predictions(directory, holdout_id, global_config.col_pred)
+        predictions = get_predictions(
+            directory, holdout_id, global_config.col_pred
+        )
         predictions.columns = predictions.columns.to_flat_index()
         df_holdout = pd.merge(
             left=df_input[id_cols + [global_config.col_obs, holdout_id]],

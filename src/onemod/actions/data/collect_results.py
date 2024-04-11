@@ -20,7 +20,9 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     submodel_ids = get_rover_covsel_submodels(dataif.experiment)
     summaries = []
     for submodel_id in submodel_ids:
-        summary = dataif.load_rover_covsel(f"submodels/{submodel_id}/summary.csv")
+        summary = dataif.load_rover_covsel(
+            f"submodels/{submodel_id}/summary.csv"
+        )
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)
@@ -51,7 +53,9 @@ def _get_selected_covs(dataif: DataInterface) -> list[str]:
 
 
 def _plot_rover_covsel_results(
-    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str] | None = None
+    dataif: DataInterface,
+    summaries: pd.DataFrame,
+    covs: list[str] | None = None,
 ) -> plt.Figure:
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
@@ -98,7 +102,9 @@ def _plot_regmod_smooth_results(
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if not selected_covs:
-        warn("There are no covariates selected, skip `plot_regmod_smooth_results`")
+        warn(
+            "There are no covariates selected, skip `plot_regmod_smooth_results`"
+        )
         return None
 
     df_coef = (
@@ -109,7 +115,9 @@ def _plot_regmod_smooth_results(
     df_covs = df_coef.groupby("cov")
 
     fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
-    logger.info(f"Plotting smoothed covariates for {len(selected_covs)} covariates.")
+    logger.info(
+        f"Plotting smoothed covariates for {len(selected_covs)} covariates."
+    )
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.errorbar(
@@ -152,7 +160,9 @@ def collect_results_regmod_smooth(directory: str) -> None:
     summaries = _get_rover_covsel_summaries(dataif)
     fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
-        fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
+        fig.savefig(
+            dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight"
+        )
 
 
 def collect_results_weave(directory: str) -> None:

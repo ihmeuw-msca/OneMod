@@ -37,7 +37,9 @@ class Scheduler:
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
         # The schedule always starts with an initialization action
-        yield Action(initialize_results, stages=self.stages, directory=self.directory)
+        yield Action(
+            initialize_results, stages=self.stages, directory=self.directory
+        )
         for stage in self.stages:
             application_class = get_application_class(stage)
             application = application_class(directory=self.directory)
@@ -57,7 +59,8 @@ class Scheduler:
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
             tasks = [
-                self.create_task(action) for action in self.parent_action_generator()
+                self.create_task(action)
+                for action in self.parent_action_generator()
             ]
             workflow.add_tasks(tasks)
             status = workflow.run(configure_logging=True)

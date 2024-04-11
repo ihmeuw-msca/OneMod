@@ -51,8 +51,12 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     # other models
     test_col = global_config.col_test
     if test_col not in df_input:
-        logger.warning("Test column not found, setting null observations as test rows.")
-        df_input[test_col] = df_input[global_config["col_obs"]].isna().astype("int")
+        logger.warning(
+            "Test column not found, setting null observations as test rows."
+        )
+        df_input[test_col] = (
+            df_input[global_config["col_obs"]].isna().astype("int")
+        )
 
     df_train = df_input[df_input[global_config.col_test] == 0]
 
@@ -70,7 +74,9 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     )
 
     # Fit rover model
-    logger.info(f"Fitting the rover model with options {rover_config.rover_fit}")
+    logger.info(
+        f"Fitting the rover model with options {rover_config.rover_fit}"
+    )
     rover.fit(data=df_train, **rover_config.rover_fit.model_dump())
 
     # Save results
@@ -79,7 +85,9 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     dataif.dump_rover_covsel(
         rover.learner_info, f"submodels/{submodel_id}/learner_info.csv"
     )
-    dataif.dump_rover_covsel(rover.summary, f"submodels/{submodel_id}/summary.csv")
+    dataif.dump_rover_covsel(
+        rover.summary, f"submodels/{submodel_id}/summary.csv"
+    )
 
 
 def main() -> None:

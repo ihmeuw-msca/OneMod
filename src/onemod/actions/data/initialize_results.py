@@ -32,7 +32,10 @@ def initialize_results(directory: str, stages: list[str]) -> None:
     if config.id_subsets:
         data = data.query(
             " & ".join(
-                [f"{key}.isin({value})" for key, value in config.id_subsets.items()]
+                [
+                    f"{key}.isin({value})"
+                    for key, value in config.id_subsets.items()
+                ]
             )
         ).reset_index(drop=True)
 

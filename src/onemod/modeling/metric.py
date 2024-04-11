@@ -34,11 +34,13 @@ class Metric:
         Example
         -------
         >>> import pandas as pd
-        >>> df = pd.DataFrame({
-        ...     "id": [1, 1, 2, 2],
-        ...     "obs": [0.1, 0.1, 0.2, 0.2],
-        ...     "pred":[0.11, 0.12, 0.25, 0.18],
-        ... })
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "id": [1, 1, 2, 2],
+        ...         "obs": [0.1, 0.1, 0.2, 0.2],
+        ...         "pred": [0.11, 0.12, 0.25, 0.18],
+        ...     }
+        ... )
         >>> metric = Metric("rmse")
         >>> metric(df, "obs", "pred")
         >>> 0.0291547594742265
@@ -71,11 +73,13 @@ class Metric:
         Example
         -------
         >>> import pandas as pd
-        >>> df = pd.DataFrame({
-        ...     "id": [1, 1, 1, 2, 2, 2],
-        ...     "obs": [0.1, 0.1, 0.1, 0.2, 0.2, 0.2],
-        ...     "pred":[0.11, 0.09, 0.12, 0.21, 0.19, 0.22],
-        ... })
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "id": [1, 1, 1, 2, 2, 2],
+        ...         "obs": [0.1, 0.1, 0.1, 0.2, 0.2, 0.2],
+        ...         "pred": [0.11, 0.09, 0.12, 0.21, 0.19, 0.22],
+        ...     }
+        ... )
         >>> metric = Metric("winsorized_rmse")
         >>> metric(df, "obs", "pred", percentile_upr=0.5)
         >>> 0.01
