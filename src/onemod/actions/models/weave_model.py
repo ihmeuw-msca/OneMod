@@ -105,7 +105,8 @@ def weave_model(directory: str, submodel_id: str) -> None:
     df_pred["param_id"] = param_id
     df_pred["holdout_id"] = holdout_id
     df_pred = df_pred[
-        config.ids + ["residual", config.pred, "model_id", "param_id", "holdout_id"]
+        config.ids
+        + ["residual", config.pred, "model_id", "param_id", "holdout_id"]
     ]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 

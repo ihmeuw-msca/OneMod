@@ -311,7 +311,9 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     for subset_id in subsets.get_subset_ids():
         indices = [
             tuple(index)
-            for index in subsets.filter_subset(df_input, subset_id)[config.ids].values
+            for index in subsets.filter_subset(df_input, subset_id)[
+                config.ids
+            ].values
         ]
         df_subset = df_full.loc[indices]
         df_list.append(
