@@ -26,7 +26,7 @@ def run_pipeline(
     directory : str
         The experiment directory. It must contain config/settings.yml.
     stages : list of str or str, optional
-        The pipeline stages to run. Default is ['rover', 'weave', 'ensemble'].
+        The pipeline stages to run. Default is ['rover_covsel', 'weave', 'ensemble'].
     save_intermediate : bool, optional
         Whether to save intermediate stage results. Default is False.
     cluster_name : str, optional

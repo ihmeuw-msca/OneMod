@@ -26,22 +26,6 @@ Optional parameters:
 - `col_offset` (str, optional) - Column name for model offset values. If not specified, default offset value is 0.
 - `col_weights` (str, optional) - Column name for model weight values. If not specified, default weight value is 1.
 
-**SWiMR settings**
-
-See the [SWiMR documentation](https://hub.ihme.washington.edu/display/MSCA/Similarity-Weighted+Meta-Regression+%28SWiMR%29+models) for a full description of the SWiMR stage parameters.
-
-Optional parameters:
--  `cascade_levels` (list of str, optional) - Column names of cascade hierarchy if `model_type` is cascade. Use age__tmp for age_group_id; use locid for location_id; use sex__tmp for sex_id.
-- `cascade_hierarchy_csv_path` (str, optional) - Path to cascade hierarchy file if `model_type` is cascade. If not specified, a cascade hierarchy file is created by the OneMod package based on the input data and `cascade_levels`.
-
-For the SWiMR stage, you can include multiple model configurations (note: model names cannot contain underscores). In addition, you can specify a list of values for the following model parameters:
-- `n_internal_knots_year`
-- `similarity_matrix`
-- `similarity_multiplier`
-- `use_similarity_matrix`
-- `theta`
-- `intercept_theta`
-
 **WeAve settings**
 
 See the [WeAve documentation](https://ihmeuw-msca.github.io/weighted-average/) for a full description of the WeAve stage parameters. Dimensions using the `depth` kernel (e.g., `location_id`) should be listed last for weight normalization to work as intended.

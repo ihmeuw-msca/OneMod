@@ -1,12 +1,13 @@
 from typing import Any
 
 from modrover.globals import model_type_dict
+from pydantic import field_validator
+
 from onemod.schema.models.base import ParametrizedBaseModel
 from onemod.schema.models.ensemble_config import EnsembleConfig
 from onemod.schema.models.regmod_smooth_config import RegmodSmoothConfig
 from onemod.schema.models.rover_covsel_config import RoverCovselConfig
 from onemod.schema.models.weave_config import WeaveConfig
-from pydantic import field_validator
 
 
 class OneModConfig(ParametrizedBaseModel):
