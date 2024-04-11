@@ -1,5 +1,6 @@
-from onemod.schema.models.base import ParametrizedBaseModel
 from pydantic import Field
+
+from onemod.schema.models.base import ParametrizedBaseModel
 
 
 class RegmodModelInit(ParametrizedBaseModel):

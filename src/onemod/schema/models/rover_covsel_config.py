@@ -1,5 +1,6 @@
-from onemod.schema.models.base import ParametrizedBaseModel
 from pydantic import BaseModel, Field
+
+from onemod.schema.models.base import ParametrizedBaseModel
 
 
 class RoverInit(BaseModel):

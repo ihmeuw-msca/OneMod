@@ -27,12 +27,12 @@ Parameters:
 - `cluster_name` (str, optional) - Name of cluster to run pipeline on. Default is slurm.
 
 **Additional entrypoints:**
-- `initialize_results {stage} --experiment_dir {path/to/experiment/directory}`
-- `collect_results {stage} --experiment_dir {path/to/experiment/directory}`
-- `delete_results {stage} --experiment_dir {path/to/experiment/directory}`
-- `rover_model --experiment_dir {path/to/experiment/directory} --submodel_id {submodel ID}`
-- `weave_model --experiment_dir {path/to/experiment/directory} --submodel_id {submodel ID}`
-- `ensemble_model --experiment_dir {path/to/experiment/directory}`
+- `initialize_results {stage} --directory {path/to/experiment/directory}`
+- `collect_results {stage} --directory {path/to/experiment/directory}`
+- `delete_results {stage} --directory {path/to/experiment/directory}`
+- `rover_model --directory {path/to/experiment/directory} --submodel_id {submodel ID}`
+- `weave_model --directory {path/to/experiment/directory} --submodel_id {submodel ID}`
+- `ensemble_model --directory {path/to/experiment/directory}`
 
 ### Input
 
