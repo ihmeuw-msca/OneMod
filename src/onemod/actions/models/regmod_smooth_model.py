@@ -12,7 +12,7 @@ import pandas as pd
 from regmodsm.model import Model
 from scipy.special import logit
 
-from onemod.utils import get_handle
+from onemod.utils import get_handle,get_binom_adjusted_se
 
 
 def get_residual_computation_function(
@@ -218,20 +218,8 @@ def regmod_smooth_model(experiment_dir: str) -> None:
         regmod_predictions = model.predict(df,return_ui = True)
         df[global_config.col_pred] = regmod_predictions[0]
         df["regmod_logit_SE"]=(logit(regmod_predictions[2]) - logit(regmod_predictions[1]))/(2*1.96)
-
-        dtrain = df[df['obs'].notna()].copy()
-        pred_var_mean = ((dtrain[global_config.col_pred]*(1-dtrain[global_config.col_pred]))/(dtrain['sample_size'])).mean()
-
-        mean_sample_size = dtrain['sample_size'].mean()
-        weighted_data_mse = (
-            (
-                (dtrain[global_config.col_pred]-dtrain['obs_rate'])**2) 
-            * (dtrain['sample_size']/mean_sample_size)
-            ).mean()
-        SE_corrector = np.sqrt(pred_var_mean/weighted_data_mse)
-        df['binomial_adjusted_regmod_logit_SE'] = df['regmod_logit_SE']*SE_corrector
-
-
+        df['binomial_adjusted_regmod_logit_SE'] = get_binom_adjusted_se(df[global_config.col_pred],df['regmod_logit_SE']**2,df['obs'],df['sample_size'])
+        
     else:
         df[global_config.col_pred] = model.predict(df)
 
