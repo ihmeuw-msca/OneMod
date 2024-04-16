@@ -7,22 +7,21 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
+from scipy.special import logit
 
 from onemod.schema.models.onemod_config import OneModConfig
-from onemod.utils import (
-    get_binom_adjusted_se,
-    get_handle,
-    get_rover_covsel_submodels,
-    get_swimr_submodels,
-    get_weave_submodels,
-)
+from onemod.utils import (get_binom_adjusted_se, get_handle,
+                          get_rover_covsel_submodels, get_swimr_submodels,
+                          get_weave_submodels)
 
 
 def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     submodel_ids = get_rover_covsel_submodels(dataif.experiment)
     summaries = []
     for submodel_id in submodel_ids:
-        summary = dataif.load_rover_covsel(f"submodels/{submodel_id}/summary.csv")
+        summary = dataif.load_rover_covsel(
+            f"submodels/{submodel_id}/summary.csv"
+        )
         summary["submodel_id"] = submodel_id
         summaries.append(summary)
     summaries = pd.concat(summaries, axis=0)
@@ -53,7 +52,9 @@ def _get_selected_covs(dataif: DataInterface) -> list[str]:
 
 
 def _plot_rover_covsel_results(
-    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str] | None = None
+    dataif: DataInterface,
+    summaries: pd.DataFrame,
+    covs: list[str] | None = None,
 ) -> plt.Figure:
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
@@ -100,7 +101,9 @@ def _plot_regmod_smooth_results(
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if not selected_covs:
-        warn("There are no covariates selected, skip `plot_regmod_smooth_results`")
+        warn(
+            "There are no covariates selected, skip `plot_regmod_smooth_results`"
+        )
         return None
 
     df_coef = (
@@ -111,7 +114,9 @@ def _plot_regmod_smooth_results(
     df_covs = df_coef.groupby("cov")
 
     fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
-    logger.info(f"Plotting smoothed covariates for {len(selected_covs)} covariates.")
+    logger.info(
+        f"Plotting smoothed covariates for {len(selected_covs)} covariates."
+    )
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.errorbar(
@@ -154,7 +159,9 @@ def collect_results_regmod_smooth(experiment_dir: str) -> None:
     summaries = _get_rover_covsel_summaries(dataif)
     fig = _plot_regmod_smooth_results(dataif, summaries)
     if fig is not None:
-        fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
+        fig.savefig(
+            dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight"
+        )
 
 
 def collect_results_swimr(experiment_dir: str) -> None:
@@ -190,6 +197,7 @@ def collect_results_weave(experiment_dir: str) -> None:
     """Collect weave submodel results."""
     dataif, config = get_handle(experiment_dir)
 
+    # Collect submodel results
     submodel_ids = get_weave_submodels(experiment_dir)
     for holdout_id in config.col_holdout + ["full"]:
         df_pred = pd.concat(
@@ -202,41 +210,45 @@ def collect_results_weave(experiment_dir: str) -> None:
             ],
             ignore_index=True,
         ).drop_duplicates()
+
+        # Add binomial SE
+        if holdout_id == "full" and config.mtype == "binomial":
+            df_pred = df_pred.merge(
+                right=dataif.load_regmod_smooth("predictions.parquet")[
+                    config.col_id
+                    + [
+                        config.col_obs,
+                        config.regmod_smooth.model.weights,
+                        "regmod_logit_SE",
+                    ]
+                ],
+                on=config.col_id,
+            )
+            df_pred["logitspace_pred"] = logit(df_pred[config.col_pred])
+            df_pred["logitspace_adjusted_sd"] = get_binom_adjusted_se(
+                df_pred[config.col_pred],
+                df_pred["residual_var"] + df_pred["regmod_logit_SE"] ** 2,
+                df_pred[config.col_obs],
+                df_pred[config.regmod_smooth.model.weights],
+            )
+
+        # Save weave results
         df_pred = pd.pivot(
             data=df_pred,
             index=config.col_id,
             columns=["model_id", "param_id"],
-            values=["residual", config.col_pred, "weave_result_variance"],
+            values=[
+                "residual",
+                "residual_var",
+                "logitspace_pred",
+                "logitspace_adjusted_se",
+                config.col_pred,
+            ],
         )
         if holdout_id == "full":
-            if config["mtype"] == "binomial":
-                from scipy.special import logit
-
-                regmod_preds = dataif.load_regmod_smooth(
-                    "predictions.parquet"
-                ).set_index(df_pred.index.names)
-                df_pred["regmod_logit_SE"] = regmod_preds["regmod_logit_SE"]
-                for col in [config.col_obs, config.regmod_smooth.model.weights]:
-                    df_pred[col] = regmod_preds[col]
-
-            for colname in df_pred[config.col_pred].columns:
-                df_pred[("logitspace_pred",) + colname] = logit(
-                    df_pred[(config.col_pred,) + colname]
-                )
-                df_pred[("logitspace_adjusted_se",) + colname] = get_binom_adjusted_se(
-                    df_pred[config.col_pred][colname],
-                    df_pred["weave_result_variance"][colname]
-                    + df_pred["regmod_logit_SE"] ** 2,
-                    df_pred[config.col_obs],
-                    df_pred[config.regmod_smooth.model.weights],
-                )
-
             dataif.dump_weave(df_pred, "predictions.parquet")
-
         else:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
-
-    regmod_preds
 
 
 def collect_results(stage_name: str, experiment_dir: str) -> None:
