@@ -100,12 +100,8 @@ def get_pi_coverage(
 
     lwr = 0.5 * alpha
     upr = 1.0 - lwr
-    residual["lwr"] = norm.ppf(
-        lwr, loc=residual["residual"], scale=residual["total_sd"]
-    )
-    residual["upr"] = norm.ppf(
-        upr, loc=residual["residual"], scale=residual["total_sd"]
-    )
+    residual["lwr"] = norm.ppf(lwr, loc=0.0, scale=residual["total_sd"])
+    residual["upr"] = norm.ppf(upr, loc=0.0, scale=residual["total_sd"])
     coverage = residual.eval("residual >= lwr and residual <= upr").mean()
     return coverage
 
