@@ -1,16 +1,17 @@
 """Useful functions."""
+
 from __future__ import annotations
 
+import warnings
 from functools import cache
 from itertools import product
 from pathlib import Path
 from typing import Any, Optional, Union
-import warnings
 
 import numpy as np
 import pandas as pd
-from pplkit.data.interface import DataInterface
 import yaml
+from pplkit.data.interface import DataInterface
 
 from onemod.schema.models.onemod_config import OneModConfig as OneModCFG
 
@@ -117,9 +118,9 @@ class SwimrParams(Parameters):
         )
         param_sets = pd.DataFrame(index=index).reset_index()
         for param in ["similarity_matrix", "similarity_multiplier"]:
-            param_sets.loc[
-                param_sets["use_similarity_matrix"] == 0, param
-            ] = param_sets[param].unique()[0]
+            param_sets.loc[param_sets["use_similarity_matrix"] == 0, param] = (
+                param_sets[param].unique()[0]
+            )
         param_sets.drop_duplicates(inplace=True, ignore_index=True)
         param_cols = list(param_sets.columns)
         param_sets["model_id"] = self.model_id
@@ -612,11 +613,18 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
 
     return dataif, config
 
-def get_binom_adjusted_se(pred,var,obs,sample_size):
+
+def get_binom_adjusted_se(pred, var, obs, sample_size):
     observed_inds = obs.notna()
-    adj_sample_size = np.maximum(sample_size,0.0001)
-    pred_var = ((pred[observed_inds]*(1-pred[observed_inds]))/(adj_sample_size[observed_inds])).mean()
+    adj_sample_size = np.maximum(sample_size, 0.0001)
+    pred_var = (
+        (pred[observed_inds] * (1 - pred[observed_inds]))
+        / (adj_sample_size[observed_inds])
+    ).mean()
     mean_sample_size = adj_sample_size[observed_inds].mean()
-    data_mse = (((pred[observed_inds] - obs[observed_inds]/adj_sample_size[observed_inds])**2)*adj_sample_size[observed_inds]).mean()/mean_sample_size
-    SE_corrector = np.sqrt(pred_var/data_mse)
+    data_mse = (
+        ((pred[observed_inds] - obs[observed_inds]) ** 2)
+        * adj_sample_size[observed_inds]
+    ).mean() / mean_sample_size
+    SE_corrector = np.sqrt(pred_var / data_mse)
     return np.sqrt(var) * SE_corrector

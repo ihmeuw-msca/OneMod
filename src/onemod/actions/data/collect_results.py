@@ -1,19 +1,20 @@
 """Collect onemod stage submodel results."""
+
 from warnings import warn
 
 import fire
-from loguru import logger
 import matplotlib.pyplot as plt
 import pandas as pd
+from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from onemod.schema.models.onemod_config import OneModConfig
 from onemod.utils import (
+    get_binom_adjusted_se,
     get_handle,
     get_rover_covsel_submodels,
     get_swimr_submodels,
     get_weave_submodels,
-    get_binom_adjusted_se
 )
 
 
@@ -187,10 +188,10 @@ def collect_results_swimr(experiment_dir: str) -> None:
 
 def collect_results_weave(experiment_dir: str) -> None:
     """Collect weave submodel results."""
-    dataif, settings = get_handle(experiment_dir)
+    dataif, config = get_handle(experiment_dir)
 
     submodel_ids = get_weave_submodels(experiment_dir)
-    for holdout_id in settings.col_holdout + ["full"]:
+    for holdout_id in config.col_holdout + ["full"]:
         df_pred = pd.concat(
             [
                 dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
@@ -203,34 +204,38 @@ def collect_results_weave(experiment_dir: str) -> None:
         ).drop_duplicates()
         df_pred = pd.pivot(
             data=df_pred,
-            index=settings["col_id"],
+            index=config.col_id,
             columns=["model_id", "param_id"],
-            values=["residual", settings.col_pred,"weave_result_variance"],
+            values=["residual", config.col_pred, "weave_result_variance"],
         )
         if holdout_id == "full":
-            if settings['mtype'] == 'binomial':
+            if config["mtype"] == "binomial":
                 from scipy.special import logit
-                regmod_preds = dataif.load_regmod_smooth("predictions.parquet").set_index(df_pred.index.names)
-                df_pred['regmod_logit_SE'] = regmod_preds["regmod_logit_SE"]
-                df_pred['obs'] = regmod_preds["obs"]
-                df_pred['sample_size'] = regmod_preds["sample_size"]
 
-            for colname in df_pred['pred_rate'].columns:
-                df_pred[('logitspace_pred',) + colname] = logit(df_pred[('pred_rate',) + colname])
-                df_pred[('logitspace_adjusted_se',) + colname] = (
-                    get_binom_adjusted_se(
-                        df_pred['pred_rate'][colname],
-                        df_pred['weave_result_variance'][colname] + df_pred['regmod_logit_SE']**2,
-                        df_pred['obs'],
-                        df_pred['sample_size']
-                        )
+                regmod_preds = dataif.load_regmod_smooth(
+                    "predictions.parquet"
+                ).set_index(df_pred.index.names)
+                df_pred["regmod_logit_SE"] = regmod_preds["regmod_logit_SE"]
+                for col in [config.col_obs, config.regmod_smooth.model.weights]:
+                    df_pred[col] = regmod_preds[col]
+
+            for colname in df_pred[config.col_pred].columns:
+                df_pred[("logitspace_pred",) + colname] = logit(
+                    df_pred[(config.col_pred,) + colname]
+                )
+                df_pred[("logitspace_adjusted_se",) + colname] = get_binom_adjusted_se(
+                    df_pred[config.col_pred][colname],
+                    df_pred["weave_result_variance"][colname]
+                    + df_pred["regmod_logit_SE"] ** 2,
+                    df_pred[config.col_obs],
+                    df_pred[config.regmod_smooth.model.weights],
                 )
 
             dataif.dump_weave(df_pred, "predictions.parquet")
 
         else:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
-    
+
     regmod_preds
 
 
