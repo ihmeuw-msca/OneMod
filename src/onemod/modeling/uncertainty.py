@@ -153,7 +153,7 @@ def calibrate_pred_sd(
         pearson_residual = residual["residual"] / np.sqrt(
             residual["residual_se"] ** 2 + (alpha * data[pred_sd]) ** 2
         )
-        return np.std(pearson_residual) - 1.0
+        return pearson_residual.std() - 1.0
 
     if equation(0.0) > 0:
         # Here we assume all of data[pred_sd] are strictly greater than 0
