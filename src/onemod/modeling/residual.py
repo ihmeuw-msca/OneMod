@@ -37,4 +37,4 @@ class ResidualCalculator:
         return result
 
     def __call__(self, *args, **kwargs) -> pd.DataFrame:
-        return getattr(self, f"get_residual_{self.name}")(*args, **kwargs)
+        return getattr(self, f"get_residual_{self.model_type}")(*args, **kwargs)
