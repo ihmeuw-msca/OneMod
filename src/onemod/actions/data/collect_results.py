@@ -210,6 +210,7 @@ def collect_results_weave(experiment_dir: str) -> None:
             ],
             ignore_index=True,
         ).drop_duplicates()
+        values = ["residual", "residual_var", config.col_pred]
 
         # Add binomial SE
         if holdout_id == "full" and config.mtype == "binomial":
@@ -225,25 +226,20 @@ def collect_results_weave(experiment_dir: str) -> None:
                 on=config.col_id,
             )
             df_pred["logitspace_pred"] = logit(df_pred[config.col_pred])
-            df_pred["logitspace_adjusted_sd"] = get_binom_adjusted_se(
+            df_pred["logitspace_adjusted_se"] = get_binom_adjusted_se(
                 df_pred[config.col_pred],
                 df_pred["residual_var"] + df_pred["regmod_logit_SE"] ** 2,
                 df_pred[config.col_obs],
                 df_pred[config.regmod_smooth.model.weights],
             )
+            values += ["logitspace_pred", "logitspace_adjusted_se"]
 
         # Save weave results
         df_pred = pd.pivot(
             data=df_pred,
             index=config.col_id,
             columns=["model_id", "param_id"],
-            values=[
-                "residual",
-                "residual_var",
-                "logitspace_pred",
-                "logitspace_adjusted_se",
-                config.col_pred,
-            ],
+            values=values,
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")
