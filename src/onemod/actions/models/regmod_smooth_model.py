@@ -6,13 +6,12 @@ from functools import partial
 from typing import Callable
 
 import fire
+from loguru import logger
 import numpy as np
 import pandas as pd
-from loguru import logger
 from regmodsm.model import Model
-from scipy.special import logit
 
-from onemod.utils import get_binom_adjusted_se, get_handle
+from onemod.utils import get_handle
 
 
 def get_residual_computation_function(
@@ -156,14 +155,14 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     predictions.parquet
         Predictions with residual information.
     """
-    dataif, config = get_handle(experiment_dir)
+    dataif, global_config = get_handle(experiment_dir)
 
-    stage_config = config.regmod_smooth
+    regmod_smooth_config = global_config.regmod_smooth
 
     # Create regmod smooth parameters
-    var_groups = stage_config.model.var_groups
-    coef_bounds = stage_config.model.coef_bounds
-    lam = stage_config.model.lam
+    var_groups = regmod_smooth_config.model.var_groups
+    coef_bounds = regmod_smooth_config.model.coef_bounds
+    lam = regmod_smooth_config.model.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
@@ -194,49 +193,35 @@ def regmod_smooth_model(experiment_dir: str) -> None:
 
     # Create regmod smooth model
     model = Model(
-        model_type=stage_config.mtype,
-        obs=config.col_obs,
-        dims=stage_config.model.dims,
+        model_type=regmod_smooth_config.mtype,
+        obs=global_config.col_obs,
+        dims=regmod_smooth_config.model.dims,
         var_groups=var_groups,
-        weights=stage_config.model.weights,
+        weights=regmod_smooth_config.model.weights,
     )
 
-    df = dataif.load(config.input_path)
-    df_train = df.query(f"({config.col_test} == 0) & {config.col_obs}.notnull()")
+    df = dataif.load(global_config.input_path)
+    df_train = df.query(
+        f"({global_config.col_test} == 0) & {global_config.col_obs}.notnull()"
+    )
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, data_dim_vals=df, **stage_config.regmod_fit)
+    model.fit(df_train, data_dim_vals=df, **regmod_smooth_config.regmod_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
-
-    if stage_config.mtype == "binomial":
-        regmod_predictions = model.predict(df, return_ui=True)
-        df[config.col_pred] = regmod_predictions[0]
-        df["regmod_logit_SE"] = (
-            logit(regmod_predictions[2]) - logit(regmod_predictions[1])
-        ) / (2 * 1.96)
-        df["binomial_adjusted_regmod_logit_SE"] = get_binom_adjusted_se(
-            df[config.col_pred],
-            df["regmod_logit_SE"] ** 2,
-            df[config.col_obs],
-            df[stage_config.model.weights],
-        )
-
-    else:
-        df[config.col_pred] = model.predict(df)
-
+    df[global_config.col_pred] = model.predict(df)
     residual_func = get_residual_computation_function(
-        model_type=stage_config.mtype,
-        col_obs=config.col_obs,
-        col_pred=config.col_pred,
+        model_type=regmod_smooth_config.mtype,
+        col_obs=global_config.col_obs,
+        col_pred=global_config.col_pred,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=stage_config.mtype,
-        col_pred=config.col_pred,
-        col_weights=stage_config.model.weights,
+        model_type=regmod_smooth_config.mtype,
+        col_pred=global_config.col_pred,
+        col_weights=regmod_smooth_config.model.weights,
     )
     df["residual"] = df.apply(
         residual_func,

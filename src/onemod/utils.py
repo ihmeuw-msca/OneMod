@@ -546,6 +546,20 @@ def get_weave_submodels(
     return submodels
 
 
+def get_ensemble_submodels(experiment_dir: str, save_file: bool = False) -> list[str]:
+    """Get ensemble submodel IDs and save subsets."""
+    dataif, config = get_handle(experiment_dir)
+
+    # Create ensemble subsets and submodels
+    subsets = Subsets("ensemble", config["ensemble"], dataif.load_data())
+    submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
+
+    # Save file
+    if save_file:
+        dataif.dump_ensemble(subsets.subsets, "subsets.csv")
+    return submodels
+
+
 def get_prediction(row: pd.Series, col_pred: str, model_type: str) -> float:
     """Get smoother prediction."""
     if model_type == "binomial":
@@ -612,19 +626,3 @@ def get_handle(experiment_dir: str) -> tuple[DataInterface, OneModCFG]:
     dataif.add_dir("raw_data", config.input_path)
 
     return dataif, config
-
-
-def get_binom_adjusted_se(pred, var, obs, sample_size):
-    observed_inds = obs.notna()
-    adj_sample_size = np.maximum(sample_size, 0.0001)
-    pred_var = (
-        (pred[observed_inds] * (1 - pred[observed_inds]))
-        / (adj_sample_size[observed_inds])
-    ).mean()
-    mean_sample_size = adj_sample_size[observed_inds].mean()
-    data_mse = (
-        ((pred[observed_inds] - obs[observed_inds]) ** 2)
-        * adj_sample_size[observed_inds]
-    ).mean() / mean_sample_size
-    SE_corrector = np.sqrt(pred_var / data_mse)
-    return np.sqrt(var) * SE_corrector
