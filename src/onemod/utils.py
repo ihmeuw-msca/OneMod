@@ -376,7 +376,6 @@ def get_smoother_input(
     return df_input
 
 
-# TODO: This need to be adjusted for the new change
 def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
     """Get column names needed for smoother model."""
     columns = set(config.holdouts + [config.test])
@@ -462,6 +461,7 @@ def get_ensemble_submodels(
     return submodels
 
 
+# TODO: move to modeling module
 def get_prediction(row: pd.Series, pred: str, model_type: str) -> float:
     """Get smoother prediction."""
     if model_type == "binomial":
