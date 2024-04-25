@@ -240,11 +240,11 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     """
     dataif, config = get_handle(directory)
 
-    ensemble_config = config.ensemble
+    stage_config = config.ensemble
 
     subsets = Subsets(
         "ensemble",
-        ensemble_config,
+        stage_config,
         subsets=dataif.load_ensemble("subsets.csv"),
     )
 
@@ -272,12 +272,12 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
             right=predictions,
             on=config.ids,
         )
-        df[ensemble_config.metric] = df.apply(
+        df[stage_config.metric] = df.apply(
             lambda row: get_performance(
                 row,
                 df_holdout,
                 subsets,
-                ensemble_config.metric,
+                stage_config.metric,
                 config.obs,
                 **kwargs,
             ),
@@ -287,7 +287,7 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
 
     # Get smoother weights
     columns = ["smoother_id", "model_id", "param_id", "subset_id"]
-    metric_name = ensemble_config.metric
+    metric_name = stage_config.metric
     groups = pd.concat(df_list).groupby(columns)
     mean = groups.mean(numeric_only=True).rename(
         {metric_name: f"{metric_name}_mean"}, axis=1
@@ -299,10 +299,10 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     df_performance["weight"] = get_weights(
         df_performance,
         subsets,
-        ensemble_config.metric,
-        ensemble_config.score,
-        ensemble_config.top_pct_score,
-        ensemble_config.top_pct_model,
+        stage_config.metric,
+        stage_config.score,
+        stage_config.top_pct_score,
+        stage_config.top_pct_model,
     )
     dataif.dump_ensemble(df_performance, "performance.csv", index=True)
 
