@@ -134,7 +134,7 @@ class OneModConfig(Config):
         ensemble:
           groupby: [sex_id, super_region_id]
           metric: rmse
-          score: neg_exp
+          score: rover
           top_pct_score: 1
           top_pct_model: 1
 

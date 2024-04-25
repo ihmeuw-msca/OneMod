@@ -1,3 +1,5 @@
+from typing import Literal
+
 from onemod.schema.base import StageConfig
 
 
@@ -9,7 +11,7 @@ class EnsembleConfig(StageConfig):
     metric
         Metric to use for model evaluation. Default is "rmse".
     score
-        Score to compute the model ensemble weights. Default is "neg_exp".
+        Score to compute the model ensemble weights. Default is "rover".
     top_pct_score
         Percentage of models have the top score to consider for ensemble
         weights. Default is 1.0, which means all models are considered.
@@ -29,13 +31,13 @@ class EnsembleConfig(StageConfig):
           max_attempts: 1
           max_batch: -1
           metric: rmse
-          score: neg_exp
+          score: rover
           top_pct_score: 1.0
           top_pct_model: 1.0
 
     """
 
-    metric: str = "rmse"
-    score: str = "neg_exp"
+    metric: Literal["rmse", "winsorized_rmse"] = "rmse"
+    score: Literal["avg", "rover", "codem", "best"] = "rover"
     top_pct_score: float = 1.0
     top_pct_model: float = 1.0
