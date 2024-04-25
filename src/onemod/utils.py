@@ -127,6 +127,7 @@ class WeaveParams(Parameters):
         return param_sets[["model_id", "param_id"] + param_cols]
 
 
+# TODO: Need to handle the case when groupby is an empty list
 class Subsets:
     """Helper class for model subsets based on groupby setting.
 
