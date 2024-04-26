@@ -19,7 +19,7 @@ kernel_params = {
     "exponential": "radius",
     "tricubic": "exponent",
     "depth": "radius",
-    "variance": "radius",
+    "inverse": "radius",
 }
 
 
