@@ -29,7 +29,7 @@ dependencies = [
     "pyarrow",
     "pydantic",
     "scipy",
-    "regmod == 0.1.1",
+    "regmod == 0.1.2",
     "weighted-average >= 1.3.0",
 ]
 
