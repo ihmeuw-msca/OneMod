@@ -12,15 +12,15 @@ import pandas as pd
 from pplkit.data.interface import DataInterface
 
 from onemod.schema import OneModConfig
+from onemod.schema.stages.weave import WeaveDimension
 
 
 class Parameters:
     """Helper class for creating smoother parameter sets.
 
-    In the settings dictionary, some smoother model parameters can be
-    specified as either a single item or a list. This class generates
-    the cartesian product of all possible parameter combinations and
-    assigns each a unique parameter ID.
+    Some smoother model parameters are specified as a list. This class
+    generates the cartesian product of all possible parameter
+    combinations and assigns each a unique parameter ID.
 
     Attributes
     ----------
@@ -70,9 +70,8 @@ class Parameters:
         """Create parameter set data frame.
 
         Parameter set data frame contains parameter IDs and their
-        corresponding parameters. Model parameters not included in
-        self.params are not included in the data frame as they do not
-        vary by submodel.
+        corresponding parameters. Model parameters are not included in
+        the data frame if they do not vary by submodel.
 
         Parameters
         ----------
@@ -104,20 +103,17 @@ class WeaveParams(Parameters):
 
     def _create_param_sets(self, config: OneModConfig) -> pd.DataFrame:
         """Create parameter set data frame."""
-        weave_config = config["weave"]["models"][self.model_id]
-        dimensions = weave_config["dimensions"]
+        dimensions = config.weave.models[self.model_id].dimensions
         index = pd.MultiIndex.from_product(
             iterables=[
-                as_list(dimensions[dimension][param])
-                for dimension in dimensions
-                for param in self.params
-                if param in dimensions[dimension]
+                dimension[param]
+                for dimension in dimensions.values()
+                for param in self._get_dimension_params(dimension)
             ],
             names=[
-                f"{dimension}_{param}"
-                for dimension in dimensions
-                for param in self.params
-                if param in dimensions[dimension]
+                f"{dimension_name}_{param}"
+                for dimension_name, dimension in dimensions.items()
+                for param in self._get_dimension_params(dimension)
             ],
         )
         param_sets = pd.DataFrame(index=index).reset_index()
@@ -125,6 +121,20 @@ class WeaveParams(Parameters):
         param_sets["model_id"] = self.model_id
         param_sets["param_id"] = param_sets.index
         return param_sets[["model_id", "param_id"] + param_cols]
+
+    def _get_dimension_params(self, dimension: WeaveDimension) -> list[str]:
+        """Get dimension parameters with multiple values."""
+        param_list = []
+        if dimension.kernel in ["exponential", "depth", "inverse"]:
+            if len(dimension.radius) > 1:
+                param_list.append("radius")
+        elif dimension.kernel == "tricubic":
+            if len(dimension.exponent) > 1:
+                param_list.append("exponent")
+        if dimension.distance == "dictionary":
+            if len(dimension.distance_dict) > 1:
+                param_list.append("distance_dict")
+        return param_list
 
 
 # TODO: Need to handle the case when groupby is an empty list
