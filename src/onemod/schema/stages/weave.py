@@ -1,101 +1,147 @@
+from typing import Literal
+
+from pydantic import model_validator
+
 from onemod.schema.base import Config, StageConfig
 
 
-class DimensionInit(Config):
-    """Weave dimension creation configuration. For more details please check
-    `weave <https://ihmeuw-msca.github.io/weighted-average/>`_.
+class WeaveDimension(Config):
+    """WeAve dimension configuration.
 
     Parameters
     ----------
     name
-        Name of the dimension.
+        Dimension name.
     coordinates
-        Coordinates of the dimension. Default is None.
+        Dimension coordinates. Default is None.
     kernel
-        Kernel function to use. Default is "identity".
+        Kernel function name. Default is "identity".
     distance
-        Distance function to use. Default is None.
+        Distance function name. Default is None.
     radius
-        List of radius for the kernel. Default is [0.0]. All the parameters in
-        the list will be used to create different configurations of the
-        dimension to do parameter ensemble.
+        List of radii for the exponential, depth, and inverse kernels.
+        Default is None. These parameters are used to create different
+        weave models for the ensemble.
     exponent
-        List of exponent for the kernel. Default is [0.0]. All the parameters in
-        the list will be used to create different configurations of the
-        dimension to do parameter ensemble.
+        List of tricubic kernel exponents. Default is None. These
+        parameters are used to create different weave models for the
+        ensemble.
     version
-        Version of the kernel. Default is None.
+        Depth kernel version. Default is None.
     distance_dict
-        Dictionary of distance functions. Default is None.
+        List of filepaths (str) containing distance dictionaries.
+        Default is None. These parameters are used to create different
+        weave models for the ensemble.
 
     """
 
     name: str
-    coordinates: str | list[str] | None = None
-    kernel: str = "identity"
-    distance: str | None = None
-    radius: float | list[float] = [0.0]
-    exponent: float | list[float] = [0.0]
-    version: str | None = None
-    distance_dict: str | list[str] | None = None
+    coordinates: list[str] | None = None
+    kernel: Literal[
+        "exponential", "tricubic", "depth", "inverse", "identity"
+    ] = "identity"
+    distance: Literal["euclidean", "tree", "dictionary"] | None = None
+    radius: list[float] | None = None
+    exponent: list[float] | None = None
+    version: Literal["codem", "stgpr"] | None = None
+    distance_dict: list[str] | None = None
+
+    @model_validator(mode="after")
+    def check_args(self):
+        """Make sure each dimension has required parameters."""
+        if (
+            self.kernel in ["exponential", "depth", "inverse"]
+            and self.radius is None
+        ):
+            raise ValueError(f"{self.kernel} kernel requires radius parameter")
+        if self.kernel == "tricubic" and self.exponent is None:
+            raise ValueError("tricubic kernel requires exponent parameter")
+        if self.distance == "dictionary" and self.distance_dict is None:
+            raise ValueError(
+                "dictionary distance requires distance_dict parameter"
+            )
+        return self
 
 
-class WeaveConfig(StageConfig):
-    """Configuration for the WeAve stage. In the actual OneMod configuration,
-    this will be considered as a sub-model configuration for the weave stage.
+class WeaveModel(StageConfig):
+    """WeAve model configuration.
 
     Parameters
     ----------
-    max_batch
-        Maximum batch size to use. Default is 5000. This overwrite the parent
-        class default.
+    groupby
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
+    max_attempts
+        Maximum number of attempts to run the Jobmon task associated
+        with the stage. Default is 1.
     dimensions
-        Dictionary of dimension configurations. Default is an empty dictionary.
+        Dictionary of WeAve dimension configuration objects.
+    max_batch
+        Maximum number of points per batch when fitting the model using
+        multiple Jobmon tasks. Default is -1, which means do not fit the
+        model in batches.
 
-    Example
-    -------
-    All of the fields have default values. However using the default will not
-    provide any information to the model run. Here is an example to setup the
-    weave stage properly.
+    """
+
+    dimensions: dict[str, WeaveDimension]
+    max_batch: int = -1
+
+
+class WeaveConfig(Config):
+    """WeAve stage configuration. Unlike other OneMod stages, the WeAve
+    stage can consist of multiple models which different parameters.
+
+    Parameters
+    ----------
+    models
+        Dictionary of WeAve model configuration objects.
+
+    Examples
+    --------
+    Here is an example to set up the WeAve stage properly. For more
+    details please check out the WeAve package
+    `documentation <https://ihmeuw-msca.github.io/weighted-average/>`_.
 
     .. code-block:: yaml
 
         weave:
-          model1:
-            groupby: [sex_id, super_region_id]
-            max_attempts: 1
-            max_batch: 5000
-            dimensions:
-              age:
-                name: age_group_id
-                coordinates: age_mid
-                kernel: exponential
-                radius: [0.75, 1, 1.25]
-              year:
-                name: year_id
-                kernel: tricubic
-                exponent: [0.5, 1, 1.5]
-              location:
-                name: location_id
-                coordinates: [super_region_id, region_id, location_id]
-                kernel: depth
-                radius: [0.7, 0.8, 0.9]
-            model2:
-            groupby: [age_group_id, sex_id]
-            max_attempts: 1
-            max_batch: 5000
-            dimensions:
-              year:
-                name: year_id
-                kernel: tricubic
-                exponent: [0.5, 1, 1.5]
-              location:
-                name: location_id
-                kernel: identity
-                distance: dictionary
-                distance_dict: [/path/to/distance_dict1.parquet, /path/to/distance_dict2.parquet]
+          models:
+            super_region_model:
+              groupby: [sex_id, super_region_id]
+              max_attempts: 1
+              max_batch: 5000
+              dimensions:
+                age:
+                  name: age_group_id
+                  coordinates: [age_mid]
+                  kernel: exponential
+                  radius: [0.75, 1, 1.25]
+                location:
+                  name: location_id
+                  coordinates: [super_region_id, region_id, location_id]
+                  kernel: depth
+                  radius: [0.7, 0.8, 0.9]
+                year:
+                  name: year_id
+                  kernel: tricubic
+                  exponent: [0.5, 1, 1.5]
+            age_model:
+              groupby: [sex_id, age_group_id]
+              max_attempts: 1
+              dimensions:
+                location:
+                  name: location_id
+                  kernel: identity
+                  distance: dictionary
+                  distance_dict:
+                  - /path/to/distance_dict1.parquet
+                  - /path/to/distance_dict2.parquet
+                year:
+                  name: year_id
+                  kernel: inverse
+                  radius: [0.5, 1, 1.5]
 
     """
 
-    max_batch: int = 5000
-    dimensions: dict[str, DimensionInit] = {}
+    models: dict[str, WeaveModel]
