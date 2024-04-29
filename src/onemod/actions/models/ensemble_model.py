@@ -65,7 +65,7 @@ def get_predictions(directory: str, holdout_id: Any, pred: str) -> pd.DataFrame:
 def get_performance(
     row: pd.Series,
     df_holdout: pd.DataFrame,
-    subsets: Optional[Subsets],
+    subsets: Subsets,
     metric_name: str,
     obs: str,
     **kwargs,
@@ -78,10 +78,10 @@ def get_performance(
         Row containing the subset details.
     df_holdout : pd.DataFrame
         Dataframe containing the holdout data.
-    subsets : Optional[Subsets]
+    subsets : Subsets
         Subsets object containing the subset data.
     metric_name : str
-        Performance metric to be used (e.g., "rmse").
+        Metric used to compute model performance.
     obs : str
         Column name for the observed values.
 
@@ -96,21 +96,20 @@ def get_performance(
         If an invalid performance metric is provided.
 
     """
-    df_holdout = df_holdout[df_holdout[row["holdout_id"]] == 1]
-    if subsets is not None:
-        df_holdout = subsets.filter_subset(df_holdout, row["subset_id"])
-
     metric = Metric(metric_name)
+    df_holdout = subsets.filter_subset(
+        df_holdout[df_holdout[row["holdout_id"]] == 1], row["subset_id"]
+    )
     return metric(df_holdout, obs, tuple(row[:3]), **kwargs)
 
 
 def get_weights(
     df_performance: pd.DataFrame,
-    subsets: Optional[Subsets],
+    subsets: Subsets,
     metric: str,
     score: str,
-    top_pct_score: float = 0.0,
-    top_pct_model: float = 0.0,
+    top_pct_score: float = 1.0,
+    top_pct_model: float = 1.0,
     psi: float = 0.0,
 ) -> pd.Series:
     """Get smoother weights.
@@ -119,18 +118,24 @@ def get_weights(
     ----------
     df_performance : pd.DataFrame
         Dataframe containing smoother performance metrics.
-    subsets : Optional[Subsets]
+    subsets : Subsets
         Subsets object containing the subset data.
     metric : str
-        Performance metric to be used for weighting (e.g., "rmse_mean").
+        Metric used to compute model performance.
     score : str
-        Weighting score to be used (e.g., "avg", "rover", "codem", "best").
+        Score function used to compute ensemble weights.
     top_pct_score : float, optional
-        Percentage of top scores to be used for weighting, by default 0.
+        Models must be within top_pct_score of the best model to be
+        included in the ensemble (i.e., score >= (1 - top_pct_score) *
+        highest_score). Only used for the "rover" score function.
+        Default is 1.0, which means all models are included in the
+        ensemble.
     top_pct_model : float, optional
-        Percentage of top models to be used for weighting, by default 0.
+        Percentage of highest scoring models to include in the ensemble.
+        Only used for the "rover" score function. Default is 1.0, which
+        means all models are included.
     psi : float, optional
-        Smoothing parameter for codem score, by default 0.
+        Smoothing parameter for "codem" score, by default 0.
 
     Returns
     -------
@@ -143,14 +148,6 @@ def get_weights(
         If an invalid weight score is provided.
 
     """
-    if subsets is None:
-        return get_subset_weights(
-            df_performance[metric + "_mean"],
-            score,
-            top_pct_score,
-            top_pct_model,
-            psi,
-        )
     for subset_id in subsets.get_subset_ids():
         subset_idx = pd.IndexSlice[:, :, :, subset_id]
         df_performance.loc[subset_idx, "weight"] = get_subset_weights(
@@ -166,37 +163,44 @@ def get_weights(
 def get_subset_weights(
     performance: pd.Series,
     score: str,
-    top_pct_score: float = 0.0,
-    top_pct_model: float = 0.0,
-    psi: float = 0.0,
+    top_pct_score: float = 1.0,
+    top_pct_model: float = 1.0,
+    psi: float = 1.0,
 ) -> pd.Series:
     """Get subset weights.
-
-    This function calculates subset weights based on the given scoring method.
 
     Parameters
     ----------
     performance : pd.Series
-        Series containing performance scores for each subset.
+        Series containing performance metrics for each subset.
     score : str
-        Scoring method to be used for computing weights. Available options are:
-            - "avg": Assigns equal weights to all subsets.
-            - "rover": Uses the ROVER (Rank-Ordered Vote Evaluation Results) method.
-            - "codem": Uses the CODEm (Consistent Over Different Experiments) method.
-            - "best": Assigns all weight to the subset with the best performance score.
+        Score function used to compute ensemble weights.
     top_pct_score : float, optional
-        The percentage of top-performing scores to be used for weighting (used only for
-        "rover" score), by default 0.0.
+        Models must be within top_pct_score of the best model to be
+        included in the ensemble (i.e., score >= (1 - top_pct_score) *
+        highest_score). Only used for the "rover" score function.
+        Default is 1.0, which means all models are included in the
+        ensemble.
     top_pct_model : float, optional
-        The percentage of top models to be used for weighting (used only for "rover" score),
-        by default 0.0.
+        Percentage of highest scoring models to include in the ensemble.
+        Only used for the "rover" score function. Default is 1.0, which
+        means all models are included.
     psi : float, optional
-        Smoothing parameter for CODEm score (used only for "codem" score), by default 0.0.
+        Smoothing parameter for CODEm score (used only for "codem"
+        score). Default is 1.0.
 
     Returns
     -------
     pd.Series
         Series containing the subset weights.
+
+    Notes
+    -----
+    Available score functions are:
+    - "avg": Assigns equal weight to all subsets.
+    - "rover": Uses the score function from the ModRover package
+    - "codem": Uses the score function from the CODEm model.
+    - "best": Assigns all weight to the subset with the highest score.
 
     Raises
     ------
@@ -330,7 +334,8 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
 def main() -> None:
     """Main entry point of the module.
 
-    This function uses the Fire library to allow the rover_model function to be
-    invoked from the command line.
+    This function uses the Fire library to allow the ensemble_model
+    function to be invoked from the command line.
+
     """
     fire.Fire(ensemble_model)
