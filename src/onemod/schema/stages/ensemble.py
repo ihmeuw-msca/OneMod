@@ -16,14 +16,14 @@ class EnsembleConfig(StageConfig):
         Maximum number of attempts to run the Jobmon task associated
         with the stage. Default is 1.
     metric
-        Metric to use for model evaluation. Default is "rmse".
+        Metric used to compute model performance. Default is "rmse".
     score
-        Score used to compute model ensemble weights. Default is "rover".
+        Score used to compute ensemble weights. Default is "rover".
     top_pct_score
         Models must be within top_pct_score of the best model to be
         included in the ensemble (i.e., score >= (1 - top_pct_score) *
         highest_score). Default is 1.0, which means all models are
-        included in the ensemble..
+        included in the ensemble.
     top_pct_model
         Percentage of highest scoring models to include in the ensemble.
         Default is 1.0, which means all models are included.
