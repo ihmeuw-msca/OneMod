@@ -17,9 +17,9 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
         - ``directory / config / settings.yaml`` contains rover modeling settings
         - ``directory / results / rover_covsel`` stores all rover results
     submodel_id
-        Example of ``submodel_id`` can be written as ``'subset0'``. In this case
-        the numbered id ``0`` will be used to lookup the corresponding subsets
-        stored in ``subsets.csv``.
+        Example of ``submodel_id`` can be written as ``'subset0'``.
+        In this case the numbered id ``0`` will be used to lookup the
+        corresponding subsets stored in ``subsets.csv``.
 
     Outputs
     -------
@@ -36,7 +36,7 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
 
     subsets = Subsets(
         "rover_covsel",
-        config["rover_covsel"],
+        stage_config,
         subsets=dataif.load_rover_covsel("subsets.csv"),
     )
 
@@ -44,16 +44,6 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     subset_id = int(submodel_id[6:])
     df_input = subsets.filter_subset(dataif.load_data(), subset_id)
     logger.info(f"Fitting rover for {subset_id=}")
-
-    # Create a test column if not existing
-    # TODO: Either move this to some data prep stage or make it persistent, needed in
-    # other models
-    test_col = config.test
-    if test_col not in df_input:
-        logger.warning(
-            "Test column not found, setting null observations as test rows."
-        )
-        df_input[test_col] = df_input[config.obs].isna().astype("int")
 
     df_train = df_input[df_input[config.test] == 0]
 
