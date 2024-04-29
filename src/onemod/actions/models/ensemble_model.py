@@ -135,7 +135,8 @@ def get_weights(
         Only used for the "rover" score function. Default is 1.0, which
         means all models are included.
     psi : float, optional
-        Smoothing parameter for "codem" score. Default is 1.0.
+        Smoothing parameter for the "codem" score function. Default is
+        1.0.
 
     Returns
     -------
@@ -186,7 +187,8 @@ def get_subset_weights(
         Only used for the "rover" score function. Default is 1.0, which
         means all models are included.
     psi : float, optional
-        Smoothing parameter for "codem" score. Default is 1.0.
+        Smoothing parameter for the "codem" score function. Default is
+        1.0.
 
     Returns
     -------
@@ -306,6 +308,7 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
         stage_config.score,
         stage_config.top_pct_score,
         stage_config.top_pct_model,
+        stage_config.psi,
     )
     dataif.dump_ensemble(df_performance, "performance.csv")
 

@@ -22,11 +22,16 @@ class EnsembleConfig(StageConfig):
     top_pct_score
         Models must be within top_pct_score of the best model to be
         included in the ensemble (i.e., score >= (1 - top_pct_score) *
-        highest_score). Default is 1.0, which means all models are
-        included in the ensemble.
+        highest_score). Only used for the "rover" score function.
+        Default is 1.0, which means all models are included in the
+        ensemble.
     top_pct_model
         Percentage of highest scoring models to include in the ensemble.
-        Default is 1.0, which means all models are included.
+        Only used for the "rover" score funciton. Default is 1.0, which
+        means all models are included.
+    psi
+        Smoothing parameter for the "codem" score function. Default is
+        1.0.
 
     Example
     -------
@@ -42,6 +47,7 @@ class EnsembleConfig(StageConfig):
           score: rover
           top_pct_score: 1.0
           top_pct_model: 1.0
+          psi: 1.0
 
     """
 
@@ -49,3 +55,4 @@ class EnsembleConfig(StageConfig):
     score: Literal["avg", "rover", "codem", "best"] = "rover"
     top_pct_score: float = 1.0
     top_pct_model: float = 1.0
+    psi: float = 1.0
