@@ -110,7 +110,7 @@ def get_weights(
     score: str,
     top_pct_score: float = 1.0,
     top_pct_model: float = 1.0,
-    psi: float = 0.0,
+    psi: float = 1.0,
 ) -> pd.Series:
     """Get smoother weights.
 
@@ -135,7 +135,7 @@ def get_weights(
         Only used for the "rover" score function. Default is 1.0, which
         means all models are included.
     psi : float, optional
-        Smoothing parameter for "codem" score, by default 0.
+        Smoothing parameter for "codem" score. Default is 1.0.
 
     Returns
     -------
@@ -186,8 +186,7 @@ def get_subset_weights(
         Only used for the "rover" score function. Default is 1.0, which
         means all models are included.
     psi : float, optional
-        Smoothing parameter for CODEm score (used only for "codem"
-        score). Default is 1.0.
+        Smoothing parameter for "codem" score. Default is 1.0.
 
     Returns
     -------
