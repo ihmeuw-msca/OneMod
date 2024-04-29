@@ -274,7 +274,8 @@ class WeaveSubsets(Subsets):
         super().__init__(stage_id, stage_config, data, subsets)
         if subsets is None:
             n_batches = []
-            for _, df in data.groupby(self.groupby):
+            for subset_id in self.get_subset_ids():
+                df = super().filter_subset(data, subset_id)
                 if stage_config.max_batch is None:
                     n_batches.append(1)
                 else:
