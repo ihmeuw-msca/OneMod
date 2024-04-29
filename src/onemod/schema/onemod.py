@@ -10,8 +10,10 @@ from onemod.schema.stages import (
 
 
 class OneModConfig(Config):
-    """OneMod configuration class. It holds global information about the run. And
-    each stage configuration is stored in a separate class.
+    """OneMod configuration class.
+
+    This class holds the global configuration information for a OneMod
+    experiment. Each stage configuration is stored in a separate class.
 
     Parameters
     ----------
@@ -22,23 +24,32 @@ class OneModConfig(Config):
     obs
         Observation column name.
     mtype
-        Model type. Current options are `'binoimal'`, `'gaussian'`, `'poisson'`.
+        Model type. Current options are `'binoimal'`, `'gaussian'`, and
+        `'poisson'`.
     weights
         Weights column name.
     pred
         Prediction column name.
     holdouts
-        List of holdout columns.
+        List of holdout columns. In the input data, holdout columns
+        should have values 0 (train), 1 (holdout), or NaN (missing
+        observations). Holdout sets are used to evaluate out-of-sample
+        performance for rover and weave models.
     test
-        Test column name. All the observations in the non-test rows must be
-        available.
+        Test column name. In the input data, the test column should have
+        values 0 (train) or 1 (test). Test data is never used to train
+        any stage models, so it can be used to evaluate out-of-sample
+        performance of the entire onemod pipeline. If no test column is
+        provided, all missing observations will be the test set.
     id_subsets
-        Dictionary of subsets with id name as key and list of id values as
-        values. This can be used to subset the data.
+        Dictionary of subsets with ID name as key and list of ID values
+        as values. This can be used to run models on subsets of the
+        input data; for example, if the input data includes data from
+        1950-2000 but you only want to run a model from 1980-1990.
     rover_covsel
-        Rover Covsel stage configuration.
+        Rover covariate selection stage configuration.
     regmod_smooth
-        Regmod Smooth stage configuration.
+        Regmod smooth stage configuration.
     weave
         Weave stage configuration.
     ensemble
@@ -46,11 +57,11 @@ class OneModConfig(Config):
 
     Example
     -------
-    This is a sample configuration OneMod model run.
+    This is a sample OneMod configuration.
 
     .. code-block:: yaml
 
-        # Global config
+        # OneMod settings
         input_path: /path/to/input/data.parquet
         ids: [age_group_id, location_id, sex_id, year_id]
         id_subsets:
@@ -65,9 +76,10 @@ class OneModConfig(Config):
         holdouts: [holdout1, holdout2, holdout3]
         test: test
 
-        # Rover covsel settings
+        # Rover covariate selection settings
         rover_covsel:
           groupby: [age_group_id, sex_id]
+          t_threshold: 1.0
           rover:
             cov_fixed: [intercept]
             cov_exploring: [cov1, cov2, cov3]
@@ -99,36 +111,39 @@ class OneModConfig(Config):
 
         # WeAve settings
         weave:
-          model1:
-            max_batch: 5000
-            groupby: [sex_id, super_region_id]
-            dimensions:
-              age:
-                name: age_group_id
-                coordinates: age_mid
-                kernel: exponential
-                radius: [0.75, 1, 1.25]
-              year:
-                name: year_id
-                kernel: tricubic
-                exponent: [0.5, 1, 1.5]
-              location:
-                name: location_id
-                coordinates: [super_region_id, region_id, location_id]
-                kernel: depth
-                radius: [0.7, 0.8, 0.9]
-            model2:
-            groupby: [age_group_id, sex_id]
-            dimensions:
-              year:
-                name: year_id
-                kernel: tricubic
-                exponent: [0.5, 1, 1.5]
-              location:
-                name: location_id
-                kernel: identity
-                distance: dictionary
-                distance_dict: [/path/to/distance_dict1.parquet, /path/to/distance_dict2.parquet]
+          models:
+            super_region_model:
+              groupby: [sex_id, super_region_id]
+              max_batch: 5000
+              dimensions:
+                age:
+                  name: age_group_id
+                  coordinates: [age_mid]
+                  kernel: exponential
+                  radius: [0.75, 1, 1.25]
+                location:
+                  name: location_id
+                  coordinates: [super_region_id, region_id, location_id]
+                  kernel: depth
+                  radius: [0.7, 0.8, 0.9]
+                year:
+                  name: year_id
+                  kernel: tricubic
+                  exponent: [0.5, 1, 1.5]
+              age_group_model:
+                groupby: [age_group_id, sex_id]
+                dimensions:
+                  location:
+                    name: location_id
+                    kernel: identity
+                    distance: dictionary
+                    distance_dict:
+                    - /path/to/distance_dict1.parquet
+                    - /path/to/distance_dict2.parquet
+                  year:
+                    name: year_id
+                    kernel: inverse
+                    radius: [0.5, 1, 1.5]
 
         # Ensemble settings
         ensemble:
@@ -147,10 +162,10 @@ class OneModConfig(Config):
     weights: str
     pred: str
     holdouts: list[str]
-    test: str
+    test: str = "test"
     id_subsets: dict[str, list[Any]] = {}
 
     rover_covsel: RoverCovselConfig | None = None
     regmod_smooth: RegmodSmoothConfig | None = None
-    weave: dict[str, WeaveConfig] | None = None
+    weave: WeaveConfig | None = None
     ensemble: EnsembleConfig | None = None
