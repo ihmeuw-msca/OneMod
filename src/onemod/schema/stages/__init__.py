@@ -8,4 +8,6 @@ __all__ = [
     RegmodSmoothConfig,
     RoverCovselConfig,
     WeaveConfig,
+    WeaveDimension,
+    WeaveModel,
 ]
