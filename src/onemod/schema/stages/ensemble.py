@@ -4,32 +4,40 @@ from onemod.schema.base import StageConfig
 
 
 class EnsembleConfig(StageConfig):
-    """Configuration class for ensemble stage. All fields have default values.
+    """Ensemble configuration class.
 
     Parameters
     ----------
+    groupby
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
+    max_attempts
+        Maximum number of attempts to run the Jobmon task associated
+        with the stage. Default is 1.
     metric
         Metric to use for model evaluation. Default is "rmse".
     score
-        Score to compute the model ensemble weights. Default is "rover".
+        Score used to compute model ensemble weights. Default is "rover".
     top_pct_score
-        Percentage of models have the top score to consider for ensemble
-        weights. Default is 1.0, which means all models are considered.
+        Models must be within top_pct_score of the best model to be
+        included in the ensemble (i.e., score >= (1 - top_pct_score) *
+        highest_score). Default is 1.0, which means all models are
+        included in the ensemble..
     top_pct_model
-        Percentage of models to consider for ensemble weights. Default is 1.0,
-        which means all models are considered.
+        Percentage of highest scoring models to include in the ensemble.
+        Default is 1.0, which means all models are included.
 
     Example
     -------
-    All of the fields have default values. And it is equivalent to the following
-    configuration for the ensemble section.
+    All of the ensemble fields have default values equivalent to the
+    following configuration.
 
     .. code-block:: yaml
 
         ensemble:
           groupby: []
           max_attempts: 1
-          max_batch: -1
           metric: rmse
           score: rover
           top_pct_score: 1.0
