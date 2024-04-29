@@ -2,10 +2,12 @@ from onemod.schema.base import Config, StageConfig
 
 
 class RoverInit(Config):
-    """Rover class initialization arguments. To create the rover model,
-    addition configuration args `mtype`, `obs`, `weights` are taken from
-    the OneMod config. For more details please check out the ModRover
-    package `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
+    """Rover class initialization arguments.
+
+    To create a rover model, addition configuration args `mtype`, `obs`,
+    and `weights` are taken from the OneMod config. For more details
+    please check out the ModRover package
+    `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
 
     Parameters
     ----------
@@ -21,8 +23,10 @@ class RoverInit(Config):
 
 
 class RoverFit(Config):
-    """Rover fit function arguments. For more details please check out
-    the ModRover package `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
+    """Rover fit function arguments.
+
+    For more details please check out the ModRover package
+    `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
 
     Parameters
     ----------
