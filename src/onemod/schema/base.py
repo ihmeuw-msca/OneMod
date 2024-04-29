@@ -4,22 +4,22 @@ from pydantic import BaseModel, ConfigDict
 
 
 class Config(BaseModel):
-    """An extension of BaseModel that supports some dict-like dunder methods.
-    Froze model fields once set.
+    """An extension of BaseModel that supports some dict-like dunder
+    methods. Model fields frozen once set.
 
     """
 
     model_config = ConfigDict(frozen=True)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Get a field value by key. If key is not found, return default.
+        """Get a field value by key. If key not found, return default.
 
         Parameters
         ----------
         key
             Field name.
         default
-            Default value to return if key is not found. Default is None.
+            Default value to return if key not found. Default is None.
 
         Returns
         -------
@@ -41,23 +41,23 @@ class Config(BaseModel):
 
 
 class StageConfig(Config):
-    """Stage configuration class. All stages configuration will include
-    `groupby`, `max_attempts` and `max_batch` fields. All the stages will use
-    the provided defaults unless they are overwritten.
+    """Stage configuration class.
+
+    All stage configurations will include `groupby` and `max_attempts`
+    fields. All stages will use the provided defaults unless they are
+    overwritten.
 
     Parameters
     ----------
     groupby
-        List of index columns to group by. Default is an empty list, which means
-        all data points are run in a single model.
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
     max_attempts
-        Maximum number of attempts to run the stage. Default is 1.
-    max_batch
-        Maximum number of data points to run in a single batch. If -1, run all
-        models in a single batch.
+        Maximum number of attempts to run the Jobmon task associated
+        with the stage. Default is 1.
 
     """
 
     groupby: list[str] = []
     max_attempts: int = 1
-    max_batch: int = -1
