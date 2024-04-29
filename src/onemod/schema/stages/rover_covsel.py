@@ -59,13 +59,14 @@ class RoverCovselConfig(StageConfig):
     max_attempts
         Maximum number of attempts to run the Jobmon task associated
         with the stage. Default is 1.
+    t_threshold
+        T-statistic threshold to consider as a covariate selection
+        criterion. Default is 1.0.
     rover
         Rover class initialization arguments.
     rover_fit
         Rover fit function arguments.
-    t_threshold
-        T-statistic threshold to consider as a covariate selection
-        criterion. Default is 1.0.
+
 
     Example
     -------
@@ -77,6 +78,7 @@ class RoverCovselConfig(StageConfig):
         rover_covsel:
           groupby: []
           max_attempts: 1
+          t_threshold: 1.0
           rover:
             cov_fixed: ["intercept"]
             cov_exploring: []
@@ -85,7 +87,6 @@ class RoverCovselConfig(StageConfig):
             top_pct_score: 0.1
             top_pct_learner: 1.0
             coef_bounds: {}
-          t_threshold: 1.0
 
     """
 
