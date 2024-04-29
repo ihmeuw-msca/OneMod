@@ -79,18 +79,18 @@ class WeaveModel(StageConfig):
         Dictionary of WeAve dimension configuration objects.
     max_batch
         Maximum number of points per batch when fitting the model using
-        multiple Jobmon tasks. Default is -1, which means do not fit the
-        model in batches.
+        multiple Jobmon tasks. Default is None, which means do not fit
+        the model in batches.
 
     """
 
     dimensions: dict[str, WeaveDimension]
-    max_batch: int = -1
+    max_batch: int | None = None
 
 
 class WeaveConfig(Config):
     """WeAve stage configuration. Unlike other OneMod stages, the WeAve
-    stage can consist of multiple models which different parameters.
+    stage can consist of multiple models with different parameters.
 
     Parameters
     ----------
@@ -109,7 +109,6 @@ class WeaveConfig(Config):
           models:
             super_region_model:
               groupby: [sex_id, super_region_id]
-              max_attempts: 1
               max_batch: 5000
               dimensions:
                 age:
@@ -126,9 +125,8 @@ class WeaveConfig(Config):
                   name: year_id
                   kernel: tricubic
                   exponent: [0.5, 1, 1.5]
-            age_model:
-              groupby: [sex_id, age_group_id]
-              max_attempts: 1
+            age_group_model:
+              groupby: [age_group_id, sex_id]
               dimensions:
                 location:
                   name: location_id
