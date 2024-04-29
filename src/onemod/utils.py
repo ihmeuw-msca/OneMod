@@ -204,13 +204,17 @@ class Subsets:
             column_name: [] for column_name in self.groupby
         }
 
-        for column_vals, df in data.groupby(self.groupby):
-            for idx, column_name in enumerate(self.groupby):
-                subset_dict[column_name].append(column_vals[idx])
-
-        subset_df: pd.DataFrame = pd.DataFrame(subset_dict)
-        subset_df["stage_id"] = self.stage_id
-        subset_df["subset_id"] = subset_df.index
+        if len(self.groupby) == 0:
+            subset_df: pd.DataFrame = pd.DataFrame(
+                {"stage_id": [self.stage_id], "subset_id": [0]}
+            )
+        else:
+            for column_vals, _ in data.groupby(self.groupby):
+                for idx, column_name in enumerate(self.groupby):
+                    subset_dict[column_name].append(column_vals[idx])
+            subset_df: pd.DataFrame = pd.DataFrame(subset_dict)
+            subset_df["stage_id"] = self.stage_id
+            subset_df["subset_id"] = subset_df.index
         return subset_df[["stage_id", "subset_id"] + self.groupby]
 
     def get_subset_ids(self) -> list:
@@ -444,14 +448,12 @@ def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
 def get_rover_covsel_submodels(
     directory: str, save_file: bool = False
 ) -> list[str]:
-    """Get rover submodel IDs and save subsets.
-    TODO: merge this to the rover_covsel function to avoid confusion
-    """
+    """Get rover submodel IDs and save subsets."""
     dataif, config = get_handle(directory)
 
     # Create rover subsets and submodels
     df_input = dataif.load_data()
-    subsets = Subsets("rover_covsel", config["rover_covsel"], df_input)
+    subsets = Subsets("rover_covsel", config.rover_covsel, df_input)
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
@@ -473,7 +475,7 @@ def get_weave_submodels(
     for model_id, model_config in config.weave.models.items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        subsets = Subsets(model_id, model_config, df_input)
+        subsets = WeaveSubsets(model_id, model_config, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
