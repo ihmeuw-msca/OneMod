@@ -2,15 +2,15 @@ from onemod.schema.base import Config, StageConfig
 
 
 class RoverInit(Config):
-    """Rover class initialization arguments. To create the rover model it will
-    need addition configuration `mtype`, `obs`, `weights` from the global
-    config. For more details please check
-    `modrover <https://ihmeuw-msca.github.io/modrover/>`_.
+    """Rover class initialization arguments. To create the rover model,
+    addition configuration args `mtype`, `obs`, `weights` are taken from
+    the OneMod config. For more details please check out the ModRover
+    package `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
 
     Parameters
     ----------
     cov_fixed
-        List of fixed covariates. Default is a list with covariate intercept.
+        List of fixed covariates. Default is `["intercept"]`.
     cov_exploring
         List of covariates to explore. Default is an empty list.
 
@@ -21,8 +21,8 @@ class RoverInit(Config):
 
 
 class RoverFit(Config):
-    """Rover fit function arguments. For more details please check
-    `modrover <https://ihmeuw-msca.github.io/modrover/>`_.
+    """Rover fit function arguments. For more details please check out
+    the ModRover package `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
 
     Parameters
     ----------
@@ -48,25 +48,31 @@ class RoverCovselConfig(StageConfig):
 
     Parameters
     ----------
+    groupby
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
+    max_attempts
+        Maximum number of attempts to run the Jobmon task associated
+        with the stage. Default is 1.
     rover
         Rover class initialization arguments.
     rover_fit
         Rover fit function arguments.
     t_threshold
-        T-statistic threshold to consider as a covariate selection criterion.
-        Default is 1.0.
+        T-statistic threshold to consider as a covariate selection
+        criterion. Default is 1.0.
 
     Example
     -------
-    All of the fields have default values. And it is equivalent to the following
-    configuration for the ensemble section.
+    All of the rover fields have default values equivalent to the
+    following configuration.
 
     .. code-block:: yaml
 
         rover_covsel:
           groupby: []
           max_attempts: 1
-          max_batch: -1
           rover:
             cov_fixed: ["intercept"]
             cov_exploring: []
