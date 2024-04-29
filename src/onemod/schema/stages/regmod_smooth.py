@@ -2,27 +2,31 @@ from onemod.schema.base import Config, StageConfig
 
 
 class ModelInit(Config):
-    """Arguments for initialiation of a regmodsm model. To create a regmodsm
-    model, we need additional configuration `mtype`, `obs`, `weights`, from the
-    global config. For more details please check
-    `regmodsm <https://github.com/ihmeuw-msca/regmodsm>`_.
+    """RegmodSmooth class initialization arguments.
+
+    To create a regmodsm model, additional configuration args `mtype`,
+    `obs`, `weights`, are taken from the OneMod config. For more details
+    please check out the RegModSM package
+    `documentation <https://github.com/ihmeuw-msca/regmodsm>`_.
 
     Parameters
     ----------
     dims
-        List of dictionaries with dimension information. Default is an empty
-        list. When `age_mid` as a dimension is not provided. It will be
-        automatically created and added to the list.
+        List of dictionaries with dimension information. Default is an
+        empty list. When `age_mid` as a dimension is not provided. It
+        will be automatically created and added to the list.
     var_groups
-        List of dictionaries with variable group information. Default is an
-        empty list. This list is considered as a suppliment list to the selected
-        covariates with dimension `age_mid` from `rover_covsel` stage. Those
-        variables will be automatically created and added to the list.
+        List of dictionaries with variable group information. Default is
+        an empty list. This list is considered as a suppliment list to
+        the selected covariates with dimension `age_mid` from
+        `rover_covsel` stage. Those variables will be automatically
+        created and added to the list.
     coef_bounds
-        Dictionary of coefficient bounds. Default is an empty dictionary.
+        Dictionary of coefficient bounds. Default is an empty
+        dictionary.
     lam
-        Default smoothing parameter, you can overwrite this value when define
-        variable groups in `var_groups`. Default is 0.0.
+        Default smoothing parameter, you can overwrite this value when
+        define variable groups in `var_groups`. Default is 0.0.
 
     """
 
@@ -34,11 +38,19 @@ class ModelInit(Config):
 
 
 class RegmodSmoothConfig(StageConfig):
-    """RegmodSmooth stage configuration class. Will need the `mtype` form the
-    upper level to initialize a regmodsm model.
+    """RegmodSmooth stage configuration class.
+
+    Additional configuration arg `mtype` taken from the OneMod config.
 
     Parameters
     ----------
+    groupby
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
+    max_attempts
+        Maximum number of attempts to run the Jobmon task associated
+        with the stage. Default is 1.
     xmodel
         Model initialization arguments.
     xmodel_fit
@@ -46,15 +58,14 @@ class RegmodSmoothConfig(StageConfig):
 
     Example
     -------
-    All of the fields have default values. And it is equivalent to the following
-    configuration for the regmod_smooth section.
+    All of the regmodsm fields have default values equivalent to the
+    following configuratio.
 
     .. code-block:: yaml
 
         regmod_smooth:
           groupby: []
           max_attempts: 1
-          max_batch: -1
           xmodel:
             dims: []
             var_groups: []
