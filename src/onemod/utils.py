@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 from pplkit.data.interface import DataInterface
 
-from onemod.schema import OneModConfig
-from onemod.schema.stages.weave import WeaveDimension
+from onemod.schema import OneModConfig, StageConfig
+from onemod.schema.stages import WeaveDimension, WeaveModel
 
 
 class Parameters:
@@ -137,16 +137,17 @@ class WeaveParams(Parameters):
         return param_list
 
 
-# TODO: Need to handle the case when groupby is an empty list
 class Subsets:
-    """Helper class for model subsets based on groupby setting.
+    """Helper class for stage subsets based on groupby setting.
 
     Attributes
     ----------
-    model_id : str
-        Model ID.
-    columns : list of str
-        Columns used to group data subsets.
+    stage_id : str
+        Stage ID.
+    groupby : list of str
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
     subsets : pandas.DataFrame
         Subset data frame.
 
@@ -154,8 +155,8 @@ class Subsets:
 
     def __init__(
         self,
-        model_id: str,
-        config: OneModConfig,
+        stage_id: str,
+        stage_config: StageConfig,
         data: pd.DataFrame | None = None,
         subsets: pd.DataFrame | None = None,
     ) -> None:
@@ -163,10 +164,10 @@ class Subsets:
 
         Parameters
         ----------
-        model_id : str
-            Model ID.
-        config
-            Model specifications.
+        stage_id : str
+            Stage ID.
+        stage_config : StageConfig
+            Stage configuration.
         data : pandas.DataFrame, optional
             Input data.
         subsets : pandas.DataFrame, optional
@@ -174,31 +175,24 @@ class Subsets:
 
         """
 
-        self.model_id = model_id
-        self.columns = config.groupby
+        self.stage_id = stage_id
+        self.groupby = stage_config.groupby
         if subsets is None:
             if data is None:
                 raise TypeError(
                     "Data cannot be None if subsets are not provided."
                 )
-            self.columns = config.groupby
-            max_batch_size = config.max_batch
-            self.subsets = self._create_subsets(data, max_batch_size)
+            self.subsets = self._create_subsets(data)
         else:
-            self.subsets = subsets[subsets["model_id"] == model_id]
+            self.subsets = subsets[subsets["stage_id"] == stage_id]
 
-    def _create_subsets(
-        self, data: pd.DataFrame, max_batch: int
-    ) -> pd.DataFrame:
+    def _create_subsets(self, data: pd.DataFram) -> pd.DataFrame:
         """Create subset data frame.
 
         Parameters
         ----------
         data : pandas.DataFrame
             Input data.
-        max_batch : int
-            Maximum number of prediction points per subset. If -1, do
-            not split data into batches.
 
         Returns
         -------
@@ -206,34 +200,84 @@ class Subsets:
             Subset data frame.
 
         """
-        subsets: dict[str, list] = {
-            column: [] for column in self.columns + ["n_batch"]
+        subset_dict: dict[str, list] = {
+            column_name: [] for column_name in self.groupby
         }
-        # TODO: use a different name distinguish column name and column value
-        # to improve readibility
 
-        groupby_cols = self.columns
-        if len(groupby_cols) == 1:
-            groupby_cols = groupby_cols[0]
+        for column_vals, df in data.groupby(self.groupby):
+            for idx, column_name in enumerate(self.groupby):
+                subset_dict[column_name].append(column_vals[idx])
 
-        for columns, df in data.groupby(groupby_cols):
-            if len(self.columns) == 1:
-                subsets[self.columns[0]].append(columns)
-            else:
-                for idx, column in enumerate(self.columns):
-                    subsets[column].append(columns[idx])
-            n_batch = (
-                1 if max_batch == -1 else int(np.ceil(len(df) / max_batch))
-            )
-            subsets["n_batch"].append(n_batch)
-        subsets_df: pd.DataFrame = pd.DataFrame(subsets)
-        subsets_df["model_id"] = self.model_id
-        subsets_df["subset_id"] = subsets_df.index
-        return subsets_df[["model_id", "subset_id", "n_batch"] + self.columns]
+        subset_df: pd.DataFrame = pd.DataFrame(subset_dict)
+        subset_df["stage_id"] = self.stage_id
+        subset_df["subset_id"] = subset_df.index
+        return subset_df[["stage_id", "subset_id"] + self.groupby]
 
     def get_subset_ids(self) -> list:
         """Get list of subset IDs."""
         return self.subsets["subset_id"].tolist()
+
+    def get_column(self, column: str, subset_id: int) -> Any:
+        """Get subset column value."""
+        subset = self.subsets[self.subsets["subset_id"] == subset_id]
+        return subset[column].item()
+
+    def filter_subset(self, data: pd.DataFrame, subset_id: int) -> pd.DataFrame:
+        """Filter data by subset."""
+        for column in self.groupby:
+            data = data[data[column] == self.get_column(column, subset_id)]
+        return data
+
+
+class WeaveSubsets(Subsets):
+    """Helper class for weave model subsets based on groupby setting.
+
+    Attributes
+    ----------
+    stage_id : str
+        Stage ID.
+    groupby : list of str
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
+    subsets : pandas.DataFrame
+        Subset data frame.
+
+    """
+
+    def __init__(
+        self,
+        stage_id: str,
+        stage_config: StageConfig,
+        data: pd.DataFrame | None = None,
+        subsets: pd.DataFrame | None = None,
+    ) -> None:
+        """Create Subsets object.
+
+        Parameters
+        ----------
+        stage_id : str
+            Stage ID.
+        stage_config : StageConfig
+            Stage configuration.
+        data : pandas.DataFrame, optional
+            Input data.
+        subsets : pandas.DataFrame, optional
+            Subset data frame.
+
+        """
+
+        super().__init__(stage_id, stage_config, data, subsets)
+        if subsets is None:
+            n_batches = []
+            for _, df in data.groupby(self.groupby):
+                if stage_config.max_batch is None:
+                    n_batches.append(1)
+                else:
+                    n_batches.append(
+                        int(np.ceil(len(df) / stage_config.max_batch))
+                    )
+            self.subsets["n_batch"] = n_batches
 
     def get_batch_ids(self, subset_id: int) -> list:
         """Get list of batch IDs."""
@@ -242,17 +286,11 @@ class Subsets:
         ].item()
         return np.arange(n_batch).tolist()
 
-    def get_column(self, column: str, subset_id: int) -> Any:
-        """Get subset column value."""
-        subset = self.subsets[self.subsets["subset_id"] == subset_id]
-        return subset[column].item()
-
     def filter_subset(
         self, data: pd.DataFrame, subset_id: int, batch_id: int = 0
     ) -> pd.DataFrame:
         """Filter data by subset and batch."""
-        for column in self.columns:
-            data = data[data[column] == self.get_column(column, subset_id)]
+        data = super().filter_subset(data, subset_id)
         n_batch = self.get_column("n_batch", subset_id)
         max_batch = int(np.ceil(len(data) / n_batch))
         batch_start = batch_id * max_batch
@@ -367,9 +405,9 @@ def get_smoother_input(
         df_input.columns
     )
     columns = config.ids + list(columns)
-    # Deduplicate
+    # Deduplicate  # TODO: # shouldn't config.ids already be included?
     columns = list(set(columns))
-    if len(columns) > 0:
+    if len(columns) > 0:  # TODO: this is missing the id_subset part
         try:
             # The data path only exists if the initialzie_results action has already been run. Fallback to
             # raw datapath if creating submodels prior to workflow run.
@@ -383,6 +421,7 @@ def get_smoother_input(
     if smoother == "weave":  # weave models can't have NaN data
         df_input.loc[df_input[config.obs].isna(), "residual_value"] = 1
         df_input.loc[df_input[config.obs].isna(), "residual_se"] = 1
+        # TODO: isn't this also done within the weave model?
     return df_input
 
 
@@ -431,10 +470,10 @@ def get_weave_submodels(
     param_list, subset_list, submodels = [], [], []
 
     df_input = get_smoother_input("weave", dataif=dataif, config=config)
-    for model_id, model_settings in config["weave"]["models"].items():
+    for model_id, model_config in config.weave.models.items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        subsets = Subsets(model_id, model_settings, df_input)
+        subsets = Subsets(model_id, model_config, df_input)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
@@ -462,7 +501,7 @@ def get_ensemble_submodels(
     dataif, config = get_handle(directory)
 
     # Create ensemble subsets and submodels
-    subsets = Subsets("ensemble", config["ensemble"], dataif.load_data())
+    subsets = Subsets("ensemble", config.ensemble, dataif.load_data())
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
