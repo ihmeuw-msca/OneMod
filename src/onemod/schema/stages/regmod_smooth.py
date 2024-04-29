@@ -59,7 +59,7 @@ class RegmodSmoothConfig(StageConfig):
     Example
     -------
     All of the regmodsm fields have default values equivalent to the
-    following configuratio.
+    following configuration.
 
     .. code-block:: yaml
 
