@@ -175,9 +175,9 @@ def regmod_smooth_model(directory: str) -> None:
     stage_config = config.regmod_smooth
 
     # Create regmod smooth parameters
-    var_groups = stage_config.model.var_groups
-    coef_bounds = stage_config.model.coef_bounds
-    lam = stage_config.model.lam
+    var_groups = stage_config.xmodel.var_groups
+    coef_bounds = stage_config.xmodel.coef_bounds
+    lam = stage_config.xmodel.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
@@ -210,23 +210,23 @@ def regmod_smooth_model(directory: str) -> None:
     model = Model(
         model_type=config.mtype,
         obs=config.obs,
-        dims=stage_config.model.dims,
+        dims=stage_config.xmodel.dims,
         var_groups=var_groups,
         weights=config.weights,
     )
 
-    df = dataif.load(config.input_path)
+    df = dataif.load_data()
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, data_dim_vals=df, **stage_config.regmod_fit)
+    model.fit(df_train, data_dim_vals=df, **stage_config.xmodel_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[config.pred] = model.predict(df)
     residual_func = get_residual_computation_function(
-        model_type=stage_config.mtype,
+        model_type=config.mtype,
         obs=config.obs,
         pred=config.pred,
     )
