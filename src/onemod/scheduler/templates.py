@@ -133,7 +133,7 @@ def create_modeling_template(
 
     # Tasks can be parallelized by an internal concept called submodels
     node_args = []
-    if task_template_name in ["rover_covsel", "weave"]:
+    if task_template_name in ["rover_covsel_model", "weave_model"]:
         node_args.append("submodel_id")
 
     template = _create_task_template(
