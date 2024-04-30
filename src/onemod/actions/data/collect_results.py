@@ -177,7 +177,7 @@ def collect_results_weave(directory: str) -> None:
                     {"param_id": str}
                 )
                 for submodel_id in submodel_ids
-                if submodel_id.split("_")[3] == holdout_id
+                if submodel_id.split("__")[3] == holdout_id
             ],
             ignore_index=True,
         ).drop_duplicates()
