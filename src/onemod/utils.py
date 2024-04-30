@@ -12,7 +12,7 @@ import pandas as pd
 from pplkit.data.interface import DataInterface
 
 from onemod.schema import OneModConfig, StageConfig
-from onemod.schema.stages import WeaveDimension, WeaveModel
+from onemod.schema.stages import WeaveDimension
 
 
 class Parameters:
@@ -108,12 +108,12 @@ class WeaveParams(Parameters):
             iterables=[
                 dimension[param]
                 for dimension in dimensions.values()
-                for param in self._get_dimension_params(dimension)
+                for param in self.get_dimension_params(dimension)
             ],
             names=[
-                f"{dimension_name}_{param}"
+                f"{dimension_name}__{param}"
                 for dimension_name, dimension in dimensions.items()
-                for param in self._get_dimension_params(dimension)
+                for param in self.get_dimension_params(dimension)
             ],
         )
         param_sets = pd.DataFrame(index=index).reset_index()
@@ -122,18 +122,16 @@ class WeaveParams(Parameters):
         param_sets["param_id"] = param_sets.index
         return param_sets[["model_id", "param_id"] + param_cols]
 
-    def _get_dimension_params(self, dimension: WeaveDimension) -> list[str]:
-        """Get dimension parameters with multiple values."""
+    @classmethod
+    def get_dimension_params(cls, dimension: WeaveDimension) -> list[str]:
+        """Get dimension parameters by kernel."""
         param_list = []
         if dimension.kernel in ["exponential", "depth", "inverse"]:
-            if len(dimension.radius) > 1:
-                param_list.append("radius")
+            param_list.append("radius")
         elif dimension.kernel == "tricubic":
-            if len(dimension.exponent) > 1:
-                param_list.append("exponent")
+            param_list.append("exponent")
         if dimension.distance == "dictionary":
-            if len(dimension.distance_dict) > 1:
-                param_list.append("distance_dict")
+            param_list.append("distance_dict")
         return param_list
 
 
