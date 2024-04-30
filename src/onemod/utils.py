@@ -485,8 +485,8 @@ def get_weave_submodels(
         ):
             for batch_id in subsets.get_batch_ids(subset_id):
                 submodel = (
-                    f"{model_id}_param{param_id}_subset{subset_id}"
-                    f"_{holdout_id}_batch{batch_id}"
+                    f"{model_id}__param{param_id}__subset{subset_id}"
+                    f"__{holdout_id}__batch{batch_id}"
                 )
                 submodels.append(submodel)
 
