@@ -33,15 +33,30 @@ def weave_model(directory: str, submodel_id: str) -> None:
     submodel_id (str)
         The ID of the submodel to be processed.
 
+    Notes
+    -----
+    Each submodel_id has the form:
+
+    f"{model_id}__param{param_id}__subset{subset_id}__{holdout_id}__batch{batch_id}"
+
+    with:
+    * model_id (str): user input
+    * param_id (int): assigned by WeaveParams
+    * subset_id (int): assigned by WeaveSubsets
+    * holdout_id (str): user input
+    * batch_id (int): assigned by WeaveSubsets
+
+    Example: "age_model__param0__subset0__holdout1__batch0"
+
     """
     dataif, config = get_handle(directory)
 
     # Get submodel settings
-    model_id = submodel_id.split("_")[0]
-    param_id = int(submodel_id.split("_")[1][5:])
-    subset_id = int(submodel_id.split("_")[2][6:])
-    holdout_id = submodel_id.split("_")[3]
-    batch_id = int(submodel_id.split("_")[4][5:])
+    model_id = submodel_id.split("__")[0]
+    param_id = int(submodel_id.split("__")[1][5:])
+    subset_id = int(submodel_id.split("__")[2][6:])
+    holdout_id = submodel_id.split("__")[3]
+    batch_id = int(submodel_id.split("__")[4][5:])
     model_settings = config["weave"]["models"][model_id]
     params = WeaveParams(
         model_id, param_sets=dataif.load_weave("parameters.csv")
@@ -83,9 +98,11 @@ def weave_model(directory: str, submodel_id: str) -> None:
         dimensions.append(Dimension(**dim_dict))
     smoother = Smoother(dimensions)
 
+    # TODO: Check if this is already done in helper function
     # Impute missing observation and holdout values
     # Assume that missing numbers for holdouts are implicit 1's (i.e. used for testing anyways)
     df_input.fillna(1, inplace=True)
+
     # Get predictions
     logger.info(f"Fitting smoother for {submodel_id=}")
     df_pred = smoother(
@@ -114,7 +131,8 @@ def weave_model(directory: str, submodel_id: str) -> None:
 def main() -> None:
     """Main entry point of the module.
 
-    This function uses the Fire library to allow the weave_model function to be
-    invoked from the command line.
+    This function uses the Fire library to allow the weave_model
+    function to be invoked from the command line.
+
     """
     fire.Fire(weave_model)
