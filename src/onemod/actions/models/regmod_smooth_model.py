@@ -6,33 +6,39 @@ from functools import partial
 from typing import Callable
 
 import fire
-from loguru import logger
 import numpy as np
 import pandas as pd
+from loguru import logger
 from regmodsm.model import Model
 
 from onemod.utils import get_handle
 
 
 def get_residual_computation_function(
-    model_type: str,
-    col_obs: str,
-    col_pred: str,
+    model_type: str, obs: str, pred: str
 ) -> Callable:
     """
     Calculate the residual for a given row based on the specified model type.
 
-    Parameters:
-        row (pd.Series): The row containing the observation and prediction data.
-        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-        col_obs (str): Column name for the observed values.
-        col_pred (str): Column name for the predicted values.
+    Parameters
+    ----------
+    model_type
+        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+    obs
+        Column name for the observed values.
+    pred
+        Column name for the predicted values.
 
-    Returns:
-        float: The calculated residual value.
+    Returns
+    -------
+    float
+        The calculated residual value.
 
-    Raises:
-        ValueError: If the specified model_type is unsupported.
+    Raises
+    ------
+    ValueError
+        If the specified model_type is unsupported.
+
     """
 
     # TODO: can these be vectorized functions?
@@ -40,14 +46,14 @@ def get_residual_computation_function(
         "binomial": partial(
             lambda row, obs, pred: (row[obs] - row[pred])
             / (row[pred] * (1 - row[pred])),
-            obs=col_obs,
-            pred=col_pred,
+            obs=obs,
+            pred=pred,
         ),
         "poisson": partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=col_obs, pred=col_pred
+            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=obs, pred=pred
         ),
         "gaussian": partial(
-            lambda row, obs, pred: row[obs] - row[pred], obs=col_obs, pred=col_pred
+            lambda row, obs, pred: row[obs] - row[pred], obs=obs, pred=pred
         ),
     }
 
@@ -58,40 +64,46 @@ def get_residual_computation_function(
 
 
 def get_residual_se_function(
-    model_type: str,
-    col_pred: str,
-    col_weights: str,
+    model_type: str, pred: str, weights: str
 ) -> Callable:
     """
     Calculate the residual standard error for a given row based on the specified model type.
 
-    Parameters:
-        row (pd.Series): The row containing the observation and prediction data.
-        model_type (str): Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-        col_pred (str): Column name for the predicted values.
-        col_weights (str): Column name for the weights.
+    Parameters
+    ----------
+    model_type
+        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+    pred
+        Column name for the predicted values.
+    weights
+        Column name for the weights.
 
-    Returns:
-        float: The calculated residual standard error value.
+    Returns
+    -------
+    float
+        The calculated residual standard error value.
 
-    Raises:
-        ValueError: If the specified model_type is unsupported.
+    Raises
+    ------
+    ValueError
+        If the specified model_type is unsupported.
+
     """
 
     callable_map = {
         "binomial": partial(
             lambda row, pred, weights: 1
             / np.sqrt(row[weights] * row[pred] * (1 - row[pred])),
-            pred=col_pred,
-            weights=col_weights,
+            pred=pred,
+            weights=weights,
         ),
         "poisson": partial(
             lambda row, pred, weights: 1 / np.sqrt(row[weights] * row[pred]),
-            pred=col_pred,
-            weights=col_weights,
+            pred=pred,
+            weights=weights,
         ),
         "gaussian": partial(
-            lambda row, weights: 1 / np.sqrt(row[weights]), weights=col_weights
+            lambda row, weights: 1 / np.sqrt(row[weights]), weights=weights
         ),
     }
 
@@ -105,12 +117,16 @@ def get_coef(model: Model) -> pd.DataFrame:
     """
     Get coefficient information from the specified model.
 
-    Parameters:
-        model (Model): The statistical model object containing coefficient data.
+    Parameters
+    ----------
+    model
+        The statistical model object containing coefficient data.
 
-    Returns:
-        pd.DataFrame: A DataFrame containing coefficient, dimension,
-            and dimension value information.
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing coefficient, dimension, and dimension value information.
+
     """
     df_coef = []
     for var_group in model.var_groups:
@@ -135,16 +151,16 @@ def get_coef(model: Model) -> pd.DataFrame:
     return df_coef
 
 
-def regmod_smooth_model(experiment_dir: str) -> None:
+def regmod_smooth_model(directory: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
 
     Parameters
     ----------
-    experiment_dir
+    directory
         Parent folder where the experiment is run.
-        - ``experiment_dir / config / settings.yaml`` contains rover modeling settings
-        - ``experiment_dir / results / rover`` stores all rover results
+        - ``directory / config / settings.yaml`` contains rover modeling settings
+        - ``directory / results / rover`` stores all rover results
 
     Outputs
     -------
@@ -155,14 +171,13 @@ def regmod_smooth_model(experiment_dir: str) -> None:
     predictions.parquet
         Predictions with residual information.
     """
-    dataif, global_config = get_handle(experiment_dir)
-
-    regmod_smooth_config = global_config.regmod_smooth
+    dataif, config = get_handle(directory)
+    stage_config = config.regmod_smooth
 
     # Create regmod smooth parameters
-    var_groups = regmod_smooth_config.model.var_groups
-    coef_bounds = regmod_smooth_config.model.coef_bounds
-    lam = regmod_smooth_config.model.lam
+    var_groups = stage_config.xmodel.var_groups
+    coef_bounds = stage_config.xmodel.coef_bounds
+    lam = stage_config.xmodel.lam
 
     var_group_keys = [
         (var_group["col"], var_group.get("dim")) for var_group in var_groups
@@ -193,35 +208,33 @@ def regmod_smooth_model(experiment_dir: str) -> None:
 
     # Create regmod smooth model
     model = Model(
-        model_type=regmod_smooth_config.mtype,
-        obs=global_config.col_obs,
-        dims=regmod_smooth_config.model.dims,
+        model_type=config.mtype,
+        obs=config.obs,
+        dims=stage_config.xmodel.dims,
         var_groups=var_groups,
-        weights=regmod_smooth_config.model.weights,
+        weights=config.weights,
     )
 
-    df = dataif.load(global_config.input_path)
-    df_train = df.query(
-        f"({global_config.col_test} == 0) & {global_config.col_obs}.notnull()"
-    )
+    df = dataif.load_data()
+    df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
     # Fit regmod smooth model
-    model.fit(df_train, data_dim_vals=df, **regmod_smooth_config.regmod_fit)
+    model.fit(df_train, data_dim_vals=df, **stage_config.xmodel_fit)
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
-    df[global_config.col_pred] = model.predict(df)
+    df[config.pred] = model.predict(df)
     residual_func = get_residual_computation_function(
-        model_type=regmod_smooth_config.mtype,
-        col_obs=global_config.col_obs,
-        col_pred=global_config.col_pred,
+        model_type=config.mtype,
+        obs=config.obs,
+        pred=config.pred,
     )
 
     residual_se_func = get_residual_se_function(
-        model_type=regmod_smooth_config.mtype,
-        col_pred=global_config.col_pred,
-        col_weights=regmod_smooth_config.model.weights,
+        model_type=config.mtype,
+        pred=config.pred,
+        weights=config.weights,
     )
     df["residual"] = df.apply(
         residual_func,

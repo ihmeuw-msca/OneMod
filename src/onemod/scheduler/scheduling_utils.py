@@ -1,8 +1,7 @@
 from collections import defaultdict
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from jobmon.client.api import Tool
-
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
     create_collection_template,
@@ -11,16 +10,15 @@ from onemod.scheduler.templates import (
     create_modeling_template,
 )
 
-
 if TYPE_CHECKING:
-    from jobmon.client.task_template import TaskTemplate
     from jobmon.client.task import Task
+    from jobmon.client.task_template import TaskTemplate
 
 
 class ParentTool:
     """Singleton implementation of a single tool used across OneMod for scheduling."""
 
-    tool: Optional["Tool"] = None
+    tool: Tool | None = None
 
     @classmethod
     def initialize_tool(
@@ -110,7 +108,11 @@ def upstream_task_callback(action: Action) -> list["Task"]:
         "initialize_results": [],
         "rover_covsel_model": ["initialize_results"],
         "regmod_smooth_model": ["collect_results", "initialize_results"],
-        "weave_model": ["collect_results", "collect_results", "initialize_results"],
+        "weave_model": [
+            "collect_results",
+            "collect_results",
+            "initialize_results",
+        ],
         "ensemble_model": 3 * ["collect_results"] + ["initialize_results"],
         # Logic for collect results: set all modeling tasks as dependencies.
         # Due to traversal order of the generator, the rover collection task must be created
@@ -118,7 +120,11 @@ def upstream_task_callback(action: Action) -> list["Task"]:
         # theoretically safe to do.
         # Vice versa: when regmod_smooth_model's task is created, there can be at most one
         # previously created collect task (for rover)
-        "collect_results": ["rover_covsel_model", "regmod_smooth_model", "weave_model"],
+        "collect_results": [
+            "rover_covsel_model",
+            "regmod_smooth_model",
+            "weave_model",
+        ],
     }
     func_name = action.name
     upstream_action_names = order_map[func_name]

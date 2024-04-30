@@ -1,5 +1,4 @@
 import pytest
-
 from onemod.scheduler.scheduler import Scheduler
 
 
@@ -15,7 +14,7 @@ def test_end_to_end_local(
     sample_config.weave.models.pop("model2")
 
     scheduler = Scheduler(
-        experiment_dir=temporary_directory,
+        directory=temporary_directory,
         config=sample_config,
         stages=["rover_covsel", "regmod_smooth", "weave"],
     )
@@ -42,7 +41,7 @@ def test_end_to_end_remote(
     sample_config.weave.models.pop("model2")
 
     scheduler = Scheduler(
-        experiment_dir=temporary_directory,
+        directory=temporary_directory,
         config=sample_config,
         stages=["rover_covsel", "regmod_smooth", "weave"],
         default_cluster_name="sequential",

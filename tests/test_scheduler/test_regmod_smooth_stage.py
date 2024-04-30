@@ -10,7 +10,7 @@ def test_rover_tasks(
 
     # Create a set of regmod tasks. Check that the correct commands are generated
     scheduler = Scheduler(
-        experiment_dir=temporary_directory,
+        directory=temporary_directory,
         config=sample_config,
         stages=["regmod_smooth"],
     )

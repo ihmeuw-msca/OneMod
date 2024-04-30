@@ -9,12 +9,12 @@ from onemod.application.base import Application
 class EnsembleApplication(Application):
     """An application to run the ensemble stage."""
 
-    def __init__(self, experiment_dir: str | Path):
-        self.experiment_dir = experiment_dir
+    def __init__(self, directory: str | Path):
+        self.directory = directory
 
     def action_generator(self) -> Generator[Action, None, None]:
         """A generator to return actions to be run."""
         yield Action(
             ensemble_model,
-            experiment_dir=self.experiment_dir,
+            directory=self.directory,
         )

@@ -132,8 +132,5 @@ dmypy.json
 # Mac stuff
 .DS_Store
 
-# IDE files
-.vscode/
-
 # Docs
 out/*

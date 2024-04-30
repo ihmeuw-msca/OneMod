@@ -12,7 +12,7 @@ onemod run_pipeline --directory {path/to/experiment/directory}
 
 Parameters:
 - `directory` (str) - Path to experiment directory. Must contain config/settings.yml.
-- `stages` (str or list of str, optional) - Pipeline stage(s) to run. Default is [rover,swimr,weave,ensemble].
+- `stages` (str or list of str, optional) - Pipeline stage(s) to run. Default is [rover,weave,ensemble].
 - `save_intermediate` (bool, optional) - Save intermediate stage results. Default is False.
 - `cluster_name` (str, optional) - Name of cluster to run pipeline on. Default is slurm.
 - `configure_resources` (bool, optional) - Configure resources in directory/config/resources.yml. Default is True.
@@ -27,13 +27,12 @@ Parameters:
 - `cluster_name` (str, optional) - Name of cluster to run pipeline on. Default is slurm.
 
 **Additional entrypoints:**
-- `initialize_results {stage} --experiment_dir {path/to/experiment/directory}`
-- `collect_results {stage} --experiment_dir {path/to/experiment/directory}`
-- `delete_results {stage} --experiment_dir {path/to/experiment/directory}`
-- `rover_model --experiment_dir {path/to/experiment/directory} --submodel_id {submodel ID}`
-- `swimr_model --experiment_dir {path/to/experiment/directory} --submodel_id {submodel ID}`
-- `weave_model --experiment_dir {path/to/experiment/directory} --submodel_id {submodel ID}`
-- `ensemble_model --experiment_dir {path/to/experiment/directory}`
+- `initialize_results {stage} --directory {path/to/experiment/directory}`
+- `collect_results {stage} --directory {path/to/experiment/directory}`
+- `delete_results {stage} --directory {path/to/experiment/directory}`
+- `rover_model --directory {path/to/experiment/directory} --submodel_id {submodel ID}`
+- `weave_model --directory {path/to/experiment/directory} --submodel_id {submodel ID}`
+- `ensemble_model --directory {path/to/experiment/directory}`
 
 ### Input
 
@@ -61,13 +60,6 @@ experiment/
 - results/
   - rover/
     - predictions.parquet
-    - subsets.csv
-  - swimr/
-    - predictions_holdout1.parquet
-    - ...
-    - predictions_holdout5.parquet
-    - predictions.parquet
-    - parameters.csv
     - subsets.csv
   - weave/
     - predictions_holdout1.parquet

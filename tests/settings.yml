@@ -1,15 +1,15 @@
 # OneMod settings
 input_path: /path/to/input/data.parquet
-col_id: [age_group_id, location_id, sex_id, year_id]
+ids: [age_group_id, location_id, sex_id, year_id]
 id_subsets:
   age_group_id: [8, 9, 10]
   location_id: [13, 14]
   sex_id: [1, 2]
   year_id: [1980, 1981, 1982]
-col_obs: obs_rate
-col_pred: pred_rate
-col_holdout: [holdout1, holdout2]
-col_test: test
+obs: obs_rate
+pred: pred_rate
+holdouts: [holdout1, holdout2]
+test: test
 mtype: binomial
 max_attempts: 1
 groupby: [age_group_id, sex_id]
@@ -48,52 +48,6 @@ regmod_smooth:
     options:
       verbose: false
 
-# SWiMR settings
-swimr:
-  max_attempts: 1
-  singularity_image: /ihme/singularity-images/rstudio/ihme_rstudio_4201.img
-  age_metadata: /mnt/team/msca/priv/projects/openmod/data/age_metadata.csv
-  swimr_parentdir: /ihme/scratch/users/rsoren/projects/swimr_dev_tmp/
-  conda_binary: /ihme/code/mscm/miniconda3/bin/conda
-  conda_env: mrtool_0.0.2
-  models:
-    model1:
-      model_type: noncascade
-      groupby: [age_group_id, sex_id]
-      similarity_matrix: [/path/to/similarity_matrix1.parquet, /path/to/similarity_matrix2.parquet]
-      similarity_multiplier: [0.01, 0.1, 1]
-      use_similarity_matrix: [0, 1]
-      n_internal_knots_year: [2, 3, 4]
-      n_internal_knots_age: .na
-      theta: .na
-      intercept_theta: .na
-      ranef_variable: loc__tmp
-      gamma_uprior_lower: 0
-      gamma_uprior_upper: 0
-      overwrite: 1
-      save_input_data: 0
-      save_fitted_models: 0
-      save_similarity_matrix: 0
-    model2:
-      model_type: cascade
-      cascade_levels: age__tmp,locid
-      cascade_hierarchy_csv_path: /path/to/cascade_hierarchy.csv
-      groupby: sex_id
-      similarity_matrix: /path/to/similarity_matrix.parquet
-      similarity_multiplier: 1
-      use_similarity_matrix: 0
-      n_internal_knots_year: 3
-      n_internal_knots_age: .na
-      theta: ['0.1,0.1', '1,1', '10,10']
-      intercept_theta: ['0.1,0.1', '1,1', '10,10']
-      ranef_variable: submodel_id__tmp
-      gamma_uprior_lower: .na
-      gamma_uprior_upper: .na
-      overwrite: 1
-      save_input_data: 0
-      save_fitted_models: 0
-      save_similarity_matrix: 0
-
 # WeAve settings
 weave:
   max_attempts: 1
@@ -126,6 +80,6 @@ ensemble:
   max_attempts: 1
   groupby: [sex_id, super_region_id]
   metric: rmse
-  score: neg_exp
+  score: rover
   top_pct_score: 1
   top_pct_model: 1
