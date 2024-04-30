@@ -7,20 +7,12 @@ from weave.dimension import Dimension
 from weave.smoother import Smoother
 
 from onemod.utils import (
-    Subsets,
     WeaveParams,
+    WeaveSubsets,
     get_handle,
     get_prediction,
     get_smoother_input,
 )
-
-# weave kernel parameters
-kernel_params = {
-    "exponential": "radius",
-    "tricubic": "exponent",
-    "depth": "radius",
-    "inverse": "radius",
-}
 
 
 def weave_model(directory: str, submodel_id: str) -> None:
@@ -57,12 +49,12 @@ def weave_model(directory: str, submodel_id: str) -> None:
     subset_id = int(submodel_id.split("__")[2][6:])
     holdout_id = submodel_id.split("__")[3]
     batch_id = int(submodel_id.split("__")[4][5:])
-    model_settings = config["weave"]["models"][model_id]
+    model_config = config.weave.models[model_id]
     params = WeaveParams(
         model_id, param_sets=dataif.load_weave("parameters.csv")
     )
-    subsets = Subsets(
-        model_id, model_settings, subsets=dataif.load_weave("subsets.csv")
+    subsets = WeaveSubsets(
+        model_id, model_config, subsets=dataif.load_weave("subsets.csv")
     )
 
     # Load data and filter by subset and batch
@@ -82,19 +74,16 @@ def weave_model(directory: str, submodel_id: str) -> None:
 
     # Create smoother objects
     dimensions = []
-    for dim_name, dim_dict in model_settings["dimensions"].items():
-        dim_dict = dim_dict.model_dump(
-            exclude={"parent_args"}
-        )  # Base type is a pydantic model, so convert to dict
-        if dim_dict["kernel"] != "identity":
-            param = kernel_params[dim_dict["kernel"]]
-            dim_dict[param] = params.get_param(f"{dim_name}_{param}", param_id)
-        if "distance" in dim_dict:
-            if dim_dict["distance"] == "dictionary":
+    for dim_name, dim_object in model_config.dimensions.items():
+        dim_dict = dim_object.model_dump()
+        for param in params.get_dimension_params(dim_object):
+            if param == "distance_dict":
                 dim_dict["distance_dict"] = np.load(
-                    params.get_param(f"{dim_name}_distance_dict", param_id),
+                    params.get_param(f"{dim_name}__distance_dict", param_id),
                     allow_pickle=True,
-                ).item()
+                )
+            else:
+                dim_dict[param] = params.get_param(f"{dim_name}__{param}", param_id)
         dimensions.append(Dimension(**dim_dict))
     smoother = Smoother(dimensions)
 
