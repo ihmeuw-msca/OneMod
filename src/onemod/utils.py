@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from onemod.schema import OneModConfig, StageConfig
@@ -577,3 +578,40 @@ def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
     dataif.add_dir("raw_data", config.input_path)
 
     return dataif, config
+
+
+def format_input(directory: str) -> None:
+    """Filter input data by ID subsets and add test column.
+
+    Parameters
+    ----------
+    directory : str
+        The experiment directory.
+
+    """
+    # Load input data
+    dataif, config = get_handle(directory)
+    data = dataif.load(config.input_path)
+
+    # Filter data by ID subsets
+    if config.id_subsets:
+        data = data.query(
+            " & ".join(
+                [
+                    f"{key}.isin({value})"
+                    for key, value in config.id_subsets.items()
+                ]
+            )
+        ).reset_index(drop=True)
+
+    # Create a test column if not in input
+    if config.test not in data:
+        logger.warning(
+            "Test column not found; setting null observations as test rows."
+        )
+        data[config.test] = data[config.obs].isna().astype("int")
+
+    # TODO: Create holdout columns if not in input
+
+    # Save to directory/data/data.parquet
+    dataif.dump_data(data)
