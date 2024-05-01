@@ -3,7 +3,6 @@
 import shutil
 
 import fire
-from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from onemod.utils import (
@@ -27,7 +26,7 @@ def initialize_results(directory: str, stages: list[str]) -> None:
 
 
 def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
-    """Initialize rover results."""
+    """Initialize rover covariate selection results."""
 
     # Initialize directories
     if dataif.rover_covsel.exists():
@@ -40,6 +39,8 @@ def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
 
 
 def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
+    """Initialize regmod smooth results."""
+
     # Initialize directories
     if dataif.regmod_smooth.exists():
         shutil.rmtree(dataif.regmod_smooth)
