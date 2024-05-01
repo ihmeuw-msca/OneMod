@@ -100,7 +100,7 @@ Common Errors and Solutions
 - Exploding Covariates and Incorrect Model Selection
 
   A model_type like binomial nominally expects rates data. If your data is not properly converted to a rate or is not
-  normalized, Rover or Regmod Smooth could fail. You'll first see warnings like::
+  normalized, Rover or SPxMod could fail. You'll first see warnings like::
 
     /ihme/homes/dhs2018/miniconda3/envs/onemod/lib/python3.11/site-packages/regmod/models/binomial.py:81: RuntimeWarning: divide by zero encountered in divide
       (param - self.data.obs) / (param*(1 - param)) * dparam

@@ -49,7 +49,7 @@ class OneModConfig(Config):
     rover_covsel
         Rover covariate selection stage configuration.
     spxmod
-        Regmod smooth stage configuration.
+        SPxMod stage configuration.
     weave
         Weave stage configuration.
     ensemble
@@ -88,7 +88,7 @@ class OneModConfig(Config):
             top_pct_score: 1.0
             top_pct_learner: 0.5
 
-        # Regmod smooth settings
+        # SPxMod settings
         spxmod:
           xmodel:
             var_groups:

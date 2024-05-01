@@ -11,7 +11,7 @@ class SPxModApplication(Application):
     """A SPxMod Application to run through the regmod smooth stage."""
 
     def __init__(self, directory: str | Path):
-        """Create a Regmod Smooth Application."""
+        """Create a SPxMod Application."""
         self.directory = directory
 
     def action_generator(self) -> Generator[Action, None, None]:
