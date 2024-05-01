@@ -1,7 +1,29 @@
+from typing import Literal
+
 from onemod.schema.base import Config, StageConfig
 
 
-class ModelInit(Config):
+class SPxModDimension(Config):
+    name: str
+    dim_type: Literal["categorical", "numerical"]
+
+
+class SPxModSpace(Config):
+    name: str | None = None
+    dims: list[SPxModDimension] | None = None
+
+
+class SPxModVarBuilder(Config):
+    name: str
+    space: SPxModSpace = SPxModSpace()
+    lam: float | dict[str, float] = 0.0
+    lam_mean: float = 0.0
+    gprior: dict[str, float] | None = None
+    uprior: dict[str, float] | None = None
+    scale_by_distance: bool = False
+
+
+class XModelInit(Config):
     """SPxMod class initialization arguments.
 
     To create a spxmod model, additional configuration args `mtype`,
@@ -30,11 +52,9 @@ class ModelInit(Config):
 
     """
 
-    dims: list[dict] = []
-    var_groups: list[dict] = []
-
-    coef_bounds: dict[str, tuple[float, float]] = {}
-    lam: float = 0.0
+    spaces: list[SPxModSpace] = []
+    var_builders: list[SPxModVarBuilder] = []
+    param_specs: dict | None = None
 
 
 class SPxModConfig(StageConfig):
@@ -44,17 +64,14 @@ class SPxModConfig(StageConfig):
 
     Parameters
     ----------
-    groupby
-        List of ID columns to group data by when running separate models
-        for each sex_id, age_group_id, super_region_id, etc. Default is
-        an empty list, which means all points are run in a single model.
-    max_attempts
-        Maximum number of attempts to run the Jobmon task associated
-        with the stage. Default is 1.
-    xmodel
-        Model initialization arguments.
-    xmodel_fit
-        Model fit function arguments.
+    spaces
+        List of dictionaries containing space names and arguments.
+    var_builders
+        List of dictionaries containing variable group names and arguments.
+    weights
+        Name of the weight column in the data. Default is "weight".
+    param_specs
+        Additional parameter specifications for the model.
 
     Example
     -------
@@ -67,13 +84,11 @@ class SPxModConfig(StageConfig):
           groupby: []
           max_attempts: 1
           xmodel:
-            dims: []
-            var_groups: []
-            coef_bounds: {}
-            lam: 0.0
+            spaces: []
+            var_builders: []
           xmodel_fit: {}
 
     """
 
-    xmodel: ModelInit = ModelInit()
+    xmodel: XModelInit = XModelInit()
     xmodel_fit: dict = {}
