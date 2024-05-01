@@ -33,22 +33,14 @@ class XModelInit(Config):
 
     Parameters
     ----------
-    dims
-        List of dictionaries with dimension information. Default is an
-        empty list. When `age_mid` as a dimension is not provided. It
-        will be automatically created and added to the list.
-    var_groups
-        List of dictionaries with variable group information. Default is
-        an empty list. This list is considered as a suppliment list to
-        the selected covariates with dimension `age_mid` from
-        `rover_covsel` stage. Those variables will be automatically
-        created and added to the list.
-    coef_bounds
-        Dictionary of coefficient bounds. Default is an empty
-        dictionary.
-    lam
-        Default smoothing parameter, you can overwrite this value when
-        define variable groups in `var_groups`. Default is 0.0.
+    spaces
+        List of dictionaries containing space names and arguments.
+    var_builders
+        List of dictionaries containing variable group names and arguments.
+    weights
+        Name of the weight column in the data. Default is "weight".
+    param_specs
+        Additional parameter specifications for the model.
 
     """
 
@@ -64,14 +56,17 @@ class SPxModConfig(StageConfig):
 
     Parameters
     ----------
-    spaces
-        List of dictionaries containing space names and arguments.
-    var_builders
-        List of dictionaries containing variable group names and arguments.
-    weights
-        Name of the weight column in the data. Default is "weight".
-    param_specs
-        Additional parameter specifications for the model.
+    groupby
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
+    max_attempts
+        Maximum number of attempts to run the Jobmon task associated
+        with the stage. Default is 1.
+    xmodel
+        Model initialization arguments.
+    xmodel_fit
+        Model fit function arguments.
 
     Example
     -------
