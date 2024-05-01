@@ -9,7 +9,7 @@ import fire
 import numpy as np
 import pandas as pd
 from loguru import logger
-from regmodsm.model import Model
+from spxmod.model import XModel
 
 from onemod.utils import get_handle
 
@@ -113,7 +113,7 @@ def get_residual_se_function(
         raise ValueError(f"Unsupported {model_type=}")
 
 
-def get_coef(model: Model) -> pd.DataFrame:
+def get_coef(model: XModel) -> pd.DataFrame:
     """
     Get coefficient information from the specified model.
 
@@ -151,7 +151,7 @@ def get_coef(model: Model) -> pd.DataFrame:
     return df_coef
 
 
-def regmod_smooth_model(directory: str) -> None:
+def spxmod_model(directory: str) -> None:
     """Run regmod smooth model smooth the age coefficients across different age
     groups.
 
@@ -172,7 +172,7 @@ def regmod_smooth_model(directory: str) -> None:
         Predictions with residual information.
     """
     dataif, config = get_handle(directory)
-    stage_config = config.regmod_smooth
+    stage_config = config.spxmod
 
     # Create regmod smooth parameters
     var_groups = stage_config.xmodel.var_groups
@@ -207,7 +207,7 @@ def regmod_smooth_model(directory: str) -> None:
             var_group["lam"] = lam
 
     # Create regmod smooth model
-    model = Model(
+    model = XModel(
         model_type=config.mtype,
         obs=config.obs,
         dims=stage_config.xmodel.dims,
@@ -224,7 +224,7 @@ def regmod_smooth_model(directory: str) -> None:
     model.fit(df_train, data_dim_vals=df, **stage_config.xmodel_fit)
 
     # Create prediction and residuals
-    logger.info("Model fit, calculating residuals")
+    logger.info("XModel fit, calculating residuals")
     df[config.pred] = model.predict(df)
     residual_func = get_residual_computation_function(
         model_type=config.mtype,
@@ -248,13 +248,10 @@ def regmod_smooth_model(directory: str) -> None:
     df_coef = get_coef(model)
 
     # Save results
-    dataif.dump_regmod_smooth(model, "model.pkl")
-    dataif.dump_regmod_smooth(df_coef, "coef.csv")
-    dataif.dump_regmod_smooth(
-        df[config.ids + ["residual", "residual_se", config.pred]],
-        "predictions.parquet",
-    )
+    dataif.dump_spxmod(model, "model.pkl")
+    dataif.dump_spxmod(df_coef, "coef.csv")
+    dataif.dump_spxmod(df, "predictions.parquet")
 
 
 def main() -> None:
-    fire.Fire(regmod_smooth_model)
+    fire.Fire(spxmod_model)

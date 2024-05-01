@@ -16,7 +16,7 @@ from onemod.utils import (
 def initialize_results(directory: str, stages: list[str]) -> None:
     stage_init_map: dict[str, callable] = {
         "rover_covsel": _initialize_rover_covsel_results,
-        "regmod_smooth": _initialize_regmod_smooth_results,
+        "spxmod": _initialize_spxmod_results,
         "weave": _initialize_weave_results,
         "ensemble": _initialize_ensemble_results,
     }
@@ -38,13 +38,11 @@ def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
     get_rover_covsel_submodels(dataif.experiment, save_file=True)
 
 
-def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
-    """Initialize regmod smooth results."""
-
+def _initialize_spxmod_results(dataif: DataInterface) -> None:
     # Initialize directories
-    if dataif.regmod_smooth.exists():
-        shutil.rmtree(dataif.regmod_smooth)
-    dataif.regmod_smooth.mkdir(parents=True)
+    if dataif.spxmod.exists():
+        shutil.rmtree(dataif.spxmod)
+    dataif.spxmod.mkdir(parents=True)
 
 
 def _initialize_weave_results(dataif: DataInterface) -> None:

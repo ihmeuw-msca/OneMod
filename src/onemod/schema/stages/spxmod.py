@@ -2,12 +2,12 @@ from onemod.schema.base import Config, StageConfig
 
 
 class ModelInit(Config):
-    """RegmodSmooth class initialization arguments.
+    """SPxMod class initialization arguments.
 
-    To create a regmodsm model, additional configuration args `mtype`,
+    To create a spxmod model, additional configuration args `mtype`,
     `obs`, `weights`, are taken from the OneMod config. For more details
     please check out the RegModSM package
-    `documentation <https://github.com/ihmeuw-msca/regmodsm>`_.
+    `documentation <https://github.com/ihmeuw-msca/spxmod>`_.
 
     Parameters
     ----------
@@ -37,8 +37,8 @@ class ModelInit(Config):
     lam: float = 0.0
 
 
-class RegmodSmoothConfig(StageConfig):
-    """RegmodSmooth stage configuration class.
+class SPxModConfig(StageConfig):
+    """SPxMod stage configuration class.
 
     Additional configuration arg `mtype` taken from the OneMod config.
 
@@ -58,12 +58,12 @@ class RegmodSmoothConfig(StageConfig):
 
     Example
     -------
-    All of the regmodsm fields have default values equivalent to the
+    All of the spxmod fields have default values equivalent to the
     following configuration.
 
     .. code-block:: yaml
 
-        regmod_smooth:
+        spxmod:
           groupby: []
           max_attempts: 1
           xmodel:

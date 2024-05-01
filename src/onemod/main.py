@@ -36,8 +36,7 @@ def run_pipeline(
         Whether to run pipeline without Jobmon. Default is False.
 
     """
-    # Validate stages
-    all_stages = ["rover_covsel", "regmod_smooth", "weave", "ensemble"]
+    all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
     if stages is None:
         stages = all_stages
     for stage in stages:

@@ -622,7 +622,7 @@ def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
 
     # add results folders
     dataif.add_dir("rover_covsel", dataif.results / "rover_covsel")
-    dataif.add_dir("regmod_smooth", dataif.results / "regmod_smooth")
+    dataif.add_dir("spxmod", dataif.results / "spxmod")
     dataif.add_dir("weave", dataif.results / "weave")
     dataif.add_dir("ensemble", dataif.results / "ensemble")
 

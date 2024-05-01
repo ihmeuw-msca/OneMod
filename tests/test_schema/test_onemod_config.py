@@ -1,7 +1,8 @@
 import pytest
-from onemod.schema import OneModConfig
-from onemod.schema.stages import RegmodSmoothConfig, RoverCovselConfig
 from pydantic import ValidationError
+
+from onemod.schema import OneModConfig
+from onemod.schema.stages import RoverCovselConfig, SPxModConfig
 
 
 def test_onemod_config(sample_config_file):
@@ -12,8 +13,8 @@ def test_onemod_config(sample_config_file):
     assert hasattr(parent_config, "rover_covsel")
     assert isinstance(parent_config.rover_covsel, RoverCovselConfig)
 
-    assert hasattr(parent_config, "regmod_smooth")
-    assert isinstance(parent_config.regmod_smooth, RegmodSmoothConfig)
+    assert hasattr(parent_config, "spxmod")
+    assert isinstance(parent_config.spxmod, SPxModConfig)
 
     # Try a non recognized model type
     with pytest.raises(ValidationError):

@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from jobmon.client.api import Tool
+
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
     create_collection_template,
@@ -107,7 +108,7 @@ def upstream_task_callback(action: Action) -> list["Task"]:
     order_map = {
         "initialize_results": [],
         "rover_covsel_model": ["initialize_results"],
-        "regmod_smooth_model": ["collect_results", "initialize_results"],
+        "spxmod_model": ["collect_results", "initialize_results"],
         "weave_model": [
             "collect_results",
             "collect_results",
@@ -118,11 +119,11 @@ def upstream_task_callback(action: Action) -> list["Task"]:
         # Due to traversal order of the generator, the rover collection task must be created
         # prior to weave modeling tasks being instantiated, therefore this is
         # theoretically safe to do.
-        # Vice versa: when regmod_smooth_model's task is created, there can be at most one
+        # Vice versa: when spxmod_model's task is created, there can be at most one
         # previously created collect task (for rover)
         "collect_results": [
             "rover_covsel_model",
-            "regmod_smooth_model",
+            "spxmod_model",
             "weave_model",
         ],
     }

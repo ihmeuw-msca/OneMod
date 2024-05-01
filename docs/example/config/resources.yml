@@ -13,7 +13,7 @@ task_template_resources:
     slurm:
       memory: 10G
       runtime: 10m
-  regmod_smooth_modeling_template:
+  spxmod_modeling_template:
     slurm:
       memory: 10G
       runtime: 20m

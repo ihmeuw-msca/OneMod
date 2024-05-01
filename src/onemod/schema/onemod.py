@@ -3,8 +3,8 @@ from typing import Any, Literal
 from onemod.schema.base import Config
 from onemod.schema.stages import (
     EnsembleConfig,
-    RegmodSmoothConfig,
     RoverCovselConfig,
+    SPxModConfig,
     WeaveConfig,
 )
 
@@ -48,7 +48,7 @@ class OneModConfig(Config):
         1950-2000 but you only want to run a model from 1980-1990.
     rover_covsel
         Rover covariate selection stage configuration.
-    regmod_smooth
+    spxmod
         Regmod smooth stage configuration.
     weave
         Weave stage configuration.
@@ -89,7 +89,7 @@ class OneModConfig(Config):
             top_pct_learner: 0.5
 
         # Regmod smooth settings
-        regmod_smooth:
+        spxmod:
           xmodel:
             var_groups:
               - col: "intercept"
@@ -166,6 +166,6 @@ class OneModConfig(Config):
     id_subsets: dict[str, list[Any]] = {}
 
     rover_covsel: RoverCovselConfig | None = None
-    regmod_smooth: RegmodSmoothConfig | None = None
+    spxmod: SPxModConfig | None = None
     weave: WeaveConfig | None = None
     ensemble: EnsembleConfig | None = None

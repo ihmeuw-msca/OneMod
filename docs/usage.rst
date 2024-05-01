@@ -89,7 +89,7 @@ OneMod creates a lot of output files. After running, the experiment directory sh
     |    |    |    |    |--- rover.pkl
     |    |    |    |    |--- summary.csv
                     ...
-    |    |--- regmod_smooth/
+    |    |--- spxmod/
     |    |    |--- coef.csv
     |    |    |--- model.pkl
     |    |    |--- predictions.parquet

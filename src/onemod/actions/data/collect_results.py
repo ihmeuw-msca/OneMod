@@ -98,19 +98,17 @@ def _plot_rover_covsel_results(
     return fig
 
 
-def _plot_regmod_smooth_results(
+def _plot_spxmod_results(
     dataif: DataInterface, summaries: pd.DataFrame
 ) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if not selected_covs:
-        warn(
-            "There are no covariates selected, skip `plot_regmod_smooth_results`"
-        )
+        warn("There are no covariates selected, skip `plot_spxmod_results`")
         return None
 
     df_coef = (
-        dataif.load_regmod_smooth("coef.csv")
+        dataif.load_spxmod("coef.csv")
         .query("dim == 'age_mid'")
         .rename(columns={"dim_val": "age_mid"})
     )
@@ -128,7 +126,7 @@ def _plot_regmod_smooth_results(
             yerr=1.96 * df_cov["coef_sd"],
             fmt="o-",
             alpha=0.5,
-            label="regmod_smooth",
+            label="spxmod",
         )
         ax.legend(fontsize="xx-small")
     return fig
@@ -156,15 +154,13 @@ def collect_results_rover_covsel(directory: str) -> None:
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
-def collect_results_regmod_smooth(directory: str) -> None:
+def collect_results_spxmod(directory: str) -> None:
     """This step is used for creating diagnostics."""
     dataif, _ = get_handle(directory)
     summaries = _get_rover_covsel_summaries(dataif)
-    fig = _plot_regmod_smooth_results(dataif, summaries)
+    fig = _plot_spxmod_results(dataif, summaries)
     if fig is not None:
-        fig.savefig(
-            dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight"
-        )
+        fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
 
 
 def collect_results_weave(directory: str) -> None:
@@ -196,7 +192,7 @@ def collect_results_weave(directory: str) -> None:
 def collect_results(stage_name: str, directory: str) -> None:
     callable_map = {
         "rover_covsel": collect_results_rover_covsel,
-        "regmod_smooth": collect_results_regmod_smooth,
+        "spxmod": collect_results_spxmod,
         "weave": collect_results_weave,
     }
     try:
