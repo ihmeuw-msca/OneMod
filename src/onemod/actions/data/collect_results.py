@@ -77,6 +77,7 @@ def _plot_rover_covsel_results(
     )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
+    ax = [ax] if len(covs) == 1 else ax
     for i, cov in enumerate(covs):
         df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
         if i % 5 == 0:
