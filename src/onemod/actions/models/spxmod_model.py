@@ -1,4 +1,4 @@
-"""Run regmod smooth model, currently the main goal of this step is to smooth
+"""Run spxmod model, currently the main goal of this step is to smooth
 the covariate coefficients across age groups.
 """
 
@@ -11,6 +11,7 @@ import pandas as pd
 from loguru import logger
 from spxmod.model import XModel
 
+from onemod.schema.stages.spxmod import XModelInit
 from onemod.utils import get_handle
 
 
@@ -151,8 +152,44 @@ def get_coef(model: XModel) -> pd.DataFrame:
     return df_coef
 
 
+def _build_xmodel_args(
+    xmodel_config: XModelInit, selected_covs: list[str]
+) -> dict:
+    xmodel_args = xmodel_config.model_dump()
+    coef_bounds = xmodel_args.pop("coef_bounds")
+    lam = xmodel_args.pop("lam")
+
+    space_keys = [space["name"] for space in xmodel_args["spaces"]]
+    var_builder_keys = [
+        (var_builder["name"], var_builder["space"]["name"])
+        for var_builder in xmodel_args["var_builders"]
+    ]
+
+    # add age_mid if not specified in spaces
+    if "age_mid" not in space_keys:
+        xmodel_args["spaces"].append(
+            dict(name="age_mid", dims=[dict(name="age_mid", type="numerical")])
+        )
+
+    for cov in selected_covs:
+        if (cov, "age_mid") not in var_builder_keys:
+            xmodel_args["var_builders"].append(dict(name=cov, space="age_mid"))
+
+    # default settings for everyone
+    for var_builder in xmodel_args["var_builders"]:
+        cov = var_builder["name"]
+        if "uprior" not in var_builder:
+            var_builder["uprior"] = tuple(
+                map(float, coef_bounds.get(cov, [-np.inf, np.inf]))
+            )
+        if "lam" not in var_builder:
+            var_builder["lam"] = lam
+
+    return xmodel_args
+
+
 def spxmod_model(directory: str) -> None:
-    """Run regmod smooth model smooth the age coefficients across different age
+    """Run spxmod model smooth the age coefficients across different age
     groups.
 
     Parameters
@@ -160,7 +197,7 @@ def spxmod_model(directory: str) -> None:
     directory
         Parent folder where the experiment is run.
         - ``directory / config / settings.yaml`` contains rover modeling settings
-        - ``directory / results / rover`` stores all rover results
+        - ``directory / results / spxmod`` stores all rover results
 
     Outputs
     -------
@@ -170,59 +207,36 @@ def spxmod_model(directory: str) -> None:
         Coefficients from different age groups.
     predictions.parquet
         Predictions with residual information.
+
     """
     dataif, config = get_handle(directory)
     stage_config = config.spxmod
 
-    # Create regmod smooth parameters
-    var_groups = stage_config.xmodel.var_groups
-    coef_bounds = stage_config.xmodel.coef_bounds
-    lam = stage_config.xmodel.lam
-
-    var_group_keys = [
-        (var_group["col"], var_group.get("dim")) for var_group in var_groups
-    ]
-
+    # load selected covs from previous stage
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if not selected_covs:
         selected_covs = []
 
     logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
 
-    # add selected covariates as var_group with age_mid as the dimension
-    for cov in selected_covs:
-        if (cov, "age_mid") not in var_group_keys:
-            var_groups.append(dict(col=cov, dim="age_mid"))
+    # Create spxmod parameters
+    xmodel_args = _build_xmodel_args(stage_config.xmodel, selected_covs)
+    xmodel_fit_args = stage_config.xmodel_fit
 
-    logger.info(f"{len(var_groups)} var_groups created for smoothing.")
-
-    # default settings for everyone
-    for var_group in var_groups:
-        cov = var_group["col"]
-        if "uprior" not in var_group:
-            var_group["uprior"] = tuple(
-                map(float, coef_bounds.get(cov, [-np.inf, np.inf]))
-            )
-        if "lam" not in var_group:
-            var_group["lam"] = lam
-
-    # Create regmod smooth model
-    model = XModel(
-        model_type=config.mtype,
-        obs=config.obs,
-        dims=stage_config.xmodel.dims,
-        var_groups=var_groups,
-        weights=config.weights,
+    logger.info(
+        f"{len(xmodel_args["var_builders"])} var_builders created for smoothing."
     )
+
+    # Create spxmod model
+    model = XModel(**xmodel_args)
 
     df = dataif.load_data()
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
-    # Fit regmod smooth model
-    model.fit(df_train, data_dim_vals=df, **stage_config.xmodel_fit)
-
+    # Fit spxmod model
+    model.fit(data=df_train, data_span=df, **xmodel_fit_args)
     # Create prediction and residuals
     logger.info("XModel fit, calculating residuals")
     df[config.pred] = model.predict(df)

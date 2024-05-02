@@ -15,7 +15,7 @@ class SPxModSpace(Config):
 
 class SPxModVarBuilder(Config):
     name: str
-    space: SPxModSpace = SPxModSpace()
+    space: str | SPxModSpace = SPxModSpace()
     lam: float | dict[str, float] = 0.0
     lam_mean: float = 0.0
     gprior: dict[str, float] | None = None
@@ -47,6 +47,9 @@ class XModelInit(Config):
     spaces: list[SPxModSpace] = []
     var_builders: list[SPxModVarBuilder] = []
     param_specs: dict | None = None
+
+    coef_bounds: dict[str, tuple[float, float]] = {}
+    lam: float = 0.0
 
 
 class SPxModConfig(StageConfig):

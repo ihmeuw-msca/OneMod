@@ -8,7 +8,7 @@ from onemod.application.base import Application
 
 
 class SPxModApplication(Application):
-    """A SPxMod Application to run through the regmod smooth stage."""
+    """A SPxMod Application to run through the spxmod stage."""
 
     def __init__(self, directory: str | Path):
         """Create a SPxMod Application."""
@@ -17,7 +17,7 @@ class SPxModApplication(Application):
     def action_generator(self) -> Generator[Action, None, None]:
         """A generator to return actions to be run, with the correct dependencies.
 
-        For the regmod smooth stage, there are currently just two actions - model and plot.
+        For the spxmod stage, there are currently just two actions - model and plot.
         """
         # Modeling task
         yield Action(

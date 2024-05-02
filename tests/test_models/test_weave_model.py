@@ -7,7 +7,7 @@ from onemod.utils import get_weave_submodels
 
 
 def test_weave_model(sample_input_data, temporary_directory):
-    # Mock a regmod smooth
+    # Mock a spxmod
     spxmod_path = (
         temporary_directory / "results" / "spxmod" / "predictions.parquet"
     )
