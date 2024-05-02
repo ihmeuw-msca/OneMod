@@ -107,12 +107,7 @@ def _plot_spxmod_results(
         warn("There are no covariates selected, skip `plot_spxmod_results`")
         return None
 
-    df_coef = (
-        dataif.load_spxmod("coef.csv")
-        .query("dim == 'age_mid'")
-        .rename(columns={"dim_val": "age_mid"})
-    )
-    df_covs = df_coef.groupby("cov")
+    df_covs = dataif.load_spxmod("coef.csv").groupby("cov")
 
     fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
     logger.info(
@@ -120,10 +115,9 @@ def _plot_spxmod_results(
     )
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
-        ax.errorbar(
+        ax.plot(
             df_cov["age_mid"],
             df_cov["coef"],
-            yerr=1.96 * df_cov["coef_sd"],
             fmt="o-",
             alpha=0.5,
             label="spxmod",
