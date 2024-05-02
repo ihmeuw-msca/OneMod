@@ -186,7 +186,7 @@ def collect_results_weave(directory: str) -> None:
             data=pd.concat(df_list, ignore_index=True),
             index=config.ids,
             columns=["model_id", "param_id"],
-            values=["residual", config.pred],
+            values=["residual", "residual_se", config.pred],
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")
