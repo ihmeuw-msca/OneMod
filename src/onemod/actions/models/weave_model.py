@@ -11,7 +11,7 @@ from onemod.utils import (
     WeaveSubsets,
     get_handle,
     get_prediction,
-    get_smoother_input,
+    get_weave_input,
     parse_weave_submodel,
 )
 
@@ -60,7 +60,7 @@ def weave_model(directory: str, submodel_id: str) -> None:
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input("weave", config, dataif),
+        get_weave_input(config, dataif),
         subset_id,
         batch_id,
     ).rename(columns={"batch": "predict"})
@@ -99,8 +99,8 @@ def weave_model(directory: str, submodel_id: str) -> None:
     logger.info(f"Fitting smoother for {submodel_id=}")
     df_pred = smoother(
         data=df_input,
-        observed="residual_value",
-        stdev="residual_se",
+        observed="regmod_value",
+        stdev="regmod_se",
         smoothed="residual",
         fit="fit",
         predict="predict",

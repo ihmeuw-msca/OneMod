@@ -393,25 +393,24 @@ def add_holdouts(
     return df
 
 
-def get_smoother_input(
-    smoother: str,
+def get_weave_input(
     config: OneModConfig,
     dataif: DataInterface,
 ) -> pd.DataFrame:
     """Get input data for smoother model.
 
-    Each stage only saves ID columns and stage results. Smoothers may
-    need additional columns (e.g., super_region_id, age_mid, holdouts,
-    test) that aren't included in regmod_smooth results.
+    Each stage only saves ID columns and stage results. Weave needs
+    additional columns (e.g., super_region_id, age_mid, holdouts, test)
+    that aren't included in regmod_smooth results.
 
     TODO: Could make a generic version of this function for loading
     predictions from any stage with additional columns from input.
 
     """
     data = dataif.load_regmod_smooth("predictions.parquet").rename(
-        columns={"residual": "residual_value"}
+        columns={"residual": "regmod_value", "residual_se": "regmod_se"}
     )
-    columns = _get_smoother_columns(smoother, data.columns, config)
+    columns = _get_weave_columns(data.columns, config)
     data = data.merge(
         right=dataif.load_data()[columns].drop_duplicates(),
         on=config.ids,
@@ -420,23 +419,21 @@ def get_smoother_input(
     return data
 
 
-def _get_smoother_columns(
+def _get_weave_columns(
     smoother: str, regmod_columns: list[str], config: OneModConfig
 ) -> list[str]:
-    """Get additional columns needed for smoother model."""
-    if smoother == "weave":
-        columns = set(config.holdouts + [config.test])
-        for model_config in config[smoother].models.values():
-            columns.update(model_config.groupby)
-            for dimension_config in model_config.dimensions.values():
-                for key in ["name", "coordinates"]:
-                    value = dimension_config[key]
-                    if value:
-                        columns.update(as_list(value))
-        columns = columns.difference(regmod_columns)
-        columns.update(config.ids)
-        return list(columns)
-    raise ValueError(f"Invalid smoother name: {smoother}")
+    """Get additional columns needed for weave model."""
+    columns = set(config.holdouts + [config.test])
+    for model_config in config[smoother].models.values():
+        columns.update(model_config.groupby)
+        for dimension_config in model_config.dimensions.values():
+            for key in ["name", "coordinates"]:
+                value = dimension_config[key]
+                if value:
+                    columns.update(as_list(value))
+    columns = columns.difference(regmod_columns)
+    columns.update(config.ids)
+    return list(columns)
 
 
 def get_rover_covsel_submodels(
