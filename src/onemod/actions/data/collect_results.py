@@ -1,5 +1,6 @@
 """Collect onemod stage submodel results."""
 
+from ast import parse
 from warnings import warn
 
 import fire
@@ -13,6 +14,7 @@ from onemod.utils import (
     get_handle,
     get_rover_covsel_submodels,
     get_weave_submodels,
+    parse_weave_submodel,
 )
 
 
@@ -172,18 +174,17 @@ def collect_results_weave(directory: str) -> None:
 
     submodel_ids = get_weave_submodels(directory)
     for holdout_id in config.holdouts + ["full"]:
-        df_pred = pd.concat(
-            [
-                dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
-                    {"param_id": str}
+        df_list = []
+        for submodel_id in submodel_ids:
+            if parse_weave_submodel(submodel_id, "holdout_id") == holdout_id:
+                df = dataif.load_weave(f"submodels/{submodel_id}.parquet")
+                df["model_id"] = parse_weave_submodel(submodel_id, "model_id")
+                df["param_id"] = str(
+                    parse_weave_submodel(submodel_id, "param_id")
                 )
-                for submodel_id in submodel_ids
-                if submodel_id.split("__")[3] == holdout_id
-            ],
-            ignore_index=True,
-        ).drop_duplicates()
+                df_list.append(df)
         df_pred = pd.pivot(
-            data=df_pred,
+            data=pd.concat(df_list, ignore_index=True),
             index=config.ids,
             columns=["model_id", "param_id"],
             values=["residual", config.pred],

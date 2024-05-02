@@ -12,6 +12,7 @@ from onemod.utils import (
     get_handle,
     get_prediction,
     get_smoother_input,
+    parse_weave_submodel,
 )
 
 
@@ -44,11 +45,11 @@ def weave_model(directory: str, submodel_id: str) -> None:
     dataif, config = get_handle(directory)
 
     # Get submodel settings
-    model_id = submodel_id.split("__")[0]
-    param_id = int(submodel_id.split("__")[1][5:])
-    subset_id = int(submodel_id.split("__")[2][6:])
-    holdout_id = submodel_id.split("__")[3]
-    batch_id = int(submodel_id.split("__")[4][5:])
+    model_id = parse_weave_submodel(submodel_id, "model_id")
+    param_id = parse_weave_submodel(submodel_id, "param_id")
+    subset_id = parse_weave_submodel(submodel_id, "subset_id")
+    holdout_id = parse_weave_submodel(submodel_id, "holdout_id")
+    batch_id = parse_weave_submodel(submodel_id, "batch_id")
     model_config = config.weave.models[model_id]
     params = WeaveParams(
         model_id, param_sets=dataif.load_weave("parameters.csv")
@@ -109,13 +110,7 @@ def weave_model(directory: str, submodel_id: str) -> None:
         lambda row: get_prediction(row, config.pred, config.mtype),
         axis=1,
     )
-    df_pred["model_id"] = model_id
-    df_pred["param_id"] = param_id
-    df_pred["holdout_id"] = holdout_id
-    df_pred = df_pred[
-        config.ids
-        + ["residual", config.pred, "model_id", "param_id", "holdout_id"]
-    ]
+    df_pred = df_pred[config.ids + ["residual", config.pred]]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
 

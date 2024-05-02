@@ -501,6 +501,22 @@ def get_ensemble_submodels(
     return submodels
 
 
+def parse_weave_submodel(submodel_id: str, id_name: str) -> str | int:
+    """Get IDs from weave submodel_id."""
+    id_list = submodel_id.split("__")
+    if id_name == "model_id":
+        return id_list[0]
+    if id_name == "param_id":
+        return int(id_list[1][5:])
+    if id_name == "subset_id":
+        return int(id_list[2][6:])
+    if id_name == "holdout_id":
+        return id_list[3]
+    if id_name == "batch_id":
+        return int(id_list[4][5:])
+    raise ValueError(f"Invalid id_name: {id_name}")
+
+
 # TODO: move to modeling module
 def get_prediction(row: pd.Series, pred: str, model_type: str) -> float:
     """Get smoother prediction."""
