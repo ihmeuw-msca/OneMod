@@ -115,8 +115,7 @@ def get_residual_se_function(
 
 
 def get_coef(model: XModel) -> pd.DataFrame:
-    """
-    Get coefficient information from the specified model.
+    """Get coefficient information from the specified model.
 
     Parameters
     ----------
@@ -130,25 +129,12 @@ def get_coef(model: XModel) -> pd.DataFrame:
 
     """
     df_coef = []
-    for var_group in model.var_groups:
-        dim = var_group.dim
-        if dim is None:
-            dim_vals = [np.nan]
-            dim_name = "None"
-        else:
-            dim_vals = dim.vals
-            dim_name = dim.name
-        df_sub = pd.DataFrame(
-            {
-                "cov": var_group.col,
-                "dim": dim_name,
-                "dim_val": dim_vals,
-            }
-        )
+    for var_builder in model.var_builders:
+        df_sub = var_builder.space.span
+        df_sub["cov"] = var_builder.name
         df_coef.append(df_sub)
     df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
-    df_coef["coef"] = model._model.opt_coefs
-    df_coef["coef_sd"] = np.sqrt(np.diag(model._model.opt_vcov))
+    df_coef["coef"] = model.core.opt_coefs
     return df_coef
 
 
