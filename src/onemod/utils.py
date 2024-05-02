@@ -420,11 +420,11 @@ def get_weave_input(
 
 
 def _get_weave_columns(
-    smoother: str, regmod_columns: list[str], config: OneModConfig
+    regmod_columns: list[str], config: OneModConfig
 ) -> list[str]:
-    """Get additional columns needed for weave model."""
+    """Get columns needed for weave model."""
     columns = set(config.holdouts + [config.test])
-    for model_config in config[smoother].models.values():
+    for model_config in config.weave.models.values():
         columns.update(model_config.groupby)
         for dimension_config in model_config.dimensions.values():
             for key in ["name", "coordinates"]:

@@ -90,7 +90,7 @@ def weave_model(directory: str, submodel_id: str) -> None:
 
     # WeAve models throw error if data contains NaNs
     # Replace possible NaNs with dummy value
-    for column in ["residual_value", "residual_se"]:
+    for column in ["regmod_value", "regmod_se"]:
         df_input.loc[
             df_input.eval(f"fit == False and {column}.isna()"), column
         ] = 1
