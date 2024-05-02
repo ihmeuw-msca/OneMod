@@ -517,6 +517,59 @@ def parse_weave_submodel(submodel_id: str, id_name: str) -> str | int:
     raise ValueError(f"Invalid id_name: {id_name}")
 
 
+def reformat_weave_results(
+    df_pivot: pd.DataFrame, columns: str | list[str], ids: list[str]
+) -> pd.DataFrame:
+    """Reformat MultiIndex weave results.
+
+    To reduce file sizes, weave results are saved with a MultiIndex for
+    indices (config.col_ids) and columns (results, model_id, param_id).
+    This function returns a data frame with columns ids + [model_id,
+    param_id] + columns.
+
+    Parameters
+    ----------
+    df_pivot : pandas.DataFrame
+        MultiIndex weave results.
+    columns : str or list of str
+        Name of result columns to return.
+    ids : list of str
+        Index column names.
+
+    Returns
+    -------
+    pandas.DataFrame
+
+    """
+    columns = as_list(columns)
+    df_melt = _reformat_weave_column(df_pivot, columns[0])
+    for column in columns[1:]:
+        df_melt = df_melt.merge(
+            right=_reformat_weave_column(df_pivot, column),
+            on=ids + ["model_id", "param_id"],
+        )
+    return df_melt
+
+
+def _reformat_weave_column(df: pd.DataFrame, column=str) -> pd.DataFrame:
+    """Reformat single column from MultiIndex weave results.
+
+    Parameters
+    ----------
+    df_pivot : pandas.DataFrame
+        MultiIndex weave results.
+    columns : str or list of str
+        Name of result column to return.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Data frame with index columns and specified result column.
+
+    """
+    return df[column].melt(value_name=column, ignore_index=False).reset_index()
+
+
 # TODO: move to modeling module
 def get_prediction(row: pd.Series, pred: str, model_type: str) -> float:
     """Get smoother prediction."""
