@@ -104,13 +104,13 @@ def weave_model(directory: str, submodel_id: str) -> None:
         smoothed="residual",
         fit="fit",
         predict="predict",
-    )
+    ).rename(columns={"residual_sd": "residual_se"})
     logger.info(f"Completed fitting, predicting for {submodel_id=}")
     df_pred[config.pred] = df_pred.apply(
         lambda row: get_prediction(row, config.pred, config.mtype),
         axis=1,
     )
-    df_pred = df_pred[config.ids + ["residual", config.pred]]
+    df_pred = df_pred[config.ids + ["residual", "residual_se", config.pred]]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
 
