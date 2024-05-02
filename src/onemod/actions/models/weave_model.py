@@ -59,9 +59,7 @@ def weave_model(directory: str, submodel_id: str) -> None:
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input(
-            "weave", config=config, dataif=dataif, from_rover=True
-        ),
+        get_smoother_input("weave", config, dataif),
         subset_id,
         batch_id,
     ).rename(columns={"batch": "predict"})
@@ -83,14 +81,18 @@ def weave_model(directory: str, submodel_id: str) -> None:
                     allow_pickle=True,
                 )
             else:
-                dim_dict[param] = params.get_param(f"{dim_name}__{param}", param_id)
+                dim_dict[param] = params.get_param(
+                    f"{dim_name}__{param}", param_id
+                )
         dimensions.append(Dimension(**dim_dict))
     smoother = Smoother(dimensions)
 
-    # TODO: Check if this is already done in helper function
-    # Impute missing observation and holdout values
-    # Assume that missing numbers for holdouts are implicit 1's (i.e. used for testing anyways)
-    df_input.fillna(1, inplace=True)
+    # WeAve models throw error if data contains NaNs
+    # Replace possible NaNs with dummy value
+    for column in ["residual_value", "residual_se"]:
+        df_input.loc[
+            df_input.eval(f"fit == False and {column}.isna()"), column
+        ] = 1
 
     # Get predictions
     logger.info(f"Fitting smoother for {submodel_id=}")

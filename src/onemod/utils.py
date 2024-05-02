@@ -397,52 +397,43 @@ def get_smoother_input(
     smoother: str,
     config: OneModConfig,
     dataif: DataInterface,
-    from_rover: bool | None = False,
 ) -> pd.DataFrame:
-    """Get input data for smoother model."""
-    if from_rover:
-        df_input = dataif.load_regmod_smooth("predictions.parquet")
-        df_input = df_input.rename(columns={"residual": "residual_value"})
-    else:
-        df_input = dataif.load_data()
-    columns = _get_smoother_columns(smoother, config).difference(
-        df_input.columns
+    """Get input data for smoother model.
+
+    Each stage only saves ID columns and stage results. Smoothers may
+    need additional columns (e.g., super_region_id, age_mid, holdouts,
+    test) that aren't included in regmod_smooth results.
+
+    """
+    data = dataif.load_regmod_smooth("predictions.parquet").rename(
+        columns={"residual": "residual_value"}
     )
-    columns = config.ids + list(columns)
-    # Deduplicate  # TODO: # shouldn't config.ids already be included?
-    columns = list(set(columns))
-    if len(columns) > 0:  # TODO: this is missing the id_subset part
-        try:
-            # The data path only exists if the initialzie_results action has already been run. Fallback to
-            # raw datapath if creating submodels prior to workflow run.
-            right = dataif.load_data()
-        except FileNotFoundError:
-            right = dataif.load_raw_data()
-        df_input = df_input.merge(
-            right=right[columns].drop_duplicates(),
-            on=config.ids,
-        )
-    if smoother == "weave":  # weave models can't have NaN data
-        df_input.loc[df_input[config.obs].isna(), "residual_value"] = 1
-        df_input.loc[df_input[config.obs].isna(), "residual_se"] = 1
-        # TODO: isn't this also done within the weave model?
-    return df_input
+    columns = _get_smoother_columns(smoother, data.columns, config)
+    data = data.merge(
+        right=dataif.load_data()[columns].drop_duplicates(),
+        on=config.ids,
+    )
+
+    return data
 
 
-def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
-    """Get column names needed for smoother model."""
-    columns = set(config.holdouts + [config.test])
-    if smoother != "weave":
-        raise ValueError(f"Invalid smoother name: {smoother}")
-    for model_settings in config[smoother]["models"].values():
-        columns.update(model_settings["groupby"])
-        if smoother == "weave":
-            for dimension_settings in model_settings["dimensions"].values():
+def _get_smoother_columns(
+    smoother: str, regmod_columns: list[str], config: OneModConfig
+) -> list[str]:
+    """Get additional columns needed for smoother model."""
+    if smoother == "weave":
+        columns = set(config.holdouts + [config.test])
+        for model_config in config[smoother].models.values():
+            columns.update(model_config.groupby)
+            for dimension_config in model_config.dimensions.values():
                 for key in ["name", "coordinates"]:
-                    key_val = dimension_settings.get(key)
-                    if key_val:
-                        columns.update(as_list(key_val))
-    return columns
+                    value = dimension_config[key]
+                    if value:
+                        columns.update(as_list(value))
+        columns = columns.difference(regmod_columns)
+        columns.update(config.ids)
+        return list(columns)
+    raise ValueError(f"Invalid smoother name: {smoother}")
 
 
 def get_rover_covsel_submodels(
@@ -452,8 +443,7 @@ def get_rover_covsel_submodels(
     dataif, config = get_handle(directory)
 
     # Create rover subsets and submodels
-    df_input = dataif.load_data()
-    subsets = Subsets("rover_covsel", config.rover_covsel, df_input)
+    subsets = Subsets("rover_covsel", config.rover_covsel, dataif.load_data())
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
@@ -470,12 +460,11 @@ def get_weave_submodels(
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
-
-    df_input = get_smoother_input("weave", dataif=dataif, config=config)
+    data = dataif.load_data()
     for model_id, model_config in config.weave.models.items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        subsets = WeaveSubsets(model_id, model_config, df_input)
+        subsets = WeaveSubsets(model_id, model_config, data)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
