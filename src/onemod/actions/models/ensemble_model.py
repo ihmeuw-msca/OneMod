@@ -79,7 +79,7 @@ def get_performance(
     df_holdout : pd.DataFrame
         Dataframe containing the holdout data.
     subsets : Subsets
-        Subsets object containing the subset data.
+        Subsets object containing the subset configuration.
     metric_name : str
         Metric used to compute model performance.
     obs : str
@@ -94,6 +94,13 @@ def get_performance(
     ------
     ValueError
         If an invalid performance metric is provided.
+
+    Notes
+    -----
+    * `row` contain columns smoother_id, model_id, param_id, holdout_id,
+      and subset_id.
+    * `df_holdout` result columns are tuples
+      (smoother_id, model_id, param_id).
 
     """
     metric = Metric(metric_name)
@@ -270,13 +277,20 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     df_list = []
 
     for holdout_id, df in df_performance.groupby("holdout_id"):
+        # Get weave predictions for holdout set
         predictions = get_predictions(directory, holdout_id, config.pred)
-        predictions.columns = predictions.columns.to_flat_index()
+        predictions.columns = (
+            predictions.columns.to_flat_index()
+        )  # columns are tuples (smoother_id, model_id, param_id)
+
+        # Add observations and holdout column
         df_holdout = pd.merge(
             left=df_input[config.ids + [config.obs, holdout_id]],
             right=predictions,
             on=config.ids,
         )
+
+        # Calculate performance metric
         df[stage_config.metric] = df.apply(
             lambda row: get_performance(
                 row,
