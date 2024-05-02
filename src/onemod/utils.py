@@ -404,6 +404,9 @@ def get_smoother_input(
     need additional columns (e.g., super_region_id, age_mid, holdouts,
     test) that aren't included in regmod_smooth results.
 
+    TODO: Could make a generic version of this function for loading
+    predictions from any stage with additional columns from input.
+
     """
     data = dataif.load_regmod_smooth("predictions.parquet").rename(
         columns={"residual": "residual_value"}
