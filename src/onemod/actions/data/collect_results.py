@@ -1,6 +1,5 @@
 """Collect onemod stage submodel results."""
 
-from ast import parse
 from warnings import warn
 
 import fire
