@@ -86,6 +86,7 @@ def plot_results(
     >>> fig
 
     """
+    # Initialize figure and subplots
     fig = plt.Figure(**fig_options)
     so.Plot(data, x=x).facet(**facet_options).share(**share_options).on(
         fig
@@ -97,6 +98,7 @@ def plot_results(
         if facet_options.get(key) is not None
     ]
 
+    # Query data by subplot
     if by:
         values = pd.DataFrame(
             data=[ax.get_title().split(" | ") for ax in axes],
@@ -111,6 +113,7 @@ def plot_results(
     else:
         data_list = [data]
 
+    # Plot data
     for ax, df in zip(axes, data_list):
         for y in y_dots:
             ax.scatter(df[x], df[y], label=y, **dots_options.get(y, {}))
@@ -129,6 +132,7 @@ def plot_results(
                 ax.scatter(df[x], df[y], label=y, **dots_options.get(y, {}))
         ax.set_ylim(ylim)
 
+    # Format legend
     fig.tight_layout()
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(
@@ -138,4 +142,5 @@ def plot_results(
         bbox_to_anchor=(0.5, -0.05),
         ncol=len(handles),
     )
+
     return fig
