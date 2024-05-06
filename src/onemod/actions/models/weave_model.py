@@ -26,47 +26,32 @@ def weave_model(directory: str, submodel_id: str) -> None:
     submodel_id (str)
         The ID of the submodel to be processed.
 
-    Notes
-    -----
-    Each submodel_id has the form:
-
-    f"{model_id}__param{param_id}__subset{subset_id}__{holdout_id}__batch{batch_id}"
-
-    with:
-    * model_id (str): user input
-    * param_id (int): assigned by WeaveParams
-    * subset_id (int): assigned by WeaveSubsets
-    * holdout_id (str): user input
-    * batch_id (int): assigned by WeaveSubsets
-
-    Example: "age_model__param0__subset0__holdout1__batch0"
-
     """
     dataif, config = get_handle(directory)
 
     # Get submodel settings
-    model_id = parse_weave_submodel(submodel_id, "model_id")
-    param_id = parse_weave_submodel(submodel_id, "param_id")
-    subset_id = parse_weave_submodel(submodel_id, "subset_id")
-    holdout_id = parse_weave_submodel(submodel_id, "holdout_id")
-    batch_id = parse_weave_submodel(submodel_id, "batch_id")
-    model_config = config.weave.models[model_id]
+    submodel = parse_weave_submodel(submodel_id)
+    model_config = config.weave.models[submodel["model_id"]]
     params = WeaveParams(
-        model_id, param_sets=dataif.load_weave("parameters.csv")
+        submodel["model_id"], param_sets=dataif.load_weave("parameters.csv")
     )
     subsets = WeaveSubsets(
-        model_id, model_config, subsets=dataif.load_weave("subsets.csv")
+        submodel["model_id"],
+        model_config,
+        subsets=dataif.load_weave("subsets.csv"),
     )
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
         get_weave_input(config, dataif),
-        subset_id,
-        batch_id,
+        submodel["subset_id"],
+        submodel["batch_id"],
     ).rename(columns={"batch": "predict"})
     df_input["fit"] = df_input[config.test] == 0
-    if holdout_id != "full":
-        df_input["fit"] = df_input["fit"] & (df_input[holdout_id] == 0)
+    if submodel["holdout_id"] != "full":
+        df_input["fit"] = df_input["fit"] & (
+            df_input[submodel["holdout_id"]] == 0
+        )
     df_input = df_input[df_input["fit"] | df_input["predict"]].drop(
         columns=[config.test] + config.holdouts
     )
@@ -78,12 +63,14 @@ def weave_model(directory: str, submodel_id: str) -> None:
         for param in params.get_dimension_params(dim_object):
             if param == "distance_dict":
                 dim_dict["distance_dict"] = np.load(
-                    params.get_param(f"{dim_name}__distance_dict", param_id),
+                    params.get_param(
+                        f"{dim_name}__distance_dict", submodel["param_id"]
+                    ),
                     allow_pickle=True,
                 )
             else:
                 dim_dict[param] = params.get_param(
-                    f"{dim_name}__{param}", param_id
+                    f"{dim_name}__{param}", submodel["param_id"]
                 )
         dimensions.append(Dimension(**dim_dict))
     smoother = Smoother(dimensions)

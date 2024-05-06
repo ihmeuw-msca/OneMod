@@ -294,6 +294,7 @@ class WeaveSubsets(Subsets):
         self, data: pd.DataFrame, subset_id: int, batch_id: int = 0
     ) -> pd.DataFrame:
         """Filter data by subset and batch."""
+        # TODO: Use itertools.batched in Python 3.12
         data = super().filter_subset(data, subset_id)
         n_batch = self.get_column("n_batch", subset_id)
         max_batch = int(np.ceil(len(data) / n_batch))
@@ -501,20 +502,16 @@ def get_ensemble_submodels(
     return submodels
 
 
-def parse_weave_submodel(submodel_id: str, id_name: str) -> str | int:
+def parse_weave_submodel(submodel_id: str) -> dict[str, str | int]:
     """Get IDs from weave submodel_id."""
-    id_list = submodel_id.split("__")
-    if id_name == "model_id":
-        return id_list[0]
-    if id_name == "param_id":
-        return int(id_list[1][5:])
-    if id_name == "subset_id":
-        return int(id_list[2][6:])
-    if id_name == "holdout_id":
-        return id_list[3]
-    if id_name == "batch_id":
-        return int(id_list[4][5:])
-    raise ValueError(f"Invalid id_name: {id_name}")
+    id_dict = {}
+    submodel_list = submodel_id.split("__")
+    id_dict["model_id"] = submodel_list[0]
+    id_dict["param_id"] = int(submodel_list[1].removeprefix("param"))
+    id_dict["subset_id"] = int(submodel_list[2].removeprefix("subset"))
+    id_dict["holdout_id"] = submodel_list[3]
+    id_dict["batch_id"] = int(submodel_list[4].removeprefix("batch"))
+    return id_dict
 
 
 def reformat_weave_results(

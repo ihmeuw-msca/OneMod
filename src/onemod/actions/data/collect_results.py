@@ -175,12 +175,11 @@ def collect_results_weave(directory: str) -> None:
     for holdout_id in config.holdouts + ["full"]:
         df_list = []
         for submodel_id in submodel_ids:
-            if parse_weave_submodel(submodel_id, "holdout_id") == holdout_id:
+            submodel = parse_weave_submodel(submodel_id)
+            if submodel["holdout_id"] == holdout_id:
                 df = dataif.load_weave(f"submodels/{submodel_id}.parquet")
-                df["model_id"] = parse_weave_submodel(submodel_id, "model_id")
-                df["param_id"] = str(
-                    parse_weave_submodel(submodel_id, "param_id")
-                )
+                df["model_id"] = submodel["model_id"]
+                df["param_id"] = str(submodel["param_id"])
                 df_list.append(df)
         df_pred = pd.pivot(
             data=pd.concat(df_list, ignore_index=True),
