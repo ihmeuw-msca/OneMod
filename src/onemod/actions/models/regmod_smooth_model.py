@@ -222,6 +222,7 @@ def regmod_smooth_model(directory: str) -> None:
 
     # Fit regmod smooth model
     model.fit(df_train, data_dim_vals=df, **stage_config.xmodel_fit)
+
     # Create prediction and residuals
     logger.info("Model fit, calculating residuals")
     df[config.pred] = model.predict(df)
@@ -230,7 +231,6 @@ def regmod_smooth_model(directory: str) -> None:
         obs=config.obs,
         pred=config.pred,
     )
-
     residual_se_func = get_residual_se_function(
         model_type=config.mtype,
         pred=config.pred,
@@ -250,7 +250,10 @@ def regmod_smooth_model(directory: str) -> None:
     # Save results
     dataif.dump_regmod_smooth(model, "model.pkl")
     dataif.dump_regmod_smooth(df_coef, "coef.csv")
-    dataif.dump_regmod_smooth(df, "predictions.parquet")
+    dataif.dump_regmod_smooth(
+        df[config.ids + ["residual", "residual_se", config.pred]],
+        "predictions.parquet",
+    )
 
 
 def main() -> None:

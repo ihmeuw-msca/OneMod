@@ -13,6 +13,7 @@ from onemod.utils import (
     get_handle,
     get_rover_covsel_submodels,
     get_weave_submodels,
+    parse_weave_submodel,
 )
 
 
@@ -77,6 +78,7 @@ def _plot_rover_covsel_results(
     )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
+    ax = [ax] if len(covs) == 1 else ax
     for i, cov in enumerate(covs):
         df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
         if i % 5 == 0:
@@ -171,21 +173,19 @@ def collect_results_weave(directory: str) -> None:
 
     submodel_ids = get_weave_submodels(directory)
     for holdout_id in config.holdouts + ["full"]:
-        df_pred = pd.concat(
-            [
-                dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
-                    {"param_id": str}
-                )
-                for submodel_id in submodel_ids
-                if submodel_id.split("__")[3] == holdout_id
-            ],
-            ignore_index=True,
-        ).drop_duplicates()
+        df_list = []
+        for submodel_id in submodel_ids:
+            submodel = parse_weave_submodel(submodel_id)
+            if submodel["holdout_id"] == holdout_id:
+                df = dataif.load_weave(f"submodels/{submodel_id}.parquet")
+                df["model_id"] = submodel["model_id"]
+                df["param_id"] = str(submodel["param_id"])
+                df_list.append(df)
         df_pred = pd.pivot(
-            data=df_pred,
+            data=pd.concat(df_list, ignore_index=True),
             index=config.ids,
             columns=["model_id", "param_id"],
-            values=["residual", config.pred],
+            values=["residual", "residual_se", config.pred],
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")

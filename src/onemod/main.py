@@ -8,12 +8,12 @@ import fire
 from jobmon.client.status_commands import resume_workflow_from_id
 
 from onemod.scheduler.scheduler import Scheduler
-from onemod.utils import as_list, get_handle
+from onemod.utils import format_input, get_handle
 
 
 def run_pipeline(
     directory: str,
-    stages: str | list[str] | None = None,
+    stages: list[str] | None = None,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
     run_local: bool = False,
@@ -23,29 +23,37 @@ def run_pipeline(
     Parameters
     ----------
     directory : str
-        The experiment directory. It must contain config/settings.yml.
-    stages : list of str or str, optional
-        The pipeline stages to run. Default is ['rover_covsel', 'weave', 'ensemble'].
-    save_intermediate : bool, optional
-        Whether to save intermediate stage results. Default is False.
+        The experiment directory. Must contain config/settings.yml.
+    stages : list of str, optional
+        The pipeline stages to run. Default is
+        ['rover_covsel', 'regmod_smooth', 'weave', 'ensemble'].
     cluster_name : str, optional
         Name of the cluster to run the pipeline on. Default is 'slurm'.
     configure_resources : bool, optional
-        Whether to configure resources in directory/config/resources.yml. Default is True.
+        Whether to configure resources in
+        directory/config/resources.yml. Default is True.
+    run_local : bool, optional
+        Whether to run pipeline without Jobmon. Default is False.
 
     """
+    # Validate stages
     all_stages = ["rover_covsel", "regmod_smooth", "weave", "ensemble"]
     if stages is None:
         stages = all_stages
-    for stage in as_list(stages):
+    for stage in stages:
         if stage not in all_stages:
             raise ValueError(f"Invalid stage: {stage}")
 
     # Load and validate the configuration file
     dataif, config = get_handle(directory)
 
-    directory = Path(directory)
+    # Filter input data by ID subsets
+    # Used for task creation so must happen outside of workflow
+    if not dataif.data.exists():
+        format_input(directory)
 
+    # Configure Jobmon resources
+    directory = Path(directory)
     if configure_resources and not run_local:
         resources_file = str(directory / "config" / "resources.yml")
     else:
@@ -60,7 +68,6 @@ def run_pipeline(
         default_cluster_name=cluster_name,
         configure_resources=configure_resources,
     )
-
     scheduler.run(run_local=run_local)
 
 

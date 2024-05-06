@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from onemod.schema import OneModConfig, StageConfig
@@ -293,6 +294,7 @@ class WeaveSubsets(Subsets):
         self, data: pd.DataFrame, subset_id: int, batch_id: int = 0
     ) -> pd.DataFrame:
         """Filter data by subset and batch."""
+        # TODO: Use itertools.batched in Python 3.12
         data = super().filter_subset(data, subset_id)
         n_batch = self.get_column("n_batch", subset_id)
         max_batch = int(np.ceil(len(data) / n_batch))
@@ -392,56 +394,47 @@ def add_holdouts(
     return df
 
 
-def get_smoother_input(
-    smoother: str,
+def get_weave_input(
     config: OneModConfig,
     dataif: DataInterface,
-    from_rover: bool | None = False,
 ) -> pd.DataFrame:
-    """Get input data for smoother model."""
-    if from_rover:
-        df_input = dataif.load_regmod_smooth("predictions.parquet")
-        df_input = df_input.rename(columns={"residual": "residual_value"})
-    else:
-        df_input = dataif.load_data()
-    columns = _get_smoother_columns(smoother, config).difference(
-        df_input.columns
+    """Get input data for smoother model.
+
+    Each stage only saves ID columns and stage results. Weave needs
+    additional columns (e.g., super_region_id, age_mid, holdouts, test)
+    that aren't included in regmod_smooth results.
+
+    TODO: Could make a generic version of this function for loading
+    predictions from any stage with additional columns from input.
+
+    """
+    data = dataif.load_regmod_smooth("predictions.parquet").rename(
+        columns={"residual": "regmod_value", "residual_se": "regmod_se"}
     )
-    columns = config.ids + list(columns)
-    # Deduplicate  # TODO: # shouldn't config.ids already be included?
-    columns = list(set(columns))
-    if len(columns) > 0:  # TODO: this is missing the id_subset part
-        try:
-            # The data path only exists if the initialzie_results action has already been run. Fallback to
-            # raw datapath if creating submodels prior to workflow run.
-            right = dataif.load_data()
-        except FileNotFoundError:
-            right = dataif.load_raw_data()
-        df_input = df_input.merge(
-            right=right[columns].drop_duplicates(),
-            on=config.ids,
-        )
-    if smoother == "weave":  # weave models can't have NaN data
-        df_input.loc[df_input[config.obs].isna(), "residual_value"] = 1
-        df_input.loc[df_input[config.obs].isna(), "residual_se"] = 1
-        # TODO: isn't this also done within the weave model?
-    return df_input
+    columns = _get_weave_columns(data.columns, config)
+    data = data.merge(
+        right=dataif.load_data()[columns].drop_duplicates(),
+        on=config.ids,
+    )
+
+    return data
 
 
-def _get_smoother_columns(smoother: str, config: OneModConfig) -> set:
-    """Get column names needed for smoother model."""
+def _get_weave_columns(
+    regmod_columns: list[str], config: OneModConfig
+) -> list[str]:
+    """Get columns needed for weave model."""
     columns = set(config.holdouts + [config.test])
-    if smoother != "weave":
-        raise ValueError(f"Invalid smoother name: {smoother}")
-    for model_settings in config[smoother]["models"].values():
-        columns.update(model_settings["groupby"])
-        if smoother == "weave":
-            for dimension_settings in model_settings["dimensions"].values():
-                for key in ["name", "coordinates"]:
-                    key_val = dimension_settings.get(key)
-                    if key_val:
-                        columns.update(as_list(key_val))
-    return columns
+    for model_config in config.weave.models.values():
+        columns.update(model_config.groupby)
+        for dimension_config in model_config.dimensions.values():
+            for key in ["name", "coordinates"]:
+                value = dimension_config[key]
+                if value:
+                    columns.update(as_list(value))
+    columns = columns.difference(regmod_columns)
+    columns.update(config.ids)
+    return list(columns)
 
 
 def get_rover_covsel_submodels(
@@ -451,8 +444,7 @@ def get_rover_covsel_submodels(
     dataif, config = get_handle(directory)
 
     # Create rover subsets and submodels
-    df_input = dataif.load_data()
-    subsets = Subsets("rover_covsel", config.rover_covsel, df_input)
+    subsets = Subsets("rover_covsel", config.rover_covsel, dataif.load_data())
     submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
 
     # Save file
@@ -469,12 +461,11 @@ def get_weave_submodels(
 
     # Create weave parameters, subsets, and submodels
     param_list, subset_list, submodels = [], [], []
-
-    df_input = get_smoother_input("weave", dataif=dataif, config=config)
+    data = dataif.load_data()
     for model_id, model_config in config.weave.models.items():
         params = WeaveParams(model_id, config)
         param_list.append(params.param_sets)
-        subsets = WeaveSubsets(model_id, model_config, df_input)
+        subsets = WeaveSubsets(model_id, model_config, data)
         subset_list.append(subsets.subsets)
         for param_id, subset_id, holdout_id in product(
             params.get_param_ids(),
@@ -509,6 +500,71 @@ def get_ensemble_submodels(
     if save_file:
         dataif.dump_ensemble(subsets.subsets, "subsets.csv")
     return submodels
+
+
+def parse_weave_submodel(submodel_id: str) -> dict[str, str | int]:
+    """Get IDs from weave submodel_id."""
+    id_dict = {}
+    submodel_list = submodel_id.split("__")
+    id_dict["model_id"] = submodel_list[0]
+    id_dict["param_id"] = int(submodel_list[1].removeprefix("param"))
+    id_dict["subset_id"] = int(submodel_list[2].removeprefix("subset"))
+    id_dict["holdout_id"] = submodel_list[3]
+    id_dict["batch_id"] = int(submodel_list[4].removeprefix("batch"))
+    return id_dict
+
+
+def reformat_weave_results(
+    df_pivot: pd.DataFrame, columns: str | list[str], ids: list[str]
+) -> pd.DataFrame:
+    """Reformat MultiIndex weave results.
+
+    To reduce file sizes, weave results are saved with a MultiIndex for
+    indices (config.col_ids) and columns (results, model_id, param_id).
+    This function returns a data frame with columns ids + [model_id,
+    param_id] + columns.
+
+    Parameters
+    ----------
+    df_pivot : pandas.DataFrame
+        MultiIndex weave results.
+    columns : str or list of str
+        Name of result columns to return.
+    ids : list of str
+        Index column names.
+
+    Returns
+    -------
+    pandas.DataFrame
+
+    """
+    columns = as_list(columns)
+    df_melt = _reformat_weave_column(df_pivot, columns[0])
+    for column in columns[1:]:
+        df_melt = df_melt.merge(
+            right=_reformat_weave_column(df_pivot, column),
+            on=ids + ["model_id", "param_id"],
+        )
+    return df_melt
+
+
+def _reformat_weave_column(df: pd.DataFrame, column=str) -> pd.DataFrame:
+    """Reformat single column from MultiIndex weave results.
+
+    Parameters
+    ----------
+    df_pivot : pandas.DataFrame
+        MultiIndex weave results.
+    columns : str or list of str
+        Name of result column to return.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Data frame with index columns and specified result column.
+
+    """
+    return df[column].melt(value_name=column, ignore_index=False).reset_index()
 
 
 # TODO: move to modeling module
@@ -577,3 +633,40 @@ def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
     dataif.add_dir("raw_data", config.input_path)
 
     return dataif, config
+
+
+def format_input(directory: str) -> None:
+    """Filter input data by ID subsets and add test column.
+
+    Parameters
+    ----------
+    directory : str
+        The experiment directory.
+
+    """
+    # Load input data
+    dataif, config = get_handle(directory)
+    data = dataif.load(config.input_path)
+
+    # Filter data by ID subsets
+    if config.id_subsets:
+        data = data.query(
+            " & ".join(
+                [
+                    f"{key}.isin({value})"
+                    for key, value in config.id_subsets.items()
+                ]
+            )
+        ).reset_index(drop=True)
+
+    # Create a test column if not in input
+    if config.test not in data:
+        logger.warning(
+            "Test column not found; setting null observations as test rows."
+        )
+        data[config.test] = data[config.obs].isna().astype("int")
+
+    # TODO: Create holdout columns if not in input
+
+    # Save to directory/data/data.parquet
+    dataif.dump_data(data)

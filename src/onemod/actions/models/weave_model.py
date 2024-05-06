@@ -11,7 +11,8 @@ from onemod.utils import (
     WeaveSubsets,
     get_handle,
     get_prediction,
-    get_smoother_input,
+    get_weave_input,
+    parse_weave_submodel,
 )
 
 
@@ -25,49 +26,32 @@ def weave_model(directory: str, submodel_id: str) -> None:
     submodel_id (str)
         The ID of the submodel to be processed.
 
-    Notes
-    -----
-    Each submodel_id has the form:
-
-    f"{model_id}__param{param_id}__subset{subset_id}__{holdout_id}__batch{batch_id}"
-
-    with:
-    * model_id (str): user input
-    * param_id (int): assigned by WeaveParams
-    * subset_id (int): assigned by WeaveSubsets
-    * holdout_id (str): user input
-    * batch_id (int): assigned by WeaveSubsets
-
-    Example: "age_model__param0__subset0__holdout1__batch0"
-
     """
     dataif, config = get_handle(directory)
 
     # Get submodel settings
-    model_id = submodel_id.split("__")[0]
-    param_id = int(submodel_id.split("__")[1][5:])
-    subset_id = int(submodel_id.split("__")[2][6:])
-    holdout_id = submodel_id.split("__")[3]
-    batch_id = int(submodel_id.split("__")[4][5:])
-    model_config = config.weave.models[model_id]
+    submodel = parse_weave_submodel(submodel_id)
+    model_config = config.weave.models[submodel["model_id"]]
     params = WeaveParams(
-        model_id, param_sets=dataif.load_weave("parameters.csv")
+        submodel["model_id"], param_sets=dataif.load_weave("parameters.csv")
     )
     subsets = WeaveSubsets(
-        model_id, model_config, subsets=dataif.load_weave("subsets.csv")
+        submodel["model_id"],
+        model_config,
+        subsets=dataif.load_weave("subsets.csv"),
     )
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input(
-            "weave", config=config, dataif=dataif, from_rover=True
-        ),
-        subset_id,
-        batch_id,
+        get_weave_input(config, dataif),
+        submodel["subset_id"],
+        submodel["batch_id"],
     ).rename(columns={"batch": "predict"})
     df_input["fit"] = df_input[config.test] == 0
-    if holdout_id != "full":
-        df_input["fit"] = df_input["fit"] & (df_input[holdout_id] == 0)
+    if submodel["holdout_id"] != "full":
+        df_input["fit"] = df_input["fit"] & (
+            df_input[submodel["holdout_id"]] == 0
+        )
     df_input = df_input[df_input["fit"] | df_input["predict"]].drop(
         columns=[config.test] + config.holdouts
     )
@@ -79,41 +63,41 @@ def weave_model(directory: str, submodel_id: str) -> None:
         for param in params.get_dimension_params(dim_object):
             if param == "distance_dict":
                 dim_dict["distance_dict"] = np.load(
-                    params.get_param(f"{dim_name}__distance_dict", param_id),
+                    params.get_param(
+                        f"{dim_name}__distance_dict", submodel["param_id"]
+                    ),
                     allow_pickle=True,
                 )
             else:
-                dim_dict[param] = params.get_param(f"{dim_name}__{param}", param_id)
+                dim_dict[param] = params.get_param(
+                    f"{dim_name}__{param}", submodel["param_id"]
+                )
         dimensions.append(Dimension(**dim_dict))
     smoother = Smoother(dimensions)
 
-    # TODO: Check if this is already done in helper function
-    # Impute missing observation and holdout values
-    # Assume that missing numbers for holdouts are implicit 1's (i.e. used for testing anyways)
-    df_input.fillna(1, inplace=True)
+    # WeAve models throw error if data contains NaNs
+    # Replace possible NaNs with dummy value
+    for column in ["regmod_value", "regmod_se"]:
+        df_input.loc[
+            df_input.eval(f"fit == False and {column}.isna()"), column
+        ] = 1
 
     # Get predictions
     logger.info(f"Fitting smoother for {submodel_id=}")
     df_pred = smoother(
         data=df_input,
-        observed="residual_value",
-        stdev="residual_se",
+        observed="regmod_value",
+        stdev="regmod_se",
         smoothed="residual",
         fit="fit",
         predict="predict",
-    )
+    ).rename(columns={"residual_sd": "residual_se"})
     logger.info(f"Completed fitting, predicting for {submodel_id=}")
     df_pred[config.pred] = df_pred.apply(
         lambda row: get_prediction(row, config.pred, config.mtype),
         axis=1,
     )
-    df_pred["model_id"] = model_id
-    df_pred["param_id"] = param_id
-    df_pred["holdout_id"] = holdout_id
-    df_pred = df_pred[
-        config.ids
-        + ["residual", config.pred, "model_id", "param_id", "holdout_id"]
-    ]
+    df_pred = df_pred[config.ids + ["residual", "residual_se", config.pred]]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
 

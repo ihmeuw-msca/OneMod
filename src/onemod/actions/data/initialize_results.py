@@ -3,7 +3,6 @@
 import shutil
 
 import fire
-from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from onemod.utils import (
@@ -21,40 +20,13 @@ def initialize_results(directory: str, stages: list[str]) -> None:
         "weave": _initialize_weave_results,
         "ensemble": _initialize_ensemble_results,
     }
-
-    dataif, config = get_handle(directory)
-
-    # ETL the input data into parquet format
-    # More compressible, faster IO, allows for partitioning
-    data = dataif.load(config.input_path)
-
-    # Filter data by ID subsets
-    if config.id_subsets:
-        data = data.query(
-            " & ".join(
-                [
-                    f"{key}.isin({value})"
-                    for key, value in config.id_subsets.items()
-                ]
-            )
-        ).reset_index(drop=True)
-
-    # Create a test column if not in input
-    if config.test not in data:
-        logger.warning(
-            "Test column not found; setting null observations as test rows."
-        )
-        data[config.test] = data[config.obs].isna().astype("int")
-
-    # Saves to $directory/data/data.parquet
-    dataif.dump_data(data)
-
+    dataif, _ = get_handle(directory)
     for stage in stages:
         stage_init_map[stage](dataif)
 
 
 def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
-    """Initialize rover results."""
+    """Initialize rover covariate selection results."""
 
     # Initialize directories
     if dataif.rover_covsel.exists():
@@ -67,6 +39,8 @@ def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
 
 
 def _initialize_regmod_smooth_results(dataif: DataInterface) -> None:
+    """Initialize regmod smooth results."""
+
     # Initialize directories
     if dataif.regmod_smooth.exists():
         shutil.rmtree(dataif.regmod_smooth)
