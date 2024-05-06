@@ -121,15 +121,15 @@ def plot_results(
             ax.plot(df[x], df[y], label=y, **line_options.get(y, {}))
 
     # plot posinf and neginf
+    # TODO: include infs after log/logit scale changes
     for ax, df in zip(axes, data_list):
         ax.set_yscale(yscale)
-
         ylim = ax.get_ylim()
         for y in y_dots:
-            df = df.query(f"{y} in [-inf, inf]").reset_index(drop=True)
-            if not df.empty:
-                df[y] = df[y].clip(*ylim)
-                ax.scatter(df[x], df[y], label=y, **dots_options.get(y, {}))
+            df_inf = df.query(f"{y} in [-inf, inf]").reset_index(drop=True)
+            if not df_inf.empty:
+                df_inf[y] = df_inf[y].clip(*ylim)
+                ax.scatter(df_inf[x], df_inf[y], **dots_options.get(y, {}))
         ax.set_ylim(ylim)
 
     # Format legend
