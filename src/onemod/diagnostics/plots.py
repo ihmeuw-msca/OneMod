@@ -14,8 +14,8 @@ def plot_results(
     line_options: dict = {},
     facet_options: dict = {},
     share_options: dict = {},
-    scale_options: dict = {},
     fig_options: dict = {},
+    yscale: str = "linear",
 ) -> plt.Figure:
     """Plot result from OneMod model.
 
@@ -37,22 +37,21 @@ def plot_results(
 
     Other Parameters
     ----------------
-    dots_options
+    dots_options : dict, optional
         Arguments passed to `matplotlib.pyplot.scatter() <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html>`_.
         Dictionary keys must correspond to column names in `y_dots`.
-    line_options
+    line_options : dict, optional
         Arguments passed to `matplotlib.pyplot.plot() <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html>`_.
         Dictionary keys must correspond to column names in `y_line`.
-    facet_options
+    facet_options : dict, optional
         Arguments passed to `seaborn.objects.Plot.facet() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.facet.html>`_.
-    share_options
+    share_options : dict, optional
         Arguments passed to `seaborn.objects.Plot.share() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.share.html>`_.
-    scale_options
-        Dictionary with options for scale axes on plot. For details please see,
-        https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_xscale.html
-        https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_yscale.html
-    fig_options
+    fig_options : dict, optional
         Arguments passed to `matplotlib.figure.Figure() <https://matplotlib.org/stable/api/figure_api.html#matplotlib.figure.Figure>`_.
+    yscale : str, optional
+        Argument passed to `matplotlib.axes.Axes.set_yscale <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_yscale.html>`_. Default is 'linear'.
+
 
     Returns
     -------
@@ -120,8 +119,7 @@ def plot_results(
 
     # plot posinf and neginf
     for ax, df in zip(axes, data_list):
-        for name, scale in scale_options.items():
-            getattr(ax, f"set_{name}scale")(scale)
+        ax.set_yscale(yscale)
 
         ylim = ax.get_ylim()
         for y in y_dots:
