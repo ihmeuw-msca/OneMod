@@ -6,6 +6,7 @@ class ResidualCalculator:
         if not hasattr(self, f"get_residual_{model_type}"):
             raise AttributeError(f"'{model_type}' is not a valid model type")
         self.model_type = model_type
+        self.get_residual = getattr(self, f"get_residual_{model_type}")
         self.predict = getattr(self, f"predict_{model_type}")
 
     @staticmethod
@@ -58,4 +59,4 @@ class ResidualCalculator:
         return data.eval(f"{pred} + {residual}")
 
     def __call__(self, *args, **kwargs) -> pd.DataFrame:
-        return getattr(self, f"get_residual_{self.model_type}")(*args, **kwargs)
+        return self.get_residual(*args, **kwargs)
