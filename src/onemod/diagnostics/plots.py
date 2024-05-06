@@ -21,32 +21,38 @@ def plot_results(
 
     Parameters
     ----------
-    data
-        Dataframe with the results from the OneMod model.
-    x
-        Name of the column to use as x-axis.
-    y_dots
-        List of columns to plot as scatter plot.
-    y_line
-        List of columns to plot as line plot.
+    data : pandas.DataFrame
+        OneMod results.
+    x : str
+        Column name for x-axis.
+    y_dots : list of str, optional
+        List of column names for scatter plots.
+    y_line: list of str, optional
+        List of column names for line plots.
+
+    Returns
+    -------
+    matplotlib.Figure
+        Figure object.
+
+    Other Parameters
+    ----------------
     dots_options
-        Dictionary with options for scatter plot. Key to this dictionary is the
-        column name that has been listed in `y_dots`.
+        Arguments passed to `matplotlib.pyplot.scatter() <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html>`_.
+        Dictionary keys must correspond to column names in `y_dots`.
     line_options
-        Dictionary with options for line plot. Key to this dictionary is the
-        column name that has been listed in `y_line`.
+        Arguments passed to `matplotlib.pyplot.plot() <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html>`_.
+        Dictionary keys must correspond to column names in `y_line`.
     facet_options
-        Dictionary with options for facet plot. For details please see,
-        https://seaborn.pydata.org/generated/seaborn.objects.Plot.facet.html
+        Arguments passed to `seaborn.objects.Plot.facet() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.facet.html>`_.
     share_options
-        Dictionary with options for share axes on plot. For details please see,
-        https://seaborn.pydata.org/generated/seaborn.objects.Plot.share.html
+        Arguments passed to `seaborn.objects.Plot.share() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.share.html>`_.
     scale_options
         Dictionary with options for scale axes on plot. For details please see,
         https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_xscale.html
         https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_yscale.html
     fig_options
-        Dictionary with options for creating the figure.
+        Arguments passed to `matplotlib.figure.Figure() <https://matplotlib.org/stable/api/figure_api.html#matplotlib.figure.Figure>`_.
 
     Returns
     -------
