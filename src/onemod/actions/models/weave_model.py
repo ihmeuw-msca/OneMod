@@ -6,11 +6,11 @@ from loguru import logger
 from weave.dimension import Dimension
 from weave.smoother import Smoother
 
+from onemod.modeling.residual import ResidualCalculator
 from onemod.utils import (
     WeaveParams,
     WeaveSubsets,
     get_handle,
-    get_prediction,
     get_weave_input,
     parse_weave_submodel,
 )
@@ -93,10 +93,9 @@ def weave_model(directory: str, submodel_id: str) -> None:
         predict="predict",
     ).rename(columns={"residual_sd": "residual_se"})
     logger.info(f"Completed fitting, predicting for {submodel_id=}")
-    df_pred[config.pred] = df_pred.apply(
-        lambda row: get_prediction(row, config.pred, config.mtype),
-        axis=1,
-    )
+
+    residual_calculator = ResidualCalculator(config.mtype)
+    df_pred[config.pred] = residual_calculator.predict(df_pred, config.pred)
     df_pred = df_pred[config.ids + ["residual", "residual_se", config.pred]]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
