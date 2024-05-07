@@ -11,7 +11,7 @@ import pandas as pd
 from loguru import logger
 from spxmod.model import XModel
 
-from onemod.schema.stages.spxmod import XModelInit
+from onemod.schema import OneModConfig
 from onemod.utils import get_handle
 
 
@@ -138,16 +138,14 @@ def get_coef(model: XModel) -> pd.DataFrame:
     return df_coef
 
 
-def _build_xmodel_args(
-    xmodel_config: XModelInit, selected_covs: list[str]
-) -> dict:
-    xmodel_args = xmodel_config.model_dump()
+def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
+    xmodel_args = config.spxmod.xmodel.model_dump()
     coef_bounds = xmodel_args.pop("coef_bounds")
     lam = xmodel_args.pop("lam")
 
     space_keys = [space["name"] for space in xmodel_args["spaces"]]
     var_builder_keys = [
-        (var_builder["name"], var_builder["space"]["name"])
+        (var_builder["name"], var_builder["space"])
         for var_builder in xmodel_args["var_builders"]
     ]
 
@@ -165,11 +163,16 @@ def _build_xmodel_args(
     for var_builder in xmodel_args["var_builders"]:
         cov = var_builder["name"]
         if "uprior" not in var_builder:
-            var_builder["uprior"] = tuple(
-                map(float, coef_bounds.get(cov, [-np.inf, np.inf]))
+            var_builder["uprior"] = coef_bounds.get(
+                cov, dict(lb=-np.inf, ub=np.inf)
             )
+
         if "lam" not in var_builder:
             var_builder["lam"] = lam
+
+    xmodel_args["model_type"] = config.mtype
+    xmodel_args["obs"] = config.obs
+    xmodel_args["weights"] = config.weights
 
     return xmodel_args
 
@@ -206,7 +209,7 @@ def spxmod_model(directory: str) -> None:
     logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
 
     # Create spxmod parameters
-    xmodel_args = _build_xmodel_args(stage_config.xmodel, selected_covs)
+    xmodel_args = _build_xmodel_args(config, selected_covs)
     xmodel_fit_args = stage_config.xmodel_fit
 
     logger.info(
@@ -214,7 +217,7 @@ def spxmod_model(directory: str) -> None:
     )
 
     # Create spxmod model
-    model = XModel(**xmodel_args)
+    model = XModel.from_config(xmodel_args)
 
     df = dataif.load_data()
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
