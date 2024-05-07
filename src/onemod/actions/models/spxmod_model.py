@@ -226,6 +226,7 @@ def spxmod_model(directory: str) -> None:
 
     # Fit spxmod model
     model.fit(data=df_train, data_span=df, **xmodel_fit_args)
+
     # Create prediction and residuals
     logger.info("XModel fit, calculating residuals")
     df[config.pred] = model.predict(df)
@@ -253,7 +254,10 @@ def spxmod_model(directory: str) -> None:
     # Save results
     dataif.dump_spxmod(model, "model.pkl")
     dataif.dump_spxmod(df_coef, "coef.csv")
-    dataif.dump_spxmod(df, "predictions.parquet")
+    dataif.dump_spxmod(
+        df[config.ids, ["residual", "residual_se", config.pred]],
+        "predictions.parquet",
+    )
 
 
 def main() -> None:
