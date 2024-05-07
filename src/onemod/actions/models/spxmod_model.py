@@ -210,7 +210,7 @@ def spxmod_model(directory: str) -> None:
     xmodel_fit_args = stage_config.xmodel_fit
 
     logger.info(
-        f"{len(xmodel_args["var_builders"])} var_builders created for smoothing."
+        f"{len(xmodel_args['var_builders'])} var_builders created for smoothing."
     )
 
     # Create spxmod model
