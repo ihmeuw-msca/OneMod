@@ -14,7 +14,8 @@ def test_rover_tasks(
     )
 
     tasks = [
-        scheduler.create_task(action) for action in scheduler.parent_action_generator()
+        scheduler.create_task(action)
+        for action in scheduler.parent_action_generator()
     ]
     # Breakdown: Model1 has 2 parameters - age and location
     # (in the settings.weave.models.model1.dimensions register).

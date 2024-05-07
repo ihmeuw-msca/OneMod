@@ -16,14 +16,17 @@ def test_rover_tasks(
     )
 
     tasks = [
-        scheduler.create_task(action) for action in scheduler.parent_action_generator()
+        scheduler.create_task(action)
+        for action in scheduler.parent_action_generator()
     ]
     # Inspecting the settings, we are grouping by sex and age. 3 ages + 2 sexes = 6 tasks
     assert len(tasks) == 8  # 6 modeling tasks plus init and aggregation task
     expected_agg_task = tasks.pop()
     assert expected_agg_task.name == "collect_results"
     assert len(expected_agg_task.upstream_tasks) == 6
-    assert "collect_results --stage_name rover_covsel" in expected_agg_task.command
+    assert (
+        "collect_results --stage_name rover_covsel" in expected_agg_task.command
+    )
 
     init_task = tasks[0]
     assert init_task.name == "initialize_results"

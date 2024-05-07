@@ -6,8 +6,6 @@ import fire
 import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
-from pplkit.data.interface import DataInterface
-
 from onemod.schema import OneModConfig
 from onemod.utils import (
     get_handle,
@@ -15,6 +13,7 @@ from onemod.utils import (
     get_weave_submodels,
     parse_weave_submodel,
 )
+from pplkit.data.interface import DataInterface
 
 
 def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
@@ -118,7 +117,7 @@ def _plot_spxmod_results(
         ax.plot(
             df_cov["age_mid"],
             df_cov["coef"],
-            fmt="o-",
+            "o-",
             alpha=0.5,
             label="spxmod",
         )

@@ -12,7 +12,9 @@ class ResidualCalculator:
         data: pd.DataFrame, pred: str, obs: str, weights: str
     ) -> pd.DataFrame:
         result = pd.DataFrame(index=data.index)
-        result["residual"] = data.eval(f"({obs} - {pred}) / ({pred} * (1 - {pred}))")
+        result["residual"] = data.eval(
+            f"({obs} - {pred}) / ({pred} * (1 - {pred}))"
+        )
         result["residual_se"] = data.eval(
             f"1 / sqrt({pred} * (1 - {pred}) * {weights})"
         )

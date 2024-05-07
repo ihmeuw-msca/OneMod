@@ -96,7 +96,9 @@ def get_pi_coverage(
     data[f"pred_{obs}"] = _inv_link_funs[model_type](data[pred])
 
     residual = get_residual(data, f"pred_{obs}", obs, weights)
-    residual["total_sd"] = np.sqrt(residual["residual_se"] ** 2 + data[pred_sd] ** 2)
+    residual["total_sd"] = np.sqrt(
+        residual["residual_se"] ** 2 + data[pred_sd] ** 2
+    )
 
     lwr = 0.5 * alpha
     upr = 1.0 - lwr
@@ -165,7 +167,8 @@ def calibrate_pred_sd(
         # the Person residual is less than 1.
         alpha_upr = 1.1 * np.sqrt(
             np.max(
-                residual.eval("residual ** 2 - residual_se ** 2") / data[pred_sd] ** 2
+                residual.eval("residual ** 2 - residual_se ** 2")
+                / data[pred_sd] ** 2
             )
         )
         alpha = brentq(equation, 0.0, alpha_upr)
