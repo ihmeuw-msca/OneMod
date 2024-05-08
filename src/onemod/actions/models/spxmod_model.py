@@ -9,10 +9,9 @@ import fire
 import numpy as np
 import pandas as pd
 from loguru import logger
-from spxmod.model import XModel
-
 from onemod.schema import OneModConfig
 from onemod.utils import get_handle
+from spxmod.model import XModel
 
 
 def get_residual_computation_function(
@@ -162,7 +161,7 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     # default settings for everyone
     for var_builder in xmodel_args["var_builders"]:
         cov = var_builder["name"]
-        if "uprior" not in var_builder:
+        if "uprior" not in var_builder or var_builder["uprior"] is None:
             var_builder["uprior"] = coef_bounds.get(cov)
 
         if "lam" not in var_builder:
