@@ -37,10 +37,12 @@ class XModelInit(Config):
         List of dictionaries containing space names and arguments.
     var_builders
         List of dictionaries containing variable group names and arguments.
-    weights
-        Name of the weight column in the data. Default is "weight".
     param_specs
         Additional parameter specifications for the model.
+    coef_bounds
+        Dictionary containing bounds for the coefficients.
+    lam
+        Default lam value for the model. Default is 0.0.
 
     """
 
@@ -48,7 +50,7 @@ class XModelInit(Config):
     var_builders: list[SPxModVarBuilder] = []
     param_specs: dict | None = None
 
-    coef_bounds: dict[str, tuple[float, float]] = {}
+    coef_bounds: dict[str, dict[str, float]] = {}
     lam: float = 0.0
 
 

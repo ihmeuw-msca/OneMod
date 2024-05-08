@@ -91,19 +91,26 @@ class OneModConfig(Config):
         # SPxMod settings
         spxmod:
           xmodel:
-            var_groups:
-              - col: "intercept"
-              - col: "intercept"
-                dim: "super_region_id"
-                gprior: [0, 0.35]
+            spaces:
+            - name: age_mid
+              dims:
+                - name: age_mid
+                  dim_type: numerical
+            - name: super_region_id
+              dims:
+                - name: super_region_id
+                  dim_type: categorical
+            var_builders:
+              - name: intercept
+              - name: intercept
+                space: super_region_id
+                lam: 1.0
             coef_bounds:
-              LDI_pc: [-inf, 0]
-              education_yrs_pc: [-inf, 0]
-            dims:
-              - name: "age_mid"
-                type: "numerical"
-              - name: "super_region_id"
-                type: "categorical"
+              LDI_pc:
+                ub: 0.0
+              education_yrs_pc:
+                ub: 0.0
+            lam: 100.0
           xmodel_fit:
             options:
               verbose: false
