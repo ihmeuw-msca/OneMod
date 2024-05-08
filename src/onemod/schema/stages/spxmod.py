@@ -67,7 +67,6 @@ class XModelInit(Config):
     spaces: list[SPxModSpace] = []
     var_builders: list[SPxModVarBuilder] = []
     param_specs: dict | None = None
-
     coef_bounds: dict[str, dict[str, float]] = {}
     lam: float = 0.0
 

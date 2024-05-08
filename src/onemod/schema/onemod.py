@@ -90,6 +90,7 @@ class OneModConfig(Config):
 
         # SPxMod settings
         spxmod:
+          groupby: [sex_id]
           xmodel:
             spaces:
             - name: age_mid
