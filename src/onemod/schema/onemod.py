@@ -3,8 +3,8 @@ from typing import Any, Literal
 from onemod.schema.base import Config
 from onemod.schema.stages import (
     EnsembleConfig,
-    RegmodSmoothConfig,
     RoverCovselConfig,
+    SPxModConfig,
     WeaveConfig,
 )
 
@@ -48,8 +48,8 @@ class OneModConfig(Config):
         1950-2000 but you only want to run a model from 1980-1990.
     rover_covsel
         Rover covariate selection stage configuration.
-    regmod_smooth
-        Regmod smooth stage configuration.
+    spxmod
+        SPxMod stage configuration.
     weave
         Weave stage configuration.
     ensemble
@@ -88,25 +88,43 @@ class OneModConfig(Config):
             top_pct_score: 1.0
             top_pct_learner: 0.5
 
-        # Regmod smooth settings
-        regmod_smooth:
+        # SPxMod settings
+        spxmod:
           xmodel:
-            var_groups:
-              - col: "intercept"
-              - col: "intercept"
-                dim: "super_region_id"
-                gprior: [0, 0.35]
+            spaces:
+            - name: age_mid
+              dims:
+                - name: age_mid
+                  dim_type: numerical
+            - name: super_region_id*agd_mid
+              dims:
+                - name: super_region_id
+                  dim_type: categorical
+                - name: age_mid
+                  dim_type: numerical
+            var_builders:
+              - name: intercept
+              - name: intercept
+                space: super_region_id*age_mid
+                lam: 1.0
+                # above lam is equivalent to use gprior as follows
+                # gprior:
+                #   mean: 0.0
+                #   sd: 1.0
             coef_bounds:
-              LDI_pc: [-inf, 0]
-              education_yrs_pc: [-inf, 0]
-            dims:
-              - name: "age_mid"
-                type: "numerical"
-              - name: "super_region_id"
-                type: "categorical"
+              LDI_pc:
+                # lower bounds is automatically set to -inf
+                ub: 0.0
+              smoking_prev:
+                # upper bounds is automatically set to inf
+                lb: 0.0
+            lam: 100.0
           xmodel_fit:
             options:
               verbose: false
+              # this is only used if we set bounds in the var_builders, this is
+              # the settings for interior point optimization, for more please
+              # check `here <https://github.com/ihmeuw-msca/msca/blob/main/src/msca/optim/solver/ipsolver.py#L158>`_.
               m_scale: 0.1
 
         # WeAve settings
@@ -166,6 +184,6 @@ class OneModConfig(Config):
     id_subsets: dict[str, list[Any]] = {}
 
     rover_covsel: RoverCovselConfig | None = None
-    regmod_smooth: RegmodSmoothConfig | None = None
+    spxmod: SPxModConfig | None = None
     weave: WeaveConfig | None = None
     ensemble: EnsembleConfig | None = None

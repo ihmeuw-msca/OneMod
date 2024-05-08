@@ -1,4 +1,5 @@
 import pytest
+
 from onemod.scheduler.scheduler import Scheduler
 
 
@@ -16,18 +17,22 @@ def test_end_to_end_local(
     scheduler = Scheduler(
         directory=temporary_directory,
         config=sample_config,
-        stages=["rover_covsel", "regmod_smooth", "weave"],
+        stages=["rover_covsel", "spxmod", "weave"],
     )
 
     # First run the schedule in memory
     scheduler.run(run_local=True)
 
     # Check for output files
-    assert (temporary_directory / "results" / "rover_covsel" / "summaries.csv").exists()
     assert (
-        temporary_directory / "results" / "regmod_smooth" / "predictions.parquet"
+        temporary_directory / "results" / "rover_covsel" / "summaries.csv"
     ).exists()
-    assert (temporary_directory / "results" / "weave" / "predictions.parquet").exists()
+    assert (
+        temporary_directory / "results" / "spxmod" / "predictions.parquet"
+    ).exists()
+    assert (
+        temporary_directory / "results" / "weave" / "predictions.parquet"
+    ).exists()
 
 
 @pytest.mark.skip(
@@ -43,7 +48,7 @@ def test_end_to_end_remote(
     scheduler = Scheduler(
         directory=temporary_directory,
         config=sample_config,
-        stages=["rover_covsel", "regmod_smooth", "weave"],
+        stages=["rover_covsel", "spxmod", "weave"],
         default_cluster_name="sequential",
         resources_path=temporary_directory / "config" / "resources.yml",
         configure_resources=False,
@@ -54,8 +59,10 @@ def test_end_to_end_remote(
     scheduler.run(run_local=False)
 
     # Check for output files
-    assert (temporary_directory / "results" / "rover_covsel" / "summaries.csv").exists()
     assert (
-        temporary_directory / "results" / "regmod_smooth" / "predictions.parquet"
+        temporary_directory / "results" / "rover_covsel" / "summaries.csv"
+    ).exists()
+    assert (
+        temporary_directory / "results" / "spxmod" / "predictions.parquet"
     ).exists()
     # assert (temporary_directory / 'results' / 'weave' / 'predictions.parquet').exists()

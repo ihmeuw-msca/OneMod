@@ -13,7 +13,7 @@ This pipeline package estimates quantities using the following approach:
 
    * Explore covariate combinations with `ModRover <https://github.com/ihmeuw-msca/modrover>`_
 
-#. Coefficient smoothing with `RegMod Smooth <https://github.com/ihmeuw-msca/regmodsm>`_
+#. Coefficient smoothing with `SPxMod <https://github.com/ihmeuw-msca/spxmod>`_
 #. Smoothing across dimensions
 
    * Smooth predictions using weighted averages with `WeAve <https://github.com/ihmeuw-msca/weighted-average>`_

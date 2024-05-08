@@ -402,14 +402,14 @@ def get_weave_input(
 
     Each stage only saves ID columns and stage results. Weave needs
     additional columns (e.g., super_region_id, age_mid, holdouts, test)
-    that aren't included in regmod_smooth results.
+    that aren't included in spxmod results.
 
     TODO: Could make a generic version of this function for loading
     predictions from any stage with additional columns from input.
 
     """
-    data = dataif.load_regmod_smooth("predictions.parquet").rename(
-        columns={"residual": "regmod_value", "residual_se": "regmod_se"}
+    data = dataif.load_spxmod("predictions.parquet").rename(
+        columns={"residual": "spxmod_value", "residual_se": "spxmod_se"}
     )
     columns = _get_weave_columns(data.columns, config)
     data = data.merge(
@@ -622,7 +622,7 @@ def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
 
     # add results folders
     dataif.add_dir("rover_covsel", dataif.results / "rover_covsel")
-    dataif.add_dir("regmod_smooth", dataif.results / "regmod_smooth")
+    dataif.add_dir("spxmod", dataif.results / "spxmod")
     dataif.add_dir("weave", dataif.results / "weave")
     dataif.add_dir("ensemble", dataif.results / "ensemble")
 

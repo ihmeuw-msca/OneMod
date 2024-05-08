@@ -24,7 +24,7 @@ dependencies = [
     "fire",
     "loguru",
     "modrover @ git+https://github.com/ihmeuw-msca/modrover.git@v0.1.3",
-    "regmodsm @ git+https://github.com/ihmeuw-msca/regmodsm.git@v0.1.1",
+    "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@v0.2.0",
     "pandas",
     "pyarrow",
     "pydantic",
@@ -46,6 +46,6 @@ initialize_results = "onemod.actions.data.initialize_results:main"
 collect_results = "onemod.actions.data.collect_results:main"
 delete_results = "onemod.actions.data.delete_results:main"
 rover_covsel_model = "onemod.actions.models.rover_covsel_model:main"
-regmod_smooth_model = "onemod.actions.models.regmod_smooth_model:main"
+spxmod_model = "onemod.actions.models.spxmod_model:main"
 weave_model = "onemod.actions.models.weave_model:main"
 ensemble_model = "onemod.actions.models.ensemble_model:main"

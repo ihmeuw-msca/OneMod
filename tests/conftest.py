@@ -62,7 +62,13 @@ def sample_input_data(temporary_directory):
     )
     data = pd.DataFrame(
         values,
-        columns=["super_region_id", "location_id", "sex_id", "age_group_id", "year_id"],
+        columns=[
+            "super_region_id",
+            "location_id",
+            "sex_id",
+            "age_group_id",
+            "year_id",
+        ],
     )
 
     # Mock an age mid column

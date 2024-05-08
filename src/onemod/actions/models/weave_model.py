@@ -77,7 +77,7 @@ def weave_model(directory: str, submodel_id: str) -> None:
 
     # WeAve models throw error if data contains NaNs
     # Replace possible NaNs with dummy value
-    for column in ["regmod_value", "regmod_se"]:
+    for column in ["spxmod_value", "spxmod_se"]:
         df_input.loc[
             df_input.eval(f"fit == False and {column}.isna()"), column
         ] = 1
@@ -86,8 +86,8 @@ def weave_model(directory: str, submodel_id: str) -> None:
     logger.info(f"Fitting smoother for {submodel_id=}")
     df_pred = smoother(
         data=df_input,
-        observed="regmod_value",
-        stdev="regmod_se",
+        observed="spxmod_value",
+        stdev="spxmod_se",
         smoothed="residual",
         fit="fit",
         predict="predict",

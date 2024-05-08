@@ -25,8 +25,8 @@ rover_covsel:
     top_pct_score: 1.0
     top_pct_learner: 0.5
 
-# Regmod smooth settings
-regmod_smooth:
+# SPxMod settings
+spxmod:
   model:
     var_groups:
       # Intercept relisted multiple times,

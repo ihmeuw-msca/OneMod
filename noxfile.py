@@ -3,6 +3,7 @@ from nox.sessions import Session
 
 python = "3.10"
 
+
 @nox.session(python=python, venv_backend="conda")
 def lint(session: Session) -> None:
     """Lint code using various plugins.
@@ -17,24 +18,17 @@ def lint(session: Session) -> None:
     args = session.posargs or ["src"]
     # TODO - Add in flake8-docstrings (extension for flake8 which uses pydocstyle to check docstrings.)
     session.install(
-        "flake8",
-        "flake8-annotations",
-        "flake8-import-order",
-        "flake8-black"
+        "flake8", "flake8-annotations", "flake8-import-order", "flake8-black"
     )
-    session.run(
-        "flake8",
-        *args
-    )
+    session.run("flake8", *args)
+
 
 @nox.session(python=python, venv_backend="conda")
 def black(session):
     args = session.posargs or ["src"]
     session.install("black")
-    session.run(
-        "black",
-        *args
-    )
+    session.run("black", *args)
+
 
 @nox.session(python=python, venv_backend="conda")
 def tests(session: Session) -> None:
@@ -44,12 +38,8 @@ def tests(session: Session) -> None:
 
     args = session.posargs or ["tests"]
 
-    session.run(
-        "pytest",
-        "--cov=onemod",
-        "--cov-report=term",
-        *args
-    )
+    session.run("pytest", "--cov=onemod", "--cov-report=term", *args)
+
 
 @nox.session(python=python, venv_backend="conda")
 def typecheck(session: Session) -> None:
@@ -59,6 +49,7 @@ def typecheck(session: Session) -> None:
     session.install("-e", ".")
     session.run("mypy", "--explicit-package-bases", *args)
 
+
 @nox.session(python=python, venv_backend="conda")
 def docs(session: Session) -> None:
     session.conda_install("graphviz", "mysqlclient")
@@ -66,11 +57,9 @@ def docs(session: Session) -> None:
         "sphinx",
         "sphinx-autodoc-typehints",
         "sphinx_rtd_theme",
-        "sphinx_autoapi"
+        "sphinx_autoapi",
     )
 
     session.install(".")
     output_dir = "out/_html"
-    session.run(
-        "sphinx-build", "docs", output_dir
-    )
+    session.run("sphinx-build", "docs", output_dir)

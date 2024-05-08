@@ -1,17 +1,18 @@
 from pathlib import Path
 
 import numpy as np
+
 from onemod.actions.models.weave_model import weave_model
 from onemod.utils import get_weave_submodels
 
 
 def test_weave_model(sample_input_data, temporary_directory):
-    # Mock a regmod smooth
-    regmod_smooth_path = (
-        temporary_directory / "results" / "regmod_smooth" / "predictions.parquet"
+    # Mock a spxmod
+    spxmod_path = (
+        temporary_directory / "results" / "spxmod" / "predictions.parquet"
     )
-    if not regmod_smooth_path.parent.exists():
-        regmod_smooth_path.parent.mkdir(parents=True)
+    if not spxmod_path.parent.exists():
+        spxmod_path.parent.mkdir(parents=True)
 
     sample_input_data["pred_rate"] = np.random.rand(len(sample_input_data))
     sample_input_data["residual"] = (
@@ -22,7 +23,7 @@ def test_weave_model(sample_input_data, temporary_directory):
         sample_input_data["pred_rate"] * (1 - sample_input_data["pred_rate"])
     )
 
-    sample_input_data.to_parquet(regmod_smooth_path)
+    sample_input_data.to_parquet(spxmod_path)
 
     # Initialize weave directories and parameter files
     get_weave_submodels(temporary_directory, save_files=True)
