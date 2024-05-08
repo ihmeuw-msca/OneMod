@@ -567,19 +567,6 @@ def _reformat_weave_column(df: pd.DataFrame, column=str) -> pd.DataFrame:
     return df[column].melt(value_name=column, ignore_index=False).reset_index()
 
 
-# TODO: move to modeling module
-def get_prediction(row: pd.Series, pred: str, model_type: str) -> float:
-    """Get smoother prediction."""
-    if model_type == "binomial":
-        update = row["residual"] * row[pred] * (1 - row[pred])
-        return row[pred] + update
-    if model_type == "gaussian":
-        return row[pred] + row["residual"]
-    if model_type in ("poisson", "tobit"):
-        return (row["residual"] + 1) * row[pred]
-    raise ValueError("Unsupported model_type")
-
-
 @cache
 def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
     """Get data interface for loading and dumping files. This object encoded the
