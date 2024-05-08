@@ -163,9 +163,7 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     for var_builder in xmodel_args["var_builders"]:
         cov = var_builder["name"]
         if "uprior" not in var_builder:
-            var_builder["uprior"] = coef_bounds.get(
-                cov, dict(lb=-np.inf, ub=np.inf)
-            )
+            var_builder["uprior"] = coef_bounds.get(cov)
 
         if "lam" not in var_builder:
             var_builder["lam"] = lam
