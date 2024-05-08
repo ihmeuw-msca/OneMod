@@ -255,7 +255,7 @@ def spxmod_model(directory: str) -> None:
     dataif.dump_spxmod(model, "model.pkl")
     dataif.dump_spxmod(df_coef, "coef.csv")
     dataif.dump_spxmod(
-        df[config.ids, ["residual", "residual_se", config.pred]],
+        df[config.ids + ["residual", "residual_se", config.pred]],
         "predictions.parquet",
     )
 
