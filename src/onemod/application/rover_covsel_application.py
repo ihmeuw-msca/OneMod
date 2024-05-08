@@ -5,7 +5,7 @@ from onemod.actions.action import Action
 from onemod.actions.data.collect_results import collect_results
 from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.base import Application
-from onemod.utils import get_rover_covsel_submodels
+from onemod.utils import get_submodels
 
 
 class RoverCovselApplication(Application):
@@ -14,7 +14,7 @@ class RoverCovselApplication(Application):
     def __init__(self, directory: str | Path):
         """Create a RoverCovsel Application."""
         self.directory = directory
-        self.submodels = get_rover_covsel_submodels(directory)
+        self.submodels = get_submodels("rover_covsel", directory)
 
     def action_generator(self) -> Generator[Action, None, None]:
         """A generator to return actions to be run."""

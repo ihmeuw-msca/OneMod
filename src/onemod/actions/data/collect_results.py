@@ -9,16 +9,11 @@ from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from onemod.schema import OneModConfig
-from onemod.utils import (
-    get_handle,
-    get_rover_covsel_submodels,
-    get_weave_submodels,
-    parse_weave_submodel,
-)
+from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
 
 def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
-    submodel_ids = get_rover_covsel_submodels(dataif.experiment)
+    submodel_ids = get_submodels("rover_covsel", dataif.experiment)
     summaries = []
     for submodel_id in submodel_ids:
         summary = dataif.load_rover_covsel(
@@ -161,7 +156,7 @@ def collect_results_weave(directory: str) -> None:
     """Collect weave submodel results."""
     dataif, config = get_handle(directory)
 
-    submodel_ids = get_weave_submodels(directory)
+    submodel_ids = get_submodels("weave", directory)
     for holdout_id in config.holdouts + ["full"]:
         df_list = []
         for submodel_id in submodel_ids:

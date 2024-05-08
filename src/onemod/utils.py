@@ -437,68 +437,46 @@ def _get_weave_columns(
     return list(columns)
 
 
-def get_rover_covsel_submodels(
-    directory: str, save_file: bool = False
+def get_submodels(
+    stage: str, directory: str, save_file: bool = False
 ) -> list[str]:
-    """Get rover submodel IDs and save subsets."""
+    """Get stage submodel IDs and save subsets."""
     dataif, config = get_handle(directory)
-
-    # Create rover subsets and submodels
-    subsets = Subsets("rover_covsel", config.rover_covsel, dataif.load_data())
-    submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
-
-    # Save file
-    if save_file:
-        dataif.dump_rover_covsel(subsets.subsets, "subsets.csv")
-    return submodels
-
-
-def get_weave_submodels(
-    directory: str, save_files: bool | None = False
-) -> list[str]:
-    """Get weave submodel IDs; save parameters and subsets."""
-    dataif, config = get_handle(directory)
-
-    # Create weave parameters, subsets, and submodels
-    param_list, subset_list, submodels = [], [], []
     data = dataif.load_data()
-    for model_id, model_config in config.weave.models.items():
-        params = WeaveParams(model_id, config)
-        param_list.append(params.param_sets)
-        subsets = WeaveSubsets(model_id, model_config, data)
-        subset_list.append(subsets.subsets)
-        for param_id, subset_id, holdout_id in product(
-            params.get_param_ids(),
-            subsets.get_subset_ids(),
-            config.holdouts + ["full"],
-        ):
-            for batch_id in subsets.get_batch_ids(subset_id):
-                submodel = (
-                    f"{model_id}__param{param_id}__subset{subset_id}"
-                    f"__{holdout_id}__batch{batch_id}"
-                )
-                submodels.append(submodel)
+    stage_config = config[stage]
 
-    # Save files
-    if save_files:
-        dataif.dump_weave(pd.concat(param_list), "parameters.csv")
-        dataif.dump_weave(pd.concat(subset_list), "subsets.csv")
-    return submodels
-
-
-def get_ensemble_submodels(
-    directory: str, save_file: bool = False
-) -> list[str]:
-    """Get ensemble submodel IDs and save subsets."""
-    dataif, config = get_handle(directory)
-
-    # Create ensemble subsets and submodels
-    subsets = Subsets("ensemble", config.ensemble, dataif.load_data())
-    submodels = [f"subset{subset_id}" for subset_id in subsets.get_subset_ids()]
+    # Create subsets
+    if stage == "weave":
+        param_list, subset_list, submodels = [], [], []
+        for model_id, model_config in stage_config.models.items():
+            params = WeaveParams(model_id, config)
+            param_list.append(params.param_sets)
+            subsets = WeaveSubsets(model_id, model_config, data)
+            subset_list.append(subsets.subsets)
+            for param_id, subset_id, holdout_id in product(
+                params.get_param_ids(),
+                subsets.get_subset_ids(),
+                config.holdouts + ["full"],
+            ):
+                for batch_id in subsets.get_batch_ids(subset_id):
+                    submodel = (
+                        f"{model_id}__param{param_id}__subset{subset_id}"
+                        f"__{holdout_id}__batch{batch_id}"
+                    )
+                    submodels.append(submodel)
+    else:
+        subsets = Subsets(stage, stage_config, data)
+        submodels = [
+            f"subset{subset_id}" for subset_id in subsets.get_subset_ids()
+        ]
 
     # Save file
     if save_file:
-        dataif.dump_ensemble(subsets.subsets, "subsets.csv")
+        if stage == "weave":
+            dataif.dump_weave(pd.concat(param_list), "parameters.csv")
+            dataif.dump_weave(pd.concat(subset_list), "subsets.csv")
+        else:
+            dataif.dump(subsets.subsets, "subsets.csv", key=stage)
     return submodels
 
 

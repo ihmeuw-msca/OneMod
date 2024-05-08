@@ -5,12 +5,7 @@ import shutil
 import fire
 from pplkit.data.interface import DataInterface
 
-from onemod.utils import (
-    get_ensemble_submodels,
-    get_handle,
-    get_rover_covsel_submodels,
-    get_weave_submodels,
-)
+from onemod.utils import get_handle, get_submodels
 
 
 def initialize_results(directory: str, stages: list[str]) -> None:
@@ -35,7 +30,7 @@ def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
         (dataif.rover_covsel / sub_dir).mkdir(parents=True)
 
     # Create rover subsets
-    get_rover_covsel_submodels(dataif.experiment, save_file=True)
+    get_submodels("rover_covsel", dataif.experiment, save_file=True)
 
 
 def _initialize_spxmod_results(dataif: DataInterface) -> None:
@@ -54,7 +49,7 @@ def _initialize_weave_results(dataif: DataInterface) -> None:
     (dataif.weave / "submodels").mkdir(parents=True)
 
     # Create weave parameters and subsets
-    get_weave_submodels(dataif.experiment, save_files=True)
+    get_submodels("weave", dataif.experiment, save_file=True)
 
 
 def _initialize_ensemble_results(dataif: DataInterface) -> None:
@@ -66,7 +61,7 @@ def _initialize_ensemble_results(dataif: DataInterface) -> None:
     dataif.ensemble.mkdir(parents=True)
 
     # Create ensemble subsets
-    get_ensemble_submodels(dataif.experiment, save_file=True)
+    get_submodels("ensemble", dataif.experiment, save_file=True)
 
 
 def main() -> None:
