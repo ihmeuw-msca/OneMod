@@ -4,19 +4,34 @@ from onemod.schema.base import Config, StageConfig
 
 
 class SPxModDimension(Config):
+    """For details of the settings description please check
+    `here <https://github.com/ihmeuw-msca/spxmod/blob/main/src/spxmod/dimension.py#L7>`_.
+
+    """
+
     name: str
     dim_type: Literal["categorical", "numerical"]
 
 
 class SPxModSpace(Config):
+    """For details of the settings description please check
+    `here <https://github.com/ihmeuw-msca/spxmod/blob/main/src/spxmod/space.py#L13>`_.
+
+    """
+
     name: str | None = None
     dims: list[SPxModDimension] | None = None
 
 
 class SPxModVarBuilder(Config):
+    """For details of the settings description please check
+    `here <https://github.com/ihmeuw-msca/spxmod/blob/main/src/spxmod/variable_builder.py#L10>`_.
+
+    """
+
     name: str
     space: str | SPxModSpace = SPxModSpace()
-    lam: float | dict[str, float] = 0.0
+    lam: float | dict[str, float] | None = None
     lam_mean: float = 0.0
     gprior: dict[str, float] | None = None
     uprior: dict[str, float] | None = None
@@ -39,10 +54,13 @@ class XModelInit(Config):
         List of dictionaries containing variable group names and arguments.
     param_specs
         Additional parameter specifications for the model.
+        This argument is used `here <https://github.com/ihmeuw-msca/regmod/blob/release/0.1.2/src/regmod/models/model.py#L133>`_.
+        This is used for inv_link function or linear prior or any other settings
+        that are captured by the current schema.
     coef_bounds
         Dictionary containing bounds for the coefficients.
     lam
-        Default lam value for the model. Default is 0.0.
+        Default lam value for all var_builders. Default is 0.0.
 
     """
 

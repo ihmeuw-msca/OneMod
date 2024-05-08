@@ -96,24 +96,35 @@ class OneModConfig(Config):
               dims:
                 - name: age_mid
                   dim_type: numerical
-            - name: super_region_id
+            - name: super_region_id*agd_mid
               dims:
                 - name: super_region_id
                   dim_type: categorical
+                - name: age_mid
+                  dim_type: numerical
             var_builders:
               - name: intercept
               - name: intercept
-                space: super_region_id
+                space: super_region_id*age_mid
                 lam: 1.0
+                # above lam is equivalent to use gprior as follows
+                # gprior:
+                #   mean: 0.0
+                #   sd: 1.0
             coef_bounds:
               LDI_pc:
+                # lower bounds is automatically set to -inf
                 ub: 0.0
-              education_yrs_pc:
-                ub: 0.0
+              smoking_prev:
+                # upper bounds is automatically set to inf
+                lb: 0.0
             lam: 100.0
           xmodel_fit:
             options:
               verbose: false
+              # this is only used if we set bounds in the var_builders, this is
+              # the settings for interior point optimization, for more please
+              # check `here <https://github.com/ihmeuw-msca/msca/blob/main/src/msca/optim/solver/ipsolver.py#L158>`_.
               m_scale: 0.1
 
         # WeAve settings
