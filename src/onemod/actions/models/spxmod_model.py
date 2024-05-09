@@ -12,7 +12,7 @@ from loguru import logger
 from spxmod.model import XModel
 
 from onemod.schema import OneModConfig
-from onemod.utils import get_handle
+from onemod.utils import Subsets, get_handle
 
 
 def get_residual_computation_function(
@@ -175,7 +175,7 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     return xmodel_args
 
 
-def spxmod_model(directory: str) -> None:
+def spxmod_model(directory: str, submodel_id: str) -> None:
     """Run spxmod model smooth the age coefficients across different age
     groups.
 
@@ -185,6 +185,10 @@ def spxmod_model(directory: str) -> None:
         Parent folder where the experiment is run.
         - ``directory / config / settings.yaml`` contains rover modeling settings
         - ``directory / results / spxmod`` stores all rover results
+    submodel_id
+        Submodel to run based on groupby setting. For example, the submodel_id
+        ``subset0`` corresponds to the data subset ``0`` stored in
+        ``subsets.csv``.
 
     Outputs
     -------
@@ -199,7 +203,15 @@ def spxmod_model(directory: str) -> None:
     dataif, config = get_handle(directory)
     stage_config = config.spxmod
 
-    # load selected covs from previous stage
+    # Load data and filter by subset
+    subsets = Subsets(
+        "spxmod", stage_config, subsets=dataif.load_spxmod("subsets.csv")
+    )
+    subset_id = int(submodel_id.removeprefix("subset"))
+    df = subsets.filter_subset(dataif.load_data(), subset_id)
+    df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
+
+    # Load selected covs from previous stage
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if not selected_covs:
         selected_covs = []
@@ -216,9 +228,6 @@ def spxmod_model(directory: str) -> None:
 
     # Create spxmod model
     model = XModel.from_config(xmodel_args)
-
-    df = dataif.load_data()
-    df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
     logger.info(f"Fitting the model with data size {df_train.shape}")
 
@@ -250,11 +259,11 @@ def spxmod_model(directory: str) -> None:
     df_coef = get_coef(model)
 
     # Save results
-    dataif.dump_spxmod(model, "model.pkl")
-    dataif.dump_spxmod(df_coef, "coef.csv")
+    dataif.dump_spxmod(model, f"submodels/{submodel_id}/model.pkl")
+    dataif.dump_spxmod(df_coef, f"submodels/{submodel_id}/coef.csv")
     dataif.dump_spxmod(
         df[config.ids + ["residual", "residual_se", config.pred]],
-        "predictions.parquet",
+        f"submodels/{submodel_id}/predictions.parquet",
     )
 
 

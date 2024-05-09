@@ -37,7 +37,10 @@ def _initialize_spxmod_results(dataif: DataInterface) -> None:
     # Initialize directories
     if dataif.spxmod.exists():
         shutil.rmtree(dataif.spxmod)
-    dataif.spxmod.mkdir(parents=True)
+    (dataif.spxmod / "submodels").mkdir(parents=True)
+
+    # Create spxmod subsets
+    get_submodels("spxmod", dataif.experiment, save_file=True)
 
 
 def _initialize_weave_results(dataif: DataInterface) -> None:

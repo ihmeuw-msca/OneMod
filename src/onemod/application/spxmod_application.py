@@ -5,28 +5,27 @@ from onemod.actions.action import Action
 from onemod.actions.data.collect_results import collect_results
 from onemod.actions.models.spxmod_model import spxmod_model
 from onemod.application.base import Application
+from onemod.utils import get_submodels
 
 
 class SPxModApplication(Application):
-    """A SPxMod Application to run through the spxmod stage."""
+    """An SPxMod application to run the spxmod stage."""
 
     def __init__(self, directory: str | Path):
-        """Create a SPxMod Application."""
+        """Create an SPxMod Application."""
         self.directory = directory
+        self.submodels = get_submodels("spxmod", directory)
 
     def action_generator(self) -> Generator[Action, None, None]:
-        """A generator to return actions to be run, with the correct dependencies.
-
-        For the spxmod stage, there are currently just two actions - model and plot.
-        """
+        """A generator to return actions to be run."""
         # Modeling task
-        yield Action(
-            spxmod_model,
-            directory=self.directory,
-        )
+        for submodel_id in self.submodels:
+            action = Action(
+                spxmod_model, directory=self.directory, submodel_id=submodel_id
+            )
+            yield action
+
         # Collection task
         yield Action(
-            collect_results,
-            stage_name="spxmod",
-            directory=self.directory,
+            collect_results, stage_name="spxmod", directory=self.directory
         )

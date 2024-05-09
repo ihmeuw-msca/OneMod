@@ -134,7 +134,11 @@ def create_modeling_template(
     # Tasks can be parallelized by an internal concept called submodels
     # swimr_model also uses submodels, but hasn't been implemented yet
     node_args = []
-    if task_template_name in ["rover_covsel_model", "weave_model"]:
+    if task_template_name in [
+        "rover_covsel_model",
+        "spxmod_model",
+        "weave_model",
+    ]:
         node_args.append("submodel_id")
 
     template = _create_task_template(

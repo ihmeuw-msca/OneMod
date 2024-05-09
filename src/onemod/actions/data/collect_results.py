@@ -56,6 +56,7 @@ def _plot_rover_covsel_results(
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
     """
+    # TODO: Plot by submodel?
 
     logger.info("Plotting coefficient magnitudes by age.")
     config = OneModConfig(**dataif.load_settings())
@@ -97,6 +98,7 @@ def _plot_spxmod_results(
     dataif: DataInterface, summaries: pd.DataFrame
 ) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
+    # TODO: Plot by submodel?
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     if not selected_covs:
         warn("There are no covariates selected, skip `plot_spxmod_results`")
@@ -123,7 +125,7 @@ def _plot_spxmod_results(
 
 def collect_results_rover_covsel(directory: str) -> None:
     """Collect rover covariate selection results. Process all the significant
-    covariates for each sub group. If a covaraite is significant across more
+    covariates for each sub group. If a covariate is significant across more
     than half of the subgroups if will be selected.
 
     This step will save ``selected_covs.yaml`` with a list of selected
@@ -146,6 +148,32 @@ def collect_results_rover_covsel(directory: str) -> None:
 def collect_results_spxmod(directory: str) -> None:
     """This step is used for creating diagnostics."""
     dataif, _ = get_handle(directory)
+
+    # Collect submodel predictions
+    predictions = []
+    subsets = dataif.load_spxmod("subsets.csv")
+    for subset_id in subsets["subset_id"]:
+        df = dataif.load_spxmod(
+            f"submodels/subset{subset_id}/predictions.parquet"
+        )
+        predictions.append(df)
+    dataif.dump_spxmod(pd.concat(predictions), "predictions.parquet")
+
+    # Collect submodel coefficients
+    coef = []
+    for subset_id in subsets["subset_id"]:
+        df = dataif.load_spxmod(f"submodels/subset{subset_id}/coef.csv")
+        df["subset_id"] = subset_id
+        coef.append(df)
+    coef = pd.merge(
+        left=pd.concat(coef).reset_index(drop=True),
+        right=subsets.drop("stage_id", axis=1),
+        on="subset_id",
+        how="left",
+    )
+    dataif.dump_spxmod(coef, "coef.csv")
+
+    # Plot coefficients
     summaries = _get_rover_covsel_summaries(dataif)
     fig = _plot_spxmod_results(dataif, summaries)
     if fig is not None:
