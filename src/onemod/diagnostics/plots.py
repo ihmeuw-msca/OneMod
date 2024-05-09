@@ -17,7 +17,7 @@ def plot_results(
     fig_options: dict = {},
     yscale: str = "linear",
 ) -> plt.Figure:
-    """Plot result from OneMod model.
+    """Plot OneMod predictions for a single location.
 
     Parameters
     ----------
@@ -58,34 +58,57 @@ def plot_results(
     plt.Figure
         Figure object.
 
-    Example
+    Examples
     -------
-    >>> from onemod_diagnostics.figure import plot_result
-    >>> data = ...  # load result data for a single location
-    >>> # plot result as time series
-    >>> fig = plot_result(
-    ...     data_sel,
-    ...     x="year_id",
-    ...     y_dots=["obs_rate"],
-    ...     y_line=["truth", "regmod_smooth"],
-    ...     dots_options=dict(obs_rate=dict(color="grey")),
-    ...     facet_options=dict(col="age_mid", wrap=6),
-    ...     fig_options=dict(figsize=(18, 12)),
-    ... )
-    >>> fig
-    >>> # plot result as age series
-    >>> fig = plot_result(
-    ...     data_sel,
-    ...     x="age_mid",
-    ...     y_dots=["obs_rate"],
-    ...     y_line=["truth", "regmod_smooth"],
-    ...     dots_options=dict(obs_rate=dict(color="grey")),
-    ...     facet_options=dict(col="year_id", wrap=6),
-    ...     fig_options=dict(figsize=(18, 12)),
-    ... )
-    >>> fig
+    Load OneMod results and filter by location.
+    >>> import pandas as pd
+    >>> from onemod.diagnostics import plot_results
+    >>> data = pd.read_parquet(/path/to/dataframe).query("location_id == 71")
+
+    Plot time series by sex and age.
+    >>> from onemod.diagnostics import plot_result
+    >>> fig = plot_results(
+    >>>     data=data.query("30 <= age_mid <= 40"),
+    >>>     x="year_id",
+    >>>     y_dots=["obs_rate"],
+    >>>     y_line=["true_rate", "pred_rate"],
+    >>>     dots_options={"obs_rate": {"color": "gray"}},
+    >>>     facet_options={"col": "sex_id", "row": "age_mid"},
+    >>>     share_options={"y": False},
+    >>>     fig_options={"figsize": (12, 8)},
+    >>> )
+    >>> fig.suptitle("death rate by sex and age", fontsize=16)
+    >>> fig.tight_layout()
+    >>> fig.savefig("example1.png", bbox_inches="tight")
+
+    Plot age series by sex and year.
+    >>>     fig = plot_results(
+    >>>         data=pd.concat([
+    >>>             data.query("sex_id == 1").rename(columns={
+    >>>                 "obs_rate": "obs_male", "pred_rate": "pred_male"
+    >>>             }),
+    >>>             data.query("sex_id == 2").rename(columns={
+    >>>                 "obs_rate": "obs_female", "pred_rate": "pred_female"
+    >>>             }),
+    >>>         ]).query("1981 <= year_id <= 1989"),
+    >>>         x="age_mid",
+    >>>         y_dots=["obs_male", "obs_female"],
+    >>>         y_line=["pred_male", "pred_female"],
+    >>>         dots_options={
+    >>>             "obs_male": {"color": "gray", "marker": "o"},
+    >>>             "obs_female": {"color": "gray", "marker": "^"},
+    >>>         },
+    >>>         facet_options={"col": "year_id", "wrap": 3},
+    >>>         fig_options={"figsize": (18, 12)},
+    >>>     )
+    >>>     for ii, ax in enumerate(fig.get_axes()):
+    >>>         if ii % 3 == 0:
+    >>>             ax.set_ylabel("death_rate")
+    >>>     fig.tight_layout()
+    >>>     fig.savefig("example2.png", bbox_inches="tight")
 
     """
+    # TODO: groupby within plot (i.e., if dim not a facet)
     # Initialize figure and subplots
     fig = plt.Figure(**fig_options)
     so.Plot(data, x=x).facet(**facet_options).share(**share_options).on(
@@ -120,7 +143,7 @@ def plot_results(
         for y in y_line:
             ax.plot(df[x], df[y], label=y, **line_options.get(y, {}))
 
-    # plot posinf and neginf
+    # rescale and plot posinf/neginf
     # TODO: include infs after log/logit scale changes
     for ax, df in zip(axes, data_list):
         ax.set_yscale(yscale)
