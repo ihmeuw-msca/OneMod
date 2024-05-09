@@ -1,8 +1,14 @@
 """Plot OneMod results."""
 
+from warnings import warn
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn.objects as so
+from loguru import logger
+from ppklit.data.interface import DataInterface
+
+from onemod.schema import OneModConfig
 
 
 def plot_results(
@@ -166,4 +172,102 @@ def plot_results(
         ncol=len(handles),
     )
 
+    return fig
+
+
+def plot_rover_covsel_results(
+    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str]
+) -> plt.Figure:
+    """Description.
+
+    Parameters
+    ----------
+    dataif : DataInterface
+        Description.
+    summaries : pd.DataFrame
+        Description.
+    covs : list[str]
+        Description.
+
+    Returns
+    -------
+    matplotlib.Figure
+        Figure object.
+
+    """
+    logger.info("Plotting coefficient magnitudes by age.")
+    config = OneModConfig(**dataif.load_settings())
+
+    # add age_mid to summary
+    df_age = dataif.load(
+        config.input_path, columns=["age_group_id", "age_mid"]
+    ).drop_duplicates()
+
+    summaries = summaries.merge(df_age, on="age_group_id", how="left")
+    df_covs = summaries.groupby("cov")
+    covs = covs or list(df_covs.groups.keys())
+    logger.info(
+        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
+    )
+
+    fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
+    ax = [ax] if len(covs) == 1 else ax
+    for ii, cov in enumerate(covs):
+        df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
+        if ii % 5 == 0:
+            logger.info(f"Plotting for group {ii}")
+        ax[ii].errorbar(
+            df_cov["age_mid"],
+            df_cov["coef"],
+            yerr=1.96 * df_cov["coef_sd"],
+            fmt="o-",
+            alpha=0.5,
+            label="rover_covsel",
+        )
+        ax[ii].set_ylabel("cov")
+        ax[ii].axhline(0.0, linestyle="--")
+
+    logger.info("Completed plotting of rover results.")
+    return fig
+
+
+def plot_spxmod_results(
+    dataif: DataInterface, summaries: pd.DataFrame
+) -> plt.Figure | None:
+    """Description.
+
+    Parameters
+    ----------
+    dataif : DataInterface
+        Description.
+    summaries : pandas.DataFrame
+        Description.
+
+    Returns
+    -------
+    matplotlib.Figure
+        Figure object.
+
+    """
+    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    if not selected_covs:
+        warn("No covariates selected; skipping `plot_spxmod_results`")
+        return None
+
+    df_covs = dataif.load_spxmod("coef.csv").groupby("cov")
+
+    fig = plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
+    logger.info(
+        f"Plotting smoothed covariates for {len(selected_covs)} covariates"
+    )
+    for ax, cov in zip(fig.axes, selected_covs):
+        df_cov = df_covs.get_group(cov)
+        ax.plot(
+            df_cov["age_mid"],
+            df_cov["coef"],
+            "o-",
+            alpha=0.5,
+            label="spxmod",
+        )
+        ax.legend(fontsize="xx-small")
     return fig
