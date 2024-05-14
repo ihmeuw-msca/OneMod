@@ -130,7 +130,7 @@ def get_coef(model: XModel) -> pd.DataFrame:
     """
     df_coef = []
     for var_builder in model.var_builders:
-        df_sub = var_builder.space.span
+        df_sub = var_builder.space.span.copy()
         df_sub["cov"] = var_builder.name
         df_coef.append(df_sub)
     df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
