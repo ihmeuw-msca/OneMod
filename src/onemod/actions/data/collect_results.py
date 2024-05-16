@@ -31,18 +31,20 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     return summaries
 
 
-def _get_selected_covs(dataif: DataInterface) -> list[str]:
+def _get_selected_covs(
+    dataif: DataInterface, config: OneModConfig
+) -> pd.DataFrame:
     summaries = _get_rover_covsel_summaries(dataif)
     t_threshold = dataif.load_settings()["rover_covsel"]["t_threshold"]
-
     selected_covs = (
-        summaries.groupby("cov")["abs_t_stat"]
+        summaries.groupby(list(config.groupby) + ["cov"])["abs_t_stat"]
         .mean()
         .reset_index()
-        .query(f"abs_t_stat >= {t_threshold}")["cov"]
-        .tolist()
+        .query(f"abs_t_stat >= {t_threshold}")
     )
-    logger.info(f"Selected covariates: {selected_covs}")
+    logger.info(
+        f"Selected covariates: {selected_covs['cov'].unique().tolist()}"
+    )
     return selected_covs
 
 
@@ -97,7 +99,9 @@ def _plot_spxmod_results(
 ) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
     # TODO: Plot by submodel?
-    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    selected_covs = (
+        dataif.load_rover_covsel("selected_covs.yaml")["cov"].unique().tolist()
+    )
     if not selected_covs:
         warn("There are no covariates selected, skip `plot_spxmod_results`")
         return None
@@ -126,13 +130,13 @@ def collect_results_rover_covsel(directory: str) -> None:
     covariates for each sub group. If a covariate is significant across more
     than half of the subgroups if will be selected.
 
-    This step will save ``selected_covs.yaml`` with a list of selected
+    This step will save ``selected_covs.csv`` with a list of selected
     covariates in the rover results folder.
     """
     dataif, _ = get_handle(directory)
 
     selected_covs = _get_selected_covs(dataif)
-    dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
+    dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
 
     # Concatenate summaries and save
     logger.info("Saving concatenated rover coefficient summaries.")
