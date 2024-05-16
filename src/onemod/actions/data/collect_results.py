@@ -13,22 +13,20 @@ from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
 
 def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
-    submodel_ids = get_submodels("rover_covsel", dataif.experiment)
-    summaries = []
-    for submodel_id in submodel_ids:
-        summary = dataif.load_rover_covsel(
-            f"submodels/{submodel_id}/summary.csv"
-        )
-        summary["submodel_id"] = submodel_id
-        summaries.append(summary)
-    summaries = pd.concat(summaries, axis=0)
-
-    # Merge with the existing subsets
     subsets = dataif.load_rover_covsel("subsets.csv")
-    subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
-    summaries = summaries.merge(
-        subsets.drop("subset_id", axis=1), on="submodel_id", how="left"
-    )
+
+    # Collect coefficient summaries
+    summaries = []
+    for subset_id in subsets["subset_id"]:
+        summary = dataif.load_rover_covsel(
+            f"submodels/subset{subset_id}/summary.csv"
+        )
+        summary["subset_id"] = subset_id
+        summaries.append(summary)
+    summaries = pd.concat(summaries)
+
+    # Merge with existing subsets and add statistic
+    summaries = summaries.merge(subsets, on="subset_id", how="left")
     summaries["abs_t_stat"] = summaries.eval("abs(coef / coef_sd)")
     return summaries
 
