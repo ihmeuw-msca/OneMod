@@ -148,6 +148,8 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     Model includes a coefficient for each of the selected covariates and
     age group (based on the 'age_mid' column in the input data).
 
+    TODO: Update for spline variables.
+
     """
     xmodel_args = config.spxmod.xmodel.model_dump()
     coef_bounds = xmodel_args.pop("coef_bounds")
@@ -224,31 +226,28 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     df = subsets.filter_subset(dataif.load_data(), subset_id)
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
-    # Load selected covs from previous stage
+    # Load selected covs and filter by subset
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
-    if not selected_covs:
-        selected_covs = []
-
-    logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
+    for col_name in config.groupby:
+        col_val = subsets.get_column(col_name, subset_id)
+        selected_covs = selected_covs.query(f"{col_name} == {repr(col_val)}")
+    selected_covs = selected_covs.tolist()
+    logger.info(f"Running spxmod with selected_covariates: {selected_covs}")
 
     # Create spxmod parameters
     xmodel_args = _build_xmodel_args(config, selected_covs)
     xmodel_fit_args = stage_config.xmodel_fit
-
     logger.info(
-        f"{len(xmodel_args['var_builders'])} var_builders created for smoothing."
+        f"{len(xmodel_args['var_builders'])} var_builders created for spxmod"
     )
 
-    # Create spxmod model
+    # Create and fit spxmod model
+    logger.info(f"Fitting spxmod model with data size {df_train.shape}")
     model = XModel.from_config(xmodel_args)
-
-    logger.info(f"Fitting the model with data size {df_train.shape}")
-
-    # Fit spxmod model
     model.fit(data=df_train, data_span=df, **xmodel_fit_args)
 
     # Create prediction and residuals
-    logger.info("XModel fit, calculating residuals")
+    logger.info("Calculating predictions and residuals")
     df[config.pred] = model.predict(df)
     residual_func = get_residual_computation_function(
         model_type=config.mtype,
@@ -268,7 +267,6 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
         residual_se_func,
         axis=1,
     )
-
     df_coef = get_coef(model)
 
     # Save results
