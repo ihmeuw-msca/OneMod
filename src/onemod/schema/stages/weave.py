@@ -114,7 +114,7 @@ class WeaveConfig(Config):
         weave:
           models:
             super_region_model:
-              groupby: [sex_id, super_region_id]
+              groupby: [super_region_id]
               max_batch: 5000
               dimensions:
                 age:
@@ -132,7 +132,7 @@ class WeaveConfig(Config):
                   kernel: tricubic
                   exponent: [0.5, 1, 1.5]
             age_group_model:
-              groupby: [age_group_id, sex_id]
+              groupby: [age_group_id]
               dimensions:
                 location:
                   name: location_id
