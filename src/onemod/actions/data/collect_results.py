@@ -32,15 +32,13 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
 
 
 def _get_selected_covs(
-    dataif: DataInterface, config: OneModConfig
+    summaries: pd.DataFrame, config: OneModConfig
 ) -> pd.DataFrame:
-    summaries = _get_rover_covsel_summaries(dataif)
-    t_threshold = dataif.load_settings()["rover_covsel"]["t_threshold"]
     selected_covs = (
         summaries.groupby(list(config.groupby) + ["cov"])["abs_t_stat"]
         .mean()
         .reset_index()
-        .query(f"abs_t_stat >= {t_threshold}")
+        .query(f"abs_t_stat >= {config.rover_covsel.t_threshold}")
     )
     logger.info(
         f"Selected covariates: {selected_covs['cov'].unique().tolist()}"
@@ -57,13 +55,11 @@ def _plot_rover_covsel_results(
     across age groups and use age mid as x axis of the plot.
     """
     # TODO: Plot by submodel?
-
     logger.info("Plotting coefficient magnitudes by age.")
-    config = OneModConfig(**dataif.load_settings())
 
     # add age_mid to summary
-    df_age = dataif.load(
-        config.input_path, columns=["age_group_id", "age_mid"]
+    df_age = dataif.load_data(
+        columns=["age_group_id", "age_mid"]
     ).drop_duplicates()
 
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
@@ -126,23 +122,25 @@ def _plot_spxmod_results(
 
 
 def collect_results_rover_covsel(directory: str) -> None:
-    """Collect rover covariate selection results. Process all the significant
-    covariates for each sub group. If a covariate is significant across more
-    than half of the subgroups if will be selected.
+    """Collect rover covariate selection results.
 
-    This step will save ``selected_covs.csv`` with a list of selected
-    covariates in the rover results folder.
+    Collect covariate summaries from submodels, select covariates based
+    on t-statistic and save as ``selected_covs.csv``, and plot
+    covariate coefficients by age group.
+
     """
-    dataif, _ = get_handle(directory)
-
-    selected_covs = _get_selected_covs(dataif)
-    dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
+    dataif, config = get_handle(directory)
 
     # Concatenate summaries and save
     logger.info("Saving concatenated rover coefficient summaries.")
     summaries = _get_rover_covsel_summaries(dataif)
     dataif.dump_rover_covsel(summaries, "summaries.csv")
 
+    # Select covariates and save
+    selected_covs = _get_selected_covs(summaries, config)
+    dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
+
+    # Plot coefficients and save
     fig = _plot_rover_covsel_results(dataif, summaries)
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
