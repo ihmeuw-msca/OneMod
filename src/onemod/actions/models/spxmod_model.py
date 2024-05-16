@@ -13,6 +13,7 @@ import fire
 import numpy as np
 import pandas as pd
 from loguru import logger
+from pplkit.data.interface import DataInterface
 from spxmod.model import XModel
 
 from onemod.schema import OneModConfig
@@ -142,6 +143,23 @@ def get_coef(model: XModel) -> pd.DataFrame:
     return df_coef
 
 
+def _get_covs(
+    dataif: DataInterface, config: OneModConfig, subset: pd.DataFrame
+) -> list[str]:
+    # Get covariates selected in previous stage; filter by subset
+    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    for col_name in config.groupby:
+        col_val = subset[col_name].item()
+        selected_covs = selected_covs.query(f"{col_name} == {repr(col_val)}")
+    selected_covs = selected_covs.tolist()
+
+    # Get fixed covariates
+    fixed_covs = config.rover_covsel.rover.cov_fixed
+    if "intercept" in fixed_covs:
+        fixed_covs.remove("intercept")
+    return selected_covs + fixed_covs
+
+
 def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     """Format config data for spxmod xmodel.
 
@@ -226,13 +244,11 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     df = subsets.filter_subset(dataif.load_data(), subset_id)
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
-    # Load selected covs and filter by subset
-    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
-    for col_name in config.groupby:
-        col_val = subsets.get_column(col_name, subset_id)
-        selected_covs = selected_covs.query(f"{col_name} == {repr(col_val)}")
-    selected_covs = selected_covs.tolist()
-    logger.info(f"Running spxmod with selected_covariates: {selected_covs}")
+    # Get model covariates
+    selected_covs = _get_covs(
+        dataif, config, subsets.query(f"subset_id == {subset_id}")
+    )
+    logger.info(f"Running spxmod with covariates: {selected_covs}")
 
     # Create spxmod parameters
     xmodel_args = _build_xmodel_args(config, selected_covs)
