@@ -1,5 +1,9 @@
-"""Run spxmod model, currently the main goal of this step is to smooth
-the covariate coefficients across age groups.
+"""Run spxmod stage.
+
+This stage fits a model with the covariates selected in the rover stage,
+using priors or splines to smooth covariate coefficients across age
+groups (based on the 'age_mid" column in the input data).
+
 """
 
 from functools import partial
@@ -67,13 +71,12 @@ def get_residual_computation_function(
 def get_residual_se_function(
     model_type: str, pred: str, weights: str
 ) -> Callable:
-    """
-    Calculate the residual standard error for a given row based on the specified model type.
+    """Calculate the residual SE for a given row based on model type.
 
     Parameters
     ----------
     model_type
-        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
+        Model type (e.g., 'binomial', 'poisson', 'tobit').
     pred
         Column name for the predicted values.
     weights
@@ -125,7 +128,8 @@ def get_coef(model: XModel) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing coefficient, dimension, and dimension value information.
+        A DataFrame containing coefficient, dimension, and dimension
+        value information.
 
     """
     df_coef = []
@@ -139,6 +143,12 @@ def get_coef(model: XModel) -> pd.DataFrame:
 
 
 def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
+    """Format config data for spxmod xmodel.
+
+    Model includes a coefficient for each of the selected covariates and
+    age group (based on the 'age_mid' column in the input data).
+
+    """
     xmodel_args = config.spxmod.xmodel.model_dump()
     coef_bounds = xmodel_args.pop("coef_bounds")
     lam = xmodel_args.pop("lam")
@@ -176,26 +186,29 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
 
 
 def spxmod_model(directory: str, submodel_id: str) -> None:
-    """Run spxmod model smooth the age coefficients across different age
-    groups.
+    """Run spxmod stage.
+
+    This stage fits a model with the covariates selected in the rover
+    stage, using priors or splines to smooth covariate coefficients
+    across age groups (based on the 'age_mid" column in the input data).
 
     Parameters
     ----------
     directory
         Parent folder where the experiment is run.
-        - ``directory / config / settings.yaml`` contains rover modeling settings
-        - ``directory / results / spxmod`` stores all rover results
+        - ``directory / config / settings.yml`` contains model settings
+        - ``directory / results / spxmod`` stores spxmod results
     submodel_id
-        Submodel to run based on groupby setting. For example, the submodel_id
-        ``subset0`` corresponds to the data subset ``0`` stored in
-        ``subsets.csv``.
+        Submodel to run based on groupby setting. For example, the
+        submodel_id ``subset0`` corresponds to the data subset ``0``
+        stored in ``directory / results / spxmod / subsets.csv``.
 
     Outputs
     -------
     model.pkl
-        Regmodsm model instance for diagnostics.
+        SPxMod model instance for diagnostics.
     coef.csv
-        Coefficients from different age groups.
+        Model coefficients for different age groups.
     predictions.parquet
         Predictions with residual information.
 
