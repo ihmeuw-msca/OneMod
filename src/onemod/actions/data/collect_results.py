@@ -96,7 +96,7 @@ def _plot_spxmod_results(
     """TODO: same with _plot_rover_covsel_results"""
     # TODO: Plot by submodel?
     selected_covs = (
-        dataif.load_rover_covsel("selected_covs.yaml")["cov"].unique().tolist()
+        dataif.load_rover_covsel("selected_covs.csv")["cov"].unique().tolist()
     )
     if not selected_covs:
         warn("There are no covariates selected, skip `plot_spxmod_results`")
