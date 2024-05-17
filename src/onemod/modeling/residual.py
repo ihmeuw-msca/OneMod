@@ -26,7 +26,7 @@ class ResidualCalculator:
     def predict_binomial(
         data: pd.DataFrame, pred: str, residual: str = "residual"
     ) -> pd.Series:
-        return data.eval(f"{residual} * {pred} * (1 - {pred})")
+        return data.eval(f"{pred} + {residual} * {pred} * (1 - {pred})")
 
     @staticmethod
     def get_residual_poisson(
