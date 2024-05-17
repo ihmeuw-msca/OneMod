@@ -16,6 +16,7 @@ from loguru import logger
 from pplkit.data.interface import DataInterface
 from spxmod.model import XModel
 
+from onemod.modeling.residual import ResidualCalculator
 from onemod.schema import OneModConfig
 from onemod.utils import Subsets, get_handle
 
@@ -146,6 +147,7 @@ def get_coef(model: XModel) -> pd.DataFrame:
 def _get_covs(
     dataif: DataInterface, config: OneModConfig, subset: pd.DataFrame
 ) -> list[str]:
+    """Get spxmod model covariates."""
     # Get covariates selected in previous stage; filter by subset
     selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
     for col_name in config.groupby:
@@ -244,13 +246,13 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     df = subsets.filter_subset(dataif.load_data(), subset_id)
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
-    # Get model covariates
+    # Get spxmod model covariates
     selected_covs = _get_covs(
         dataif, config, subsets.query(f"subset_id == {subset_id}")
     )
     logger.info(f"Running spxmod with covariates: {selected_covs}")
 
-    # Create spxmod parameters
+    # Create spxmod model parameters
     xmodel_args = _build_xmodel_args(config, selected_covs)
     xmodel_fit_args = stage_config.xmodel_fit
     logger.info(
@@ -262,27 +264,11 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     model = XModel.from_config(xmodel_args)
     model.fit(data=df_train, data_span=df, **xmodel_fit_args)
 
-    # Create prediction and residuals
+    # Create prediction, residuals, and coefs
     logger.info("Calculating predictions and residuals")
+    residual_calculator = ResidualCalculator(config.mtype)
     df[config.pred] = model.predict(df)
-    residual_func = get_residual_computation_function(
-        model_type=config.mtype,
-        obs=config.obs,
-        pred=config.pred,
-    )
-    residual_se_func = get_residual_se_function(
-        model_type=config.mtype,
-        pred=config.pred,
-        weights=config.weights,
-    )
-    df["residual"] = df.apply(
-        residual_func,
-        axis=1,
-    )
-    df["residual_se"] = df.apply(
-        residual_se_func,
-        axis=1,
-    )
+    df = residual_calculator.get_residual(df)
     df_coef = get_coef(model)
 
     # Save results
