@@ -51,11 +51,11 @@ def _get_covs(
 ) -> list[str]:
     """Get spxmod model covariates."""
     # Get covariates selected in previous stage; filter by subset
-    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    selected_covs = dataif.load_rover_covsel("selected_covs.csv")
     for col_name in config.groupby:
         col_val = subset[col_name].item()
         selected_covs = selected_covs.query(f"{col_name} == {repr(col_val)}")
-    selected_covs = selected_covs.tolist()
+    selected_covs = selected_covs["cov"].tolist()
 
     # Get fixed covariates
     fixed_covs = config.rover_covsel.rover.cov_fixed
@@ -150,7 +150,7 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
 
     # Get spxmod model covariates
     selected_covs = _get_covs(
-        dataif, config, subsets.query(f"subset_id == {subset_id}")
+        dataif, config, subsets.subsets.query(f"subset_id == {subset_id}")
     )
     logger.info(f"Running spxmod with covariates: {selected_covs}")
 
@@ -170,16 +170,20 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     logger.info("Calculating predictions and residuals")
     residual_calculator = ResidualCalculator(config.mtype)
     df[config.pred] = model.predict(df)
-    df = residual_calculator.get_residual(df)
+    residuals = residual_calculator.get_residual(
+        df, config.pred, config.obs, config.weights
+    )
     df_coef = get_coef(model)
 
     # Save results
     dataif.dump_spxmod(model, f"submodels/{submodel_id}/model.pkl")
-    dataif.dump_spxmod(df_coef, f"submodels/{submodel_id}/coef.csv")
     dataif.dump_spxmod(
-        df[config.ids + ["residual", "residual_se", config.pred]],
+        pd.concat([df, residuals], axis=1)[
+            config.ids + ["residual", "residual_se", config.pred]
+        ],
         f"submodels/{submodel_id}/predictions.parquet",
     )
+    dataif.dump_spxmod(df_coef, f"submodels/{submodel_id}/coef.csv")
 
 
 def main() -> None:
