@@ -26,7 +26,7 @@ def get_predictions(directory: str, holdout_id: Any, pred: str) -> pd.DataFrame:
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing the available smoother predictions.
 
     Raises
@@ -74,9 +74,9 @@ def get_performance(
 
     Parameters
     ----------
-    row : pd.Series
+    row : pandas.Series
         Row containing the subset details.
-    df_holdout : pd.DataFrame
+    df_holdout : pandas.DataFrame
         Dataframe containing the holdout data.
     subsets : Subsets
         Subsets object containing the subset configuration.
@@ -125,7 +125,7 @@ def get_weights(
 
     Parameters
     ----------
-    df_performance : pd.DataFrame
+    df_performance : pandas.DataFrame
         Dataframe containing smoother performance metrics.
     subsets : Subsets
         Subsets object containing the subset data.
@@ -149,7 +149,7 @@ def get_weights(
 
     Returns
     -------
-    pd.Series
+    pandas.Series
         Smoother weights.
 
     Raises
@@ -176,12 +176,12 @@ def get_subset_weights(
     top_pct_score: float = 1.0,
     top_pct_model: float = 1.0,
     psi: float = 1.0,
-) -> pd.Series:
+) -> np.array:
     """Get subset weights.
 
     Parameters
     ----------
-    performance : pd.Series
+    performance : pandas.Series
         Series containing performance metrics for each subset.
     score : str
         Score function used to compute ensemble weights.
@@ -201,8 +201,8 @@ def get_subset_weights(
 
     Returns
     -------
-    pd.Series
-        Series containing the subset weights.
+    numpy.ndarray
+        Subset weights.
 
     Notes
     -----
@@ -221,7 +221,7 @@ def get_subset_weights(
     if score == "avg":
         avg_scores = performance.reset_index(drop=True)
         avg_scores[:] = 1
-        return avg_scores / avg_scores.sum()
+        return (avg_scores / avg_scores.sum()).values
     if score == "rover":
         rover_scores = np.exp(-performance)
         argsort = np.argsort(rover_scores)[::-1]
@@ -229,17 +229,17 @@ def get_subset_weights(
         num_learners = int(np.floor(len(rover_scores)) * top_pct_model) + 1
         indices[argsort[num_learners:]] = False
         rover_scores[~indices] = 0.0
-        return rover_scores / rover_scores.sum()
+        return (rover_scores / rover_scores.sum()).values
     if score == "codem":
         ranks = np.argsort(np.argsort(performance))
         codem_scores = psi ** (len(performance) - ranks)
-        return codem_scores / codem_scores.sum()
+        return (codem_scores / codem_scores.sum()).values
     if score == "best":
         best_scores = performance.reset_index(drop=True)
         argsort = np.argsort(best_scores)
         best_scores[argsort[0]] = 1.0
         best_scores[argsort[1:]] = 0.0
-        return best_scores
+        return best_scores.values
     raise ValueError(f"Invalid weight score: {score}")
 
 
@@ -289,7 +289,7 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
         columns = list(
             set(
                 config.ids
-                + stage_config.groupby
+                + list(stage_config.groupby)
                 + [config.obs, holdout_id, config.test]
             )
         )
