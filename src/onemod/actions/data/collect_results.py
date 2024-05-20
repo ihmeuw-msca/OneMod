@@ -32,13 +32,13 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
 
 
 def _get_selected_covs(
-    summaries: pd.DataFrame, config: OneModConfig
+    summaries: pd.DataFrame, groupby: list[str], t_threshold: float
 ) -> pd.DataFrame:
     selected_covs = (
-        summaries.groupby(list(config.groupby) + ["cov"])["abs_t_stat"]
+        summaries.groupby(groupby + ["cov"])["abs_t_stat"]
         .mean()
         .reset_index()
-        .query(f"abs_t_stat >= {config.rover_covsel.t_threshold}")
+        .query(f"abs_t_stat >= {t_threshold}")
     )
     logger.info(
         f"Selected covariates: {selected_covs['cov'].unique().tolist()}"
@@ -137,7 +137,9 @@ def collect_results_rover_covsel(directory: str) -> None:
     dataif.dump_rover_covsel(summaries, "summaries.csv")
 
     # Select covariates and save
-    selected_covs = _get_selected_covs(summaries, config)
+    selected_covs = _get_selected_covs(
+        summaries, list(config.groupby), config.rover_covsel.t_threshold
+    )
     dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
 
     # Plot coefficients and save
