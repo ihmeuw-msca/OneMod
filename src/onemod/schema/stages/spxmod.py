@@ -79,9 +79,9 @@ class SPxModConfig(StageConfig):
     Parameters
     ----------
     groupby
-        Set of ID columns to group data by when running separate models
+        List of ID columns to group data by when running separate models
         for each sex_id, age_group_id, super_region_id, etc. Default is
-        an empty set.
+        an empty list.
     max_attempts
         Maximum number of attempts to run the Jobmon task associated
         with the stage. Default is 1.
@@ -104,7 +104,7 @@ class SPxModConfig(StageConfig):
     .. code-block:: yaml
 
         spxmod:
-          groupby: set()
+          groupby: []
           max_attempts: 1
           xmodel:
             spaces: []

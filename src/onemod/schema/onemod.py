@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from onemod.schema.base import Config
+from onemod.schema.base import Config, StageConfig
 from onemod.schema.stages import (
     EnsembleConfig,
     RoverCovselConfig,
@@ -47,9 +47,9 @@ class OneModConfig(Config):
         input data; for example, if the input data includes data from
         1950-2000 but you only want to run a model from 1980-1990.
     groupby
-        Set of ID columns to group data by when running separate models
+        List of ID columns to group data by when running separate models
         for each sex_id, age_group_id, super_region_id, etc. Default is
-        an empty set, which means all points are run in a single model.
+        an empty list, which means all points are run in a single model.
         This setting applies to all stages.
     rover_covsel
         Rover covariate selection stage configuration.
@@ -191,7 +191,7 @@ class OneModConfig(Config):
     holdouts: list[str]
     test: str = "test"
     id_subsets: dict[str, list[Any]] = {}
-    groupby: set[str] = set()
+    groupby: list[str] = []
 
     rover_covsel: RoverCovselConfig | None = None
     spxmod: SPxModConfig | None = None
@@ -209,6 +209,12 @@ class OneModConfig(Config):
             if stage_config is not None:
                 if isinstance(stage_config, WeaveConfig):
                     for model_config in stage_config.models.values():
-                        model_config.groupby.update(self.groupby)
+                        self.add_groups(model_config)
                 else:
-                    stage_config.groupby.update(self.groupby)
+                    self.add_groups(stage_config)
+
+    def add_groups(self, stage_config: StageConfig):
+        """Add global groups to stage."""
+        for group in self.groupby:
+            if group not in stage_config.groupby:
+                stage_config.groupby.append(group)

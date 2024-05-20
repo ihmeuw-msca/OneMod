@@ -175,7 +175,7 @@ class Subsets:
         """
 
         self.stage_id = stage_id
-        self.groupby = list(stage_config.groupby)
+        self.groupby = stage_config.groupby
         if subsets is None:
             if data is None:
                 raise TypeError(

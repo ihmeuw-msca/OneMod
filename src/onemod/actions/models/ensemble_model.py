@@ -289,7 +289,7 @@ def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
         columns = list(
             set(
                 config.ids
-                + list(stage_config.groupby)
+                + stage_config.groupby
                 + [config.obs, holdout_id, config.test]
             )
         )

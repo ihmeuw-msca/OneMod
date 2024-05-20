@@ -138,7 +138,7 @@ def collect_results_rover_covsel(directory: str) -> None:
 
     # Select covariates and save
     selected_covs = _get_selected_covs(
-        summaries, list(config.groupby), config.rover_covsel.t_threshold
+        summaries, config.groupby, config.rover_covsel.t_threshold
     )
     dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
 
