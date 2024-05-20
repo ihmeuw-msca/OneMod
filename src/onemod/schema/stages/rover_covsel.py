@@ -48,14 +48,14 @@ class RoverFit(Config):
 
 
 class RoverCovselConfig(StageConfig):
-    """Rover covariate selection stage configurations.
+    """Rover covariate selection stage configuration.
 
     Parameters
     ----------
     groupby
         List of ID columns to group data by when running separate models
         for each sex_id, age_group_id, super_region_id, etc. Default is
-        an empty list, which means all points are run in a single model.
+        an empty list.
     max_attempts
         Maximum number of attempts to run the Jobmon task associated
         with the stage. Default is 1.
@@ -67,9 +67,14 @@ class RoverCovselConfig(StageConfig):
     rover_fit
         Rover fit function arguments.
 
+    Notes
+    -----
+    If a StageConfig object is created while initializing an instance of
+    OneModConfig, the onemod groupby setting will be added to the stage
+    groupby setting.
 
-    Example
-    -------
+    Examples
+    --------
     All of the rover fields have default values equivalent to the
     following configuration.
 

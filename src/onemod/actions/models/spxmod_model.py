@@ -1,5 +1,9 @@
-"""Run spxmod model, currently the main goal of this step is to smooth
-the covariate coefficients across age groups.
+"""Run spxmod stage.
+
+This stage fits a model with the covariates selected in the rover stage,
+using priors or splines to smooth covariate coefficients across age
+groups (based on the 'age_mid" column in the input data).
+
 """
 
 from functools import partial
@@ -9,109 +13,12 @@ import fire
 import numpy as np
 import pandas as pd
 from loguru import logger
+from pplkit.data.interface import DataInterface
 from spxmod.model import XModel
 
+from onemod.modeling.residual import ResidualCalculator
 from onemod.schema import OneModConfig
-from onemod.utils import get_handle
-
-
-def get_residual_computation_function(
-    model_type: str, obs: str, pred: str
-) -> Callable:
-    """
-    Calculate the residual for a given row based on the specified model type.
-
-    Parameters
-    ----------
-    model_type
-        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-    obs
-        Column name for the observed values.
-    pred
-        Column name for the predicted values.
-
-    Returns
-    -------
-    float
-        The calculated residual value.
-
-    Raises
-    ------
-    ValueError
-        If the specified model_type is unsupported.
-
-    """
-
-    # TODO: can these be vectorized functions?
-    callable_map = {
-        "binomial": partial(
-            lambda row, obs, pred: (row[obs] - row[pred])
-            / (row[pred] * (1 - row[pred])),
-            obs=obs,
-            pred=pred,
-        ),
-        "poisson": partial(
-            lambda row, obs, pred: row[obs] / row[pred] - 1, obs=obs, pred=pred
-        ),
-        "gaussian": partial(
-            lambda row, obs, pred: row[obs] - row[pred], obs=obs, pred=pred
-        ),
-    }
-
-    try:
-        return callable_map[model_type]
-    except KeyError:
-        raise ValueError(f"Unsupported {model_type=}")
-
-
-def get_residual_se_function(
-    model_type: str, pred: str, weights: str
-) -> Callable:
-    """
-    Calculate the residual standard error for a given row based on the specified model type.
-
-    Parameters
-    ----------
-    model_type
-        Type of the statistical model (e.g., 'binomial', 'poisson', 'tobit').
-    pred
-        Column name for the predicted values.
-    weights
-        Column name for the weights.
-
-    Returns
-    -------
-    float
-        The calculated residual standard error value.
-
-    Raises
-    ------
-    ValueError
-        If the specified model_type is unsupported.
-
-    """
-
-    callable_map = {
-        "binomial": partial(
-            lambda row, pred, weights: 1
-            / np.sqrt(row[weights] * row[pred] * (1 - row[pred])),
-            pred=pred,
-            weights=weights,
-        ),
-        "poisson": partial(
-            lambda row, pred, weights: 1 / np.sqrt(row[weights] * row[pred]),
-            pred=pred,
-            weights=weights,
-        ),
-        "gaussian": partial(
-            lambda row, weights: 1 / np.sqrt(row[weights]), weights=weights
-        ),
-    }
-
-    try:
-        return callable_map[model_type]
-    except KeyError:
-        raise ValueError(f"Unsupported {model_type=}")
+from onemod.utils import Subsets, get_handle
 
 
 def get_coef(model: XModel) -> pd.DataFrame:
@@ -125,12 +32,13 @@ def get_coef(model: XModel) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing coefficient, dimension, and dimension value information.
+        A DataFrame containing coefficient, dimension, and dimension
+        value information.
 
     """
     df_coef = []
     for var_builder in model.var_builders:
-        df_sub = var_builder.space.span
+        df_sub = var_builder.space.span.copy()
         df_sub["cov"] = var_builder.name
         df_coef.append(df_sub)
     df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
@@ -138,7 +46,33 @@ def get_coef(model: XModel) -> pd.DataFrame:
     return df_coef
 
 
+def _get_covs(
+    dataif: DataInterface, config: OneModConfig, subset: pd.DataFrame
+) -> list[str]:
+    """Get spxmod model covariates."""
+    # Get covariates selected in previous stage; filter by subset
+    selected_covs = dataif.load_rover_covsel("selected_covs.csv")
+    for col_name in config.groupby:
+        col_val = subset[col_name].item()
+        selected_covs = selected_covs.query(f"{col_name} == {repr(col_val)}")
+    selected_covs = selected_covs["cov"].tolist()
+
+    # Get fixed covariates
+    fixed_covs = config.rover_covsel.rover.cov_fixed
+    if "intercept" in fixed_covs:
+        fixed_covs.remove("intercept")
+    return selected_covs + fixed_covs
+
+
 def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
+    """Format config data for spxmod xmodel.
+
+    Model includes a coefficient for each of the selected covariates and
+    age group (based on the 'age_mid' column in the input data).
+
+    TODO: Update for spline variables.
+
+    """
     xmodel_args = config.spxmod.xmodel.model_dump()
     coef_bounds = xmodel_args.pop("coef_bounds")
     lam = xmodel_args.pop("lam")
@@ -175,23 +109,30 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     return xmodel_args
 
 
-def spxmod_model(directory: str) -> None:
-    """Run spxmod model smooth the age coefficients across different age
-    groups.
+def spxmod_model(directory: str, submodel_id: str) -> None:
+    """Run spxmod stage.
+
+    This stage fits a model with the covariates selected in the rover
+    stage, using priors or splines to smooth covariate coefficients
+    across age groups (based on the 'age_mid" column in the input data).
 
     Parameters
     ----------
     directory
         Parent folder where the experiment is run.
-        - ``directory / config / settings.yaml`` contains rover modeling settings
-        - ``directory / results / spxmod`` stores all rover results
+        - ``directory / config / settings.yml`` contains model settings
+        - ``directory / results / spxmod`` stores spxmod results
+    submodel_id
+        Submodel to run based on groupby setting. For example, the
+        submodel_id ``subset0`` corresponds to the data subset ``0``
+        stored in ``directory / results / spxmod / subsets.csv``.
 
     Outputs
     -------
     model.pkl
-        Regmodsm model instance for diagnostics.
+        SPxMod model instance for diagnostics.
     coef.csv
-        Coefficients from different age groups.
+        Model coefficients for different age groups.
     predictions.parquet
         Predictions with residual information.
 
@@ -199,63 +140,50 @@ def spxmod_model(directory: str) -> None:
     dataif, config = get_handle(directory)
     stage_config = config.spxmod
 
-    # load selected covs from previous stage
-    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
-    if not selected_covs:
-        selected_covs = []
-
-    logger.info(f"Running smoothing with {selected_covs} as chosen covariates.")
-
-    # Create spxmod parameters
-    xmodel_args = _build_xmodel_args(config, selected_covs)
-    xmodel_fit_args = stage_config.xmodel_fit
-
-    logger.info(
-        f"{len(xmodel_args['var_builders'])} var_builders created for smoothing."
+    # Load data and filter by subset
+    subsets = Subsets(
+        "spxmod", stage_config, subsets=dataif.load_spxmod("subsets.csv")
     )
-
-    # Create spxmod model
-    model = XModel.from_config(xmodel_args)
-
-    df = dataif.load_data()
+    subset_id = int(submodel_id.removeprefix("subset"))
+    df = subsets.filter_subset(dataif.load_data(), subset_id)
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
-    logger.info(f"Fitting the model with data size {df_train.shape}")
+    # Get spxmod model covariates
+    selected_covs = _get_covs(
+        dataif, config, subsets.subsets.query(f"subset_id == {subset_id}")
+    )
+    logger.info(f"Running spxmod with covariates: {selected_covs}")
 
-    # Fit spxmod model
+    # Create spxmod model parameters
+    xmodel_args = _build_xmodel_args(config, selected_covs)
+    xmodel_fit_args = stage_config.xmodel_fit
+    logger.info(
+        f"{len(xmodel_args['var_builders'])} var_builders created for spxmod"
+    )
+
+    # Create and fit spxmod model
+    logger.info(f"Fitting spxmod model with data size {df_train.shape}")
+    model = XModel.from_config(xmodel_args)
     model.fit(data=df_train, data_span=df, **xmodel_fit_args)
 
-    # Create prediction and residuals
-    logger.info("XModel fit, calculating residuals")
+    # Create prediction, residuals, and coefs
+    logger.info("Calculating predictions and residuals")
+    residual_calculator = ResidualCalculator(config.mtype)
     df[config.pred] = model.predict(df)
-    residual_func = get_residual_computation_function(
-        model_type=config.mtype,
-        obs=config.obs,
-        pred=config.pred,
+    residuals = residual_calculator.get_residual(
+        df, config.pred, config.obs, config.weights
     )
-    residual_se_func = get_residual_se_function(
-        model_type=config.mtype,
-        pred=config.pred,
-        weights=config.weights,
-    )
-    df["residual"] = df.apply(
-        residual_func,
-        axis=1,
-    )
-    df["residual_se"] = df.apply(
-        residual_se_func,
-        axis=1,
-    )
-
     df_coef = get_coef(model)
 
     # Save results
-    dataif.dump_spxmod(model, "model.pkl")
-    dataif.dump_spxmod(df_coef, "coef.csv")
+    dataif.dump_spxmod(model, f"submodels/{submodel_id}/model.pkl")
     dataif.dump_spxmod(
-        df[config.ids + ["residual", "residual_se", config.pred]],
-        "predictions.parquet",
+        pd.concat([df, residuals], axis=1)[
+            config.ids + ["residual", "residual_se", config.pred]
+        ],
+        f"submodels/{submodel_id}/predictions.parquet",
     )
+    dataif.dump_spxmod(df_coef, f"submodels/{submodel_id}/coef.csv")
 
 
 def main() -> None:

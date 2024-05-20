@@ -71,7 +71,7 @@ class WeaveModel(StageConfig):
     groupby
         List of ID columns to group data by when running separate models
         for each sex_id, age_group_id, super_region_id, etc. Default is
-        an empty list, which means all points are run in a single model.
+        an empty list.
     max_attempts
         Maximum number of attempts to run the Jobmon task associated
         with the stage. Default is 1.
@@ -81,6 +81,12 @@ class WeaveModel(StageConfig):
         Maximum number of points per batch when fitting the model using
         multiple Jobmon tasks. Default is None, which means do not fit
         the model in batches.
+
+    Notes
+    -----
+    If a StageConfig object is created while initializing an instance of
+    OneModConfig, the onemod groupby setting will be added to the stage
+    groupby setting.
 
     """
 
@@ -108,7 +114,7 @@ class WeaveConfig(Config):
         weave:
           models:
             super_region_model:
-              groupby: [sex_id, super_region_id]
+              groupby: [super_region_id]
               max_batch: 5000
               dimensions:
                 age:
@@ -126,7 +132,7 @@ class WeaveConfig(Config):
                   kernel: tricubic
                   exponent: [0.5, 1, 1.5]
             age_group_model:
-              groupby: [age_group_id, sex_id]
+              groupby: [age_group_id]
               dimensions:
                 location:
                   name: location_id

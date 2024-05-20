@@ -48,7 +48,7 @@ def run_pipeline(
 
     # Filter input data by ID subsets
     # Used for task creation so must happen outside of workflow
-    if not dataif.data.exists():
+    if "rover_covsel" in stages or not dataif.data.exists():
         format_input(directory)
 
     # Configure Jobmon resources

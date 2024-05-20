@@ -67,7 +67,6 @@ class XModelInit(Config):
     spaces: list[SPxModSpace] = []
     var_builders: list[SPxModVarBuilder] = []
     param_specs: dict | None = None
-
     coef_bounds: dict[str, dict[str, float]] = {}
     lam: float = 0.0
 
@@ -82,7 +81,7 @@ class SPxModConfig(StageConfig):
     groupby
         List of ID columns to group data by when running separate models
         for each sex_id, age_group_id, super_region_id, etc. Default is
-        an empty list, which means all points are run in a single model.
+        an empty list.
     max_attempts
         Maximum number of attempts to run the Jobmon task associated
         with the stage. Default is 1.
@@ -91,8 +90,14 @@ class SPxModConfig(StageConfig):
     xmodel_fit
         Model fit function arguments.
 
-    Example
-    -------
+    Notes
+    -----
+    If a StageConfig object is created while initializing an instance of
+    OneModConfig, the onemod groupby setting will be added to the stage
+    groupby setting.
+
+    Examples
+    --------
     All of the spxmod fields have default values equivalent to the
     following configuration.
 

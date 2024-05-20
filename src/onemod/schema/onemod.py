@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from onemod.schema.base import Config
+from onemod.schema.base import Config, StageConfig
 from onemod.schema.stages import (
     EnsembleConfig,
     RoverCovselConfig,
@@ -46,6 +46,11 @@ class OneModConfig(Config):
         as values. This can be used to run models on subsets of the
         input data; for example, if the input data includes data from
         1950-2000 but you only want to run a model from 1980-1990.
+    groupby
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc. Default is
+        an empty list, which means all points are run in a single model.
+        This setting applies to all stages.
     rover_covsel
         Rover covariate selection stage configuration.
     spxmod
@@ -55,9 +60,12 @@ class OneModConfig(Config):
     ensemble
         Ensemble stage configuration.
 
-    Example
-    -------
-    This is a sample OneMod configuration.
+    TODO: Indicate which settings are used by which stages.
+
+    Examples
+    --------
+    This is a sample OneMod configuration. All stages run separate
+    models by sex_id because of the OneMod groupby setting.
 
     .. code-block:: yaml
 
@@ -69,6 +77,7 @@ class OneModConfig(Config):
           location_id: [13, 14]
           sex_id: [1, 2]
           year_id: [1980, 1981, 1982]
+        groupby: [sex_id]
         obs: obs_rate
         mtype: binomial
         weights: sample_size
@@ -78,7 +87,7 @@ class OneModConfig(Config):
 
         # Rover covariate selection settings
         rover_covsel:
-          groupby: [age_group_id, sex_id]
+          groupby: [age_group_id]
           t_threshold: 1.0
           rover:
             cov_fixed: [intercept]
@@ -131,7 +140,7 @@ class OneModConfig(Config):
         weave:
           models:
             super_region_model:
-              groupby: [sex_id, super_region_id]
+              groupby: [super_region_id]
               max_batch: 5000
               dimensions:
                 age:
@@ -149,7 +158,7 @@ class OneModConfig(Config):
                   kernel: tricubic
                   exponent: [0.5, 1, 1.5]
               age_group_model:
-                groupby: [age_group_id, sex_id]
+                groupby: [age_group_id]
                 dimensions:
                   location:
                     name: location_id
@@ -165,7 +174,7 @@ class OneModConfig(Config):
 
         # Ensemble settings
         ensemble:
-          groupby: [sex_id, super_region_id]
+          groupby: [super_region_id]
           metric: rmse
           score: rover
           top_pct_score: 1
@@ -182,8 +191,30 @@ class OneModConfig(Config):
     holdouts: list[str]
     test: str = "test"
     id_subsets: dict[str, list[Any]] = {}
+    groupby: list[str] = []
 
     rover_covsel: RoverCovselConfig | None = None
     spxmod: SPxModConfig | None = None
     weave: WeaveConfig | None = None
     ensemble: EnsembleConfig | None = None
+
+    def model_post_init(self, *args, **kwargs) -> None:
+        """Add global groupby attribute to stages."""
+        for stage_config in [
+            self.rover_covsel,
+            self.spxmod,
+            self.weave,
+            self.ensemble,
+        ]:
+            if stage_config is not None:
+                if isinstance(stage_config, WeaveConfig):
+                    for model_config in stage_config.models.values():
+                        self.add_groups(model_config)
+                else:
+                    self.add_groups(stage_config)
+
+    def add_groups(self, stage_config: StageConfig):
+        """Add global groups to stage."""
+        for group in self.groupby:
+            if group not in stage_config.groupby:
+                stage_config.groupby.append(group)
