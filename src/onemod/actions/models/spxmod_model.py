@@ -117,6 +117,19 @@ def _add_spline_variables(xmodel_args: dict, spline_vars: list[str]) -> dict:
     return xmodel_args
 
 
+def _add_prior_settings(
+    xmodel_args: dict, coef_bounds: dict, lam: float
+) -> dict:
+    """Add coef_bounds and lam to all var_builders."""
+    for var_builder in xmodel_args("var_builders"):
+        cov = var_builder["name"]
+        if "uprior" not in var_builder or var_builder["uprior"] is None:
+            var_builder["uprior"] = coef_bounds.get(cov)
+        if "lam" not in var_builder or var_builder["lam"] is None:
+            var_builder["lam"] = lam
+    return xmodel_args
+
+
 def _build_xmodel_args(
     config: OneModConfig, selected_covs: list[str], spline_vars: list[str]
 ) -> dict:
@@ -128,24 +141,22 @@ def _build_xmodel_args(
     vary by dimensions such as age and/or location.
 
     """
+    # Add global settings
     xmodel_args = config.spxmod.xmodel.model_dump()
     xmodel_args["model_type"] = config.mtype
     xmodel_args["obs"] = config.obs
     xmodel_args["weights"] = config.weights
+
+    # Add covariate and spline variables
+    xmodel_args.pop("spline_config")
     xmodel_args = _add_selected_covs(xmodel_args, selected_covs)
     if spline_vars:
         xmodel_args = _add_spline_variables(xmodel_args, spline_vars)
 
-    # default settings for everyone
+    # Add coef_bounds and lam to all variables
     coef_bounds = xmodel_args.pop("coef_bounds")
     lam = xmodel_args.pop("lam")
-    for var_builder in xmodel_args["var_builders"]:
-        cov = var_builder["name"]
-        if "uprior" not in var_builder or var_builder["uprior"] is None:
-            var_builder["uprior"] = coef_bounds.get(cov)
-
-        if "lam" not in var_builder or var_builder["lam"] is None:
-            var_builder["lam"] = lam
+    xmodel_args = _add_prior_settings(xmodel_args, coef_bounds, lam)
 
     return xmodel_args
 
