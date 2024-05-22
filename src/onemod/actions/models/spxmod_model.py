@@ -105,7 +105,21 @@ def _add_selected_covs(xmodel_args: dict, selected_covs: list[str]) -> dict:
     return xmodel_args
 
 
-def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
+def _add_spline_variables(xmodel_args: dict, spline_vars: list[str]) -> dict:
+    """Add spline variables to spxmod model configuration."""
+    for var in xmodel_args["var_builders"].copy():
+        if var["name"] == "spline":
+            xmodel_args["var_builders"].remove(var)
+            for spline_var in spline_vars:
+                spline_var_builder = var.copy()
+                spline_var_builder["name"] = spline_var
+                xmodel_args["var_builders"].append(spline_var_builder)
+    return xmodel_args
+
+
+def _build_xmodel_args(
+    config: OneModConfig, selected_covs: list[str], spline_vars: list[str]
+) -> dict:
     """Format config data for spxmod xmodel.
 
     Model automatically includes a coefficient for each of the selected
@@ -115,12 +129,16 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
 
     """
     xmodel_args = config.spxmod.xmodel.model_dump()
-    coef_bounds = xmodel_args.pop("coef_bounds")
-    lam = xmodel_args.pop("lam")
-
+    xmodel_args["model_type"] = config.mtype
+    xmodel_args["obs"] = config.obs
+    xmodel_args["weights"] = config.weights
     xmodel_args = _add_selected_covs(xmodel_args, selected_covs)
+    if spline_vars:
+        xmodel_args = _add_spline_variables(xmodel_args, spline_vars)
 
     # default settings for everyone
+    coef_bounds = xmodel_args.pop("coef_bounds")
+    lam = xmodel_args.pop("lam")
     for var_builder in xmodel_args["var_builders"]:
         cov = var_builder["name"]
         if "uprior" not in var_builder or var_builder["uprior"] is None:
@@ -128,10 +146,6 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
 
         if "lam" not in var_builder or var_builder["lam"] is None:
             var_builder["lam"] = lam
-
-    xmodel_args["model_type"] = config.mtype
-    xmodel_args["obs"] = config.obs
-    xmodel_args["weights"] = config.weights
 
     return xmodel_args
 
@@ -169,19 +183,21 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     dataif, config = get_handle(directory)
     stage_config = config.spxmod
 
-    # Load data, filter by subset, and add spline basis
+    # Load data and filter by subset
     subsets = Subsets(
         "spxmod", stage_config, subsets=dataif.load_spxmod("subsets.csv")
     )
     subset_id = int(submodel_id.removeprefix("subset"))
     df = subsets.filter_subset(dataif.load_data(), subset_id)
-    if stage_config.xmodel.spline_config is not None:
+
+    # Add spline basis
+    spline_vars = []
+    if stage_config.xmodel.spline_config:
         spline_config = stage_config.xmodel.spline_config.model_dump()
         col_name = spline_config.pop("name")
-        df = pd.concat(
-            [df, _get_spline_basis(df[col_name], spline_config)], axis=1
-        )
-    df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
+        spline_basis = _get_spline_basis(df[col_name], spline_config)
+        spline_vars = spline_basis.columns.tolist()
+        df = pd.concat([df, spline_basis], axis=1)
 
     # Get spxmod model covariates
     selected_covs = _get_covs(
@@ -190,13 +206,14 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     logger.info(f"Running spxmod with covariates: {selected_covs}")
 
     # Create spxmod model parameters
-    xmodel_args = _build_xmodel_args(config, selected_covs)
+    xmodel_args = _build_xmodel_args(config, selected_covs, spline_vars)
     xmodel_fit_args = stage_config.xmodel_fit
     logger.info(
         f"{len(xmodel_args['var_builders'])} var_builders created for spxmod"
     )
 
     # Create and fit spxmod model
+    df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
     logger.info(f"Fitting spxmod model with data size {df_train.shape}")
     model = XModel.from_config(xmodel_args)
     model.fit(data=df_train, data_span=df, **xmodel_fit_args)
