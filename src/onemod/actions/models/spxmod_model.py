@@ -77,6 +77,7 @@ def _get_spline_basis(column: pd.Series, spline_config: dict) -> pd.DataFrame:
     idx_start = 0 if spline_config["include_first_basis"] else 1
     spline_basis = pd.DataFrame(
         spline.design_mat(column),
+        index=column.index,
         columns=[
             f"spline_{ii+idx_start}" for ii in range(spline.num_spline_bases)
         ],
@@ -121,7 +122,7 @@ def _add_prior_settings(
     xmodel_args: dict, coef_bounds: dict, lam: float
 ) -> dict:
     """Add coef_bounds and lam to all var_builders."""
-    for var_builder in xmodel_args("var_builders"):
+    for var_builder in xmodel_args["var_builders"]:
         cov = var_builder["name"]
         if "uprior" not in var_builder or var_builder["uprior"] is None:
             var_builder["uprior"] = coef_bounds.get(cov)
