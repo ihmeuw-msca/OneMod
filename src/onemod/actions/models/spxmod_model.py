@@ -1,8 +1,10 @@
 """Run spxmod stage.
 
 This stage fits a model with the covariates selected in the rover stage,
-using priors or splines to smooth covariate coefficients across age
-groups (based on the 'age_mid" column in the input data).
+using priors to smooth covariate coefficients across age groups (based
+on the 'age_mid' column in the input data). Users can also specify
+intercepts and spline variables that vary by dimensions such as age
+and/or location.
 
 """
 
@@ -22,7 +24,7 @@ from onemod.utils import Subsets, get_handle
 
 
 def get_coef(model: XModel) -> pd.DataFrame:
-    """Get coefficient information from the specified model.
+    """Get coefficient information from the fitted model.
 
     Parameters
     ----------
@@ -67,10 +69,10 @@ def _get_covs(
 def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     """Format config data for spxmod xmodel.
 
-    Model includes a coefficient for each of the selected covariates and
-    age group (based on the 'age_mid' column in the input data).
-
-    TODO: Update for spline variables.
+    Model automatically includes a coefficient for each of the selected
+    covariates and age group (based on the 'age_mid' column in the input
+    data). Users can also specify intercepts and spline variables that
+    vary by dimensions such as age and/or location.
 
     """
     xmodel_args = config.spxmod.xmodel.model_dump()
@@ -113,8 +115,10 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     """Run spxmod stage.
 
     This stage fits a model with the covariates selected in the rover
-    stage, using priors or splines to smooth covariate coefficients
-    across age groups (based on the 'age_mid" column in the input data).
+    stage, using priors to smooth covariate coefficients across age
+    groups (based on the 'age_mid' column in the input data). Users can
+    also specify intercepts and spline variables that vary by dimensions
+    such as age and/or location.
 
     Parameters
     ----------
