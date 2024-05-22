@@ -84,6 +84,27 @@ def _get_spline_basis(column: pd.Series, spline_config: dict) -> pd.DataFrame:
     return spline_basis
 
 
+def _add_selected_covs(xmodel_args: dict, selected_covs: list[str]) -> dict:
+    """Add selected covariates to spxmod model configuration."""
+    # add age_mid to spaces if not already included
+    space_keys = [space["name"] for space in xmodel_args["spaces"]]
+    if "age_mid" not in space_keys:
+        xmodel_args["spaces"].append(
+            dict(name="age_mid", dims=[dict(name="age_mid", type="numerical")])
+        )
+
+    # add variables for selected covs if not already included
+    var_builder_keys = [
+        (var_builder["name"], var_builder["space"])
+        for var_builder in xmodel_args["var_builders"]
+    ]
+    for cov in selected_covs:
+        if (cov, "age_mid") not in var_builder_keys:
+            xmodel_args["var_builders"].append(dict(name=cov, space="age_mid"))
+
+    return xmodel_args
+
+
 def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     """Format config data for spxmod xmodel.
 
@@ -97,21 +118,7 @@ def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
     coef_bounds = xmodel_args.pop("coef_bounds")
     lam = xmodel_args.pop("lam")
 
-    space_keys = [space["name"] for space in xmodel_args["spaces"]]
-    var_builder_keys = [
-        (var_builder["name"], var_builder["space"])
-        for var_builder in xmodel_args["var_builders"]
-    ]
-
-    # add age_mid if not specified in spaces
-    if "age_mid" not in space_keys:
-        xmodel_args["spaces"].append(
-            dict(name="age_mid", dims=[dict(name="age_mid", type="numerical")])
-        )
-
-    for cov in selected_covs:
-        if (cov, "age_mid") not in var_builder_keys:
-            xmodel_args["var_builders"].append(dict(name=cov, space="age_mid"))
+    xmodel_args = _add_selected_covs(xmodel_args, selected_covs)
 
     # default settings for everyone
     for var_builder in xmodel_args["var_builders"]:
