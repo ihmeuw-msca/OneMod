@@ -17,6 +17,7 @@ import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
 from spxmod.model import XModel
+from xspline import XSpline
 
 from onemod.modeling.residual import ResidualCalculator
 from onemod.schema import OneModConfig
@@ -64,6 +65,23 @@ def _get_covs(
     if "intercept" in fixed_covs:
         fixed_covs.remove("intercept")
     return selected_covs + fixed_covs
+
+
+def _get_spline_basis(column: pd.Series, spline_config: dict) -> pd.DataFrame:
+    """Get spline basis based on data and configuration."""
+    col_min, col_max = column.min(), column.max()
+    spline_config["knots"] = col_min + np.array(spline_config["knots"]) * (
+        col_max - col_min
+    )
+    spline = XSpline(**spline_config)
+    idx_start = 0 if spline_config["include_first_basis"] else 1
+    spline_basis = pd.DataFrame(
+        spline.design_mat(column),
+        columns=[
+            f"spline_{ii+idx_start}" for ii in range(spline.num_spline_bases)
+        ],
+    )
+    return spline_basis
 
 
 def _build_xmodel_args(config: OneModConfig, selected_covs: list[str]) -> dict:
@@ -144,12 +162,18 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     dataif, config = get_handle(directory)
     stage_config = config.spxmod
 
-    # Load data and filter by subset
+    # Load data, filter by subset, and add spline basis
     subsets = Subsets(
         "spxmod", stage_config, subsets=dataif.load_spxmod("subsets.csv")
     )
     subset_id = int(submodel_id.removeprefix("subset"))
     df = subsets.filter_subset(dataif.load_data(), subset_id)
+    if stage_config.xmodel.spline_config is not None:
+        spline_config = stage_config.xmodel.spline_config.model_dump()
+        col_name = spline_config.pop("name")
+        df = pd.concat(
+            [df, _get_spline_basis(df[col_name], spline_config)], axis=1
+        )
     df_train = df.query(f"({config.test} == 0) & {config.obs}.notnull()")
 
     # Get spxmod model covariates
