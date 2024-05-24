@@ -123,7 +123,7 @@ class XModelInit(Config):
 
     To create a spxmod model, additional configuration args `mtype`,
     `obs`, `weights`, are taken from the OneMod config. For more details
-    please check out the RegModSM package
+    please check out the SPxMod package
     `documentation <https://github.com/ihmeuw-msca/spxmod>`_.
 
     Parameters
@@ -143,6 +143,8 @@ class XModelInit(Config):
         Dictionary containing spline variable configuration.
     lam
         Default lam value for all var_builders. Default is 0.0.
+
+    # TODO: Should rover and spxmod coef_bounds be moved to onemod config?
 
     """
 
@@ -175,9 +177,12 @@ class SPxModConfig(StageConfig):
 
     Notes
     -----
-    If a StageConfig object is created while initializing an instance of
-    OneModConfig, the onemod groupby setting will be added to the stage
-    groupby setting.
+    * If a StageConfig object is created while initializing an instance
+      of OneModConfig, the onemod groupby setting will be added to the
+      stage groupby setting.
+    * `xmodel_fit` options such as tolerance values should not be
+      written in scientific notation, as pydantic will read it as a
+      string (e.g., use 0.0001 instead of 1e-4).
 
     Examples
     --------
@@ -195,8 +200,6 @@ class SPxModConfig(StageConfig):
             coef_bounds: {}
             lam: 0.0
           xmodel_fit: {}
-
-    TODO: Fix xmodel_fit['options']['gtol'] = 1e-6 read as string from yaml
 
     """
 

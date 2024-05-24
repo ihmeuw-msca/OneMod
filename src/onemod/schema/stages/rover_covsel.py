@@ -39,6 +39,8 @@ class RoverFit(Config):
     coef_bounds
         Dictionary of coefficient bounds. Default is an empty dictionary.
 
+    # TODO: Should rover and spxmod coef_bounds be moved to onemod config?
+
     """
 
     strategies: list[str] = ["forward"]
