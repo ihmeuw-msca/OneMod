@@ -19,11 +19,13 @@ from kreg.kernel.kron_kernel import KroneckerKernel
 from kreg.likelihood import BinomialLikelihood
 from kreg.model import KernelRegModel
 from numpy.typing import NDArray
-from onemod.schema.onemod import OneModConfig
+from onemod.schema import OneModConfig, StageConfig
 from onemod.utils import Subsets, get_handle
 
 
-def build_kernels(data: pd.DataFrame, config: dict) -> list[Callable]:
+def build_kernels(
+    data: pd.DataFrame, stage_config: StageConfig
+) -> list[Callable]:
     """_summary_
 
     # TODO: Ask about commented code, generalize for different kernels, finish docstring
@@ -32,7 +34,7 @@ def build_kernels(data: pd.DataFrame, config: dict) -> list[Callable]:
     ----------
     data : pandas.DataFrame
         _description_
-    config : dict
+    stage_config : StageConfig
         _description_
 
     Returns
@@ -41,7 +43,7 @@ def build_kernels(data: pd.DataFrame, config: dict) -> list[Callable]:
         _description_
 
     """
-    kage_rbf = get_gaussianRBF(config["gamma_age"])
+    kage_rbf = get_gaussianRBF(stage_config.gamma_age)
 
     # kage_linear = shifted_scaled_linear_kernel(
     #     data["transformed_age_mid"].mean(), data["transformed_age_mid"].std()
@@ -51,8 +53,8 @@ def build_kernels(data: pd.DataFrame, config: dict) -> list[Callable]:
     def age_kernel(x, y):
         return kage_rbf(x, y)  # + 0.2 * kage_linear(x, y) + 0.2
 
-    kyear_rq = get_RQ_kernel(config["alpha_year"], config["gamma_year"])
-    # kyear_rq = get_gaussianRBF(config["gamma_year"])
+    kyear_rq = get_RQ_kernel(stage_config.alpha_year, stage_config.gamma_year)
+    # kyear_rq = get_gaussianRBF(stage_config.gamma_year)
     # kyear_linear = shifted_scaled_linear_kernel(
     #     data["year_id"].mean(), data["year_id"].std()
     # )
@@ -62,7 +64,7 @@ def build_kernels(data: pd.DataFrame, config: dict) -> list[Callable]:
         return kyear_rq(x, y)  # + 0.2 * kyear_linear(x, y) + 0.2
 
     location_kernel = vectorize_kfunc(
-        get_exp_similarity_kernel(config["exp_location"])
+        get_exp_similarity_kernel(stage_config.exp_location)
     )
 
     return [location_kernel, age_kernel, year_kernel]
@@ -103,7 +105,7 @@ def build_grids(data: pd.DataFrame) -> list[NDArray]:
 
 
 def build_likelihood(
-    config: OneModConfig, data: pd.DataFrame, train: str
+    config: OneModConfig, data: pd.DataFrame
 ) -> BinomialLikelihood:
     """_summary_
 
@@ -114,8 +116,6 @@ def build_likelihood(
     config : OneModConfig
         _description_
     data : pandas.DataFrame
-        _description_
-    train : str
         _description_
 
     Returns
@@ -128,9 +128,10 @@ def build_likelihood(
     sample_size = jnp.asarray(data[config.weights].to_numpy())
     offset = jnp.asarray(data["offset"].to_numpy())
 
-    index = data.eval(train).to_numpy()  # FIXME: use test column
+    index = data.eval(f"{config.test} == 0").to_numpy()
     obs_rate = jnp.where(index, obs_rate, 0.0)
     sample_size = jnp.where(index, sample_size, 0.0)
+    # need to do this for offset as well?
 
     likelihood = BinomialLikelihood(obs_rate, sample_size, offset)
     return likelihood
@@ -166,17 +167,24 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     subsets = Subsets(
         "kreg", stage_config, subsets=dataif.load_kreg("subsets.csv")
     )
-    subset_id = int(submodel_id.removeprefix("subset"))
-    data = pd.merge(
-        left=subsets.filter_subset(
-            dataif.load_spxmod("predictions.parquet"), subset_id
+    data = subsets.filter_subset(
+        data=pd.merge(
+            left=dataif.load_spxmod("predictions.parquet"),
+            right=dataif.load_data(
+                columns=config.ids
+                + [
+                    "super_region_id",
+                    "region_id",
+                    "age_mid",
+                    config.obs,
+                    config.weights,
+                    config.test,
+                ]
+            ),
+            on=config.ids,
+            how="left",
         ),
-        right=dataif.load_data(
-            columns=config.ids
-            + ["super_region_id", "region_id", "age_mid", config.weights]
-        ),
-        on=config.ids,
-        how="left",
+        subset_id=int(submodel_id.removeprefix("subset")),
     ).sort_values(
         by=[
             "super_region_id",
@@ -189,22 +197,20 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     )
     a = 0.1  # TODO: Put into schema?
     data["transformed_age_mid"] = data.eval("log(exp(@a * age_mid) - 1) / @a")
-    data["offset"] = data.eval(
-        "log(@config.pred / (1 - @config.pred))"
-    )  # TODO: does this work with @ and schema object?
+    data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
     data["train"] = data[config.test] == 0
 
     # Build kernels, etc., etc.
-    kernels = build_kernels(data, config)
+    kernels = build_kernels(data, stage_config)
     grids = build_grids(data)
     kernel = KroneckerKernel(
-        kernels, grids, nugget=float(config["nugget"])
+        kernels, grids, nugget=float(stage_config.nugget)
     )  # FIXME: might not need "float" because schema already casts as float
     likelihood = build_likelihood(config, data, "train")
 
     # Create and fit kernel regression model
     # TODO: Put fit arguments into schema?
-    model = KernelRegModel(kernel, likelihood, config["lam"])
+    model = KernelRegModel(kernel, likelihood, stage_config.lam)
     data["kreg_y"], history = model.fit(
         gtol=5e-4,
         max_iter=20,
