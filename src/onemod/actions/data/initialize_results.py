@@ -13,6 +13,7 @@ def initialize_results(directory: str, stages: list[str]) -> None:
         "rover_covsel": _initialize_rover_covsel_results,
         "spxmod": _initialize_spxmod_results,
         "weave": _initialize_weave_results,
+        "kreg": _initialize_kreg_results,
         "ensemble": _initialize_ensemble_results,
     }
     dataif, _ = get_handle(directory)
@@ -53,6 +54,18 @@ def _initialize_weave_results(dataif: DataInterface) -> None:
 
     # Create weave parameters and subsets
     get_submodels("weave", dataif.experiment, save_file=True)
+
+
+def _initialize_kreg_results(dataif: DataInterface) -> None:
+    """Initialize kernel regression results."""
+
+    # Initialize directories
+    if dataif.kreg.exists():
+        shutil.rmtree(dataif.kreg)
+    (dataif.kreg / "submodels").mkdir(parents=True)
+
+    # Create kreg subsets
+    get_submodels("kreg", dataif.experiment, save_file=True)
 
 
 def _initialize_ensemble_results(dataif: DataInterface) -> None:
