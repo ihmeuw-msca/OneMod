@@ -198,7 +198,6 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     a = 0.1  # TODO: Put into schema?
     data["transformed_age_mid"] = data.eval("log(exp(@a * age_mid) - 1) / @a")
     data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
-    data["train"] = data[config.test] == 0
 
     # Build kernels, etc., etc.
     kernels = build_kernels(data, stage_config)
@@ -206,7 +205,7 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     kernel = KroneckerKernel(
         kernels, grids, nugget=float(stage_config.nugget)
     )  # FIXME: might not need "float" because schema already casts as float
-    likelihood = build_likelihood(config, data, "train")
+    likelihood = build_likelihood(config, data)
 
     # Create and fit kernel regression model
     # TODO: Put fit arguments into schema?
