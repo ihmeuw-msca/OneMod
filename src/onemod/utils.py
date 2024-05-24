@@ -395,8 +395,7 @@ def add_holdouts(
 
 
 def get_weave_input(
-    config: OneModConfig,
-    dataif: DataInterface,
+    config: OneModConfig, dataif: DataInterface
 ) -> pd.DataFrame:
     """Get input data for smoother model.
 
@@ -413,8 +412,7 @@ def get_weave_input(
     )
     columns = _get_weave_columns(data.columns, config)
     data = data.merge(
-        right=dataif.load_data()[columns].drop_duplicates(),
-        on=config.ids,
+        right=dataif.load_data()[columns].drop_duplicates(), on=config.ids
     )
 
     return data
@@ -589,6 +587,7 @@ def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
     dataif.add_dir("rover_covsel", dataif.results / "rover_covsel")
     dataif.add_dir("spxmod", dataif.results / "spxmod")
     dataif.add_dir("weave", dataif.results / "weave")
+    dataif.add_dir("kreg", dataif.results / "kreg")
     dataif.add_dir("ensemble", dataif.results / "ensemble")
 
     # create confiuration file
@@ -611,7 +610,7 @@ def format_input(directory: str) -> None:
     """
     # Load input data
     dataif, config = get_handle(directory)
-    data = dataif.load(config.input_path)
+    data = dataif.load_raw_data()
 
     # Filter data by ID subsets
     if config.id_subsets:
