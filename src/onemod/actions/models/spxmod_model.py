@@ -143,13 +143,12 @@ def _build_xmodel_args(
 
     """
     # Add global settings
-    xmodel_args = config.spxmod.xmodel.model_dump()
+    xmodel_args = config.spxmod.xmodel.model_dump(exclude="spline_config")
     xmodel_args["model_type"] = config.mtype
     xmodel_args["obs"] = config.obs
     xmodel_args["weights"] = config.weights
 
     # Add covariate and spline variables
-    xmodel_args.pop("spline_config")
     xmodel_args = _add_selected_covs(xmodel_args, selected_covs)
     if spline_vars:
         xmodel_args = _add_spline_variables(xmodel_args, spline_vars)
