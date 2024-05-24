@@ -3,6 +3,7 @@ from typing import Any, Literal
 from onemod.schema.base import Config, StageConfig
 from onemod.schema.stages import (
     EnsembleConfig,
+    KregConfig,
     RoverCovselConfig,
     SPxModConfig,
     WeaveConfig,
@@ -57,6 +58,8 @@ class OneModConfig(Config):
         SPxMod stage configuration.
     weave
         Weave stage configuration.
+    kreg
+        Kernel regression stage configuration.
     ensemble
         Ensemble stage configuration.
 
@@ -171,6 +174,17 @@ class OneModConfig(Config):
                     kernel: inverse
                     radius: [0.5, 1, 1.5]
 
+        # Kernel regression settings
+        kreg:
+          groupby: [super_region_id]
+          gamma_age: 8
+          gamma_year: 12
+          alpha_year: 2
+          exp_location: 0.25
+          exp_sex: 0.25
+          lam: 500
+          nugget: 0.0001
+
         # Ensemble settings
         ensemble:
           groupby: [super_region_id]
@@ -195,6 +209,7 @@ class OneModConfig(Config):
     rover_covsel: RoverCovselConfig | None = None
     spxmod: SPxModConfig | None = None
     weave: WeaveConfig | None = None
+    kreg: KregConfig | None = None
     ensemble: EnsembleConfig | None = None
 
     def model_post_init(self, *args, **kwargs) -> None:
@@ -203,6 +218,7 @@ class OneModConfig(Config):
             self.rover_covsel,
             self.spxmod,
             self.weave,
+            self.kreg,
             self.ensemble,
         ]:
             if stage_config is not None:
