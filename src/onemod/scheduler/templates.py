@@ -138,6 +138,7 @@ def create_modeling_template(
         "rover_covsel_model",
         "spxmod_model",
         "weave_model",
+        "kreg_model",
     ]:
         node_args.append("submodel_id")
 

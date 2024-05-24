@@ -23,9 +23,7 @@ class ParentTool:
 
     @classmethod
     def initialize_tool(
-        cls,
-        resources_yaml: str,
-        default_cluster_name: str,
+        cls, resources_yaml: str, default_cluster_name: str
     ) -> None:
         if cls.tool is None:
             cls.tool = Tool(name="onemod_tool")
@@ -96,35 +94,39 @@ class TaskRegistry:
 
 
 def upstream_task_callback(action: Action) -> list["Task"]:
-    """
-    Given an action, we should know (based on the action name) what the relevant upstream tasks
-    are.
-    The algorithm: as tasks are created, we will add them to a global registry keyed by action
-    name. Actions should know exactly what their upstream tasks are.
-    Assumes tasks are added in the right dependency order, but that's a requirement
-    for local execution anyway.
+    """Return upstream tasks for a given action.
+
+    Assumes tasks are added in the correct dependency order.
+
+    Notes
+    -----
+    * Assumes tasks are added in the correct dependency order.
+    * Logic for setting all modeling tasks as `collect_results`
+      dependencies: Due to traversal order of the generator, the rover
+      collection task must be created prior to weave modeling task being
+      instantiated, therefore this is theoretically safe to do. Vice
+      versa: when spxmod_model's task is created, there can be at most
+      one previously created collect task (from rover).
+
+    # FIXME: The logic above was fine when no stages could be run in
+      parallel, but now we should change things so that kreg doesn't
+      need to wait for weave models to finish. This will also be true if
+      we ever wanted to use the delete_results task again.
+
     """
 
     order_map = {
         "initialize_results": [],
         "rover_covsel_model": ["initialize_results"],
-        "spxmod_model": ["collect_results", "initialize_results"],
-        "weave_model": [
-            "collect_results",
-            "collect_results",
-            "initialize_results",
-        ],
-        "ensemble_model": 3 * ["collect_results"] + ["initialize_results"],
-        # Logic for collect results: set all modeling tasks as dependencies.
-        # Due to traversal order of the generator, the rover collection task must be created
-        # prior to weave modeling tasks being instantiated, therefore this is
-        # theoretically safe to do.
-        # Vice versa: when spxmod_model's task is created, there can be at most one
-        # previously created collect task (for rover)
+        "spxmod_model": ["initialize_results", "collect_results"],
+        "weave_model": ["initialize_results", "collect_results"],
+        "kreg_model": ["initialize_results", "collect_results"],
+        "ensemble_model": ["initialize_results", "collect_results"],
         "collect_results": [
             "rover_covsel_model",
             "spxmod_model",
             "weave_model",
+            "kreg_model",
         ],
     }
     func_name = action.name
