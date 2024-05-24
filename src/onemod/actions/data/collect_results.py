@@ -8,7 +8,6 @@ import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
 
-from onemod.schema import OneModConfig
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
 
@@ -111,11 +110,7 @@ def _plot_spxmod_results(
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.plot(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            "o-",
-            alpha=0.5,
-            label="spxmod",
+            df_cov["age_mid"], df_cov["coef"], "o-", alpha=0.5, label="spxmod"
         )
         ax.legend(fontsize="xx-small")
     return fig
@@ -208,11 +203,27 @@ def collect_results_weave(directory: str) -> None:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
 
+def collect_results_kreg(directory: str) -> None:
+    """Collect kernel regression submodel results."""
+    dataif, _ = get_handle(directory)
+
+    # Collect submodel predictions
+    predictions = []
+    subsets = dataif.load_kreg("subsets.csv")
+    for subset_id in subsets["subset_id"]:
+        df = dataif.load_kreg(
+            f"submodels/subset{subset_id}/predictions.parquet"
+        )
+        predictions.append(df)
+    dataif.dump_kreg(pd.concat(predictions), "predictions.parquet")
+
+
 def collect_results(stage_name: str, directory: str) -> None:
     callable_map = {
         "rover_covsel": collect_results_rover_covsel,
         "spxmod": collect_results_spxmod,
         "weave": collect_results_weave,
+        "kreg": collect_results_kreg,
     }
     try:
         func = callable_map[stage_name]
