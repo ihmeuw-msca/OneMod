@@ -224,7 +224,10 @@ def kreg_model(directory: str, submodel_id: str) -> None:
 
     # Save results
     dataif.dump_kreg(model, f"submodels/{submodel_id}/model.pkl")
-    dataif.dump_kreg(data, f"submodels/{submodel_id}/predictions.parquet")
+    dataif.dump_kreg(
+        data[config.ids + "kreg"].rename(columns={"kreg": config.pred}),
+        f"submodels/{submodel_id}/predictions.parquet",
+    )
 
 
 def main() -> None:
