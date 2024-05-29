@@ -223,9 +223,12 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     data["kreg"] = data.eval("1 / (1 + exp(-(kreg_y + offset)))")
 
     # Save results
+    # TODO: keep kreg_y, offset, anything else?
     dataif.dump_kreg(model, f"submodels/{submodel_id}/model.pkl")
     dataif.dump_kreg(
-        data[config.ids + "kreg"].rename(columns={"kreg": config.pred}),
+        data[config.ids + ["kreg", "kreg_y", "offset"]].rename(
+            columns={"kreg": config.pred}
+        ),
         f"submodels/{submodel_id}/predictions.parquet",
     )
 
