@@ -26,7 +26,7 @@ def run_pipeline(
         The experiment directory. Must contain config/settings.yml.
     stages : list of str, optional
         The pipeline stages to run. Default is
-        ['rover_covsel', 'regmod_smooth', 'weave', 'ensemble'].
+        ['rover_covsel', 'regmod_smooth', 'weave', 'kreg', 'ensemble'].
     cluster_name : str, optional
         Name of the cluster to run the pipeline on. Default is 'slurm'.
     configure_resources : bool, optional
@@ -36,7 +36,7 @@ def run_pipeline(
         Whether to run pipeline without Jobmon. Default is False.
 
     """
-    all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
+    all_stages = ["rover_covsel", "spxmod", "weave", "kreg", "ensemble"]
     if stages is None:
         stages = all_stages
     for stage in stages:
@@ -94,8 +94,5 @@ def main() -> None:
 
     """
     fire.Fire(
-        {
-            "run_pipeline": run_pipeline,
-            "resume_pipeline": resume_pipeline,
-        }
+        {"run_pipeline": run_pipeline, "resume_pipeline": resume_pipeline}
     )
