@@ -59,8 +59,8 @@ class RoverCovselConfig(StageConfig):
         for each sex_id, age_group_id, super_region_id, etc. Default is
         an empty list.
     max_attempts
-        Maximum number of attempts to run the Jobmon task associated
-        with the stage. Default is 1.
+        Maximum number of attempts to run the Jobmon modeling tasks
+        associated with the stage. Default is 1.
     t_threshold
         T-statistic threshold to consider as a covariate selection
         criterion. Default is 1.0.
