@@ -42,7 +42,10 @@ class Scheduler:
         )
         for stage in self.stages:
             application_class = get_application_class(stage)
-            application = application_class(directory=self.directory)
+            application = application_class(
+                directory=self.directory,
+                max_attempts=self.config[stage].max_attempts,
+            )
             generator = application.action_generator()
             yield from generator
 

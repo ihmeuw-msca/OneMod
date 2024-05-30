@@ -11,17 +11,24 @@ from onemod.utils import get_submodels
 class WeaveApplication(Application):
     """An application to run weave."""
 
-    def __init__(self, directory: str | Path):
+    def __init__(self, directory: str | Path, max_attempts: int) -> None:
         self.directory = directory
         self.submodels = get_submodels("weave", directory)
+        self.max_attempts = max_attempts
 
     def action_generator(self) -> Generator[Action, None, None]:
         """A generator to return actions to be run."""
+        # Modeling tasks
         for submodel_id in self.submodels:
             action = Action(
-                weave_model, directory=self.directory, submodel_id=submodel_id
+                weave_model,
+                directory=self.directory,
+                submodel_id=submodel_id,
+                max_attempts=self.max_attempts,
             )
             yield action
+
+        # Collection task
         yield Action(
             collect_results, stage_name="weave", directory=self.directory
         )
