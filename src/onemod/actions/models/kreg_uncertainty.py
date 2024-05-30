@@ -16,12 +16,7 @@ from onemod.modeling.uncertainty import calibrate_pred_sd
 from onemod.utils import get_handle
 
 
-def kreg_uncertainty(
-    directory: str,
-    submodel_id: str,
-    num_samples: int = 50,
-    lanczos_order: int = 150,
-) -> None:
+def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     """Get kernel regression model uncertainty
 
     Parameters
@@ -30,10 +25,6 @@ def kreg_uncertainty(
         Experiment directory.
     submodel_id
         Submodel to run based on groupby settings.
-    num_samples
-        Description.
-    lanczos_order
-        Description.
 
     Outputs
     -------
@@ -42,6 +33,8 @@ def kreg_uncertainty(
 
     """
     dataif, config = get_handle(directory)
+    num_samples = config.kreg.kreg_uncertainty.num_samples
+    lanczos_order = config.kreg.kreg_uncertainty.lanczos_order
 
     data = pd.merge(
         left=dataif.load_kreg(f"submodels/{submodel_id}/predictions.parquet"),
@@ -54,7 +47,6 @@ def kreg_uncertainty(
     model = dataif.load_kreg(f"submodels/{submodel_id}/model.pkl")
     op_hess = model.hessian(jnp.asarray(data["kreg_y"]))
 
-    # TODO: Do we need extra columns for the kernels?
     def op_root_pc(x):
         return model.kernel.op_root_k @ x
 

@@ -19,22 +19,22 @@ from kreg.kernel.kron_kernel import KroneckerKernel
 from kreg.likelihood import BinomialLikelihood
 from kreg.model import KernelRegModel
 from numpy.typing import NDArray
-from onemod.schema import OneModConfig, StageConfig
+from onemod.schema import KregModel, OneModConfig
 from onemod.utils import Subsets, get_handle
 
 
 def build_kernels(
-    data: pd.DataFrame, stage_config: StageConfig
+    data: pd.DataFrame, model_config: KregModel
 ) -> list[Callable]:
     """_summary_
 
-    # TODO: Ask about commented code, generalize for different kernels, finish docstring
+    # TODO: different kernels
 
     Parameters
     ----------
     data : pandas.DataFrame
         _description_
-    stage_config : StageConfig
+    model_config : KregModel
         _description_
 
     Returns
@@ -43,7 +43,7 @@ def build_kernels(
         _description_
 
     """
-    kage_rbf = get_gaussianRBF(stage_config.gamma_age)
+    kage_rbf = get_gaussianRBF(model_config.gamma_age)
 
     # kage_linear = shifted_scaled_linear_kernel(
     #     data["transformed_age_mid"].mean(), data["transformed_age_mid"].std()
@@ -53,7 +53,7 @@ def build_kernels(
     def age_kernel(x, y):
         return kage_rbf(x, y)  # + 0.2 * kage_linear(x, y) + 0.2
 
-    kyear_rq = get_RQ_kernel(stage_config.alpha_year, stage_config.gamma_year)
+    kyear_rq = get_RQ_kernel(model_config.alpha_year, model_config.gamma_year)
     # kyear_rq = get_gaussianRBF(stage_config.gamma_year)
     # kyear_linear = shifted_scaled_linear_kernel(
     #     data["year_id"].mean(), data["year_id"].std()
@@ -64,7 +64,7 @@ def build_kernels(
         return kyear_rq(x, y)  # + 0.2 * kyear_linear(x, y) + 0.2
 
     location_kernel = vectorize_kfunc(
-        get_exp_similarity_kernel(stage_config.exp_location)
+        get_exp_similarity_kernel(model_config.exp_location)
     )
 
     return [location_kernel, age_kernel, year_kernel]
@@ -73,7 +73,7 @@ def build_kernels(
 def build_grids(data: pd.DataFrame) -> list[NDArray]:
     """_summary_
 
-    # TODO: Generalize, finish docstring
+    # TODO: generalize for different dimensions
 
     Parameters
     ----------
@@ -109,8 +109,6 @@ def build_likelihood(
 ) -> BinomialLikelihood:
     """_summary_
 
-    # TODO: finish docstring
-
     Parameters
     ----------
     config : OneModConfig
@@ -131,7 +129,6 @@ def build_likelihood(
     index = data.eval(f"{config.test} == 0").to_numpy()
     obs_rate = jnp.where(index, obs_rate, 0.0)
     sample_size = jnp.where(index, sample_size, 0.0)
-    # need to do this for offset as well?
 
     likelihood = BinomialLikelihood(obs_rate, sample_size, offset)
     return likelihood
@@ -161,6 +158,7 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     """
     dataif, config = get_handle(directory)
     stage_config = config.kreg
+    model_config = stage_config.kreg_model
 
     # Load data and filter by subset
     # TODO: Generalize columns used
@@ -195,28 +193,20 @@ def kreg_model(directory: str, submodel_id: str) -> None:
         ],
         ignore_index=True,
     )
-    a = 0.1  # TODO: Put into schema?
+    a = model_config.age_scale
     data["transformed_age_mid"] = data.eval("log(exp(@a * age_mid) - 1) / @a")
     data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
+    # TODO: generalize offset for different model types
 
     # Build kernels, etc., etc.
-    kernels = build_kernels(data, stage_config)
+    kernels = build_kernels(data, model_config)
     grids = build_grids(data)
-    kernel = KroneckerKernel(
-        kernels, grids, nugget=float(stage_config.nugget)
-    )  # FIXME: might not need "float" because schema already casts as float
+    kernel = KroneckerKernel(kernels, grids, nugget=model_config.nugget)
     likelihood = build_likelihood(config, data)
 
     # Create and fit kernel regression model
-    # TODO: Put fit arguments into schema?
-    model = KernelRegModel(kernel, likelihood, stage_config.lam)
-    data["kreg_y"], history = model.fit(
-        gtol=5e-4,
-        max_iter=20,
-        cg_maxiter=100,
-        cg_maxiter_increment=0,
-        nystroem_rank=10,
-    )
+    model = KernelRegModel(kernel, likelihood, model_config.lam)
+    data["kreg_y"], history = model.fit(**stage_config.kreg_fit)
     print(history)
 
     # Create predictions
