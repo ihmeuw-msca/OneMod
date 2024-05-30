@@ -11,17 +11,21 @@ from onemod.utils import get_submodels
 class KregApplication(Application):
     """A kreg application to run the kernel regression stage."""
 
-    def __init__(self, directory: str | Path):
+    def __init__(self, directory: str | Path, max_attempts: int) -> None:
         """Create a kreg application."""
         self.directory = directory
         self.submodels = get_submodels("kreg", directory)
+        self.max_attempts = max_attempts
 
     def action_generator(self) -> Generator[Action, None, None]:
         """A generator that returns actions to be run."""
-        # Modeling task
+        # Modeling tasks
         for submodel_id in self.submodels:
             action = Action(
-                kreg_model, directory=self.directory, submodel_id=submodel_id
+                kreg_model,
+                directory=self.directory,
+                submodel_id=submodel_id,
+                max_attempts=self.max_attempts,
             )
             yield action
 
