@@ -39,7 +39,8 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     data = pd.merge(
         left=dataif.load_kreg(f"submodels/{submodel_id}/predictions.parquet"),
         right=dataif.load_data(
-            columns=config.ids + [config.obs, config.weights, config.test]
+            columns=config.ids
+            + ["region_id", config.obs, config.weights, config.test]
         ),
         on=config.ids,
         how="left",

@@ -19,7 +19,8 @@ from kreg.kernel.kron_kernel import KroneckerKernel
 from kreg.likelihood import BinomialLikelihood
 from kreg.model import KernelRegModel
 from numpy.typing import NDArray
-from onemod.schema import KregModel, OneModConfig
+from onemod.schema import OneModConfig
+from onemod.schema.stages import KregModel
 from onemod.utils import Subsets, get_handle
 
 
@@ -206,7 +207,7 @@ def kreg_model(directory: str, submodel_id: str) -> None:
 
     # Create and fit kernel regression model
     model = KernelRegModel(kernel, likelihood, model_config.lam)
-    data["kreg_y"], history = model.fit(**stage_config.kreg_fit)
+    data["kreg_y"], history = model.fit(**stage_config.kreg_fit.model_dump())
     print(history)
 
     # Create predictions

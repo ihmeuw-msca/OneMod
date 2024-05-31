@@ -80,8 +80,8 @@ class KregUncertainty(Config):
 
     """
 
-    num_samples: int
-    lanczos_order: int
+    num_samples: int = 50
+    lanczos_order: int = 150
 
 
 class KregConfig(StageConfig):
@@ -112,5 +112,6 @@ class KregConfig(StageConfig):
 
     """
 
-    kreg_model: KregModel = KregModel()
-    kreg_fit: KregFit = KregFit()
+    kreg_model: KregModel
+    kreg_fit: KregFit
+    kreg_uncertainty: KregUncertainty = KregUncertainty()
