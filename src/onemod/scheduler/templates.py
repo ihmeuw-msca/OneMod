@@ -139,6 +139,7 @@ def create_modeling_template(
         "spxmod_model",
         "weave_model",
         "kreg_model",
+        "kreg_uncertainty",
     ]:
         node_args.append("submodel_id")
 

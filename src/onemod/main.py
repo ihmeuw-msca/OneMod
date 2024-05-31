@@ -6,7 +6,6 @@ from pathlib import Path
 
 import fire
 from jobmon.client.status_commands import resume_workflow_from_id
-
 from onemod.scheduler.scheduler import Scheduler
 from onemod.utils import format_input, get_handle
 
@@ -36,7 +35,14 @@ def run_pipeline(
         Whether to run pipeline without Jobmon. Default is False.
 
     """
-    all_stages = ["rover_covsel", "spxmod", "weave", "kreg", "ensemble"]
+    all_stages = [
+        "rover_covsel",
+        "spxmod",
+        "weave",
+        "kreg",
+        "uncertainty",
+        "ensemble",
+    ]
     if stages is None:
         stages = all_stages
     for stage in stages:

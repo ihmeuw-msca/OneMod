@@ -36,10 +36,23 @@ class Scheduler:
         self._upstream_task_registry: dict[str, list["Task"]] = {}
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
-        # The schedule always starts with an initialization action
+        """Initialize parent action generator.
+
+        The schedule always starts with an initialization action that
+        initializes the directories and submodels for each stage. The
+        exception is the 'uncertainty' stage, which uses the 'kreg'
+        stages directory and submodels.
+
+        """
+        # Create initialization action
+        init_stages = self.stages.copy()
+        if "uncertainty" in init_stages:
+            init_stages.remove("uncertainty")
         yield Action(
-            initialize_results, stages=self.stages, directory=self.directory
+            initialize_results, stages=init_stages, directory=self.directory
         )
+
+        # Create stage actions
         for stage in self.stages:
             application_class = get_application_class(stage)
             application = application_class(

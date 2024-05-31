@@ -204,7 +204,12 @@ def collect_results_weave(directory: str) -> None:
 
 
 def collect_results_kreg(directory: str) -> None:
-    """Collect kernel regression submodel results."""
+    """Collect kernel regression submodel results.
+
+    Kernel regression modeling and uncertainty stages use the same
+    subsets and save to the same locations.
+
+    """
     dataif, _ = get_handle(directory)
 
     # Collect submodel predictions
@@ -224,6 +229,7 @@ def collect_results(stage_name: str, directory: str) -> None:
         "spxmod": collect_results_spxmod,
         "weave": collect_results_weave,
         "kreg": collect_results_kreg,
+        "uncertainty": collect_results_kreg,
     }
     try:
         func = callable_map[stage_name]
