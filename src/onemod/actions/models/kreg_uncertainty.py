@@ -94,8 +94,19 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
         data.eval("kreg_linear + 1.96 * cali_kreg_y_sd")
     )
 
-    # TODO: only save necessary columns
-    dataif.dump_results(data, "predictions.parquet")
+    dataif.dump_results(
+        data[
+            config.ids
+            + [
+                config.pred,
+                "kreg_lwr",
+                "kreg_upr",
+                "cali_kreg_lwr",
+                "cali_reg_upr",
+            ]
+        ],
+        "predictions.parquet",
+    )
 
 
 def main() -> None:
