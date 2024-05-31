@@ -3,6 +3,10 @@ src = ["src"]
 
 [format]
 docstring-code-format = true
+skip-magic-trailing-comma = true
+
+[lint]
+task-tags = ["TODO", "FIXME"]
 
 [lint.pydocstyle]
 convention = "numpy"
