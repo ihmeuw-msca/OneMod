@@ -11,17 +11,21 @@ from onemod.utils import get_submodels
 class SPxModApplication(Application):
     """An SPxMod application to run the spxmod stage."""
 
-    def __init__(self, directory: str | Path):
+    def __init__(self, directory: str | Path, max_attempts: int) -> None:
         """Create an SPxMod Application."""
         self.directory = directory
         self.submodels = get_submodels("spxmod", directory)
+        self.max_attempts = max_attempts
 
     def action_generator(self) -> Generator[Action, None, None]:
         """A generator to return actions to be run."""
-        # Modeling task
+        # Modeling tasks
         for submodel_id in self.submodels:
             action = Action(
-                spxmod_model, directory=self.directory, submodel_id=submodel_id
+                spxmod_model,
+                directory=self.directory,
+                submodel_id=submodel_id,
+                max_attempts=self.max_attempts,
             )
             yield action
 
