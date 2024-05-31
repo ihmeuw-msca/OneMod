@@ -121,12 +121,14 @@ def upstream_task_callback(action: Action) -> list["Task"]:
         "spxmod_model": ["initialize_results", "collect_results"],
         "weave_model": ["initialize_results", "collect_results"],
         "kreg_model": ["initialize_results", "collect_results"],
+        "kreg_uncertainty": ["collect_results"],
         "ensemble_model": ["initialize_results", "collect_results"],
         "collect_results": [
             "rover_covsel_model",
             "spxmod_model",
             "weave_model",
             "kreg_model",
+            "kreg_uncertainty",
         ],
     }
     func_name = action.name
