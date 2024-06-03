@@ -16,8 +16,10 @@ def plot_results(
     x: str,
     y_dots: list[str] = [],
     y_line: list[str] = [],
+    y_fill: list[str] = [],
     dots_options: dict = {},
     line_options: dict = {},
+    fill_options: dict = {},
     facet_options: dict = {},
     share_options: dict = {},
     fig_options: dict = {},
@@ -35,6 +37,10 @@ def plot_results(
         List of column names for scatter plots.
     y_line: list of str, optional
         List of column names for line plots.
+    y_fill: list of tuple of str, optional
+        List of column names for uncertainty intervals. For each column
+        in `y_fill`, e.g. 'pred', data must contain column lower and
+        upper bounds, e.g. 'pred_lwr' and 'pred_upr'.
 
     Returns
     -------
@@ -49,6 +55,9 @@ def plot_results(
     line_options : dict, optional
         Arguments passed to `matplotlib.pyplot.plot() <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html>`_.
         Dictionary keys must correspond to column names in `y_line`.
+    fill_options : dict, optional
+        Arguments passed to `matplotlib.pyplot.fill_between() <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.fill_between.html>`_.
+        Dictionary keys must correspond to column names in `y_fill`.
     facet_options : dict, optional
         Arguments passed to `seaborn.objects.Plot.facet() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.facet.html>`_.
     share_options : dict, optional
@@ -144,10 +153,18 @@ def plot_results(
 
     # Plot data
     for ax, df in zip(axes, data_list):
-        for y in y_dots:
-            ax.scatter(df[x], df[y], label=y, **dots_options.get(y, {}))
+        for y in y_fill:
+            ax.fill_between(
+                df[x],
+                df[f"{y}_lwr"],
+                df[f"{y}_upr"],
+                label=y,
+                **fill_options.get(y, {}),
+            )
         for y in y_line:
             ax.plot(df[x], df[y], label=y, **line_options.get(y, {}))
+        for y in y_dots:
+            ax.scatter(df[x], df[y], label=y, **dots_options.get(y, {}))
 
     # rescale and plot posinf/neginf
     # TODO: include infs after log/logit scale changes
