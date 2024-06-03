@@ -113,7 +113,6 @@ class OneModConfig(Config):
                   dim_type: numerical
             var_builders:
               - name: intercept
-              - name: intercept
                 space: super_region_id*age_mid
                 lam: 1.0
                 # above lam is equivalent to use gprior as follows
