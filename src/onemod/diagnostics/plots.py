@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn.objects as so
 from loguru import logger
-from ppklit.data.interface import DataInterface
+from pplkit.data.interface import DataInterface
 
 from onemod.schema import OneModConfig
 
