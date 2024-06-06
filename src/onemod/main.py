@@ -24,8 +24,7 @@ def run_pipeline(
     directory : str
         The experiment directory. Must contain config/settings.yml.
     stages : list of str, optional
-        The pipeline stages to run. Default is
-        ['rover_covsel', 'regmod_smooth', 'weave', 'kreg', 'ensemble'].
+        The pipeline stages to run. Default is all stages.
     cluster_name : str, optional
         Name of the cluster to run the pipeline on. Default is 'slurm'.
     configure_resources : bool, optional

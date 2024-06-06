@@ -57,7 +57,9 @@ class Scheduler:
             application_class = get_application_class(stage)
             application = application_class(
                 directory=self.directory,
-                max_attempts=self.config[stage].max_attempts,
+                max_attempts=self.config["kreg"].max_attempts
+                if stage == "uncertainty"
+                else self.config[stage].max_attempts,
             )
             generator = application.action_generator()
             yield from generator

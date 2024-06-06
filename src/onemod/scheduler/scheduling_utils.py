@@ -60,7 +60,7 @@ class TaskTemplateFactory:
             task_template_callable = create_collection_template
         elif action_name == "delete_results":
             task_template_callable = create_deletion_template
-        elif "model" in action_name:
+        elif "model" in action_name or "uncertainty" in action_name:
             task_template_callable = create_modeling_template
         else:
             raise ValueError(f"Invalid action name: {action_name}")
