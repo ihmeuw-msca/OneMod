@@ -9,11 +9,10 @@ import jax
 import jax.numpy as jnp
 import pandas as pd
 from kreg.uncertainty.lanczos_sample import get_PC_inv_rootH
-from scipy.special import expit
-from tqdm.auto import tqdm
-
 from onemod.modeling.uncertainty import calibrate_pred_sd
 from onemod.utils import get_handle
+from scipy.special import expit
+from tqdm.auto import tqdm
 
 
 def kreg_uncertainty(directory: str, submodel_id: str) -> None:
@@ -102,7 +101,7 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
                 "kreg_lwr",
                 "kreg_upr",
                 "cali_kreg_lwr",
-                "cali_reg_upr",
+                "cali_kreg_upr",
             ]
         ],
         "predictions.parquet",
