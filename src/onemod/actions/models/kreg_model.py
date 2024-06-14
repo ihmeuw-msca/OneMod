@@ -5,8 +5,6 @@ Modified based on Alex's MSCA-286-tune-kronreg/2024_06_12/run_kronreg.ipynb
 
 """
 
-from typing import Callable
-
 import fire
 import pandas as pd
 from kreg.kernel.component import KernelComponent
@@ -119,7 +117,7 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     data.loc[index, config.obs] = 0.0
     data.loc[index, config.weights] = 0.0
     age_scale = model_config.age_scale
-    data["transformed_age_mid"] = data.eval(
+    data["transformed_age"] = data.eval(
         "log(exp(@age_scale * age_mid) - 1) / @age_scale"
     )
     data.loc[data.eval(f"{config.pred} == 0"), config.pred] = 1e-10
@@ -129,7 +127,9 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     kernel = build_kernel(model_config)
     likelihood = BinomialLikelihood(config.obs, config.weights, "offset")
     model = KernelRegModel(kernel, likelihood, lam=model_config.lam)
-    data["kreg_y"], history = model.fit(**stage_config.kreg_fit.model_dump())
+    data["kreg_y"], history = model.fit(
+        data, **stage_config.kreg_fit.model_dump()
+    )
     print(history)
 
     # Create predictions

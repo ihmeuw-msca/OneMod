@@ -36,16 +36,47 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     num_samples = config.kreg.kreg_uncertainty.num_samples
     lanczos_order = config.kreg.kreg_uncertainty.lanczos_order
 
+    # Load data
     data = pd.merge(
         left=dataif.load_kreg(f"submodels/{submodel_id}/predictions.parquet"),
         right=dataif.load_data(
             columns=config.ids
-            + ["region_id", config.obs, config.weights, config.test]
+            + [
+                "super_region_id",
+                "region_id",
+                "age_mid",
+                config.obs,
+                config.weights,
+                config.test,
+            ]
         ),
         on=config.ids,
         how="left",
+    ).sort_values(
+        by=[
+            "super_region_id",
+            "region_id",
+            "location_id",
+            "age_mid",
+            "year_id",
+        ],
+        ignore_index=True,
     )
+
+    # Zero test data, rescale age, add offset
+    # TODO: generalize offset for different model types
+    index = data.eval(f"{config.test} == 1")
+    data.loc[index, config.obs] = 0.0
+    data.loc[index, config.weights] = 0.0
+    age_scale = config.kreg.kreg_model.age_scale
+    data["transformed_age"] = data.eval(
+        "log(exp(@age_scale * age_mid) - 1) / @age_scale"
+    )
+    data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
+
+    # Load kernel regression model
     model = dataif.load_kreg(f"submodels/{submodel_id}/model.pkl")
+    model.likelihood.attach(data)
     op_hess = model.hessian(jnp.asarray(data["kreg_y"]))
 
     def op_root_pc(x):
