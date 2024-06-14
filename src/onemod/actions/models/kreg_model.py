@@ -10,9 +10,9 @@ import fire
 import jax.numpy as jnp
 import pandas as pd
 from kreg.kernel.factory import (
-    get_exp_similarity_kernel,
-    get_gaussianRBF,
-    get_RQ_kernel,
+    build_exp_similarity_kfunc,
+    build_gaussianRBF_kfunc,
+    build_RQ_kfunc,
     vectorize_kfunc,
 )
 from kreg.kernel.kron_kernel import KroneckerKernel
@@ -44,7 +44,7 @@ def build_kernels(
         _description_
 
     """
-    kage_rbf = get_gaussianRBF(model_config.gamma_age)
+    kage_rbf = build_gaussianRBF_kfunc(model_config.gamma_age)
 
     # kage_linear = shifted_scaled_linear_kernel(
     #     data["transformed_age_mid"].mean(), data["transformed_age_mid"].std()
@@ -54,7 +54,7 @@ def build_kernels(
     def age_kernel(x, y):
         return kage_rbf(x, y)  # + 0.2 * kage_linear(x, y) + 0.2
 
-    kyear_rq = get_RQ_kernel(model_config.alpha_year, model_config.gamma_year)
+    kyear_rq = build_RQ_kfunc(model_config.alpha_year, model_config.gamma_year)
     # kyear_rq = get_gaussianRBF(stage_config.gamma_year)
     # kyear_linear = shifted_scaled_linear_kernel(
     #     data["year_id"].mean(), data["year_id"].std()
@@ -65,7 +65,7 @@ def build_kernels(
         return kyear_rq(x, y)  # + 0.2 * kyear_linear(x, y) + 0.2
 
     location_kernel = vectorize_kfunc(
-        get_exp_similarity_kernel(model_config.exp_location)
+        build_exp_similarity_kfunc(model_config.exp_location)
     )
 
     return [location_kernel, age_kernel, year_kernel]
