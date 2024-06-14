@@ -54,11 +54,16 @@ def _get_covs(
 ) -> list[str]:
     """Get spxmod model covariates."""
     # Get covariates selected in previous stage; filter by subset
-    selected_covs = dataif.load_rover_covsel("selected_covs.csv")
-    for col_name in config.groupby:
-        col_val = subset[col_name].item()
-        selected_covs = selected_covs.query(f"{col_name} == {repr(col_val)}")
-    selected_covs = selected_covs["cov"].tolist()
+    try:
+        selected_covs = dataif.load_rover_covsel("selected_covs.csv")
+        for col_name in config.groupby:
+            col_val = subset[col_name].item()
+            selected_covs = selected_covs.query(
+                f"{col_name} == {repr(col_val)}"
+            )
+        selected_covs = selected_covs["cov"].tolist()
+    except FileNotFoundError:
+        selected_covs = []
 
     # Get fixed covariates
     fixed_covs = config.rover_covsel.rover.cov_fixed
