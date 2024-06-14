@@ -187,7 +187,7 @@ def plot_results(
     if legend:
         handles, labels = ax.get_legend_handles_labels()
         default_options = dict(
-            loc="lower_center", bbox_to_anchor=(0.5, -0.05), ncol=len(handles)
+            loc="lower center", bbox_to_anchor=(0.5, -0.05), ncol=len(handles)
         )
         if legend_options:
             default_options.update(legend_options)
