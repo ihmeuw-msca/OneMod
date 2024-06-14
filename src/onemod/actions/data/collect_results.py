@@ -119,10 +119,19 @@ def collect_results_spxmod(directory: str) -> None:
 
     # Plot coefficients
     if config.plots:
-        summaries = _get_rover_covsel_summaries(dataif)
-        fig = plot_spxmod_results(dataif, summaries)
-        if fig is not None:
-            fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
+        summaries = dataif.load_rover_covsel("summaries.csv")
+        for subset_id, df in coef.groupby("subset_id"):
+            if "sex_id" in config.groupby:
+                sex_id = df["sex_id"].unique()[0]
+                fig = plot_spxmod_results(
+                    summaries.query("sex_id == @sex_id"), df
+                )
+            else:
+                fig = plot_spxmod_results(summaries, df)
+            fig.savefig(
+                dataif.spxmod / f"smooth_coef_{subset_id}.pdf",
+                bbox_inches="tight",
+            )
 
 
 def collect_results_weave(directory: str) -> None:
