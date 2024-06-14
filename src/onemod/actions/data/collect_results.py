@@ -1,5 +1,7 @@
 """Collect onemod stage submodel results."""
 
+import warnings
+
 import fire
 import pandas as pd
 from loguru import logger
@@ -15,11 +17,16 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     # Collect coefficient summaries
     summaries = []
     for subset_id in subsets["subset_id"]:
-        summary = dataif.load_rover_covsel(
-            f"submodels/subset{subset_id}/summary.csv"
-        )
-        summary["subset_id"] = subset_id
-        summaries.append(summary)
+        try:
+            summary = dataif.load_rover_covsel(
+                f"submodels/subset{subset_id}/summary.csv"
+            )
+            summary["subset_id"] = subset_id
+            summaries.append(summary)
+        except FileNotFoundError:
+            warnings.warn(
+                f"rover_covsel subset {subset_id} missing summary.csv"
+            )
     summaries = pd.concat(summaries)
 
     # Merge with existing subsets and add statistic

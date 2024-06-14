@@ -41,40 +41,43 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     )
 
     # Load and filter by subset
-    subset_id = int(submodel_id[6:])
+    subset_id = int(submodel_id.removeprefix("subset"))
     df_input = subsets.filter_subset(dataif.load_data(), subset_id)
-    logger.info(f"Fitting rover for {subset_id=}")
-
     df_train = df_input[df_input[config.test] == 0]
 
-    dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
+    # Fit model
+    if len(df_train) > 0:
+        logger.info(f"Fitting rover for {submodel_id=}")
+        dataif.dump_rover_covsel(df_train, f"data/{submodel_id}.parquet")
 
-    # Create rover objects
-    rover_init = stage_config.rover
-    rover = Rover(
-        obs=config.obs,
-        model_type=config.mtype,
-        cov_fixed=rover_init.cov_fixed,
-        cov_exploring=rover_init.cov_exploring,
-        weights=config.weights,
-        holdouts=config.holdouts,
-    )
+        # Create rover objects
+        rover_init = stage_config.rover
+        rover = Rover(
+            obs=config.obs,
+            model_type=config.mtype,
+            cov_fixed=rover_init.cov_fixed,
+            cov_exploring=rover_init.cov_exploring,
+            weights=config.weights,
+            holdouts=config.holdouts,
+        )
 
-    # Fit rover model
-    logger.info(
-        f"Fitting the rover model with options {stage_config.rover_fit}"
-    )
-    rover.fit(data=df_train, **stage_config.rover_fit.model_dump())
+        # Fit rover model
+        logger.info(
+            f"Fitting the rover model with options {stage_config.rover_fit}"
+        )
+        rover.fit(data=df_train, **stage_config.rover_fit.model_dump())
 
-    # Save results
-    logger.info("Saving rover results after fitting")
-    dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
-    dataif.dump_rover_covsel(
-        rover.learner_info, f"submodels/{submodel_id}/learner_info.csv"
-    )
-    dataif.dump_rover_covsel(
-        rover.summary, f"submodels/{submodel_id}/summary.csv"
-    )
+        # Save results
+        logger.info("Saving rover results after fitting")
+        dataif.dump_rover_covsel(rover, f"submodels/{submodel_id}/rover.pkl")
+        dataif.dump_rover_covsel(
+            rover.learner_info, f"submodels/{submodel_id}/learner_info.csv"
+        )
+        dataif.dump_rover_covsel(
+            rover.summary, f"submodels/{submodel_id}/summary.csv"
+        )
+    else:
+        logger.info(f"No training data for {submodel_id=}, skipping model")
 
 
 def main() -> None:
