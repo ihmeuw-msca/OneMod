@@ -52,6 +52,8 @@ class OneModConfig(Config):
         for each sex_id, age_group_id, super_region_id, etc. Default is
         an empty list, which means all points are run in a single model.
         This setting applies to all stages.
+    plots
+        Whether to plot results after each stage.
     rover_covsel
         Rover covariate selection stage configuration.
     spxmod
@@ -205,6 +207,7 @@ class OneModConfig(Config):
     test: str = "test"
     id_subsets: dict[str, list[Any]] = {}
     groupby: list[str] = []
+    plots: bool = True
 
     rover_covsel: RoverCovselConfig | None = None
     spxmod: SPxModConfig | None = None

@@ -65,13 +65,14 @@ def collect_results_rover_covsel(directory: str) -> None:
     dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
 
     # Plot coefficients and save
-    fig = plot_rover_covsel_results(dataif, summaries)
-    fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
+    if config.plots:
+        fig = plot_rover_covsel_results(dataif, summaries)
+        fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
 def collect_results_spxmod(directory: str) -> None:
     """This step is used for creating diagnostics."""
-    dataif, _ = get_handle(directory)
+    dataif, config = get_handle(directory)
 
     # Collect submodel predictions
     predictions = []
@@ -98,10 +99,11 @@ def collect_results_spxmod(directory: str) -> None:
     dataif.dump_spxmod(coef, "coef.csv")
 
     # Plot coefficients
-    summaries = _get_rover_covsel_summaries(dataif)
-    fig = plot_spxmod_results(dataif, summaries)
-    if fig is not None:
-        fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
+    if config.plots:
+        summaries = _get_rover_covsel_summaries(dataif)
+        fig = plot_spxmod_results(dataif, summaries)
+        if fig is not None:
+            fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
 
 
 def collect_results_weave(directory: str) -> None:
