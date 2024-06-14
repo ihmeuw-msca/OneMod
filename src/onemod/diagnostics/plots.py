@@ -23,7 +23,10 @@ def plot_results(
     facet_options: dict = {},
     share_options: dict = {},
     fig_options: dict = {},
+    legend_options: dict = {},
     yscale: str = "linear",
+    fig: plt.Figure | None = None,
+    legend: bool = True,
 ) -> plt.Figure:
     """Plot OneMod predictions for a single location.
 
@@ -64,9 +67,15 @@ def plot_results(
         Arguments passed to `seaborn.objects.Plot.share() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.share.html>`_.
     fig_options : dict, optional
         Arguments passed to `matplotlib.figure.Figure() <https://matplotlib.org/stable/api/figure_api.html#matplotlib.figure.Figure>`_.
+    legend_options : dict, optional
+        Arguments passed to `matplotlib.figure.Figure.legend() <https://matplotlib.org/stable/api/_as_gen/matplotlib.figure.Figure.legend.html#matplotlib.figure.Figure.legend>`_.
     yscale : str, optional
         Argument passed to `matplotlib.axes.Axes.set_yscale <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_yscale.html>`_. Default is 'linear'.
-
+    fig : matplotlib.Figure, optional
+        Existing figure to add plots to. If None, create new figure.
+        Default is None.
+    legend : bool, optional
+        Whether to display plot legend. Default is True.
 
     Returns
     -------
@@ -125,10 +134,11 @@ def plot_results(
     """
     # TODO: groupby within plot (i.e., if dim not a facet)
     # Initialize figure and subplots
-    fig = plt.Figure(**fig_options)
-    so.Plot(data, x=x).facet(**facet_options).share(**share_options).on(
-        fig
-    ).plot()
+    if fig is None:
+        fig = plt.Figure(**fig_options)
+        so.Plot(data, x=x).facet(**facet_options).share(**share_options).on(
+            fig
+        ).plot()
     axes = fig.get_axes()
     by = [
         facet_options.get(key)
@@ -139,8 +149,7 @@ def plot_results(
     # Query data by subplot
     if by:
         values = pd.DataFrame(
-            data=[ax.get_title().split(" | ") for ax in axes],
-            columns=by,
+            data=[ax.get_title().split(" | ") for ax in axes], columns=by
         ).astype(dict(zip(by, data[by].dtypes.to_list())))
         data_list = []
         for value in values.itertuples(index=False, name=None):
@@ -180,14 +189,14 @@ def plot_results(
 
     # Format legend
     fig.tight_layout()
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        loc="lower center",
-        bbox_to_anchor=(0.5, -0.05),
-        ncol=len(handles),
-    )
+    if legend:
+        handles, labels = ax.get_legend_handles_labels()
+        default_options = dict(
+            loc="lower_center", bbox_to_anchor=(0.5, -0.05), ncol=len(handles)
+        )
+        if legend_options:
+            default_options.update(legend_options)
+        fig.legend(handles, labels, **default_options)
 
     return fig
 
@@ -280,11 +289,7 @@ def plot_spxmod_results(
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.plot(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            "o-",
-            alpha=0.5,
-            label="spxmod",
+            df_cov["age_mid"], df_cov["coef"], "o-", alpha=0.5, label="spxmod"
         )
         ax.legend(fontsize="xx-small")
     return fig
