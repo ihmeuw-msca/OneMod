@@ -126,7 +126,7 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
 
     # Create and fit kernel regression model
-    kernel = build_kernel(data, model_config)
+    kernel = build_kernel(model_config)
     likelihood = BinomialLikelihood(config.obs, config.weights, "offset")
     model = KernelRegModel(kernel, likelihood, lam=model_config.lam)
     data["kreg_y"], history = model.fit(**stage_config.kreg_fit.model_dump())
