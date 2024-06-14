@@ -20,11 +20,7 @@ class KregModel(Config):
         Description.
     gamma_year
         Description.
-    alpha_year
-        Description.
     exp_location
-        Description.
-    exp_sex
         Description.
     lam
         Description.
@@ -36,9 +32,7 @@ class KregModel(Config):
     age_scale: float
     gamma_age: float
     gamma_year: float
-    alpha_year: float
     exp_location: float
-    exp_sex: float
     lam: float
     nugget: float
 
