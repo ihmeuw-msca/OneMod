@@ -5,10 +5,9 @@ import warnings
 import fire
 import pandas as pd
 from loguru import logger
-from pplkit.data.interface import DataInterface
-
 from onemod.diagnostics import plot_rover_covsel_results, plot_spxmod_results
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
+from pplkit.data.interface import DataInterface
 
 
 def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
@@ -72,9 +71,22 @@ def collect_results_rover_covsel(directory: str) -> None:
     dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
 
     # Plot coefficients and save
+    summaries = summaries.merge(
+        dataif.load_data(columns=["age_group_id", "age_mid"]).drop_duplicates(),
+        on="age_group_id",
+        how="left",
+    )
     if config.plots:
-        fig = plot_rover_covsel_results(dataif, summaries)
-        fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
+        if "sex_id" in config.groupby:
+            for sex_id, df in summaries.groupby("sex_id"):
+                fig = plot_rover_covsel_results(df)
+                fig.savefig(
+                    dataif.rover_covsel / f"coef_{sex_id}.pdf",
+                    bbox_inches="tight",
+                )
+        else:
+            fig = plot_rover_covsel_results(summaries)
+            fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
 def collect_results_spxmod(directory: str) -> None:

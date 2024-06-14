@@ -8,8 +8,6 @@ import seaborn.objects as so
 from loguru import logger
 from pplkit.data.interface import DataInterface
 
-from onemod.schema import OneModConfig
-
 
 def plot_results(
     data: pd.DataFrame,
@@ -202,14 +200,12 @@ def plot_results(
 
 
 def plot_rover_covsel_results(
-    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str]
+    summaries: pd.DataFrame, covs: list[str] | None = None
 ) -> plt.Figure:
     """Description.
 
     Parameters
     ----------
-    dataif : DataInterface
-        Description.
     summaries : pd.DataFrame
         Description.
     covs : list[str]
@@ -222,18 +218,12 @@ def plot_rover_covsel_results(
 
     """
     logger.info("Plotting coefficient magnitudes by age.")
-    config = OneModConfig(**dataif.load_settings())
 
     # add age_mid to summary
-    df_age = dataif.load(
-        config.input_path, columns=["age_group_id", "age_mid"]
-    ).drop_duplicates()
-
-    summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
     logger.info(
-        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
+        f"Starting to plot for {len(covs)} covariates and {df_covs['age_group_id'].nunique()} age groups"
     )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
