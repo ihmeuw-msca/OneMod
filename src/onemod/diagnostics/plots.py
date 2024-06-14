@@ -1,12 +1,9 @@
 """Plot OneMod results."""
 
-from warnings import warn
-
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn.objects as so
 from loguru import logger
-from pplkit.data.interface import DataInterface
 
 
 def plot_results(
