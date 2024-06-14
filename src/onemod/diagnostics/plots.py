@@ -223,7 +223,7 @@ def plot_rover_covsel_results(
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
     logger.info(
-        f"Starting to plot for {len(covs)} covariates and {df_covs['age_group_id'].nunique()} age groups"
+        f"Starting to plot for {len(covs)} covariates and {summaries['age_group_id'].nunique()} age groups"
     )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
@@ -240,8 +240,9 @@ def plot_rover_covsel_results(
             alpha=0.5,
             label="rover_covsel",
         )
-        ax[ii].set_ylabel("cov")
+        ax[ii].set_ylabel(cov)
         ax[ii].axhline(0.0, linestyle="--")
+    ax[ii].set_xlabel("age_mid")
 
     logger.info("Completed plotting of rover results.")
     return fig
