@@ -122,7 +122,7 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
         index = data_group.groups[key]
         data.loc[index, "cali_kreg_y_sd"] = alpha * data.loc[index, "kreg_y_sd"]
         data.loc[index, "cali_kreg_y_sd"] = alpha * data.loc[index, "kreg_y_sd"]
-        data.loc[index,cali_draw_cols] = data.loc[index,'kreg_linear'] + alpha * data.loc[index,error_draw_columns]
+        data.loc[index,cali_draw_cols] = expit(data.loc[index,'kreg_linear'] + alpha * data.loc[index,error_draw_columns])
 
 
     data["cali_kreg_lwr"] = expit(
