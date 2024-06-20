@@ -86,11 +86,14 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
         return model.kernel.op_root_k @ (op_hess(model.kernel.op_root_k @ x))
 
     sampler = jax.jit(get_PC_inv_rootH(op_pced_hess, op_root_pc, lanczos_order))
-
+    
     moment = jnp.zeros(len(data))
+    error_draw_columns = [f'kreg_error_draw_{i}' for i in tqdm(range(num_samples))]
     for i in tqdm(range(num_samples)):
         probe = jax.random.normal(jax.random.PRNGKey(i), (len(data),))
-        moment += sampler(probe) ** 2
+        sample = sampler(probe)
+        data[f'kreg_error_draw_{i}'] = sample
+        moment += sample ** 2
 
     data["kreg_y_sd"] = jnp.sqrt(moment / num_samples)
     data["kreg_linear"] = data.eval("kreg_y + offset")
@@ -102,6 +105,7 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     # TODO: hard coded by region
     data["cali_kreg_y_sd"] = data["kreg_y_sd"]
     data_group = data.groupby("region_id")
+    cali_draw_cols = [f'cali_kreg_draw_{i}' for i in tqdm(range(num_samples))]
 
     for key, data_sub in data_group:
         cali_kreg_y_sd = calibrate_pred_sd(
@@ -117,6 +121,9 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
         ).mean()
         index = data_group.groups[key]
         data.loc[index, "cali_kreg_y_sd"] = alpha * data.loc[index, "kreg_y_sd"]
+        data.loc[index, "cali_kreg_y_sd"] = alpha * data.loc[index, "kreg_y_sd"]
+        data.loc[index,cali_draw_cols] = data.loc[index,'kreg_linear'] + alpha * data.loc[index,error_draw_columns]
+
 
     data["cali_kreg_lwr"] = expit(
         data.eval("kreg_linear - 1.96 * cali_kreg_y_sd")
@@ -134,7 +141,7 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
                 "kreg_upr",
                 "cali_kreg_lwr",
                 "cali_kreg_upr",
-            ]
+            ] + cali_draw_cols
         ],
         f"submodels/{submodel_id}/predictions.parquet",
     )
