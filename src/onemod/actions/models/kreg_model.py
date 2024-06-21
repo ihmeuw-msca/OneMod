@@ -121,6 +121,7 @@ def kreg_model(directory: str, submodel_id: str) -> None:
         "log(exp(@age_scale * age_mid) - 1) / @age_scale"
     )
     data.loc[data.eval(f"{config.pred} == 0"), config.pred] = 1e-10
+    data.loc[data.eval(f"{config.pred} == 1"), config.pred] = 1 - 1e-10
     data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
 
     # Create and fit kernel regression model

@@ -72,7 +72,6 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     data["transformed_age"] = data.eval(
         "log(exp(@age_scale * age_mid) - 1) / @age_scale"
     )
-    data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
 
     # Load kernel regression model
     model = dataif.load_kreg(f"submodels/{submodel_id}/model.pkl")
@@ -130,6 +129,8 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
             config.ids
             + [
                 config.pred,
+                "kreg_y",
+                "offset",
                 "kreg_lwr",
                 "kreg_upr",
                 "cali_kreg_lwr",
