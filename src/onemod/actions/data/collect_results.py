@@ -1,68 +1,65 @@
 """Collect onemod stage submodel results."""
+
 from warnings import warn
 
 import fire
-from loguru import logger
 import matplotlib.pyplot as plt
 import pandas as pd
+from loguru import logger
 from pplkit.data.interface import DataInterface
 
-from onemod.schema.models.onemod_config import OneModConfig
-from onemod.utils import (
-    get_handle,
-    get_rover_covsel_submodels,
-    get_swimr_submodels,
-    get_weave_submodels,
-)
+from onemod.schema import OneModConfig
+from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
 
 def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
-    submodel_ids = get_rover_covsel_submodels(dataif.experiment)
-    summaries = []
-    for submodel_id in submodel_ids:
-        summary = dataif.load_rover_covsel(f"submodels/{submodel_id}/summary.csv")
-        summary["submodel_id"] = submodel_id
-        summaries.append(summary)
-    summaries = pd.concat(summaries, axis=0)
-
-    # Merge with the existing subsets
     subsets = dataif.load_rover_covsel("subsets.csv")
-    subsets["submodel_id"] = [f"subset{i}" for i in subsets["subset_id"]]
-    summaries = summaries.merge(
-        subsets.drop("subset_id", axis=1), on="submodel_id", how="left"
-    )
+
+    # Collect coefficient summaries
+    summaries = []
+    for subset_id in subsets["subset_id"]:
+        summary = dataif.load_rover_covsel(
+            f"submodels/subset{subset_id}/summary.csv"
+        )
+        summary["subset_id"] = subset_id
+        summaries.append(summary)
+    summaries = pd.concat(summaries)
+
+    # Merge with existing subsets and add statistic
+    summaries = summaries.merge(subsets, on="subset_id", how="left")
     summaries["abs_t_stat"] = summaries.eval("abs(coef / coef_sd)")
     return summaries
 
 
-def _get_selected_covs(dataif: DataInterface) -> list[str]:
-    summaries = _get_rover_covsel_summaries(dataif)
-    t_threshold = dataif.load_settings()["rover_covsel"]["t_threshold"]
-
+def _get_selected_covs(
+    summaries: pd.DataFrame, groupby: list[str], t_threshold: float
+) -> pd.DataFrame:
     selected_covs = (
-        summaries.groupby("cov")["abs_t_stat"]
+        summaries.groupby(groupby + ["cov"])["abs_t_stat"]
         .mean()
         .reset_index()
-        .query(f"abs_t_stat >= {t_threshold}")["cov"]
-        .tolist()
+        .query(f"abs_t_stat >= {t_threshold}")
     )
-    logger.info(f"Selected covariates: {selected_covs}")
+    logger.info(
+        f"Selected covariates: {selected_covs['cov'].unique().tolist()}"
+    )
     return selected_covs
 
 
 def _plot_rover_covsel_results(
-    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str] | None = None
+    dataif: DataInterface,
+    summaries: pd.DataFrame,
+    covs: list[str] | None = None,
 ) -> plt.Figure:
     """TODO: We hard-coded that the submodels for rover_covsel model are vary
     across age groups and use age mid as x axis of the plot.
     """
-
+    # TODO: Plot by submodel?
     logger.info("Plotting coefficient magnitudes by age.")
-    settings = OneModConfig(**dataif.load_settings())
 
     # add age_mid to summary
-    df_age = dataif.load(
-        settings.input_path, columns=["age_group_id", "age_mid"]
+    df_age = dataif.load_data(
+        columns=["age_group_id", "age_mid"]
     ).drop_duplicates()
 
     summaries = summaries.merge(df_age, on="age_group_id", how="left")
@@ -73,8 +70,9 @@ def _plot_rover_covsel_results(
     )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
+    ax = [ax] if len(covs) == 1 else ax
     for i, cov in enumerate(covs):
-        df_cov = df_covs.get_group(cov)
+        df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
         if i % 5 == 0:
             logger.info(f"Plotting for group {i}")
         ax[i].errorbar(
@@ -92,119 +90,117 @@ def _plot_rover_covsel_results(
     return fig
 
 
-def _plot_regmod_smooth_results(
+def _plot_spxmod_results(
     dataif: DataInterface, summaries: pd.DataFrame
 ) -> plt.Figure | None:
     """TODO: same with _plot_rover_covsel_results"""
-    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
+    # TODO: Plot by submodel?
+    selected_covs = (
+        dataif.load_rover_covsel("selected_covs.csv")["cov"].unique().tolist()
+    )
     if not selected_covs:
-        warn("There are no covariates selected, skip `plot_regmod_smooth_results`")
+        warn("There are no covariates selected, skip `plot_spxmod_results`")
         return None
 
-    df_coef = (
-        dataif.load_regmod_smooth("coef.csv")
-        .query("dim == 'age_mid'")
-        .rename(columns={"dim_val": "age_mid"})
-    )
-    df_covs = df_coef.groupby("cov")
+    df_covs = dataif.load_spxmod("coef.csv").groupby("cov")
 
     fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
-    logger.info(f"Plotting smoothed covariates for {len(selected_covs)} covariates.")
+    logger.info(
+        f"Plotting smoothed covariates for {len(selected_covs)} covariates."
+    )
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
-        ax.errorbar(
+        ax.plot(
             df_cov["age_mid"],
             df_cov["coef"],
-            yerr=1.96 * df_cov["coef_sd"],
-            fmt="o-",
+            "o-",
             alpha=0.5,
-            label="regmod_smooth",
+            label="spxmod",
         )
         ax.legend(fontsize="xx-small")
     return fig
 
 
-def collect_results_rover_covsel(experiment_dir: str) -> None:
-    """Collect rover covariate selection results. Process all the significant
-    covariates for each sub group. If a covaraite is significant across more
-    than half of the subgroups if will be selected.
+def collect_results_rover_covsel(directory: str) -> None:
+    """Collect rover covariate selection results.
 
-    This step will save ``selected_covs.yaml`` with a list of selected
-    covariates in the rover results folder.
+    Collect covariate summaries from submodels, select covariates based
+    on t-statistic and save as ``selected_covs.csv``, and plot
+    covariate coefficients by age group.
+
     """
-    dataif, _ = get_handle(experiment_dir)
-
-    selected_covs = _get_selected_covs(dataif)
-    dataif.dump_rover_covsel(selected_covs, "selected_covs.yaml")
+    dataif, config = get_handle(directory)
 
     # Concatenate summaries and save
     logger.info("Saving concatenated rover coefficient summaries.")
     summaries = _get_rover_covsel_summaries(dataif)
     dataif.dump_rover_covsel(summaries, "summaries.csv")
 
+    # Select covariates and save
+    selected_covs = _get_selected_covs(
+        summaries, config.groupby, config.rover_covsel.t_threshold
+    )
+    dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
+
+    # Plot coefficients and save
     fig = _plot_rover_covsel_results(dataif, summaries)
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
-def collect_results_regmod_smooth(experiment_dir: str) -> None:
+def collect_results_spxmod(directory: str) -> None:
     """This step is used for creating diagnostics."""
-    dataif, _ = get_handle(experiment_dir)
+    dataif, _ = get_handle(directory)
+
+    # Collect submodel predictions
+    predictions = []
+    subsets = dataif.load_spxmod("subsets.csv")
+    for subset_id in subsets["subset_id"]:
+        df = dataif.load_spxmod(
+            f"submodels/subset{subset_id}/predictions.parquet"
+        )
+        predictions.append(df)
+    dataif.dump_spxmod(pd.concat(predictions), "predictions.parquet")
+
+    # Collect submodel coefficients
+    coef = []
+    for subset_id in subsets["subset_id"]:
+        df = dataif.load_spxmod(f"submodels/subset{subset_id}/coef.csv")
+        df["subset_id"] = subset_id
+        coef.append(df)
+    coef = pd.merge(
+        left=pd.concat(coef).reset_index(drop=True),
+        right=subsets.drop("stage_id", axis=1),
+        on="subset_id",
+        how="left",
+    )
+    dataif.dump_spxmod(coef, "coef.csv")
+
+    # Plot coefficients
     summaries = _get_rover_covsel_summaries(dataif)
-    fig = _plot_regmod_smooth_results(dataif, summaries)
+    fig = _plot_spxmod_results(dataif, summaries)
     if fig is not None:
-        fig.savefig(dataif.regmod_smooth / "smooth_coef.pdf", bbox_inches="tight")
+        fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
 
 
-def collect_results_swimr(experiment_dir: str) -> None:
-    """Collect swimr submodel results."""
-    dataif, settings = get_handle(experiment_dir)
+def collect_results_weave(directory: str) -> None:
+    """Collect weave submodel results."""
+    dataif, config = get_handle(directory)
 
-    submodel_ids = get_swimr_submodels(experiment_dir)
-    for holdout_id in settings.col_holdout + ["full"]:
+    submodel_ids = get_submodels("weave", directory)
+    for holdout_id in config.holdouts + ["full"]:
         df_list = []
-        for submodel_id in [
-            submodel_id
-            for submodel_id in submodel_ids
-            if submodel_id.split("_")[3] == holdout_id
-        ]:
-            df_list.append(
-                dataif.load_swimr(
-                    f"submodels/{submodel_id}/predictions.parquet"
-                ).astype({"param_id": str})
-            )
+        for submodel_id in submodel_ids:
+            submodel = parse_weave_submodel(submodel_id)
+            if submodel["holdout_id"] == holdout_id:
+                df = dataif.load_weave(f"submodels/{submodel_id}.parquet")
+                df["model_id"] = submodel["model_id"]
+                df["param_id"] = str(submodel["param_id"])
+                df_list.append(df)
         df_pred = pd.pivot(
             data=pd.concat(df_list, ignore_index=True),
-            index=settings.col_id,
+            index=config.ids,
             columns=["model_id", "param_id"],
-            values=["residual", settings.col_pred],
-        )
-        if holdout_id == "full":
-            dataif.dump_swimr(df_pred, "predictions.parquet")
-        else:
-            dataif.dump_swimr(df_pred, f"predictions_{holdout_id}.parquet")
-
-
-def collect_results_weave(experiment_dir: str) -> None:
-    """Collect weave submodel results."""
-    dataif, settings = get_handle(experiment_dir)
-
-    submodel_ids = get_weave_submodels(experiment_dir)
-    for holdout_id in settings.col_holdout + ["full"]:
-        df_pred = pd.concat(
-            [
-                dataif.load_weave(f"submodels/{submodel_id}.parquet").astype(
-                    {"param_id": str}
-                )
-                for submodel_id in submodel_ids
-                if submodel_id.split("_")[3] == holdout_id
-            ],
-            ignore_index=True,
-        ).drop_duplicates()
-        df_pred = pd.pivot(
-            data=df_pred,
-            index=settings["col_id"],
-            columns=["model_id", "param_id"],
-            values=["residual", settings.col_pred],
+            values=["residual", "residual_se", config.pred],
         )
         if holdout_id == "full":
             dataif.dump_weave(df_pred, "predictions.parquet")
@@ -212,11 +208,10 @@ def collect_results_weave(experiment_dir: str) -> None:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
 
-def collect_results(stage_name: str, experiment_dir: str) -> None:
+def collect_results(stage_name: str, directory: str) -> None:
     callable_map = {
         "rover_covsel": collect_results_rover_covsel,
-        "regmod_smooth": collect_results_regmod_smooth,
-        "swimr": collect_results_swimr,
+        "spxmod": collect_results_spxmod,
         "weave": collect_results_weave,
     }
     try:
@@ -224,7 +219,7 @@ def collect_results(stage_name: str, experiment_dir: str) -> None:
     except KeyError:
         raise ValueError(f"Stage name {stage_name} is not valid.")
 
-    func(experiment_dir)
+    func(directory)
 
 
 def main() -> None:

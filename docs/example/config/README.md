@@ -6,11 +6,11 @@ The [settings](settings.yml) file contains the OneMod stage model settings.
 
 Parameters:
 - `input_path` (str) - Path to input data. Must be a parquet file.
-- `col_id` (str or list of str) - Column name(s) for point IDs. For example, age_group_id, location_id, sex_id, and/or year_id, etc. To run a OneMod pipeline on a subset of the input data, include a list or lists of the ID values to use in the model.
-- `col_obs` (str) - Column name for input observations.
-- `col_pred` (str) - Column name for OneMod predictions.
-- `col_holdout` (str or list or str) - Column name(s) for OneMod stage out-of-sample performance. Values can be either 0 (training data), 1 (holdout data), or NaN (missing input observations).
-- `col_test` (str) - Column name for OneMod pipeline out-of-sample performance. Values can be either 0 (training data), 1 (testing data), or NaN (missing input observations).
+- `ids` (str or list of str) - Column name(s) for point IDs. For example, age_group_id, location_id, sex_id, and/or year_id, etc. To run a OneMod pipeline on a subset of the input data, include a list or lists of the ID values to use in the model.
+- `obs` (str) - Column name for input observations.
+- `pred` (str) - Column name for OneMod predictions.
+- `holdouts` (str or list or str) - Column name(s) for OneMod stage out-of-sample performance. Values can be either 0 (training data), 1 (holdout data), or NaN (missing input observations).
+- `test` (str) - Column name for OneMod pipeline out-of-sample performance. Values can be either 0 (training data), 1 (testing data), or NaN (missing input observations).
 
 ### OneMod stage settings
 
@@ -24,23 +24,7 @@ See the [ModRover documentation](https://ihmeuw-msca.github.io/modrover/) for a 
 
 Optional parameters:
 - `col_offset` (str, optional) - Column name for model offset values. If not specified, default offset value is 0.
-- `col_weights` (str, optional) - Column name for model weight values. If not specified, default weight value is 1.
-
-**SWiMR settings**
-
-See the [SWiMR documentation](https://hub.ihme.washington.edu/display/MSCA/Similarity-Weighted+Meta-Regression+%28SWiMR%29+models) for a full description of the SWiMR stage parameters.
-
-Optional parameters:
--  `cascade_levels` (list of str, optional) - Column names of cascade hierarchy if `model_type` is cascade. Use age__tmp for age_group_id; use locid for location_id; use sex__tmp for sex_id.
-- `cascade_hierarchy_csv_path` (str, optional) - Path to cascade hierarchy file if `model_type` is cascade. If not specified, a cascade hierarchy file is created by the OneMod package based on the input data and `cascade_levels`.
-
-For the SWiMR stage, you can include multiple model configurations (note: model names cannot contain underscores). In addition, you can specify a list of values for the following model parameters:
-- `n_internal_knots_year`
-- `similarity_matrix`
-- `similarity_multiplier`
-- `use_similarity_matrix`
-- `theta`
-- `intercept_theta`
+- `weights` (str, optional) - Column name for model weight values. If not specified, default weight value is 1.
 
 **WeAve settings**
 
@@ -69,7 +53,7 @@ The optional [resources](resources.yml) file contains OneMod stage cluster resou
 
 Parameters:
 - `tool_resources` (required) - Default resources for all pipeline tasks.
-- `initialization_template`, `rover_submodel_initialization_template`, `swimr_submodel_initialization_template` (optional) - Resources for stage initialization tasks (i.e., deleting previous results and initializing result directories).
-- `rover_modeling_template`, `swimr_modeling_template`, `weave_modeling_template`, `ensemble_modeling_template` (optional) - Resources for stage modeling tasks.
+- `initialization_template`, `rover_submodel_initialization_template`, (optional) - Resources for stage initialization tasks (i.e., deleting previous results and initializing result directories).
+- `rover_modeling_template`, `weave_modeling_template`, `ensemble_modeling_template` (optional) - Resources for stage modeling tasks.
 - `collection_template` (optional) - Resources for stage collection tasks (i.e., collecting submodel results).
-- `deletion_template`, `rover_submodel_deletion_template`, `swimr_submodel_deletion_template` (optional) - Resources for stage deletion tasks (i.e., deleting intermediate results if `save_intermediate` is False).
+- `deletion_template`, `rover_submodel_deletion_template`, (optional) - Resources for stage deletion tasks (i.e., deleting intermediate results if `save_intermediate` is False).

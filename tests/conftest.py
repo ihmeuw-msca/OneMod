@@ -1,16 +1,14 @@
 import itertools
+import os
+import shutil
 from pathlib import Path
 
-from jobmon.client.api import Tool
 import numpy as np
 import pandas as pd
 import pytest
-import os
-import shutil
 import yaml
-
-
-from onemod.schema.models.api import OneModConfig
+from jobmon.client.api import Tool
+from onemod.schema import OneModConfig
 
 
 @pytest.fixture(scope="session")
@@ -64,7 +62,13 @@ def sample_input_data(temporary_directory):
     )
     data = pd.DataFrame(
         values,
-        columns=["super_region_id", "location_id", "sex_id", "age_group_id", "year_id"],
+        columns=[
+            "super_region_id",
+            "location_id",
+            "sex_id",
+            "age_group_id",
+            "year_id",
+        ],
     )
 
     # Mock an age mid column
@@ -84,6 +88,9 @@ def sample_input_data(temporary_directory):
 
     # Generate an observations column, random from 0 to 1
     data["obs_rate"] = np.random.rand(len(data))
+
+    # Add population for residual uncertainty computation
+    data["population"] = 1.0
 
     # Save to the temp directory
     os.mkdir(temporary_directory / "data")

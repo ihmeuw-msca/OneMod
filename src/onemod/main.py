@@ -1,20 +1,19 @@
 """Run onemod pipeline."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
 
 import fire
 from jobmon.client.status_commands import resume_workflow_from_id
 
 from onemod.scheduler.scheduler import Scheduler
-from onemod.schema.validate import validate_config
-from onemod.utils import as_list, get_handle
+from onemod.utils import format_input, get_handle
 
 
 def run_pipeline(
     directory: str,
-    stages: Optional[Union[list[str], str]] = None,
+    stages: list[str] | None = None,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
     run_local: bool = False,
@@ -27,44 +26,53 @@ def run_pipeline(
         The experiment directory. It must contain config/settings.yml.
     stages : list of str or str, optional
         The pipeline stages to run. Default is ['rover', 'swimr', 'weave', 'ensemble'].
+        The experiment directory. Must contain config/settings.yml.
+    stages : list of str, optional
+        The pipeline stages to run. Default is
+        ['rover_covsel', 'regmod_smooth', 'weave', 'ensemble'].
     cluster_name : str, optional
         Name of the cluster to run the pipeline on. Default is 'slurm'.
     configure_resources : bool, optional
         Whether to configure resources in directory/config/resources.yml. Default is True.
     run_local : bool, optional
         If true run the jobs sequentially without Jobmon. Default is False.
+        Whether to configure resources in
+        directory/config/resources.yml. Default is True.
+    run_local : bool, optional
+        Whether to run pipeline without Jobmon. Default is False.
 
     """
-    all_stages = ["rover_covsel", "regmod_smooth", "swimr", "weave", "ensemble"]
+    all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
     if stages is None:
         stages = all_stages
-    for stage in as_list(stages):
+    for stage in stages:
         if stage not in all_stages:
             raise ValueError(f"Invalid stage: {stage}")
 
     # Load and validate the configuration file
     dataif, config = get_handle(directory)
-    validate_config(stages=stages, directory=directory, config=config)
 
+    # Filter input data by ID subsets
+    # Used for task creation so must happen outside of workflow
+    if "rover_covsel" in stages or not dataif.data.exists():
+        format_input(directory)
+
+    # Configure Jobmon resources
     directory = Path(directory)
-
     if configure_resources and not run_local:
-        # TODO: How did that str call work?????
-        # resources_file = str(directory / "config" / "resources.yml")
-        resources_file = f"{directory}/config/resources.yml"
+        resources_file = str(directory / "config" / "resources.yml")
     else:
         resources_file = ""
 
     # Create the scheduler and run it
     scheduler = Scheduler(
         stages=stages,
-        experiment_dir=directory,
+        directory=directory,
         config=config,
         resources_path=resources_file,
         default_cluster_name=cluster_name,
         configure_resources=configure_resources,
     )
-
     scheduler.run(run_local=run_local)
 
 

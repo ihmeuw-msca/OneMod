@@ -89,7 +89,7 @@ OneMod creates a lot of output files. After running, the experiment directory sh
     |    |    |    |    |--- rover.pkl
     |    |    |    |    |--- summary.csv
                     ...
-    |    |--- regmod_smooth/
+    |    |--- spxmod/
     |    |    |--- coef.csv
     |    |    |--- model.pkl
     |    |    |--- predictions.parquet
@@ -143,7 +143,7 @@ A fit rover model, containing all explored covariate combinations and their scor
 
 Covariate coefficients, standard deviation, and overall significance, by subset ID.
 
-Regmod Smooth Files
+SPxMod Files
 -------------------
 
 * coef.csv

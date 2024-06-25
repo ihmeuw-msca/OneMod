@@ -10,13 +10,14 @@ def test_rover_tasks(
 
     # Create a set of regmod tasks. Check that the correct commands are generated
     scheduler = Scheduler(
-        experiment_dir=temporary_directory,
+        directory=temporary_directory,
         config=sample_config,
-        stages=["regmod_smooth"],
+        stages=["spxmod"],
     )
 
     tasks = [
-        scheduler.create_task(action) for action in scheduler.parent_action_generator()
+        scheduler.create_task(action)
+        for action in scheduler.parent_action_generator()
     ]
     # 3 tasks - initialization, modeling and collection
     assert len(tasks) == 3
@@ -27,5 +28,5 @@ def test_rover_tasks(
     assert agg_task.upstream_tasks == {model_task}
     assert model_task.upstream_tasks == {init_task}
     assert init_task.upstream_tasks == set()
-    assert "regmod_smooth_model" in model_task.command
-    assert "collect_results --stage_name regmod_smooth" in agg_task.command
+    assert "spxmod_model" in model_task.command
+    assert "collect_results --stage_name spxmod" in agg_task.command

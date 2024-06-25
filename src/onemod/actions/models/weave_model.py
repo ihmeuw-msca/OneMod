@@ -1,112 +1,110 @@
 """Run weave model."""
+
 import fire
-from loguru import logger
 import numpy as np
+from loguru import logger
 from weave.dimension import Dimension
 from weave.smoother import Smoother
 
+from onemod.modeling.residual import ResidualCalculator
 from onemod.utils import (
-    as_list,
-    get_handle,
-    get_prediction,
-    get_smoother_input,
-    Subsets,
     WeaveParams,
+    WeaveSubsets,
+    get_handle,
+    get_weave_input,
+    parse_weave_submodel,
 )
 
-# weave kernel parameters
-kernel_params = {
-    "exponential": "radius",
-    "tricubic": "exponent",
-    "depth": "radius",
-}
 
-
-def weave_model(experiment_dir: str, submodel_id: str) -> None:
+def weave_model(directory: str, submodel_id: str) -> None:
     """Run weave model by submodel ID.
 
-    Args:
-        experiment_dir (Union[Path, str]): The path to the directory containing the
-            experiment data.
-        submodel_id (str): The ID of the submodel to be processed.
+    Parameters
+    ----------
+    directory
+        The path to the directory containing the experiment data.
+    submodel_id (str)
+        The ID of the submodel to be processed.
+
     """
-    dataif, settings = get_handle(experiment_dir)
+    dataif, config = get_handle(directory)
 
     # Get submodel settings
-    model_id = submodel_id.split("_")[0]
-    param_id = int(submodel_id.split("_")[1][5:])
-    subset_id = int(submodel_id.split("_")[2][6:])
-    holdout_id = submodel_id.split("_")[3]
-    batch_id = int(submodel_id.split("_")[4][5:])
-    model_settings = settings["weave"]["models"][model_id]
-    params = WeaveParams(model_id, param_sets=dataif.load_weave("parameters.csv"))
-    subsets = Subsets(
-        model_id, model_settings, subsets=dataif.load_weave("subsets.csv")
+    submodel = parse_weave_submodel(submodel_id)
+    model_config = config.weave.models[submodel["model_id"]]
+    params = WeaveParams(
+        submodel["model_id"], param_sets=dataif.load_weave("parameters.csv")
+    )
+    subsets = WeaveSubsets(
+        submodel["model_id"],
+        model_config,
+        subsets=dataif.load_weave("subsets.csv"),
     )
 
     # Load data and filter by subset and batch
     df_input = subsets.filter_subset(
-        get_smoother_input("weave", config=settings, dataif=dataif, from_rover=True),
-        subset_id,
-        batch_id,
+        get_weave_input(config, dataif),
+        submodel["subset_id"],
+        submodel["batch_id"],
     ).rename(columns={"batch": "predict"})
-    df_input["fit"] = df_input[settings["col_test"]] == 0
-    if holdout_id != "full":
-        df_input["fit"] = df_input["fit"] & (df_input[holdout_id] == 0)
+    df_input["fit"] = df_input[config.test] == 0
+    if submodel["holdout_id"] != "full":
+        df_input["fit"] = df_input["fit"] & (
+            df_input[submodel["holdout_id"]] == 0
+        )
     df_input = df_input[df_input["fit"] | df_input["predict"]].drop(
-        columns=as_list(settings["col_test"]) + as_list(settings["col_holdout"])
+        columns=[config.test] + config.holdouts
     )
 
     # Create smoother objects
     dimensions = []
-    for dim_name, dim_dict in model_settings["dimensions"].items():
-        dim_dict = dim_dict.model_dump(
-            exclude={"parent_args"}
-        )  # Base type is a pydantic model, so convert to dict
-        if dim_dict["kernel"] != "identity":
-            param = kernel_params[dim_dict["kernel"]]
-            dim_dict[param] = params.get_param(f"{dim_name}_{param}", param_id)
-        if "distance" in dim_dict:
-            if dim_dict["distance"] == "dictionary":
+    for dim_name, dim_object in model_config.dimensions.items():
+        dim_dict = dim_object.model_dump()
+        for param in params.get_dimension_params(dim_object):
+            if param == "distance_dict":
                 dim_dict["distance_dict"] = np.load(
-                    params.get_param(f"{dim_name}_distance_dict", param_id),
+                    params.get_param(
+                        f"{dim_name}__distance_dict", submodel["param_id"]
+                    ),
                     allow_pickle=True,
-                ).item()
+                )
+            else:
+                dim_dict[param] = params.get_param(
+                    f"{dim_name}__{param}", submodel["param_id"]
+                )
         dimensions.append(Dimension(**dim_dict))
     smoother = Smoother(dimensions)
 
-    # Impute missing observation and holdout values
-    # Assume that missing numbers for holdouts are implicit 1's (i.e. used for testing anyways)
-    df_input.fillna(1, inplace=True)
+    # WeAve models throw error if data contains NaNs
+    # Replace possible NaNs with dummy value
+    for column in ["spxmod_value", "spxmod_se"]:
+        df_input.loc[
+            df_input.eval(f"fit == False and {column}.isna()"), column
+        ] = 1
+
     # Get predictions
     logger.info(f"Fitting smoother for {submodel_id=}")
     df_pred = smoother(
         data=df_input,
-        observed="residual_value",
-        stdev="residual_se",
+        observed="spxmod_value",
+        stdev="spxmod_se",
         smoothed="residual",
         fit="fit",
         predict="predict",
-    )
+    ).rename(columns={"residual_sd": "residual_se"})
     logger.info(f"Completed fitting, predicting for {submodel_id=}")
-    df_pred[settings["col_pred"]] = df_pred.apply(
-        lambda row: get_prediction(row, settings["col_pred"], settings["mtype"]),
-        axis=1,
-    )
-    df_pred["model_id"] = model_id
-    df_pred["param_id"] = param_id
-    df_pred["holdout_id"] = holdout_id
-    df_pred = df_pred[
-        as_list(settings["col_id"])
-        + ["residual", settings["col_pred"], "model_id", "param_id", "holdout_id"]
-    ]
+
+    residual_calculator = ResidualCalculator(config.mtype)
+    df_pred[config.pred] = residual_calculator.predict(df_pred, config.pred)
+    df_pred = df_pred[config.ids + ["residual", "residual_se", config.pred]]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
 
 def main() -> None:
     """Main entry point of the module.
 
-    This function uses the Fire library to allow the weave_model function to be
-    invoked from the command line.
+    This function uses the Fire library to allow the weave_model
+    function to be invoked from the command line.
+
     """
     fire.Fire(weave_model)

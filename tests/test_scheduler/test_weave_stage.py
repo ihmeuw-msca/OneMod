@@ -10,11 +10,12 @@ def test_rover_tasks(
 
     # Create a set of rover tasks. Check that the correct commands are generated
     scheduler = Scheduler(
-        experiment_dir=temporary_directory, config=sample_config, stages=["weave"]
+        directory=temporary_directory, config=sample_config, stages=["weave"]
     )
 
     tasks = [
-        scheduler.create_task(action) for action in scheduler.parent_action_generator()
+        scheduler.create_task(action)
+        for action in scheduler.parent_action_generator()
     ]
     # Breakdown: Model1 has 2 parameters - age and location
     # (in the settings.weave.models.model1.dimensions register).
