@@ -25,15 +25,16 @@ Jobmon
 ~~~~~~
 
 As a 30 second introduction to Jobmon, it's an orchestration module, written in Python, that allows you to define a 
-**workflow**, create **tasks** to add to that workflow, set dependencies on said tasks, and run the workflow. 
+**workflow**, create **tasks** to add to that workflow, set dependencies on its tasks, and run the workflow.
 
-A **workflow** is a computational graph of work to be done, the building blocks of said graph are **tasks**. Tasks contain
-a bash command indicating the command to run when said task is scheduled to execute. After building tasks, setting dependencies, 
-and adding to a workflow, all the user needs to do is call the ``Workflow.run()`` method to begin execution of said workflow. 
+A **workflow** is a computational graph of work to be done, the building blocks of the graph are **tasks**. Tasks contain
+a bash command which is the command to run when that task is scheduled to execute. After building tasks, setting dependencies,
+and adding to a workflow, all the user needs to do is call the ``Workflow.run()`` method to begin execution of the workflow.
 At this point the user can sit back and monitor the progress without needing to wait around for intermediate phases to conclude - 
 Jobmon will wait until a task completes and automatically schedule the downstream tasks in the graph.
 
-There is an intermediate concept called ``TaskTemplate`` - the most direct way of thinking about task templates are simply
+There is an intermediate concept called ``TaskTemplate`` - the most direct way of thinking about task templates is that they
+are simply
 a command template that you can parametrize with keyword args to create tasks. For example, if you have a task that prints out
 an arbitrary message, you can create a task template with the command template ``echo {message}``. A task will be an instance
 of this template, i.e. ``Task(message='hello'), Task(message='world')``.
@@ -57,7 +58,7 @@ about the detailed debugging process useful for OneMod, refer to the :ref:`Jobmo
 Subsets and Submodels
 ~~~~~~~~~~~~~~~~~~~~~
 
-A key requirement of onemod is the ability to flexibly model different sets of fixed/random effects. To facilitate computation, 
+A key requirement of OneMod is the ability to flexibly model different sets of fixed/random effects. To facilitate computation,
 we need to be able to split up the data across different axes arbitrarily. The concept of subsets exists to work nicely with different
 chunks of data containing different identifying attributes. 
 
@@ -123,6 +124,15 @@ Common Errors and Solutions
 
   This can cause errors in Rover or Weave. The fix must be upstream; whatever mechanism used to generate holdouts, every holdout
   column must have at least 1 ``1`` and at least 1 ``0`` per groupby parameter.
+
+Architecture
+------------
+
+OneMod uses the Model-View-Controller (MVC) design pattern.
+The architecture of OneMod is designed to be modular and extensible. The core of the project is the ``model/`` directory, which
+contains a series of Python scripts that define the transformations to be applied to the input data. These transformations
+are designed to be as general as possible, so that they can be applied to a wide variety of datasets.
+
 
 Documentation and Deployment
 ----------------------------

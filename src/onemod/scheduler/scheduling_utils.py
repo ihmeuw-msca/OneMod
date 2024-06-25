@@ -88,15 +88,15 @@ class TaskRegistry:
     registry: defaultdict[str, set["Task"]] = defaultdict(set)
 
     @classmethod
-    def get(cls, function_name: str) -> list["Task"]:
+    def get(cls, function_name: str) -> list[Task]:
         return list(cls.registry[function_name])
 
     @classmethod
-    def put(cls, function_name: str, task: "Task") -> None:
+    def put(cls, function_name: str, task: Task) -> None:
         cls.registry[function_name].add(task)
 
 
-def upstream_task_callback(action: Action) -> list["Task"]:
+def upstream_task_callback(action: Action) -> list[Task]:
     """
     Given an action, we should know (based on the action name) what the relevant upstream tasks
     are.

@@ -3,6 +3,7 @@ from nox.sessions import Session
 
 python = "3.10"
 
+
 @nox.session(python=python, venv_backend="conda")
 def lint(session: Session) -> None:
     """Lint code using various plugins.
@@ -27,6 +28,7 @@ def lint(session: Session) -> None:
         *args
     )
 
+
 @nox.session(python=python, venv_backend="conda")
 def black(session):
     args = session.posargs or ["src"]
@@ -35,6 +37,7 @@ def black(session):
         "black",
         *args
     )
+
 
 @nox.session(python=python, venv_backend="conda")
 def tests(session: Session) -> None:
@@ -51,6 +54,7 @@ def tests(session: Session) -> None:
         *args
     )
 
+
 @nox.session(python=python, venv_backend="conda")
 def typecheck(session: Session) -> None:
     """Type check code."""
@@ -58,6 +62,7 @@ def typecheck(session: Session) -> None:
     session.install("mypy", "types-PyYAML", "pandas-stubs")
     session.install("-e", ".")
     session.run("mypy", "--explicit-package-bases", *args)
+
 
 @nox.session(python=python, venv_backend="conda")
 def docs(session: Session) -> None:

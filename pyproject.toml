@@ -23,18 +23,22 @@ dependencies = [
     "jobmon_installer_ihme",
     "fire",
     "loguru",
-    "modrover @ git+https://github.com/ihmeuw-msca/modrover.git@v0.1.3",
-    "regmodsm @ git+https://github.com/ihmeuw-msca/regmodsm.git@v0.1.1",
-    "pandas < 2.0",
+    "modrover",
+    "regmodsm",
+#    "modrover @ git+http://github.com/ihmeuw-msca/modrover.git@v0.1.3",
+#    "regmodsm @ git+http://github.com/ihmeuw-msca/regmodsm.git@v0.1.1",
+#    "modrover @ git+http://github.com/ihmeuw-msca/modrover.git",
+#    "regmodsm @ git+http://github.com/ihmeuw-msca/regmodsm.git",
+    "pandas",
     "pyarrow",
     "pydantic",
     "scipy",
-    "regmod == 0.1.1",
-    "weighted-average == 1.1.1",
+    "regmod >= 0.1.1",
+    "weighted-average >= 1.1.1",
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "nox"]
 docs = ["sphinx", "sphinx-autodoc-typehints", "furo"]
 
 [project.urls]

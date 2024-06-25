@@ -27,12 +27,12 @@ def run_pipeline(
         The experiment directory. It must contain config/settings.yml.
     stages : list of str or str, optional
         The pipeline stages to run. Default is ['rover', 'swimr', 'weave', 'ensemble'].
-    save_intermediate : bool, optional
-        Whether to save intermediate stage results. Default is False.
     cluster_name : str, optional
         Name of the cluster to run the pipeline on. Default is 'slurm'.
     configure_resources : bool, optional
         Whether to configure resources in directory/config/resources.yml. Default is True.
+    run_local : bool, optional
+        If true run the jobs sequentially without Jobmon. Default is False.
 
     """
     all_stages = ["rover_covsel", "regmod_smooth", "swimr", "weave", "ensemble"]
@@ -49,7 +49,9 @@ def run_pipeline(
     directory = Path(directory)
 
     if configure_resources and not run_local:
-        resources_file = str(directory / "config" / "resources.yml")
+        # TODO: How did that str call work?????
+        # resources_file = str(directory / "config" / "resources.yml")
+        resources_file = f"{directory}/config/resources.yml"
     else:
         resources_file = ""
 
@@ -89,6 +91,7 @@ def main() -> None:
     command-line execution of the 'run_pipeline' and 'resume_pipeline' functions.
 
     """
+    # Only expose the run_pipeline and resume_pipeline functions
     fire.Fire(
         {
             "run_pipeline": run_pipeline,
