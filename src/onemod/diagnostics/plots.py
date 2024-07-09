@@ -166,21 +166,26 @@ def plot_results(
                 **fill_options.get(y, {}),
             )
         for y in y_line:
-            ax.plot(df[x], df[y], label=y, **line_options.get(y, {}))
+            kwargs = {"label": y, **line_options.get(y, {})}
+            ax.plot(df[x], df[y], **kwargs)
         for y in y_dots:
-            ax.scatter(df[x], df[y], label=y, **dots_options.get(y, {}))
+            kwargs = {"label": y, **dots_options.get(y, {})}
+            if "s" in kwargs and isinstance(kwargs["s"], str):
+                kwargs["s"] = df[kwargs["s"]]
+            ax.scatter(df[x], df[y], **kwargs)
 
     # rescale and plot posinf/neginf
     # TODO: include infs after log/logit scale changes
-    for ax, df in zip(axes, data_list):
-        ax.set_yscale(yscale)
-        ylim = ax.get_ylim()
-        for y in y_dots:
-            df_inf = df.query(f"{y} in [-inf, inf]").reset_index(drop=True)
-            if not df_inf.empty:
-                df_inf[y] = df_inf[y].clip(*ylim)
-                ax.scatter(df_inf[x], df_inf[y], **dots_options.get(y, {}))
-        ax.set_ylim(ylim)
+    if yscale != "linear":
+        for ax, df in zip(axes, data_list):
+            ax.set_yscale(yscale)
+            ylim = ax.get_ylim()
+            for y in y_dots:
+                df_inf = df.query(f"{y} in [-inf, inf]").reset_index(drop=True)
+                if not df_inf.empty:
+                    df_inf[y] = df_inf[y].clip(*ylim)
+                    ax.scatter(df_inf[x], df_inf[y], **dots_options.get(y, {}))
+            ax.set_ylim(ylim)
 
     # Format legend
     fig.tight_layout()
