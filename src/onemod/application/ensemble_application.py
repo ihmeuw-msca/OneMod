@@ -3,7 +3,7 @@ from typing import Generator
 
 from onemod.actions.action import Action
 from onemod.actions.models.ensemble_model import ensemble_model
-from onemod.application.base import Application
+from onemod.application.application import Application
 
 
 class EnsembleApplication(Application):

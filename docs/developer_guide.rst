@@ -16,7 +16,7 @@ Orchestration
 
 At its core, this repository is a data pipeline that sequentially performs a series of transformations on an input dataset.
 For large datasets, sequential or parallel computations necessitate some kind of automated orchestration to chunk the 
-computation and parallelize over a distributed cluster. In onemod, this orchestration layer is Jobmon. 
+computation and parallelize over a distributed cluster. In OneMod, this orchestration layer is Jobmon.
 
 
 .. _jobmon:
@@ -79,6 +79,13 @@ the orchestration layer. This project uses the ``pytest`` framework for running 
 You can run the test suite using ``nox``, a Python package that manages virtual environments for testing purposes. The command
 is simply ``nox -r -s tests``. Once run, nox will create a conda environment at ``.nox/tests`` relative to the root of the repository.
 As a time saving measure, if you're running repeated tests, you can activate this environment and call ``pytest`` yourself.
+
+
+Using OneMod
+------------
+
+Test this
+pip install
 
 Common Errors and Solutions
 ---------------------------

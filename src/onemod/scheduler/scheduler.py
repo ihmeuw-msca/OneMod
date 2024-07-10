@@ -41,6 +41,8 @@ class Scheduler:
             initialize_results, stages=self.stages, directory=self.directory
         )
         for stage in self.stages:
+            if self.config[stage] is None:
+                raise ValueError(f"Error: no settings for stage '{stage}'")
             application_class = get_application_class(stage)
             application = application_class(
                 directory=self.directory,
@@ -50,7 +52,6 @@ class Scheduler:
             yield from generator
 
     def run(self, run_local: bool) -> None:
-        # TODO: Add args for running with jobmon, i.e. resources file
         if run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
