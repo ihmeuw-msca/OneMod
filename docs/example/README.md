@@ -12,10 +12,15 @@ onemod run_pipeline --directory {path/to/experiment/directory}
 
 Parameters:
 - `directory` (str) - Path to experiment directory. Must contain config/settings.yml.
-- `stages` (str or list of str, optional) - Pipeline stage(s) to run. Default is [rover,weave,ensemble].
+- `stages` (str or list of str, optional) - Pipeline stage(s) to run. Default is [rover,weave,ensemble]. The square brackets are necessary.
 - `save_intermediate` (bool, optional) - Save intermediate stage results. Default is False.
 - `cluster_name` (str, optional) - Name of cluster to run pipeline on. Default is slurm.
 - `configure_resources` (bool, optional) - Configure resources in directory/config/resources.yml. Default is True.
+
+Example:
+```
+onemod run_pipeline --directory ./hiv --stages "[rover_covsel,spxmod]"
+```
 
 **Resume an existing OneMod pipeline:**
 ```

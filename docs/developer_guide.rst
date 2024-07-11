@@ -7,7 +7,7 @@ Code Layout
 For the most part, all code run by this repository lies under ``src/onemod``. Within that repository:
 
 - ``main.py`` is the core entrypoint, that exposes the functions users interact with directly. 
-- ``stages.py`` defines a concept of a Stage, that can dynamically create Jobmon task templates and spawn tasks from them
+- ``stages.py`` defines the concept of a Stage, that can dynamically create Jobmon task templates and spawn tasks from them
 - ``model/`` contains a set of Python scripts that perform the data transformations. 
 - ``data/`` contains a set of utilities mainly related to file system management (directory creation/deletion, concatenating results, etc.)
 
@@ -27,7 +27,7 @@ Jobmon
 As a 30 second introduction to Jobmon, it's an orchestration module, written in Python, that allows you to define a 
 **workflow**, create **tasks** to add to that workflow, set dependencies on its tasks, and run the workflow.
 
-A **workflow** is a computational graph of work to be done, the building blocks of the graph are **tasks**. Tasks contain
+A **workflow** is a computational graph of work to be done; the building blocks of the graph are **tasks**. Tasks contain
 a bash command which is the command to run when that task is scheduled to execute. After building tasks, setting dependencies,
 and adding to a workflow, all the user needs to do is call the ``Workflow.run()`` method to begin execution of the workflow.
 At this point the user can sit back and monitor the progress without needing to wait around for intermediate phases to conclude - 
@@ -45,7 +45,6 @@ A task is equivalent to a unit of work, ie. ``rover_covsel_model --submodel_id 0
 You can set dependencies between tasks, so that a task that needs some output file from a prior task will wait until that prior task completes.
 With onemod as an example, the ``collect_results rover_covsel`` task will wait until all ``rover_covsel_model`` tasks have
 completed - without dependencies, they would fail immediately since the expected output files would not exist.
-
 
 You can monitor the progress of a Jobmon workflow using the `Jobmon GUI <https://jobmon-gui.scicomp.ihme.washington.edu/>`_, 
 a task that has an error will block subsequent tasks from executing and report the error message so you can debug and fix. 
@@ -84,7 +83,8 @@ As a time saving measure, if you're running repeated tests, you can activate thi
 Using OneMod
 ------------
 
-Test this
+**ToDo**
+Test the following instructions
 pip install
 
 Common Errors and Solutions
@@ -92,9 +92,9 @@ Common Errors and Solutions
 
 - Configuration errors
 
-  OneMod uses a tool called ``pydantic`` to validate the settings.yml file. If you encounter an error
+  OneMod uses a tool called ``pydantic`` to validate the ``settings.yml`` file. If you encounter an error
   that looks like ``ValidationError: 1 validation error for Settings`` it's likely that you've made some kind of error in
-  creating your settings.yml file. The error message should indicate the line number and the specific error.
+  creating your ``settings.yml`` file. The error message should indicate the line number and the specific error.
 
   - Most of the time, the error is a missing parameter or an incorrect indent. For example, ``groupby`` will be a required parameter at the top
     level of the settings.yml file, so if you forget to include it, you'll get an error.
