@@ -15,7 +15,7 @@ Create a new OneMod pipeline:
 **Parameters**
 
 * ``directory`` (str) - Path to experiment directory. Must contain ``config/settings.yml``.
-* ``stages`` (str or list of str, optional) - Pipeline stage(s) to run. Default is ``[rover,weave,ensemble]``.*The square brackets are necessary.*
+* ``stages`` (str or list of str, optional) - Pipeline stage(s) to run. Default is ``[rover,weave,ensemble]``. *The square brackets are necessary.*
 * ``save_intermediate`` (bool, optional) - Save intermediate stage results. Default is ``False``.
 * ``cluster_name`` (str, optional) - Name of cluster on which to run pipeline. Default is ``slurm``.
 * ``configure_resources`` (bool, optional) - Configure the resources in ``{directory}/config/resources.yml``. Default is ``True``.
