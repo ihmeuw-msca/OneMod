@@ -1,7 +1,11 @@
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from jobmon.client.api import Tool
+try:
+    from jobmon.client.api import Tool
+except ImportError:
+    pass
+
 
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (

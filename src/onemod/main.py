@@ -5,7 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import fire
-from jobmon.client.status_commands import resume_workflow_from_id
+
+try:
+    from jobmon.client.status_commands import resume_workflow_from_id
+except ImportError:
+    pass
+
 
 from onemod.scheduler.scheduler import Scheduler
 from onemod.utils import format_input, get_handle

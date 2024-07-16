@@ -2,8 +2,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from jobmon.client.api import Tool
-    from jobmon.client.task_template import TaskTemplate
+    try:
+        from jobmon.client.api import Tool
+        from jobmon.client.task_template import TaskTemplate
+    except ImportError:
+        pass
+
 
 
 def _create_task_template(

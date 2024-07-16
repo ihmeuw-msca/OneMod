@@ -14,7 +14,11 @@ from onemod.scheduler.scheduling_utils import (
 from onemod.schema import OneModConfig
 
 if TYPE_CHECKING:
-    from jobmon.client.task import Task
+    try:
+        from jobmon.client.task import Task
+    except ImportError:
+        pass
+
 
 
 class Scheduler:
