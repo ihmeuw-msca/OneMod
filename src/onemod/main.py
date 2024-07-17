@@ -22,7 +22,7 @@ def run_pipeline(
     cluster_name: str = "slurm",
     configure_resources: bool = True,
     run_local: bool = False,
-    jobmon: bool = True
+    jobmon: bool = False
 
 ) -> None:
     """Run onemod pipeline.
@@ -45,8 +45,12 @@ def run_pipeline(
     scheduler_type : SchedulerType, optional
         Whether to run pipeline locally or with Jobmon. Default is jobmon.
     """
-    if (run_local and jobmon) or (not run_local and not jobmon):
+    if (run_local and jobmon):
         raise ValueError("Exactly one of run_local and jobmon can be True")
+
+    # If both false then use jobmon because it means they did not specify anything on the command line
+    if  not run_local and not jobmon:
+        jobmon = True
 
     scheduler_type: SchedulerType = SchedulerType.jobmon if jobmon else SchedulerType.run_local
     _run_pipeline(directory, stages, cluster_name, configure_resources, scheduler_type)
