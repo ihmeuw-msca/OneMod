@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from jobmon.client.task_template import TaskTemplate
 
 
+SchedulerType = StrEnum("SchedulerType", ['jobmon', 'run_local'])
+
 class ParentTool:
     """Singleton implementation of a single tool used across OneMod for scheduling."""
 

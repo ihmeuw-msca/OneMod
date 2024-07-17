@@ -12,11 +12,10 @@ except ImportError:
     pass
 
 
+from onemod.scheduler.scheduling_utils import SchedulerType
 from onemod.scheduler.scheduler import Scheduler
 from onemod.utils import format_input, get_handle
 
-
-SchedulerType = StrEnum("SchedulerType", ['jobmon', 'run_local'])
 
 def run_pipeline(
     directory: str,

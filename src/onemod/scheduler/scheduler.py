@@ -10,9 +10,9 @@ from onemod.scheduler.scheduling_utils import (
     TaskRegistry,
     TaskTemplateFactory,
     upstream_task_callback,
+    SchedulerType
 )
 from onemod.schema import OneModConfig
-from onemod.utils import SchedulerType
 
 if TYPE_CHECKING:
     try:
