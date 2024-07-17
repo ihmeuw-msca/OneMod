@@ -22,7 +22,7 @@ def run_pipeline(
     stages: list[str] | None = None,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
-    scheduler_type: SchedulerType = SchedulerType.run_with_jobmon
+    scheduler_type: SchedulerType = SchedulerType.jobmon
 ) -> None:
     """Run onemod pipeline.
 
