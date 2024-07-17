@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 try:
     from jobmon.client.api import Tool
+    from jobmon.client.task import Task
+    from jobmon.client.task_template import TaskTemplate
 except ImportError:
     pass
 
@@ -15,10 +17,6 @@ from onemod.scheduler.templates import (
     create_initialization_template,
     create_modeling_template,
 )
-
-if TYPE_CHECKING:
-    from jobmon.client.task import Task
-    from jobmon.client.task_template import TaskTemplate
 
 
 SchedulerType = StrEnum("SchedulerType", ['jobmon', 'run_local'])
@@ -95,15 +93,15 @@ class TaskRegistry:
     registry: defaultdict[str, set["Task"]] = defaultdict(set)
 
     @classmethod
-    def get(cls, function_name: str) -> list[Task]:
+    def get(cls, function_name: str) -> list["Task"]:
         return list(cls.registry[function_name])
 
     @classmethod
-    def put(cls, function_name: str, task: Task) -> None:
+    def put(cls, function_name: str, task: "Task") -> None:
         cls.registry[function_name].add(task)
 
 
-def upstream_task_callback(action: Action) -> list[Task]:
+def upstream_task_callback(action: Action) -> list["Task"]:
     """
     Given an action, we should know (based on the action name) what the relevant upstream tasks
     are.
