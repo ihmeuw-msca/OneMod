@@ -23,11 +23,13 @@ def lint(session: Session) -> None:
     session.run("flake8", *args)
 
 
+
 @nox.session(python=python, venv_backend="conda")
 def black(session):
     args = session.posargs or ["src"]
     session.install("black")
     session.run("black", *args)
+
 
 
 @nox.session(python=python, venv_backend="conda")
@@ -39,6 +41,7 @@ def tests(session: Session) -> None:
     args = session.posargs or ["tests"]
 
     session.run("pytest", "--cov=onemod", "--cov-report=term", *args)
+
 
 
 @nox.session(python=python, venv_backend="conda")

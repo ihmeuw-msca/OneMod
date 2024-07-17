@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "nox"]
 docs = ["sphinx", "sphinx-autodoc-typehints", "furo"]
 
 [project.urls]

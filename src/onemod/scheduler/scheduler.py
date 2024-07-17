@@ -33,7 +33,7 @@ class Scheduler:
         self.resources_path = resources_path
         self.default_cluster_name = default_cluster_name
         self.configure_resources = configure_resources
-        self._upstream_task_registry: dict[str, list["Task"]] = {}
+        self._upstream_task_registry: dict[str, list[Task]] = {}
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
         # The schedule always starts with an initialization action
@@ -41,6 +41,8 @@ class Scheduler:
             initialize_results, stages=self.stages, directory=self.directory
         )
         for stage in self.stages:
+            if self.config[stage] is None:
+                raise ValueError(f"Error: no settings for stage '{stage}'")
             application_class = get_application_class(stage)
             application = application_class(
                 directory=self.directory,
@@ -50,7 +52,6 @@ class Scheduler:
             yield from generator
 
     def run(self, run_local: bool) -> None:
-        # TODO: Add args for running with jobmon, i.e. resources file
         if run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
@@ -70,9 +71,11 @@ class Scheduler:
 
             if status != "D":
                 # TODO: Summarize errors in workflow
-                raise ValueError(f"workflow {workflow.name} failed: {status}")
+                raise ValueError(
+                    f"workflow {workflow.name} failed: {status},"
+                    f"see https://jobmon-gui.ihme.washington.edu/#/workflow/{workflow.workflow_id}/tasks")
 
-    def create_task(self, action: Action) -> "Task":
+    def create_task(self, action: Action) -> Task:
         """Create a Jobmon task from a given action."""
 
         # Unpack kwargs into a string for naming purposes

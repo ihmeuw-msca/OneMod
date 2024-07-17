@@ -1,5 +1,5 @@
 #####
-SWiMR
+Spxmod
 #####
 
 TODO

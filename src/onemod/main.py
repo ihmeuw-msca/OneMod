@@ -23,13 +23,16 @@ def run_pipeline(
     Parameters
     ----------
     directory : str
+        The experiment directory. It must contain config/settings.yml.
+    stages : list of str or str, optional
+        The pipeline stages to run. Default is ['rover_covsel', 'spxmod', 'weave', 'ensemble'].
         The experiment directory. Must contain config/settings.yml.
-    stages : list of str, optional
-        The pipeline stages to run. Default is
-        ['rover_covsel', 'regmod_smooth', 'weave', 'ensemble'].
     cluster_name : str, optional
         Name of the cluster to run the pipeline on. Default is 'slurm'.
     configure_resources : bool, optional
+        Whether to configure resources in directory/config/resources.yml. Default is True.
+    run_local : bool, optional
+        If true run the jobs sequentially without Jobmon. Default is False.
         Whether to configure resources in
         directory/config/resources.yml. Default is True.
     run_local : bool, optional
@@ -93,6 +96,7 @@ def main() -> None:
     command-line execution of the 'run_pipeline' and 'resume_pipeline' functions.
 
     """
+    # Only expose the run_pipeline and resume_pipeline functions
     fire.Fire(
         {
             "run_pipeline": run_pipeline,
