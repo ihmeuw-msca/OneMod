@@ -2,14 +2,17 @@
 Running the pipeline
 ####################
 
-OneMod is orchestrated with a tool called Jobmon. For a quick intro on Jobmon, refer to the :ref:`jobmon` section.
+OneMod is usually orchestrated with a tool called Jobmon. For a quick intro on Jobmon, refer to the :ref:`jobmon` section.
 The full Jobmon documentation lives `here <https://jobmon.readthedocs.io/en/latest/>`_
+
+OneMod can be installed with or without Jobmon.
 
 +++++++++++++++++++++++++++++++
 Directory Setup
 +++++++++++++++++++++++++++++++
 
-To create a new OneMod pipeline, the first step is setting up your experiment directory. This directory can be in any arbitrary
+To create a new OneMod pipeline, the first step is setting up your experiment directory.
+This directory can be in any arbitrary
 location, but it must contain a config folder with two files: settings.yml and resources.yml.
 
 The former file, settings.yml, dictates the OneMod parameters you will run your model with. You can specify things like
@@ -27,11 +30,20 @@ for more information on how to structure this resources.yml file.
 Running the pipeline
 +++++++++++++++++++++++++++++++
 
-After setting up your experiment directory, running the pipeline is as easy as::
+After setting up your experiment directory, running the pipeline with Jobmon is simply::
 
     onemod run_pipeline --directory {path/to/experiment/directory}
 
-The workflow will distribute and monitor jobs until either the workflow is complete, or a job fails.
+The Jobmon workflow will distribute and monitor jobs until either the workflow is complete, or a job fails.
+
+To run the pipeline "locally" without Jobmon, you can use the following command::
+
+    onemod run_pipeline --run_local --directory {path/to/experiment/directory}
+
+This will run the pipeline locally, and you can monitor the progress of the pipeline in the console. One task
+is run at a time.
+
+
 
 .. _jobmon-debugging:
 

@@ -7,7 +7,11 @@ Installation
     conda create -n {environment name} python=3.10
     conda activate {environment name}
 
-#. Install the OneMod package from Github::
+#. Install the OneMod package from Github with Jobmon::
 
-    pip install git+https://stash.ihme.washington.edu/scm/msca/onemod.git@main
+    pip install git+https://github.com/ihmeuw-msca/OneMod@main#egg=onemod[jobmon]
+
+#. Install the OneMod package from Github without Jobmon::
+
+    pip install git+https://github.com/ihmeuw-msca/OneMod@main
 

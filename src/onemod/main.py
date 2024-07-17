@@ -22,6 +22,7 @@ def run_pipeline(
     cluster_name: str = "slurm",
     configure_resources: bool = True,
     run_local: bool = False,
+    run_with_jobmon: bool = True,
 ) -> None:
     """Run onemod pipeline.
 
@@ -39,8 +40,18 @@ def run_pipeline(
         directory/config/resources.yml. Default is True.
     run_local : bool, optional
         Whether to run pipeline without Jobmon. Default is False.
+    run_with_jobmon: bool, optional
+        Wther to run with Jobmno. Defautl is true. Cannot set both
+        run_local and run_with_jobmon to True
 
     """
+
+    if run_with_jobmon and run_local:
+        raise ValueError("Cannot set both run_local and run_with_jobmon to True")
+
+    if not run_with_jobmon and not run_local:
+        raise ValueError("Cannot set both run_local and run_with_jobmon to False")
+
     all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
     if stages is None:
         stages = all_stages
@@ -58,7 +69,7 @@ def run_pipeline(
 
     # Configure Jobmon resources
     directory = Path(directory)
-    if configure_resources and not run_local:
+    if configure_resources and run_with_jobmon:
         resources_file = str(directory / "config" / "resources.yml")
     else:
         resources_file = ""

@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 class ParentTool:
     """Singleton implementation of a single tool used across OneMod for scheduling."""
 
-    tool: Tool | None = None
+    # Quoting will prevent errors if Jobmon is not installed
+    tool: "Tool" = None
 
     @classmethod
     def initialize_tool(
