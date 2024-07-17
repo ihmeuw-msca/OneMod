@@ -16,13 +16,14 @@ from onemod.scheduler.scheduler import Scheduler
 from onemod.utils import format_input, get_handle
 
 
+SchedulerType = StrEnum("SchedulerType", ['jobmon', 'run_local'])
+
 def run_pipeline(
     directory: str,
     stages: list[str] | None = None,
     cluster_name: str = "slurm",
     configure_resources: bool = True,
-    run_local: bool = False,
-    run_with_jobmon: bool = True,
+    scheduler_type: SchedulerType = SchedulerType.run_with_jobmon
 ) -> None:
     """Run onemod pipeline.
 
@@ -38,19 +39,10 @@ def run_pipeline(
     configure_resources : bool, optional
         Whether to configure resources in
         directory/config/resources.yml. Default is True.
-    run_local : bool, optional
-        Whether to run pipeline without Jobmon. Default is False.
-    run_with_jobmon: bool, optional
-        Wther to run with Jobmno. Defautl is true. Cannot set both
-        run_local and run_with_jobmon to True
+    scheduler_type : SchedulerType, optional
+        Whether to run pipeline locally or with Jobmon. Default is jobmon.
 
     """
-
-    if run_with_jobmon and run_local:
-        raise ValueError("Cannot set both run_local and run_with_jobmon to True")
-
-    if not run_with_jobmon and not run_local:
-        raise ValueError("Cannot set both run_local and run_with_jobmon to False")
 
     all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
     if stages is None:
@@ -69,7 +61,7 @@ def run_pipeline(
 
     # Configure Jobmon resources
     directory = Path(directory)
-    if configure_resources and run_with_jobmon:
+    if configure_resources and scheduler_type == SchedulerType.jobmon:
         resources_file = str(directory / "config" / "resources.yml")
     else:
         resources_file = ""
@@ -83,7 +75,7 @@ def run_pipeline(
         default_cluster_name=cluster_name,
         configure_resources=configure_resources,
     )
-    scheduler.run(run_local=run_local)
+    scheduler.run(scheduler_type=scheduler_type)
 
 
 def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:

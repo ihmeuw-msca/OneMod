@@ -12,6 +12,7 @@ from onemod.scheduler.scheduling_utils import (
     upstream_task_callback,
 )
 from onemod.schema import OneModConfig
+from onemod.utils import SchedulerType
 
 if TYPE_CHECKING:
     try:
@@ -53,9 +54,9 @@ class Scheduler:
             generator = application.action_generator()
             yield from generator
 
-    def run(self, run_local: bool) -> None:
+    def run(self, scheduler_type: SchedulerType) -> None:
         # TODO: Add args for running with jobmon, i.e. resources file
-        if run_local:
+        if scheduler_type == SchedulerType.run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
         else:
