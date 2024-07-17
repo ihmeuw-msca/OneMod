@@ -1,4 +1,5 @@
 from collections import defaultdict
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 try:
