@@ -4,7 +4,7 @@ from typing import Generator
 from onemod.actions.action import Action
 from onemod.actions.data.collect_results import collect_results
 from onemod.actions.models.weave_model import weave_model
-from onemod.application.base import Application
+from onemod.application.application import Application
 from onemod.utils import get_submodels
 
 

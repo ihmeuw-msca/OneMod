@@ -46,6 +46,8 @@ class Scheduler:
             initialize_results, stages=self.stages, directory=self.directory
         )
         for stage in self.stages:
+            if self.config[stage] is None:
+                raise ValueError(f"Error: no settings for stage '{stage}'")
             application_class = get_application_class(stage)
             application = application_class(
                 directory=self.directory,
@@ -55,7 +57,6 @@ class Scheduler:
             yield from generator
 
     def run(self, scheduler_type: SchedulerType) -> None:
-        # TODO: Add args for running with jobmon, i.e. resources file
         if scheduler_type == SchedulerType.run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
@@ -75,7 +76,9 @@ class Scheduler:
 
             if status != "D":
                 # TODO: Summarize errors in workflow
-                raise ValueError(f"workflow {workflow.name} failed: {status}")
+                raise ValueError(
+                    f"workflow {workflow.name} failed: {status},"
+                    f"see https://jobmon-gui.ihme.washington.edu/#/workflow/{workflow.workflow_id}/tasks")
 
     def create_task(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""

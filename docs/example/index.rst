@@ -2,4 +2,7 @@
 Example
 ####################
 
-TODO
+
+.. toctree::
+
+    example

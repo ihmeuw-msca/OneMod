@@ -34,7 +34,7 @@ dependencies = [
 
 [project.optional-dependencies]
 jobmon = ["jobmon_installer_ihme"]
-test = ["pytest"]
+test = ["pytest", "nox"]
 docs = ["sphinx", "sphinx-autodoc-typehints", "furo"]
 
 [project.urls]

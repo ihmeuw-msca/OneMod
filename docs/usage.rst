@@ -2,8 +2,8 @@
 Running the pipeline
 ####################
 
-OneMod is usually orchestrated with a tool called Jobmon. For a quick intro on Jobmon, refer to the :ref:`jobmon` section.
-The full Jobmon documentation lives `here <https://jobmon.readthedocs.io/en/latest/>`_
+OneMod is orchestrated with a tool called Jobmon. For a quick intro on Jobmon, refer to the :ref:`jobmon` section.
+The full Jobmon documentation lives `here <https://jobmon.readthedocs.io/en/latest/>`_.
 
 OneMod can be installed with or without Jobmon.
 
@@ -14,17 +14,19 @@ Directory Setup
 To create a new OneMod pipeline, the first step is setting up your experiment directory.
 This directory can be in any arbitrary
 location, but it must contain a config folder with two files: settings.yml and resources.yml.
+To create a new OneMod pipeline, the first step is setting up your experiment directory. This directory can be in any arbitrary
+location, but it must contain a config folder with two files: ``settings.yml`` and ``resources.yml``.
 
-The former file, settings.yml, dictates the OneMod parameters you will run your model with. You can specify things like
-the parallelism of your model (i.e. by sex/location or by age), the smoothing parameter, the dimensions to smooth over,
-covariate constraints, and more.
+The former file, ``settings.yml``, contains the OneMod parameters you will run your model with. You can specify things
+such as the parallelism of your model (i.e. by sex/location or by age), the smoothing parameter,
+the dimensions to smooth over, covariate constraints, and more.
 
 **TODO: Document sample settings file usage**
 
-The second file, resources.yml, defines the compute resources you will use to run your model. This includes the number of
+The second file, ``resources.yml``, defines the compute resources you will use to run your model. This includes the number of
 cores, memory, cluster project, and runtime of your model, and can be broken down by individual task templates. You can
 refer to the `Jobmon documentation <https://jobmon.readthedocs.io/en/latest/core_concepts.html#yaml-configuration-files>`_
-for more information on how to structure this resources.yml file.
+for more information on how to structure this ``resources.yml`` file.
 
 +++++++++++++++++++++++++++++++
 Running the pipeline
@@ -35,6 +37,8 @@ After setting up your experiment directory, running the pipeline with Jobmon is 
     onemod run_pipeline --directory {path/to/experiment/directory}
 
 The Jobmon workflow will distribute and monitor jobs until either the workflow is complete, or a job fails.
+The easiest place to monitor the progress of your workflow is the
+`Jobmon GUI <https://jobmon-gui.scicomp.ihme.washington.edu/>`_.
 
 To run the pipeline "locally" without Jobmon, you can use the following command::
 
@@ -44,6 +48,9 @@ This will run the pipeline locally, and you can monitor the progress of the pipe
 is run at a time.
 
 
+The workflow will distribute and monitor jobs until either the workflow is complete, or a job fails.
+The easiest place to monitor the progress of your workflow is the
+`Jobmon GUI <https://jobmon-gui.scicomp.ihme.washington.edu/>`_.
 
 .. _jobmon-debugging:
 
@@ -72,7 +79,8 @@ Once your errors are fixed, you can resume an existing OneMod pipeline with::
     onemod resume_pipeline --workflow_id {workflow ID}
 
 
-Both entrypoints (run_pipeline and resume_pipeline) have standard help pages you can access by suffixing the command with -h.
+Both entrypoints (``run_pipeline`` and ``resume_pipeline``) have standard help pages you can access by suffixing
+the command with -h.
 
 
 +++++++++++++++++++++++++++++++++++
@@ -118,7 +126,7 @@ OneMod creates a lot of output files. After running, the experiment directory sh
 Rover Covsel Files
 ------------------
 
-The rover_covsel directory contains the output of the covariate selection step.
+The ``rover_covsel`` directory contains the output of the covariate selection step.
 
 * selected_covs.yaml
 
@@ -128,7 +136,7 @@ the smoothing stage.
 
 * subsets.csv
 
-A csv file indicating what parameters a given subset ID maps to.
+A csv file indicating which parameters a given subset ID maps to.
 Since we can have a large number of groupby parameters, the orchestration layer condenses this to a single
 submodel_id parameter. The individual modeling job then reads in subsets.csv to determine what slice of the
 data it should be modeling.
