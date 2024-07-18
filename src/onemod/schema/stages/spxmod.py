@@ -14,6 +14,7 @@ class SPxModDimension(Config):
 
     name: str
     dim_type: Literal["categorical", "numerical"]
+    filter: str | None = None
 
 
 class SPxModSpace(Config):
