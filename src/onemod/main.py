@@ -23,7 +23,6 @@ def run_pipeline(
     configure_resources: bool = True,
     run_local: bool = False,
     jobmon: bool = False
-
 ) -> None:
     """Run onemod pipeline.
 
@@ -40,16 +39,14 @@ def run_pipeline(
         Whether to configure resources in directory/config/resources.yml. Default is True.
     run_local : bool, optional
         If true run the jobs sequentially without Jobmon. Default is False.
-    run_jobmon : bool, optional
+    jobmon : bool, optional
         If True use Jobmon. Default is True.
-    scheduler_type : SchedulerType, optional
-        Whether to run pipeline locally or with Jobmon. Default is jobmon.
     """
-    if (run_local and jobmon):
+    if run_local and jobmon:
         raise ValueError("Exactly one of run_local and jobmon can be True")
 
     # If both false then use jobmon because it means they did not specify anything on the command line
-    if  not run_local and not jobmon:
+    if not run_local and not jobmon:
         jobmon = True
 
     scheduler_type: SchedulerType = SchedulerType.jobmon if jobmon else SchedulerType.run_local
