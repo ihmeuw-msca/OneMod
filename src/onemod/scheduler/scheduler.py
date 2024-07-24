@@ -10,11 +10,16 @@ from onemod.scheduler.scheduling_utils import (
     TaskRegistry,
     TaskTemplateFactory,
     upstream_task_callback,
+    SchedulerType
 )
 from onemod.schema import OneModConfig
 
 if TYPE_CHECKING:
-    from jobmon.client.task import Task
+    try:
+        from jobmon.client.task import Task
+    except ImportError:
+        pass
+
 
 
 class Scheduler:
@@ -33,7 +38,7 @@ class Scheduler:
         self.resources_path = resources_path
         self.default_cluster_name = default_cluster_name
         self.configure_resources = configure_resources
-        self._upstream_task_registry: dict[str, list[Task]] = {}
+        self._upstream_task_registry: dict[str, list["Task"]] = {}
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
         # The schedule always starts with an initialization action
@@ -51,8 +56,8 @@ class Scheduler:
             generator = application.action_generator()
             yield from generator
 
-    def run(self, run_local: bool) -> None:
-        if run_local:
+    def run(self, scheduler_type: SchedulerType) -> None:
+        if scheduler_type == SchedulerType.run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
         else:
@@ -75,7 +80,7 @@ class Scheduler:
                     f"workflow {workflow.name} failed: {status},"
                     f"see https://jobmon-gui.ihme.washington.edu/#/workflow/{workflow.workflow_id}/tasks")
 
-    def create_task(self, action: Action) -> Task:
+    def create_task(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""
 
         # Unpack kwargs into a string for naming purposes

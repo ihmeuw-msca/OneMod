@@ -1,7 +1,14 @@
 from collections import defaultdict
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from jobmon.client.api import Tool
+try:
+    from jobmon.client.api import Tool
+    from jobmon.client.task import Task
+    from jobmon.client.task_template import TaskTemplate
+except ImportError:
+    pass
+
 
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
@@ -11,15 +18,14 @@ from onemod.scheduler.templates import (
     create_modeling_template,
 )
 
-if TYPE_CHECKING:
-    from jobmon.client.task import Task
-    from jobmon.client.task_template import TaskTemplate
 
+SchedulerType = StrEnum("SchedulerType", ['jobmon', 'run_local'])
 
 class ParentTool:
     """Singleton implementation of a single tool used across OneMod for scheduling."""
 
-    tool: Tool | None = None
+    # Quoting will prevent errors if Jobmon is not installed
+    tool: "Tool" = None
 
     @classmethod
     def initialize_tool(
@@ -87,15 +93,15 @@ class TaskRegistry:
     registry: defaultdict[str, set["Task"]] = defaultdict(set)
 
     @classmethod
-    def get(cls, function_name: str) -> list[Task]:
+    def get(cls, function_name: str) -> list["Task"]:
         return list(cls.registry[function_name])
 
     @classmethod
-    def put(cls, function_name: str, task: Task) -> None:
+    def put(cls, function_name: str, task: "Task") -> None:
         cls.registry[function_name].add(task)
 
 
-def upstream_task_callback(action: Action) -> list[Task]:
+def upstream_task_callback(action: Action) -> list["Task"]:
     """
     Given an action, we should know (based on the action name) what the relevant upstream tasks
     are.

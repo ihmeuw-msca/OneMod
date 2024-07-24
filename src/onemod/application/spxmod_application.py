@@ -24,8 +24,7 @@ class SPxModApplication(Application):
             action = Action(
                 spxmod_model,
                 directory=self.directory,
-                submodel_id=submodel_id,
-                max_attempts=self.max_attempts,
+                submodel_id=submodel_id
             )
             yield action
 
