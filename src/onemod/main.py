@@ -16,6 +16,7 @@ from onemod.scheduler.scheduling_utils import SchedulerType
 from onemod.scheduler.scheduler import Scheduler
 from onemod.utils import format_input, get_handle
 
+
 def run_pipeline(
     directory: str,
     stages: list[str] | None = None,
