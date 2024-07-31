@@ -53,6 +53,7 @@ def run_pipeline(
     scheduler_type: SchedulerType = SchedulerType.jobmon if jobmon else SchedulerType.run_local
     _run_pipeline(directory, stages, cluster_name, configure_resources, scheduler_type)
 
+
 def _run_pipeline(
     directory: str,
     stages: list[str] | None = None,
@@ -61,10 +62,9 @@ def _run_pipeline(
     scheduler_type: SchedulerType = SchedulerType.jobmon
 ) -> None:
     """
-    Internal function that uses an enum for the sechduelr type for clarity.
+    Internal function that uses an enum for the scheduler type for clarity.
     Fire cannot handle enums.
     """
-
 
     all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
     if stages is None:
