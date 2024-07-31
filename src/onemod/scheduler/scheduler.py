@@ -73,7 +73,7 @@ class Scheduler:
                 # TODO: Summarize errors in workflow
                 raise ValueError(
                     f"workflow {workflow.name} failed: {status},"
-                    f"see https://jobmon-gui.ihme.washington.edu/#/workflow/{workflow.workflow_id}/tasks")
+                    f"Lookup this workflow id {workflow.workflow_id} in your local Jobmon GUI")
 
     def create_task(self, action: Action) -> Task:
         """Create a Jobmon task from a given action."""
