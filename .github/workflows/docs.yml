@@ -26,7 +26,7 @@ jobs:
           pip install sphinx sphinx-rtd-theme
       - name: Generate API docs & Build sphinx documentation
         run: |
-          sphinx-build -M help docs docs-out
+          sphinx-build -M html docs docs-out
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
