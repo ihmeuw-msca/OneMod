@@ -8,6 +8,13 @@ from pplkit.data.interface import DataInterface
 from onemod.utils import get_handle, get_submodels
 
 
+@task_generator(
+    serializers={},
+    tool_name="test_tool",
+    module_source_path=full_script_path,
+    max_attempts=1,
+    naming_args=["foo"],
+)
 def initialize_results(directory: str, stages: list[str]) -> None:
     stage_init_map: dict[str, callable] = {
         "rover_covsel": _initialize_rover_covsel_results,
