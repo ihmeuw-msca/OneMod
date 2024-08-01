@@ -9,7 +9,7 @@
 
 # OneMod
 
-OneMOd is a Python package that provides a framework for building and evaluating
+OneMod is a Python package that provides a framework for building and evaluating
 single-parameter models. It is designed to be modular, allowing users to easily
 add new models and evaluation metrics. OneMod is built on top of the other
 IHME tools.
