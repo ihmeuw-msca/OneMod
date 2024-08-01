@@ -1,6 +1,6 @@
 <!--- README template from https://github.com/scottydocs/README-template.md -->
-[![license](https://img.shields.io/pypi/l/OneMod)](https://github.com/ihmeuw-msca/OneMod/blob/main/LICENSE)
 <!-- No pypi or build yet
+[![license](https://img.shields.io/pypi/l/OneMod)](https://github.com/ihmeuw-msca/OneMod/blob/main/LICENSE)
 [![version](https://img.shields.io/pypi/v/OneMod)](https://pypi.org/project/OneMod)
 [![build](https://img.shields.io/github/actions/workflow/status/ihmeuw-msca/OneMod/build.yml?branch=main)](https://github.com/ihmeuw-msca/OneMod/actions)
 -->
