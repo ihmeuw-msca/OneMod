@@ -9,8 +9,8 @@ run = functools.partial(subprocess.run, shell=True)
 def build_doc(version: str) -> None:
     print(f"Build _{version}_")
     run(f"git checkout v{version}")
-    run("git checkout publish-docs -- conf.py")
-    run("git checkout publish-docs -- versions.toml")
+    run("git checkout publish-docs -- docs/conf.py")
+    run("git checkout publish-docs -- docs/versions.toml")
 
     #run("make html")
     run("sphinx-build -M html docs _build")
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     run("mkdir pages")
 
     # get versions
-    with open("meta.toml", "rb") as f:
+    with open("docsmeta.toml", "rb") as f:
         versions = tomllib.load(f)["versions"]
     print(f"versions A _{versions}_")
     versions.sort(reverse=True, key=lambda v: tuple(map(int, v.split("."))))
