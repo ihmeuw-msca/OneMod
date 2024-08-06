@@ -30,9 +30,9 @@ jobs:
           git fetch --tags
           git checkout publish-docs
           git pull
-          cd docs
           echo "Calling build.py"
-          python build.py
+          python docs/build.py
+          echo "Done Calling build.py"
           cd ..
       - name: Setup Pages
         uses: actions/configure-pages@v5
