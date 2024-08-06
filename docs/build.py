@@ -33,7 +33,7 @@ if __name__ == "__main__":
     run("mkdir pages")
 
     # get versions
-    with open("docsmeta.toml", "rb") as f:
+    with open("docs/meta.toml", "rb") as f:
         versions = tomllib.load(f)["versions"]
     print(f"versions A _{versions}_")
     versions.sort(reverse=True, key=lambda v: tuple(map(int, v.split("."))))
