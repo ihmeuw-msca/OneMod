@@ -28,6 +28,8 @@ jobs:
       - name: Generate API docs & Build sphinx documentation
         run: |
           git fetch --tags
+          git checkout publish-docs
+          git pull
           cd docs
           python build.py
           cd ..
