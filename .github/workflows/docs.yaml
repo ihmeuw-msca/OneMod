@@ -11,6 +11,8 @@ permissions:
 jobs:
   docs:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     permissions:
       pages: write
       id-token: write
@@ -26,13 +28,20 @@ jobs:
           pip install sphinx
       - name: Generate API docs & Build sphinx documentation
         run: |
-          sphinx-build -M help docs docs-out
+          git fetch --tags
+          git checkout publish-docs
+          git pull
+	  cd docs
+          echo "docs.py Calling build.py"
+          python build.py
+          echo "Done Calling build.py"
+          cd ..
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './docs-out'
+          path: './docs/pages'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

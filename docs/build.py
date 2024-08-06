@@ -12,15 +12,15 @@ def build_doc(version: str) -> None:
     run("git checkout publish-docs -- conf.py")
     run("git checkout publish-docs -- meta.toml")
 
-    run("sphinx-build -M html ../docs ../_build")
-    run("ls ../_build")
-    run(f"mv ../_build/html ../pages/{version}")
-    run("rm -rf ../_build")
+    run("sphinx-build -M html . _build")
+    run("ls _build")
+    run(f"mv _build/html pages/{version}")
+    run("rm -rf _build")
     run("git checkout publish-docs")
 
 
 def build_init_page(version: str) -> None:
-    with open("../pages/index.html", "w") as f:
+    with open("pages/index.html", "w") as f:
         f.write(f"""<!doctype html>
 <meta http-equiv="refresh" content="0; url=./{version}/">""")
 
@@ -29,8 +29,8 @@ if __name__ == "__main__":
     # Executes in the docs directory, hence the constant use of ..
     # create pages folder
     print("Python main")
-    run("rm -rf ../pages")
-    run("mkdir ../pages")
+    run("rm -rf pages")
+    run("mkdir pages")
 
     # get versions
     with open("meta.toml", "rb") as f:
