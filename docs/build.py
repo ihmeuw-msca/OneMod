@@ -10,7 +10,7 @@ def build_doc(version: str) -> None:
     print(f"Build _{version}_")
     run(f"git checkout v{version}")
     run("git checkout publish-docs -- conf.py")
-    run("git checkout publish-docs -- versions.toml")
+    run("git checkout publish-docs -- meta.toml")
 
     run("sphinx-build -M html ../docs ../_build")
     run("ls ../_build")
