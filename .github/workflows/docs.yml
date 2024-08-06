@@ -25,10 +25,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install .[docs] --upgrade pip
-          pip install sphinx sphinx-rtd-theme
       - name: Generate API docs & Build sphinx documentation
         run: |
-          sphinx-build -M html docs docs-out
+          git fetch --tags
+          cd docs
+          python build.py
+          cd ..
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
