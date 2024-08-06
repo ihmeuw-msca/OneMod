@@ -25,6 +25,7 @@ def build_init_page(version: str) -> None:
 
 if __name__ == "__main__":
     # create pages folder
+    print("Python main")
     run("rm -rf pages")
     run("mkdir pages")
 
