@@ -13,7 +13,7 @@ def build_doc(version: str) -> None:
     run("git checkout publish-docs -- versions.toml")
 
     #run("make html")
-    run(" sphinx-build -M html docs _build")
+    run("sphinx-build -M html . ../_build")
     run("ls _build")
     run(f"mv _build/html pages/{version}")
     run("rm -rf _build")
