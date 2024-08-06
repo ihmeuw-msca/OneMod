@@ -31,7 +31,7 @@ jobs:
           git fetch --tags
           git checkout publish-docs
           git pull
-	  cd docs
+          cd docs
           echo "docs.py Calling build.py"
           python build.py
           echo "Done Calling build.py"
