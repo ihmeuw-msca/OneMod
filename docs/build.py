@@ -13,7 +13,7 @@ def build_doc(version: str) -> None:
     run("git checkout publish-docs -- versions.toml")
 
     #run("make html")
-    run("sphinx-build -M html . ../_build")
+    run("sphinx-build -M html docs _build")
     run("ls _build")
     run(f"mv _build/html pages/{version}")
     run("rm -rf _build")
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # get versions
     with open("meta.toml", "rb") as f:
         versions = tomllib.load(f)["versions"]
-    print(f"versions A _{versions}")
+    print(f"versions A _{versions}_")
     versions.sort(reverse=True, key=lambda v: tuple(map(int, v.split("."))))
     print(f"versions B _{versions}_")
 
