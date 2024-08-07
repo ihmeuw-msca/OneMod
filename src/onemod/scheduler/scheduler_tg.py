@@ -72,10 +72,9 @@ class Scheduler:
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
             # @ToDo, it changes here.
-            # Also add annotation.
-            # Also toss the complete application hierarchy. but how does non-Jobmon work without an
-            # action generator?
-            # Action if a function pointer.
+            # Add annotations to all the functions in the models dir. Everything between those and here is dumped.
+            # Also toss the complete application hierarchy. but how does non-Jobmon work without an action generator?
+            # Action is essentially a function pointer.
             tasks = [
                 self.create_task(action)
                 for action in self.parent_action_generator()

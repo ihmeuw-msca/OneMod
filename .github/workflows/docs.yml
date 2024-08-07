@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install .[docs] --upgrade pip
-          pip install sphinx sphinx-rtd-theme
+          pip install sphinx
       - name: Generate API docs & Build sphinx documentation
         run: |
           sphinx-build -M help docs docs-out
