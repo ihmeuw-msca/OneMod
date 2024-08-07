@@ -194,6 +194,6 @@ A csv file containing the cross product of specified parameters used to fit the 
 
 Predictions for a given holdout slice.
 
-* results/weave/submodels/*.parquet
+* results/weave/submodels/\*.parquet
 
 These files contain predictions by subset/parameter/holdout/batch. These are aggregated in the collection stage.

@@ -16,7 +16,7 @@ autoclass_content = "init"
 pygments_style = "sphinx"
 
 # HTML output options
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 
 
 # Additional configurations
