@@ -22,8 +22,11 @@ def plot_results(
     fill_options: dict = {},
     facet_options: dict = {},
     share_options: dict = {},
+    legend_options: dict = {},
     fig_options: dict = {},
     yscale: str = "linear",
+    legend: bool = True,
+    fig: plt.Figure | None = None,
 ) -> plt.Figure:
     """Plot OneMod predictions for a single location.
 
@@ -62,15 +65,20 @@ def plot_results(
         Arguments passed to `seaborn.objects.Plot.facet() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.facet.html>`_.
     share_options : dict, optional
         Arguments passed to `seaborn.objects.Plot.share() <https://seaborn.pydata.org/generated/seaborn.objects.Plot.share.html>`_.
+    legend_options : dict, optional
+        Arguments passed to `matplotlib.legend.Legend() <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.legend.html>`_.
     fig_options : dict, optional
         Arguments passed to `matplotlib.figure.Figure() <https://matplotlib.org/stable/api/figure_api.html#matplotlib.figure.Figure>`_.
     yscale : str, optional
         Argument passed to `matplotlib.axes.Axes.set_yscale <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_yscale.html>`_. Default is 'linear'.
-
+    legend : bool, optional
+        Whether to include a plot legend. Default is True.
+    fig : matplotlib.figure.Figure, optional
+        Existing figure to plot on top of.
 
     Returns
     -------
-    plt.Figure
+    matplotlib.figure.Figure
         Figure object.
 
     Examples
@@ -123,7 +131,6 @@ def plot_results(
     >>>     fig.savefig("example2.png", bbox_inches="tight")
 
     """
-    # TODO: groupby within plot (i.e., if dim not a facet)
     # Initialize figure and subplots
     fig = plt.Figure(**fig_options)
     so.Plot(data, x=x).facet(**facet_options).share(**share_options).on(
@@ -139,8 +146,7 @@ def plot_results(
     # Query data by subplot
     if by:
         values = pd.DataFrame(
-            data=[ax.get_title().split(" | ") for ax in axes],
-            columns=by,
+            data=[ax.get_title().split(" | ") for ax in axes], columns=by
         ).astype(dict(zip(by, data[by].dtypes.to_list())))
         data_list = []
         for value in values.itertuples(index=False, name=None):
@@ -152,6 +158,7 @@ def plot_results(
         data_list = [data]
 
     # Plot data
+    rescale = dots_options.pop("rescale", "")
     for ax, df in zip(axes, data_list):
         for y in y_fill:
             ax.fill_between(
@@ -164,10 +171,24 @@ def plot_results(
         for y in y_line:
             ax.plot(df[x], df[y], label=y, **line_options.get(y, {}))
         for y in y_dots:
-            ax.scatter(df[x], df[y], label=y, **dots_options.get(y, {}))
+            y_options = {"label": y, **dots_options.get(y, {})}
+            if "s" in y_options and isinstance(y_options["s"], str):
+                s = y_options["s"]
+                y_options["s"] = df[s]
+                if rescale:
+                    if rescale == "fig_median":
+                        scale = 50.0 / data[s].median()
+                    elif rescale == "ax_median":
+                        scale = 50.0 / df[s].median()
+                    else:
+                        raise ValueError(
+                            f"Invalid dots_option rescale: {rescale}"
+                        )
+                    y_options["s"] = y_options["s"] * scale
+            ax.scatter(df[x], df[y], **y_options)
 
-    # rescale and plot posinf/neginf
-    # TODO: include infs after log/logit scale changes
+    # Rescale and plot posinf/neginf
+    # TODO: include infs after log/logit scale changes?
     for ax, df in zip(axes, data_list):
         ax.set_yscale(yscale)
         ylim = ax.get_ylim()
@@ -180,14 +201,15 @@ def plot_results(
 
     # Format legend
     fig.tight_layout()
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        loc="lower center",
-        bbox_to_anchor=(0.5, -0.05),
-        ncol=len(handles),
-    )
+    if legend:
+        handles, labels = ax.get_legend_handles_labels()
+        legend_options = {
+            "loc": "lower center",
+            "bbox_to_anchor": (0.5, -0.05),
+            "ncol": len(handles),
+            **legend_options,
+        }
+        fig.legend(handles, labels, **legend_options)
 
     return fig
 
@@ -280,11 +302,7 @@ def plot_spxmod_results(
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.plot(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            "o-",
-            alpha=0.5,
-            label="spxmod",
+            df_cov["age_mid"], df_cov["coef"], "o-", alpha=0.5, label="spxmod"
         )
         ax.legend(fontsize="xx-small")
     return fig
