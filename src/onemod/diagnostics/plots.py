@@ -187,10 +187,12 @@ def plot_results(
                     y_options["s"] = y_options["s"] * scale
             ax.scatter(df[x], df[y], **y_options)
 
-    # Rescale and plot posinf/neginf
-    # TODO: include infs after log/logit scale changes?
-    for ax, df in zip(axes, data_list):
-        ax.set_yscale(yscale)
+        # Rescale
+        if yscale != "linear":
+            ax.set_yscale(yscale)
+
+        # Plot posinf/neginf
+        # TODO: include infs after log/logit scale changes?
         ylim = ax.get_ylim()
         for y in y_dots:
             df_inf = df.query(f"{y} in [-inf, inf]").reset_index(drop=True)
