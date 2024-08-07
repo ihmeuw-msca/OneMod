@@ -2,6 +2,7 @@ import functools
 import subprocess
 
 import tomllib
+from typing import TextIO
 
 run = functools.partial(subprocess.run, shell=True)
 
@@ -13,13 +14,13 @@ def build_doc(version: str) -> None:
     run("git checkout publish-docs -- meta.toml")
 
     run("sphinx-build -M html . _build")
-    run("ls _build")
     run(f"mv _build/html pages/{version}")
     run("rm -rf _build")
     run("git checkout publish-docs")
 
 
 def build_init_page(version: str) -> None:
+    f: TextIO
     with open("pages/index.html", "w") as f:
         f.write(f"""<!doctype html>
 <meta http-equiv="refresh" content="0; url=./{version}/">""")
@@ -28,7 +29,6 @@ def build_init_page(version: str) -> None:
 if __name__ == "__main__":
     # Executes in the docs directory, hence the constant use of ..
     # create pages folder
-    print("Python main")
     run("rm -rf pages")
     run("mkdir pages")
 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     with open("meta.toml", "rb") as f:
         versions = tomllib.load(f)["versions"]
     versions.sort(reverse=True, key=lambda v: tuple(map(int, v.split("."))))
-    print(f"versions _{versions}_")
+    print(f"All detected versions: {versions}")
 
     # build documentations for different versions
     for version in versions:

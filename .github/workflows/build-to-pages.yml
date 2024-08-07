@@ -31,9 +31,7 @@ jobs:
           git checkout publish-docs
           git pull
           cd docs
-          echo "Calling build.py"
           python build.py
-          echo "Done Calling build.py"
           cd ..
       - name: Setup Pages
         uses: actions/configure-pages@v5
