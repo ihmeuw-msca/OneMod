@@ -1,13 +1,11 @@
 """Collect onemod stage submodel results."""
 
-from warnings import warn
-
 import fire
-import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
 
+from onemod.diagnostics import plot_rover_covsel_results, plot_spxmod_results
 from onemod.schema import OneModConfig
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
@@ -46,81 +44,6 @@ def _get_selected_covs(
     return selected_covs
 
 
-def _plot_rover_covsel_results(
-    dataif: DataInterface,
-    summaries: pd.DataFrame,
-    covs: list[str] | None = None,
-) -> plt.Figure:
-    """TODO: We hard-coded that the submodels for rover_covsel model are vary
-    across age groups and use age mid as x axis of the plot.
-    """
-    # TODO: Plot by submodel?
-    logger.info("Plotting coefficient magnitudes by age.")
-
-    # add age_mid to summary
-    df_age = dataif.load_data(
-        columns=["age_group_id", "age_mid"]
-    ).drop_duplicates()
-
-    summaries = summaries.merge(df_age, on="age_group_id", how="left")
-    df_covs = summaries.groupby("cov")
-    covs = covs or list(df_covs.groups.keys())
-    logger.info(
-        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
-    )
-
-    fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
-    ax = [ax] if len(covs) == 1 else ax
-    for i, cov in enumerate(covs):
-        df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
-        if i % 5 == 0:
-            logger.info(f"Plotting for group {i}")
-        ax[i].errorbar(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            yerr=1.96 * df_cov["coef_sd"],
-            fmt="o-",
-            alpha=0.5,
-            label="rover_covsel",
-        )
-        ax[i].set_ylabel(cov)
-        ax[i].axhline(0.0, linestyle="--")
-
-    logger.info("Completed plotting of rover results.")
-    return fig
-
-
-def _plot_spxmod_results(
-    dataif: DataInterface, summaries: pd.DataFrame
-) -> plt.Figure | None:
-    """TODO: same with _plot_rover_covsel_results"""
-    # TODO: Plot by submodel?
-    selected_covs = (
-        dataif.load_rover_covsel("selected_covs.csv")["cov"].unique().tolist()
-    )
-    if not selected_covs:
-        warn("There are no covariates selected, skip `plot_spxmod_results`")
-        return None
-
-    df_covs = dataif.load_spxmod("coef.csv").groupby("cov")
-
-    fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
-    logger.info(
-        f"Plotting smoothed covariates for {len(selected_covs)} covariates."
-    )
-    for ax, cov in zip(fig.axes, selected_covs):
-        df_cov = df_covs.get_group(cov)
-        ax.plot(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            "o-",
-            alpha=0.5,
-            label="spxmod",
-        )
-        ax.legend(fontsize="xx-small")
-    return fig
-
-
 def collect_results_rover_covsel(directory: str) -> None:
     """Collect rover covariate selection results.
 
@@ -143,7 +66,7 @@ def collect_results_rover_covsel(directory: str) -> None:
     dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
 
     # Plot coefficients and save
-    fig = _plot_rover_covsel_results(dataif, summaries)
+    fig = plot_rover_covsel_results(dataif, summaries)
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
@@ -177,7 +100,7 @@ def collect_results_spxmod(directory: str) -> None:
 
     # Plot coefficients
     summaries = _get_rover_covsel_summaries(dataif)
-    fig = _plot_spxmod_results(dataif, summaries)
+    fig = plot_spxmod_results(dataif, summaries)
     if fig is not None:
         fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
 
