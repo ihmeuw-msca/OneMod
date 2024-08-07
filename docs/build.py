@@ -10,13 +10,13 @@ run = functools.partial(subprocess.run, shell=True)
 def build_doc(version: str) -> None:
     print(f"Build _{version}_")
     run(f"git checkout v{version}")
-    run("git checkout publish-docs -- conf.py")
-    run("git checkout publish-docs -- meta.toml")
+    run("git checkout main -- conf.py")
+    run("git checkout main -- meta.toml")
 
     run("sphinx-build -M html . _build")
     run(f"mv _build/html pages/{version}")
     run("rm -rf _build")
-    run("git checkout publish-docs")
+    run("git checkout main")
 
 
 def build_init_page(version: str) -> None:
