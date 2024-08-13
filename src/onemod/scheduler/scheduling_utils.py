@@ -1,6 +1,5 @@
 from collections import defaultdict
 from enum import StrEnum
-from typing import TYPE_CHECKING
 
 try:
     from jobmon.client.api import Tool
@@ -18,8 +17,8 @@ from onemod.scheduler.templates import (
     create_modeling_template,
 )
 
+SchedulerType = StrEnum("SchedulerType", ["jobmon", "run_local"])
 
-SchedulerType = StrEnum("SchedulerType", ['jobmon', 'run_local'])
 
 class ParentTool:
     """Singleton implementation of a single tool used across OneMod for scheduling."""
@@ -29,17 +28,21 @@ class ParentTool:
 
     @classmethod
     def initialize_tool(
-        cls,
-        resources_yaml: str,
-        default_cluster_name: str,
+        cls, default_cluster_name: str, resources_yaml: str = ""
     ) -> None:
         if cls.tool is None:
             cls.tool = Tool(name="onemod_tool")
             cls.tool.set_default_cluster_name(default_cluster_name)
-            cls.tool.set_default_compute_resources_from_yaml(
-                default_cluster_name=default_cluster_name,
-                yaml_file=resources_yaml,
-            )
+            if default_cluster_name == "dummy":
+                cls.tool.set_default_compute_resources_from_dict(
+                    cluster_name=default_cluster_name,
+                    compute_resources={"queue": "null.q"},
+                )
+            else:
+                cls.tool.set_default_compute_resources_from_yaml(
+                    default_cluster_name=default_cluster_name,
+                    yaml_file=resources_yaml,
+                )
 
     @classmethod
     def get_tool(cls) -> "Tool":
@@ -55,10 +58,7 @@ class TaskTemplateFactory:
 
     @classmethod
     def get_task_template(
-        cls,
-        action_name: str,
-        resources_path: str = "",
-        configure_resources: bool = True,
+        cls, action_name: str, resources_yaml: str = ""
     ) -> "TaskTemplate":
         tool = ParentTool.get_tool()
 
@@ -76,8 +76,7 @@ class TaskTemplateFactory:
         task_template = task_template_callable(
             tool=tool,
             task_template_name=action_name,
-            resources_path=resources_path,
-            configure_resources=configure_resources,
+            resources_yaml=resources_yaml,
         )
 
         return task_template
@@ -114,13 +113,9 @@ def upstream_task_callback(action: Action) -> list["Task"]:
     order_map = {
         "initialize_results": [],
         "rover_covsel_model": ["initialize_results"],
-        "spxmod_model": ["collect_results", "initialize_results"],
-        "weave_model": [
-            "collect_results",
-            "collect_results",
-            "initialize_results",
-        ],
-        "ensemble_model": 3 * ["collect_results"] + ["initialize_results"],
+        "spxmod_model": ["initialize_results", "collect_results"],
+        "weave_model": ["initialize_results", "collect_results"],
+        "ensemble_model": ["initialize_results", "collect_results"],
         # Logic for collect results: set all modeling tasks as dependencies.
         # Due to traversal order of the generator, the rover collection task must be created
         # prior to weave modeling tasks being instantiated, therefore this is
