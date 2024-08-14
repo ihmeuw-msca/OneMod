@@ -1,5 +1,5 @@
 """Collect onemod stage submodel results."""
-
+import os
 from warnings import warn
 
 import fire
@@ -8,9 +8,14 @@ import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
 
+from jobmon.core.task_generator import task_generator
 from onemod.schema import OneModConfig
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
+
+script_path = os.path.abspath(__file__)
+# Resolve any symbolic links (if necessary)
+full_script_path = os.path.realpath(script_path)
 
 def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     subsets = dataif.load_rover_covsel("subsets.csv")
@@ -121,6 +126,13 @@ def _plot_spxmod_results(
     return fig
 
 
+@task_generator(
+    serializers={},
+    tool_name="onemod_tool",
+    module_source_path=full_script_path,
+    max_attempts=2,
+    naming_args=["stage_name", "directory"],
+)
 def collect_results_rover_covsel(directory: str) -> None:
     """Collect rover covariate selection results.
 
@@ -147,6 +159,13 @@ def collect_results_rover_covsel(directory: str) -> None:
     fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
+@task_generator(
+    serializers={},
+    tool_name="onemod_tool",
+    module_source_path=full_script_path,
+    max_attempts=2,
+    naming_args=["stage_name", "directory"],
+)
 def collect_results_spxmod(directory: str) -> None:
     """This step is used for creating diagnostics."""
     dataif, _ = get_handle(directory)
@@ -182,6 +201,13 @@ def collect_results_spxmod(directory: str) -> None:
         fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
 
 
+@task_generator(
+    serializers={},
+    tool_name="onemod_tool",
+    module_source_path=full_script_path,
+    max_attempts=2,
+    naming_args=["stage_name", "directory"],
+)
 def collect_results_weave(directory: str) -> None:
     """Collect weave submodel results."""
     dataif, config = get_handle(directory)
@@ -208,19 +234,25 @@ def collect_results_weave(directory: str) -> None:
             dataif.dump_weave(df_pred, f"predictions_{holdout_id}.parquet")
 
 
-def collect_results(stage_name: str, directory: str) -> None:
-    callable_map = {
-        "rover_covsel": collect_results_rover_covsel,
-        "spxmod": collect_results_spxmod,
-        "weave": collect_results_weave,
-    }
-    try:
-        func = callable_map[stage_name]
-    except KeyError:
-        raise ValueError(f"Stage name {stage_name} is not valid.")
-
-    func(directory)
+script_path = os.path.abspath(__file__)
+# Resolve any symbolic links (if necessary)
+full_script_path = os.path.realpath(script_path)
 
 
-def main() -> None:
-    fire.Fire(collect_results)
+
+# def collect_results(stage_name: str, directory: str) -> None:
+#     callable_map = {
+#         "rover_covsel": collect_results_rover_covsel,
+#         "spxmod": collect_results_spxmod,
+#         "weave": collect_results_weave,
+#     }
+#     try:
+#         func = callable_map[stage_name]
+#     except KeyError:
+#         raise ValueError(f"Stage name {stage_name} is not valid.")
+#
+#     func(directory)
+
+#
+# def main() -> None:
+#     fire.Fire(collect_results)

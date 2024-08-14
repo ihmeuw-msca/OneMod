@@ -2,6 +2,8 @@
 
 import fire
 import numpy as np
+import os
+from jobmon.core.task_generator import task_generator
 from loguru import logger
 from weave.dimension import Dimension
 from weave.smoother import Smoother
@@ -15,7 +17,18 @@ from onemod.utils import (
     parse_weave_submodel,
 )
 
+script_path = os.path.abspath(__file__)
+# Resolve any symbolic links (if necessary)
+full_script_path = os.path.realpath(script_path)
 
+
+@task_generator(
+    serializers={},
+    tool_name="onemod_tool",
+    module_source_path=full_script_path,
+    max_attempts=2,
+    naming_args=["directory", "submodel_id"],
+)
 def weave_model(directory: str, submodel_id: str) -> None:
     """Run weave model by submodel ID.
 

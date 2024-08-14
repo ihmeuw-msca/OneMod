@@ -7,13 +7,11 @@ intercepts and spline variables that vary by dimensions such as age
 and/or location.
 
 """
-
-from functools import partial
-from typing import Callable
-
 import fire
 import numpy as np
+import os
 import pandas as pd
+from jobmon.core.task_generator import task_generator
 from loguru import logger
 from pplkit.data.interface import DataInterface
 from spxmod.model import XModel
@@ -161,6 +159,18 @@ def _build_xmodel_args(
     return xmodel_args
 
 
+script_path = os.path.abspath(__file__)
+# Resolve any symbolic links (if necessary)
+full_script_path = os.path.realpath(script_path)
+
+
+@task_generator(
+    serializers={},
+    tool_name="onemod_tool",
+    module_source_path=full_script_path,
+    max_attempts=2,
+    naming_args=["directory", "submodel_id"],
+)
 def spxmod_model(directory: str, submodel_id: str) -> None:
     """Run spxmod stage.
 

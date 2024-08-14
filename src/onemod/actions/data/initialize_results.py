@@ -1,13 +1,26 @@
 """Initialize onemod stage results."""
 
+import os
 import shutil
 
 import fire
+from jobmon.core.task_generator import task_generator
 from pplkit.data.interface import DataInterface
 
 from onemod.utils import get_handle, get_submodels
 
+script_path = os.path.abspath(__file__)
+# Resolve any symbolic links (if necessary)
+full_script_path = os.path.realpath(script_path)
 
+
+@task_generator(
+    serializers={},
+    tool_name="onemod_tool",
+    module_source_path=full_script_path,
+    max_attempts=2,
+    naming_args=["directory", "stages"],
+)
 def initialize_results(directory: str, stages: list[str]) -> None:
     stage_init_map: dict[str, callable] = {
         "rover_covsel": _initialize_rover_covsel_results,
