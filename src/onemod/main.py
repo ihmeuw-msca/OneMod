@@ -12,17 +12,17 @@ except ImportError:
     pass
 
 
-from onemod.scheduler.scheduling_utils import SchedulerType
 from onemod.scheduler.scheduler import Scheduler
+from onemod.scheduler.scheduling_utils import SchedulerType
 from onemod.utils import format_input, get_handle
+
 
 def run_pipeline(
     directory: str,
     stages: list[str] | None = None,
     cluster_name: str = "slurm",
-    configure_resources: bool = True,
     run_local: bool = False,
-    jobmon: bool = False
+    jobmon: bool = False,
 ) -> None:
     """Run onemod pipeline.
 
@@ -30,17 +30,17 @@ def run_pipeline(
     ----------
     directory : str
         The experiment directory. It must contain config/settings.yml.
-    stages : list of str or str, optional
+    stages : list of str, optional
         The pipeline stages to run. Default is ['rover_covsel', 'spxmod', 'weave', 'ensemble'].
-        The experiment directory. Must contain config/settings.yml.
     cluster_name : str, optional
         Name of the cluster to run the pipeline on. Default is 'slurm'.
-    configure_resources : bool, optional
-        Whether to configure resources in directory/config/resources.yml. Default is True.
+        For testing, use 'dummy'. Otherwise the directory must contain
+        config/resources.yml.
     run_local : bool, optional
         If true run the jobs sequentially without Jobmon. Default is False.
     jobmon : bool, optional
         If True use Jobmon. Default is True.
+
     """
     if run_local and jobmon:
         raise ValueError("Exactly one of run_local and jobmon can be True")
@@ -49,21 +49,22 @@ def run_pipeline(
     if not run_local and not jobmon:
         jobmon = True
 
-    scheduler_type: SchedulerType = SchedulerType.jobmon if jobmon else SchedulerType.run_local
-    _run_pipeline(directory, stages, cluster_name, configure_resources, scheduler_type)
+    scheduler_type: SchedulerType = (
+        SchedulerType.jobmon if jobmon else SchedulerType.run_local
+    )
+    _run_pipeline(directory, stages, cluster_name, scheduler_type)
+
 
 def _run_pipeline(
     directory: str,
     stages: list[str] | None = None,
     cluster_name: str = "slurm",
-    configure_resources: bool = True,
-    scheduler_type: SchedulerType = SchedulerType.jobmon
+    scheduler_type: SchedulerType = SchedulerType.jobmon,
 ) -> None:
     """
-    Internal function that uses an enum for the sechduelr type for clarity.
+    Internal function that uses an enum for the scheduler type for clarity.
     Fire cannot handle enums.
     """
-
 
     all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
     if stages is None:
@@ -82,19 +83,18 @@ def _run_pipeline(
 
     # Configure Jobmon resources
     directory = Path(directory)
-    if configure_resources and scheduler_type == SchedulerType.jobmon:
-        resources_file = str(directory / "config" / "resources.yml")
+    if scheduler_type == SchedulerType.jobmon and cluster_name != "dummy":
+        resources_yaml = str(directory / "config" / "resources.yml")
     else:
-        resources_file = ""
+        resources_yaml = ""
 
     # Create the scheduler and run it
     scheduler = Scheduler(
-        stages=stages,
         directory=directory,
         config=config,
-        resources_path=resources_file,
+        stages=stages,
         default_cluster_name=cluster_name,
-        configure_resources=configure_resources,
+        resources_yaml=resources_yaml,
     )
     scheduler.run(scheduler_type=scheduler_type)
 
@@ -124,8 +124,5 @@ def main() -> None:
     """
     # Only expose the run_pipeline and resume_pipeline functions
     fire.Fire(
-        {
-            "run_pipeline": run_pipeline,
-            "resume_pipeline": resume_pipeline,
-        }
+        {"run_pipeline": run_pipeline, "resume_pipeline": resume_pipeline}
     )
