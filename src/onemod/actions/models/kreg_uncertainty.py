@@ -34,7 +34,9 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     """
     dataif, config = get_handle(directory)
     num_samples = config.kreg.kreg_uncertainty.num_samples
+    save_draws = config.kreg.kreg_uncertainty.save_draws
     lanczos_order = config.kreg.kreg_uncertainty.lanczos_order
+
     # Load data
     data = pd.merge(
         left=dataif.load_kreg(f"submodels/{submodel_id}/predictions.parquet"),
@@ -62,7 +64,7 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
         ignore_index=True,
     )
 
-    # Zero test data, rescale age, add offset
+    # Zero test data and rescale age
     # TODO: generalize offset for different model types
     index = data.eval(f"{config.test} == 1")
     data.loc[index, config.obs] = 0.0
@@ -72,13 +74,11 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
         "log(exp(@age_scale * age_mid) - 1) / @age_scale"
     )
 
-
     # Load kernel regression model
     model = dataif.load_kreg(f"submodels/{submodel_id}/model.pkl")
     model.likelihood.attach(data)
     op_hess = model.hessian(jnp.asarray(data["kreg_y"]))
-    data["offset"] = model.likelihood.data['offset']
-    #model.likelihood.offset#data.eval(f"log({config.pred} / (1 - {config.pred}))")
+    data["offset"] = model.likelihood.data["offset"]
 
     def op_root_pc(x):
         return model.kernel.op_root_k @ x
@@ -86,15 +86,17 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     def op_pced_hess(x):
         return model.kernel.op_root_k @ (op_hess(model.kernel.op_root_k @ x))
 
+    # Sample error from N(0,H^-1) and calculate uncertainty
     sampler = jax.jit(get_PC_inv_rootH(op_pced_hess, op_root_pc, lanczos_order))
-
     moment = jnp.zeros(len(data))
-    error_draw_columns = [f'kreg_error_draw_{i}' for i in range(num_samples)]
+    if save_draws:
+        error_draw_cols = [f"kreg_error_draw_{i}" for i in range(num_samples)]
     for i in tqdm(range(num_samples)):
         probe = jax.random.normal(jax.random.PRNGKey(i), (len(data),))
         sample = sampler(probe)
-        data[f'kreg_error_draw_{i}'] = sample
-        moment += sample ** 2
+        moment += sample**2
+        if save_draws:
+            data[f"kreg_error_draw_{i}"] = sample
 
     data["kreg_y_sd"] = jnp.sqrt(moment / num_samples)
     data["kreg_linear"] = data.eval("kreg_y + offset")
@@ -102,11 +104,12 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     data["kreg_lwr"] = expit(data.eval("kreg_linear - 1.96 * kreg_y_sd"))
     data["kreg_upr"] = expit(data.eval("kreg_linear + 1.96 * kreg_y_sd"))
 
-    # calibrate by region
+    # Calibrate uncertainty by region
     # TODO: hard coded by region
     data["cali_kreg_y_sd"] = data["kreg_y_sd"]
     data_group = data.groupby("region_id")
-    cali_draw_cols = [f'cali_kreg_draw_{i}' for i in range(num_samples)]
+    if save_draws:
+        cali_draw_cols = [f"cali_kreg_draw_{i}" for i in range(num_samples)]
 
     for key, data_sub in data_group:
         cali_kreg_y_sd = calibrate_pred_sd(
@@ -122,31 +125,35 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
         ).mean()
         index = data_group.groups[key]
         data.loc[index, "cali_kreg_y_sd"] = alpha * data.loc[index, "kreg_y_sd"]
-        data.loc[index, "cali_kreg_y_sd"] = alpha * data.loc[index, "kreg_y_sd"]
-        data.loc[index, "alpha"] = alpha
-        data.loc[index,cali_draw_cols] = expit(
-            data.loc[index,['kreg_linear']].values + alpha * data.loc[index,error_draw_columns].values
+        if save_draws:
+            data.loc[index, cali_draw_cols] = expit(
+                data.loc[index, ["kreg_linear"]].values
+                + alpha * data.loc[index, error_draw_cols].values
             )
+
     data["cali_kreg_lwr"] = expit(
         data.eval("kreg_linear - 1.96 * cali_kreg_y_sd")
     )
     data["cali_kreg_upr"] = expit(
         data.eval("kreg_linear + 1.96 * cali_kreg_y_sd")
     )
+
+    # Save results
+    result_columns = [
+        "offset",
+        config.pred,
+        "kreg_lwr",
+        "kreg_upr",
+        "cali_kreg_lwr",
+        "cali_kreg_upr",
+    ]
+    if save_draws:
+        result_columns += cali_draw_cols
     dataif.dump_kreg(
-        data[
-            config.ids
-            + [
-                'offset',
-                config.pred,
-                "kreg_lwr",
-                "kreg_upr",
-                "cali_kreg_lwr",
-                "cali_kreg_upr",
-            ] + cali_draw_cols
-        ],
+        data[config.ids + result_columns],
         f"submodels/{submodel_id}/predictions.parquet",
     )
+
 
 def main() -> None:
     fire.Fire(kreg_uncertainty)
