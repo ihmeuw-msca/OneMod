@@ -1,4 +1,4 @@
-from logru import logger
+from loguru import logger
 from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Generator
