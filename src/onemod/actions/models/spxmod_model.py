@@ -163,6 +163,15 @@ def _build_xmodel_args(
     lam = xmodel_args.pop("lam")
     xmodel_args = _add_prior_settings(xmodel_args, coef_bounds, lam)
 
+    # Add dummy space for any regular variables
+    add_dummy = False
+    for var in xmodel_args["var_builders"]:
+        if var["space"] is None:
+            var["space"] = "dummy"
+            add_dummy = True
+    if add_dummy:
+        xmodel_args["spaces"].append({"name": "dummy", "dims": []})
+
     return xmodel_args
 
 

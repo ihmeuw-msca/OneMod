@@ -14,6 +14,7 @@ class SPxModDimension(Config):
 
     name: str
     dim_type: Literal["categorical", "numerical"]
+    skipna: bool = True
 
 
 class SPxModSpace(Config):
@@ -33,7 +34,7 @@ class SPxModVarBuilder(Config):
     """
 
     name: str
-    space: str | SPxModSpace = SPxModSpace()
+    space: str | SPxModSpace | None = None
     lam: float | dict[str, float] | None = None
     lam_mean: float = 0.0
     gprior: dict[str, float] | None = None
