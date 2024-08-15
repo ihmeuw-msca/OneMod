@@ -100,13 +100,13 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
 
     # Calibrate uncertainty by region
     # TODO: hard coded by region
-    data[f"{config.pred}_sd"] = data["kreg_sd"]
+    data["kreg_sd_adj"] = data["kreg_sd"]
     data_group = data.groupby("region_id")
     if save_draws:
         pred_draw_cols = [f"{config.pred}_draw_{i}" for i in range(num_samples)]
 
     for key, data_sub in data_group:
-        pred_sd = calibrate_pred_sd(
+        kreg_sd_adj = calibrate_pred_sd(
             data_sub.query(f"{config.test} == 0"),
             config.mtype,
             "kreg_with_offset",
@@ -115,12 +115,10 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
             config.weights,
         )
         alpha = (
-            pred_sd / data_sub.query(f"{config.test} == 0")["kreg_sd"]
+            kreg_sd_adj / data_sub.query(f"{config.test} == 0")["kreg_sd"]
         ).mean()
         index = data_group.groups[key]
-        data.loc[index, f"{config.pred}_sd"] = (
-            alpha * data.loc[index, "kreg_sd"]
-        )
+        data.loc[index, "kreg_sd_adj"] = alpha * data.loc[index, "kreg_sd"]
         if save_draws:
             data.loc[index, pred_draw_cols] = expit(
                 data.loc[index, ["kreg_with_offset"]].values
@@ -128,21 +126,19 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
             )
 
     data[f"{config.pred}_lwr"] = expit(
-        data.eval(f"kreg_with_offset - 1.96 * {config.pred}_sd")
+        data.eval(f"kreg_with_offset - 1.96 * kreg_sd_adj")
     )
     data[f"{config.pred}_upr"] = expit(
-        data.eval(f"kreg_with_offset + 1.96 * {config.pred}_sd")
+        data.eval(f"kreg_with_offset + 1.96 * kreg_sd_adj")
     )
 
     # Save results
     result_columns = [
         "offset",
         "kreg",
-        "kreg_sd",
         "kreg_lwr",
         "kreg_upr",
         config.pred,
-        f"{config.pred}_sd",
         f"{config.pred}_lwr",
         f"{config.pred}_upr",
     ]
