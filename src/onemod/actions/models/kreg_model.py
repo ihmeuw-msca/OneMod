@@ -17,6 +17,8 @@ from kreg.kernel.factory import (
 from kreg.kernel.kron_kernel import KroneckerKernel
 from kreg.likelihood import BinomialLikelihood
 from kreg.model import KernelRegModel
+from scipy.special import expit, logit
+
 from onemod.schema.stages import KregModel
 from onemod.utils import Subsets, get_handle
 
@@ -84,7 +86,9 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     )
     data = subsets.filter_subset(
         data=pd.merge(
-            left=dataif.load_spxmod("predictions.parquet"),
+            left=dataif.load_spxmod("predictions.parquet").rename(
+                columns={config.pred: "spxmod"}
+            ),
             right=dataif.load_data(
                 columns=config.ids
                 + [
@@ -120,28 +124,26 @@ def kreg_model(directory: str, submodel_id: str) -> None:
     data["transformed_age"] = data.eval(
         "log(exp(@age_scale * age_mid) - 1) / @age_scale"
     )
-    data.loc[data.eval(f"{config.pred} == 0"), config.pred] = 1e-10
-    data.loc[data.eval(f"{config.pred} == 1"), config.pred] = 1 - 1e-10
-    data["offset"] = data.eval(f"log({config.pred} / (1 - {config.pred}))")
+    data.loc[data.eval("spxmod == 0"), "spxmod"] = 1e-10
+    data.loc[data.eval("spxmod == 1"), "spxmod"] = 1 - 1e-10
+    data["offset"] = logit(data["spxmod"])
 
     # Create and fit kernel regression model
     kernel = build_kernel(model_config)
     likelihood = BinomialLikelihood(config.obs, config.weights, "offset")
     model = KernelRegModel(kernel, likelihood, lam=model_config.lam)
-    data["kreg_y"], history = model.fit(
+    data["kreg"], history = model.fit(
         data, **stage_config.kreg_fit.model_dump()
     )
     print(history)
 
     # Create predictions
-    data["kreg"] = data.eval("1 / (1 + exp(-(kreg_y + offset)))")
+    data[config.pred] = expit(data.eval("kreg + offset"))
 
     # Save results
     dataif.dump_kreg(model, f"submodels/{submodel_id}/model.pkl")
     dataif.dump_kreg(
-        data[config.ids + ["kreg", "kreg_y", "offset"]].rename(
-            columns={"kreg": config.pred}
-        ),
+        data[config.ids + ["transformed_age", "offset", "kreg", config.pred]],
         f"submodels/{submodel_id}/predictions.parquet",
     )
 

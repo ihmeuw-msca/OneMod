@@ -68,13 +68,16 @@ class KregUncertainty(Config):
     Parameters
     ----------
     num_samples
-        Description.
+        Number of times to sample the model Hessian, by default 50.
+    save_draws
+        Whether to save uncertainty draws, by default False.
     lanczos_order
-        Description.
+        Maximum number of Lanczos steps, by default 150.
 
     """
 
     num_samples: int = 50
+    save_draws: bool = False
     lanczos_order: int = 150
 
 
