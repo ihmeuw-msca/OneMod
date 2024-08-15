@@ -134,6 +134,7 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
 
     # Save results
     result_columns = [
+        "transformed_age",
         "offset",
         "kreg",
         "kreg_lwr",
