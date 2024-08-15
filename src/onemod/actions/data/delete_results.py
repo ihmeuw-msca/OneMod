@@ -20,7 +20,7 @@ full_script_path = os.path.realpath(script_path)
     max_attempts=2,
     naming_args=["result"],
 )
-def delete_result(result: str | Path) -> None:
+def delete_result(result: str) -> None:
     """Delete result directory or file."""
     result = Path(result)
     if result.is_dir():
