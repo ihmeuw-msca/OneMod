@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
     "jobmon_installer_ihme",
     "fire",
-    "kreg @ git+https://github.com/ihmeuw-msca/kreg.git",
+    "kreg @ git+https://github.com/ihmeuw-msca/kreg.git@v0.0.1",
     "loguru",
     "matplotlib",
     "modrover @ git+https://github.com/ihmeuw-msca/modrover.git@v0.1.3",

@@ -72,6 +72,7 @@ def kreg_uncertainty(directory: str, submodel_id: str) -> None:
     # Load kernel regression model
     model = dataif.load_kreg(f"submodels/{submodel_id}/model.pkl")
     model.likelihood.attach(data)
+    model.kernel.attach(data)
     op_hess = model.hessian(jnp.asarray(data["kreg"]))
 
     def op_root_pc(x):
