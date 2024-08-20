@@ -205,7 +205,7 @@ def plot_results(
 
 
 def plot_rover_covsel_results(
-    summaries: pd.DataFrame, covs: list[str]
+    summaries: pd.DataFrame, covs: list[str] | None = None
 ) -> plt.Figure:
     """Plot rover covariate coefficients by age.
 
@@ -220,6 +220,8 @@ def plot_rover_covsel_results(
     -------
     matplotlib.Figure
         Figure object.
+
+    TODO: add title
 
     """
     logger.info("Plotting coefficient magnitudes by age.")
@@ -269,6 +271,8 @@ def plot_spxmod_results(
     -------
     matplotlib.Figure
         Figure object.
+
+    TODO: add title
 
     """
     df_covs = coef.groupby("cov")
