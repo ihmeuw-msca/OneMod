@@ -13,7 +13,7 @@ script_path = os.path.abspath(__file__)
 full_script_path = os.path.realpath(script_path)
 
 
-def path_to_str(p: Path) -> str:
+def path_to_str(p: str | Path) -> str:
     return str(p)
 
 
@@ -22,10 +22,9 @@ def str_to_path(s: str) -> Path:
 
 
 @task_generator(
-    serializers={},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
-    serialiesers={Path: (str, path_to_str), str: (Path, str_to_path)},
+    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
     max_attempts=2,
     naming_args=["result"],
 )
