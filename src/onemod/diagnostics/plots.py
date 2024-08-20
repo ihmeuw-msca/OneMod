@@ -205,14 +205,12 @@ def plot_results(
 
 
 def plot_rover_covsel_results(
-    dataif: DataInterface, summaries: pd.DataFrame, covs: list[str]
+    summaries: pd.DataFrame, covs: list[str]
 ) -> plt.Figure:
     """Plot rover covariate coefficients by age.
 
     Parameters
     ----------
-    dataif : DataInterface
-        Data interface for loading and dumping files.
     summaries : pd.DataFrame
         Covariate summaries from rover submodels.
     covs : list[str]
@@ -225,36 +223,31 @@ def plot_rover_covsel_results(
 
     """
     logger.info("Plotting coefficient magnitudes by age.")
-    config = OneModConfig(**dataif.load_settings())
 
-    # add age_mid to summary
-    df_age = dataif.load(
-        config.input_path, columns=["age_group_id", "age_mid"]
-    ).drop_duplicates()
-
-    summaries = summaries.merge(df_age, on="age_group_id", how="left")
     df_covs = summaries.groupby("cov")
     covs = covs or list(df_covs.groups.keys())
     logger.info(
-        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
+        f"Starting to plot for {len(covs)} covariates and {summaries['age_group_id'].nunique()} age groups"
     )
 
     fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
     ax = [ax] if len(covs) == 1 else ax
     for ii, cov in enumerate(covs):
-        df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
-        if ii % 5 == 0:
-            logger.info(f"Plotting for group {ii}")
-        ax[ii].errorbar(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            yerr=1.96 * df_cov["coef_sd"],
-            fmt="o-",
-            alpha=0.5,
-            label="rover_covsel",
-        )
+        if cov in df_covs.groups:
+            df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
+            if ii % 5 == 0:
+                logger.info(f"Plotting for group {ii}")
+            ax[ii].errorbar(
+                df_cov["age_mid"],
+                df_cov["coef"],
+                yerr=1.96 * df_cov["coef_sd"],
+                fmt="o-",
+                alpha=0.5,
+                label="rover_covsel",
+            )
         ax[ii].set_ylabel(cov)
         ax[ii].axhline(0.0, linestyle="--")
+    ax[ii].set_xlabel("age_mid")
 
     logger.info("Completed plotting of rover results.")
     return fig
