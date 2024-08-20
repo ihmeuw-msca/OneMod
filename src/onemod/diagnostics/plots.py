@@ -159,34 +159,21 @@ def plot_results(
         data_list = [data]
 
     # Plot data
-    rescale = dots_options.pop("rescale", "")
     for ax, df in zip(axes, data_list):
         for y in y_fill:
             ax.fill_between(
                 df[x],
                 df[f"{y}_lwr"],
                 df[f"{y}_upr"],
-                label=y,
-                **fill_options.get(y, {}),
+                **{"label": y, **fill_options.get(y, {})},
             )
         for y in y_line:
-            ax.plot(df[x], df[y], label=y, **line_options.get(y, {}))
+            ax.plot(df[x], df[y], **{"label": y, **line_options.get(y, {})})
         for y in y_dots:
-            y_options = {"label": y, **dots_options.get(y, {})}
-            if "s" in y_options and isinstance(y_options["s"], str):
-                s = y_options["s"]
-                y_options["s"] = df[s]
-                if rescale:
-                    if rescale == "fig_median":
-                        scale = 50.0 / data[s].median()
-                    elif rescale == "ax_median":
-                        scale = 50.0 / df[s].median()
-                    else:
-                        raise ValueError(
-                            f"Invalid dots_option rescale: {rescale}"
-                        )
-                    y_options["s"] = y_options["s"] * scale
-            ax.scatter(df[x], df[y], **y_options)
+            options = {"label": y, **dots_options.get(y, {})}
+            if "s" in options and isinstance(options["s"], str):
+                options["s"] = df[options["s"]]
+            ax.scatter(df[x], df[y], **options)
 
         # Rescale
         if yscale != "linear":
@@ -266,7 +253,7 @@ def plot_rover_covsel_results(
             alpha=0.5,
             label="rover_covsel",
         )
-        ax[ii].set_ylabel("cov")
+        ax[ii].set_ylabel(cov)
         ax[ii].axhline(0.0, linestyle="--")
 
     logger.info("Completed plotting of rover results.")
