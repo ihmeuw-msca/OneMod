@@ -32,18 +32,57 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
 
 
 def _get_selected_covs(
-    summaries: pd.DataFrame, groupby: list[str], t_threshold: float
+    summaries: pd.DataFrame,
+    groupby: list[str],
+    t_threshold: float,
+    min_covs: float | None = None,
+    max_covs: float | None = None,
 ) -> pd.DataFrame:
-    selected_covs = (
-        summaries.groupby(groupby + ["cov"])["abs_t_stat"]
-        .mean()
-        .reset_index()
-        .query(f"abs_t_stat >= {t_threshold}")
-    )
-    logger.info(
-        f"Selected covariates: {selected_covs['cov'].unique().tolist()}"
-    )
-    return selected_covs
+    """Select covariates from cov_exploring.
+    Parameters
+    ----------
+    summaries : pandas.DataFrame
+        Covariate summaries across rover models.
+    groupby : list[str]
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc.
+    t_threshold : float
+        T-statistic threshold to consider as a covariate selection
+        criterion.
+    min_covs, max_covs : float or None, optional
+        Minimum/maximum number of covariates to select from
+        cov_exploring, regardless of t_threshold value. Default is None.
+    Returns
+    -------
+    pandas.DataFrame
+        Selected covariates and their t-statistics.
+    """
+    selected_covs = []
+    logger.info("Selecting covariates")
+    for group, df in summaries.groupby(groupby):
+        t_stats = (
+            df.groupby(groupby + ["cov"])["abs_t_stat"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+            .eval(f"selected = abs_t_stat >= {t_threshold}")
+        )
+        if min_covs is not None and t_stats["selected"].sum() < min_covs:
+            t_stats.loc[: min_covs - 1, "selected"] = True
+        if max_covs is not None and t_stats["selected"].sum() > max_covs:
+            t_stats.loc[max_covs:, "selected"] = False
+        selected = t_stats.query("selected").drop(columns="selected")
+        selected_covs.append(selected)
+        logger.info(
+            ", ".join(
+                [
+                    f"{id_name}: {id_val}"
+                    for id_name, id_val in zip(groupby, group)
+                ]
+                + [f"covs: {selected["cov"].values}"]
+            )
+        )
+    return pd.concat(selected_covs)
 
 
 def _plot_rover_covsel_results(
@@ -111,11 +150,7 @@ def _plot_spxmod_results(
     for ax, cov in zip(fig.axes, selected_covs):
         df_cov = df_covs.get_group(cov)
         ax.plot(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            "o-",
-            alpha=0.5,
-            label="spxmod",
+            df_cov["age_mid"], df_cov["coef"], "o-", alpha=0.5, label="spxmod"
         )
         ax.legend(fontsize="xx-small")
     return fig
