@@ -1,3 +1,5 @@
+from pydantic import model_validator
+
 from onemod.schema.base import Config, StageConfig
 
 
@@ -61,13 +63,16 @@ class RoverCovselConfig(StageConfig):
     max_attempts
         Maximum number of attempts to run the Jobmon modeling tasks
         associated with the stage. Default is 1.
-    t_threshold
-        T-statistic threshold to consider as a covariate selection
-        criterion. Default is 1.0.
     rover
         Rover class initialization arguments.
     rover_fit
         Rover fit function arguments.
+    t_threshold
+        T-statistic threshold to consider as a covariate selection
+        criterion. Default is 1.0.
+    min_covs, max_covs
+        Minimum/maximum number of covariates selected from
+        cov_exploring, regardless of t_threshold value. Default is None.
 
     Notes
     -----
@@ -86,6 +91,8 @@ class RoverCovselConfig(StageConfig):
           groupby: []
           max_attempts: 1
           t_threshold: 1.0
+          min_covs: None
+          max_covs: None
           rover:
             cov_fixed: ["intercept"]
             cov_exploring: []
@@ -100,3 +107,12 @@ class RoverCovselConfig(StageConfig):
     rover: RoverInit = RoverInit()
     rover_fit: RoverFit = RoverFit()
     t_threshold: float = 1.0
+    min_covs: float | None = None
+    max_covs: float | None = None
+
+    @model_validator(mode="after")
+    def check_min_max(self):
+        """Make sure min_covs <= max_covs."""
+        if self.min_covs > self.max_covs:
+            raise ValueError("min_covs > max_covs")
+        return self
