@@ -70,7 +70,8 @@ def plot_results(
     fig_options : dict, optional
         Arguments passed to `matplotlib.figure.Figure() <https://matplotlib.org/stable/api/figure_api.html#matplotlib.figure.Figure>`_.
     yscale : str, optional
-        Argument passed to `matplotlib.axes.Axes.set_yscale <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_yscale.html>`_. Default is 'linear'.
+        Argument passed to `matplotlib.axes.Axes.set_yscale <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_yscale.html>`_.
+        Default is 'linear'.
     legend : bool, optional
         Whether to include a plot legend. Default is True.
     fig : matplotlib.figure.Figure, optional
@@ -219,16 +220,16 @@ def plot_results(
 def plot_rover_covsel_results(
     dataif: DataInterface, summaries: pd.DataFrame, covs: list[str]
 ) -> plt.Figure:
-    """Description.
+    """Plot rover covariate coefficients by age.
 
     Parameters
     ----------
     dataif : DataInterface
-        Description.
+        Data interface for loading and dumping files.
     summaries : pd.DataFrame
-        Description.
+        Covariate summaries from rover submodels.
     covs : list[str]
-        Description.
+        List of selected covariate names.
 
     Returns
     -------
@@ -275,14 +276,14 @@ def plot_rover_covsel_results(
 def plot_spxmod_results(
     dataif: DataInterface, summaries: pd.DataFrame
 ) -> plt.Figure | None:
-    """Description.
+    """Plot rover and spxmod covariate coefficients by age.
 
     Parameters
     ----------
     dataif : DataInterface
-        Description.
+        Data interface for loading and dumping files
     summaries : pandas.DataFrame
-        Description.
+        Covariate summaries from rover submodels.
 
     Returns
     -------
