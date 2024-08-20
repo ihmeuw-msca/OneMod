@@ -93,7 +93,11 @@ def collect_results_rover_covsel(directory: str) -> None:
 
 
 def collect_results_spxmod(directory: str) -> None:
-    """This step is used for creating diagnostics."""
+    """This step is used for creating diagnostics.
+
+    FIXME: assumes rover stage has been run
+
+    """
     dataif, config = get_handle(directory)
 
     # Collect submodel predictions
@@ -122,10 +126,24 @@ def collect_results_spxmod(directory: str) -> None:
 
     # Plot coefficients
     if config.plots:
-        summaries = _get_rover_covsel_summaries(dataif)
-        fig = plot_spxmod_results(dataif, summaries)
-        if fig is not None:
-            fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
+        summaries = pd.merge(
+            left=dataif.load_rover_covsel("summaries.csv"),
+            right=dataif.load_data(
+                columns=["age_group_id", "age_mid"]
+            ).drop_duplicates(),
+            how="left",
+        )
+        for subset_id, df in coef.groupby("subset_id"):
+            if "sex_id" in config.groupby:
+                sex_id = df["sex_id"].unique()[0]
+                fig = plot_spxmod_results(
+                    summaries.query("sex_id == @sex_id"), df
+                )
+            else:
+                fig = plot_spxmod_results(summaries, df)
+        fig.savefig(
+            dataif.spxmod / f"smooth_coef_{subset_id}.pdf", bbox_inches="tight"
+        )
 
 
 def collect_results_weave(directory: str) -> None:

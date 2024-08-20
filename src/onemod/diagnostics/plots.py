@@ -254,16 +254,16 @@ def plot_rover_covsel_results(
 
 
 def plot_spxmod_results(
-    dataif: DataInterface, summaries: pd.DataFrame
+    summaries: pd.DataFrame, coef: pd.DataFrame
 ) -> plt.Figure | None:
     """Plot rover and spxmod covariate coefficients by age.
 
     Parameters
     ----------
-    dataif : DataInterface
-        Data interface for loading and dumping files
     summaries : pandas.DataFrame
         Covariate summaries from rover submodels.
+    coef : pandas.DataFrame
+        Covariate coefficients for spxmod submodels.
 
     Returns
     -------
@@ -271,18 +271,15 @@ def plot_spxmod_results(
         Figure object.
 
     """
-    selected_covs = dataif.load_rover_covsel("selected_covs.yaml")
-    if not selected_covs:
-        warn("No covariates selected; skipping `plot_spxmod_results`")
-        return None
+    df_covs = coef.groupby("cov")
+    covs = list(df_covs.groups.keys())
+    for cov in covs.copy():
+        if cov == "intercept" or cov.startswith("spline"):
+            covs.remove(cov)
 
-    df_covs = dataif.load_spxmod("coef.csv").groupby("cov")
-
-    fig = plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
-    logger.info(
-        f"Plotting smoothed covariates for {len(selected_covs)} covariates"
-    )
-    for ax, cov in zip(fig.axes, selected_covs):
+    fig = plot_rover_covsel_results(summaries, covs=covs)
+    logger.info(f"Plotting smoothed covariates for {len(covs)} covariates")
+    for ax, cov in zip(fig.axes, covs):
         df_cov = df_covs.get_group(cov)
         ax.plot(
             df_cov["age_mid"], df_cov["coef"], "o-", alpha=0.5, label="spxmod"
