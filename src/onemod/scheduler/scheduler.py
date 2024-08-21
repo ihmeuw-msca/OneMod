@@ -136,9 +136,10 @@ class Scheduler:
         match action.name:
             case "initialize_results":
                 # task_template_callable = create_initialization_template
+                import pdb; pdb.set_trace()
                 task = initialize_results.create_task(wf, directory=self.directory, stages=self.stages,
-                                                      upstream_tasks=upstream_tasks)
-                                                      # compute_resources=self.resources_path)
+                                                      upstream_tasks=upstream_tasks,
+                                                      compute_resources=self.resources_path)
             case "collect_results_rover_covsel":
                 # task_template_callable = create_collection_template
                 # Can this be specialized?
