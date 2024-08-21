@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Generator
 
 from onemod.actions.action import Action
-from onemod.actions.data.collect_results import collect_results
+from onemod.actions.data.collect_results import collect_results_spxmod
 from onemod.actions.models.spxmod_model import spxmod_model
 from onemod.application.application import Application
 from onemod.utils import get_submodels
@@ -30,5 +30,5 @@ class SPxModApplication(Application):
 
         # Collection task
         yield Action(
-            collect_results, stage_name="spxmod", directory=self.directory
+            collect_results_spxmod, stage_name="spxmod", directory=self.directory
         )
