@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Generator
 
 from onemod.actions.action import Action
-from onemod.actions.data.collect_results import collect_results
+from onemod.actions.data.collect_results import collect_results_rover_covsel
 from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.application import Application
 from onemod.utils import get_submodels
@@ -30,7 +30,7 @@ class RoverCovselApplication(Application):
 
         # Collection task
         yield Action(
-            collect_results,
+            collect_results_rover_covsel,
             stage_name="rover_covsel",
             directory=self.directory,
         )
