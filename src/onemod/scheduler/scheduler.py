@@ -80,7 +80,7 @@ class Scheduler:
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
             tasks = [
-                self.create_task_foo(action)
+                self.create_task_generators(workflow, action)
                 for action in self.parent_action_generator()
             ]
             workflow.add_tasks(tasks)
@@ -120,7 +120,7 @@ class Scheduler:
         TaskRegistry.put(action.name, task)
         return task
 
-    def create_task_foo(self, wf: Workflow, action: Action) -> "Task":
+    def create_task_generators(self, wf: Workflow, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""
 
         logger.debug(f"Creating Task for action: {action.name} over {action.kwargs}")
