@@ -250,13 +250,6 @@ script_path = os.path.abspath(__file__)
 full_script_path = os.path.realpath(script_path)
 
 
-@task_generator(
-    serializers={},
-    tool_name="onemod_tool",
-    module_source_path=full_script_path,
-    max_attempts=2,
-    naming_args=["directory", "submodel_id"],
-)
 def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     """Run ensemble model on smoother predictions.
 
