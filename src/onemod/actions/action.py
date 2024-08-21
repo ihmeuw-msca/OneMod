@@ -1,5 +1,7 @@
 from typing import Callable
 
+from jobmon.core.task_generator import TaskGenerator
+
 
 class Action:
     """Wrapper for actions.
@@ -21,7 +23,10 @@ class Action:
 
     @property
     def name(self) -> str:
-        return self.func.__name__
+        if isinstance(self.func, TaskGenerator):
+            return self.func.task_function.__name__
+        else:
+            return self.func.__name__
 
     @property
     def entrypoint(self) -> str:
