@@ -31,7 +31,6 @@ if TYPE_CHECKING:
         pass
 
 
-
 class Scheduler:
     def __init__(
         self,
@@ -67,7 +66,7 @@ class Scheduler:
             yield from generator
 
     def run(self, scheduler_type: SchedulerType) -> None:
-        logger.setLevel("DEBUG")
+        logger.level("DEBUG")
         if scheduler_type == SchedulerType.run_local:
             logger.info("Using local Scheduler")
             for action in self.parent_action_generator():
