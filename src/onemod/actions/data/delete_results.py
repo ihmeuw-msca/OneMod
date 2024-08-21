@@ -1,24 +1,17 @@
 """Delete onemod stage results."""
 
+import fire
 import os
 import shutil
 from pathlib import Path
 
-import fire
-
 from jobmon.core.task_generator import task_generator
+
+from onemod.actions.data.serializers import path_to_str, str_to_path
 
 script_path = os.path.abspath(__file__)
 # Resolve any symbolic links (if necessary)
 full_script_path = os.path.realpath(script_path)
-
-
-def path_to_str(p: str | Path) -> str:
-    return str(p)
-
-
-def str_to_path(s: str) -> Path:
-    return Path(s)
 
 
 @task_generator(
