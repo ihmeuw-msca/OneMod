@@ -137,13 +137,14 @@ class Scheduler:
             case "initialize_results":
                 # task_template_callable = create_initialization_template
                 import pdb; pdb.set_trace()
-                task = initialize_results.create_task(wf, directory=self.directory, stages=self.stages,
-                                                      upstream_tasks=upstream_tasks,
-                                                      compute_resources=self.resources_path)
+                task = initialize_results.create_task(compute_resources=self.resources_path,
+                                                      directory=self.directory, stages=self.stages,
+                                                      upstream_tasks=upstream_tasks
+                                                      )
             case "collect_results_rover_covsel":
                 # task_template_callable = create_collection_template
                 # Can this be specialized?
-                task = collect_results_rover_covsel.create_task(wf, stage_name="rover_covsel", directory=self.directory,
+                task = collect_results_rover_covsel.create_task(stage_name="rover_covsel", directory=self.directory,
                                                                 compute_resources=self.resources_path)
             case "collect_results_spxmod":
                 # the stage name is also in action.kwargs["stage_name"]
