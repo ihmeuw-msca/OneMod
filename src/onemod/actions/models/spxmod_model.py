@@ -10,6 +10,8 @@ and/or location.
 import numpy as np
 import os
 import pandas as pd
+from pathlib import Path
+
 from jobmon.core.task_generator import task_generator
 from loguru import logger
 from pplkit.data.interface import DataInterface
@@ -19,6 +21,8 @@ from xspline import XSpline
 from onemod.modeling.residual import ResidualCalculator
 from onemod.schema import OneModConfig
 from onemod.utils import Subsets, get_handle
+
+from onemod.actions.data.serializers import path_to_str, str_to_path
 
 
 def get_coef(model: XModel) -> pd.DataFrame:
@@ -164,13 +168,13 @@ full_script_path = os.path.realpath(script_path)
 
 
 @task_generator(
-    serializers={},
+    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory", "submodel_id"],
 )
-def spxmod_model(directory: str, submodel_id: str) -> None:
+def spxmod_model(directory: str | Path, submodel_id: str) -> None:
     """Run spxmod stage.
 
     This stage fits a model with the covariates selected in the rover
