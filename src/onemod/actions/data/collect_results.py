@@ -129,7 +129,7 @@ def _plot_spxmod_results(
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
-    naming_args=["stage_name", "directory"]
+    naming_args=["directory"]
 )
 def collect_results_rover_covsel(directory: str) -> None:
     """Collect rover covariate selection results.
@@ -162,7 +162,7 @@ def collect_results_rover_covsel(directory: str) -> None:
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
-    naming_args=["stage_name", "directory"],
+    naming_args=["directory"],
 )
 def collect_results_spxmod(directory: str) -> None:
     """This step is used for creating diagnostics."""
@@ -204,7 +204,7 @@ def collect_results_spxmod(directory: str) -> None:
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
-    naming_args=["stage_name", "directory"],
+    naming_args=["directory"],
 )
 def collect_results_weave(directory: str) -> None:
     """Collect weave submodel results."""
