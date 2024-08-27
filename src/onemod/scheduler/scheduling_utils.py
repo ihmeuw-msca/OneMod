@@ -120,10 +120,10 @@ def upstream_task_callback(action: Action) -> list[Task]:
         "collect_results_rover_covsel": ["rover_covsel_model"],
 
         "spxmod_model": ["collect_results_rover_covsel", "initialize_results"],
-        "collect_results_spxmod_model": [ "spxmod_model"],
+        "collect_results_spxmod": [ "spxmod_model"],
 
-        "weave_model": [ "collect_results_spxmod_model"],
-        "collect_results_weave_model": ["weave_model"],
+        "weave_model": [ "collect_results_spxmod"],
+        "collect_results_weave": ["weave_model"],
     }
     func_name = action.name
     upstream_action_names = order_map[func_name]
