@@ -2,7 +2,6 @@
 import os
 from warnings import warn
 
-import fire
 import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
@@ -130,7 +129,7 @@ def _plot_spxmod_results(
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
-    naming_args=["stage_name", "directory"],
+    naming_args=["stage_name", "directory"]
 )
 def collect_results_rover_covsel(directory: str) -> None:
     """Collect rover covariate selection results.
