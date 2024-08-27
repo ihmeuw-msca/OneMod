@@ -1,12 +1,14 @@
 """Run rover covariate selection model."""
 
 import os
+from pathlib import Path
 from loguru import logger
 from modrover.api import Rover
 
 from jobmon.core.task_generator import task_generator
 
 from onemod.utils import Subsets, get_handle
+from onemod.actions.data.serializers import path_to_str, str_to_path
 
 
 # script_path = os.path.abspath(__file__)
@@ -15,7 +17,7 @@ from onemod.utils import Subsets, get_handle
 
 
 @task_generator(
-    serializers={},
+    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
     tool_name="onemod_tool",
     max_attempts=2,
     naming_args=["directory", "submodel_id"]
