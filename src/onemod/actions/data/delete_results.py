@@ -13,15 +13,16 @@ script_path = os.path.abspath(__file__)
 # Resolve any symbolic links (if necessary)
 full_script_path = os.path.realpath(script_path)
 
+#  serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
 
 @task_generator(
+    serializers={},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
-    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
     max_attempts=2,
     naming_args=["result"],
 )
-def delete_result(result: str | Path) -> None:
+def delete_result(result: str ) -> None:
     """
     Delete result directory or file.
     Notice the custom serializer for Path.
@@ -33,6 +34,6 @@ def delete_result(result: str | Path) -> None:
     else:
         result.unlink(missing_ok=True)
 
-
-def main() -> None:
-    fire.Fire(delete_result)
+#
+# def main() -> None:
+#     fire.Fire(delete_result)

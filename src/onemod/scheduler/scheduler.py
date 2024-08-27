@@ -136,8 +136,6 @@ class Scheduler:
         match action.name:
             case "initialize_results":
                 # task_template_callable = create_initialization_template
-                import pdb;
-                pdb.set_trace()
                 task = initialize_results.create_task(
                     compute_resources=self.resources_path,
                     directory=self.directory,

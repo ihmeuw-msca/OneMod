@@ -1,6 +1,5 @@
 """Run rover covariate selection model."""
 
-import fire
 import os
 from loguru import logger
 from modrover.api import Rover
@@ -90,7 +89,7 @@ def rover_covsel_model(directory: str, submodel_id: str) -> None:
     dataif.dump_rover_covsel(
         rover.summary, f"submodels/{submodel_id}/summary.csv"
     )
-
-
-def main() -> None:
-    fire.Fire(rover_covsel_model)
+#
+#
+# def main() -> None:
+#     fire.Fire(rover_covsel_model)

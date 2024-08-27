@@ -9,7 +9,6 @@ from loguru import logger
 from pplkit.data.interface import DataInterface
 
 from jobmon.core.task_generator import task_generator
-from onemod.schema import OneModConfig
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
 
