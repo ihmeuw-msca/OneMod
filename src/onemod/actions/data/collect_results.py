@@ -1,5 +1,6 @@
 """Collect onemod stage submodel results."""
 import os
+from pathlib import Path
 from warnings import warn
 
 import matplotlib.pyplot as plt
