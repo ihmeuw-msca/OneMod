@@ -10,6 +10,8 @@ from pplkit.data.interface import DataInterface
 from jobmon.core.task_generator import task_generator
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
+from onemod.actions.data.serializers import path_to_str, str_to_path
+
 
 script_path = os.path.abspath(__file__)
 # Resolve any symbolic links (if necessary)
@@ -125,13 +127,13 @@ def _plot_spxmod_results(
 
 
 @task_generator(
-    serializers={},
+    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory"]
 )
-def collect_results_rover_covsel(directory: str) -> None:
+def collect_results_rover_covsel(directory: str | Path) -> None:
     """Collect rover covariate selection results.
 
     Collect covariate summaries from submodels, select covariates based
@@ -158,13 +160,13 @@ def collect_results_rover_covsel(directory: str) -> None:
 
 
 @task_generator(
-    serializers={},
+    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory"],
 )
-def collect_results_spxmod(directory: str) -> None:
+def collect_results_spxmod(directory: str | Path) -> None:
     """This step is used for creating diagnostics."""
     dataif, _ = get_handle(directory)
 
@@ -200,13 +202,13 @@ def collect_results_spxmod(directory: str) -> None:
 
 
 @task_generator(
-    serializers={},
+    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory"],
 )
-def collect_results_weave(directory: str) -> None:
+def collect_results_weave(directory: str | Path) -> None:
     """Collect weave submodel results."""
     dataif, config = get_handle(directory)
 
