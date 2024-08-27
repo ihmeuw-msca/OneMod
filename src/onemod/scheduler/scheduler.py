@@ -6,15 +6,15 @@ from typing import TYPE_CHECKING, Generator
 from jobmon.client.workflow import Workflow
 
 from onemod.actions.action import Action
-from onemod.actions.data import delete_results
+from onemod.actions.data.delete_results import delete_results
 from onemod.actions.data.collect_results import (
     collect_results_rover_covsel,
     collect_results_spxmod,
     collect_results_weave
 )
 from onemod.actions.data.initialize_results import initialize_results
-from onemod.actions.models import weave_model
-from onemod.actions.models import spxmod_model
+from onemod.actions.models.weave_model import weave_model
+from onemod.actions.models.spxmod_model import spxmod_model
 from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.api import get_application_class
 from onemod.scheduler.scheduling_utils import (

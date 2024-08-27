@@ -22,7 +22,7 @@ full_script_path = os.path.realpath(script_path)
     max_attempts=2,
     naming_args=["result"],
 )
-def delete_result(result: str ) -> None:
+def delete_results(result: str ) -> None:
     """
     Delete result directory or file.
     Notice the custom serializer for Path.
