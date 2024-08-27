@@ -136,43 +136,63 @@ class Scheduler:
         match action.name:
             case "initialize_results":
                 # task_template_callable = create_initialization_template
-                import pdb; pdb.set_trace()
-                task = initialize_results.create_task(compute_resources=self.resources_path,
-                                                      directory=self.directory, stages=self.stages
-                                                      ) # upstream_tasks=upstream_tasks
+                import pdb;
+                pdb.set_trace()
+                task = initialize_results.create_task(
+                    compute_resources=self.resources_path,
+                    directory=self.directory,
+                    stages=self.stages,
+                    upstream_tasks=upstream_tasks
+                )  #
             case "collect_results_rover_covsel":
                 # task_template_callable = create_collection_template
                 # Can this be specialized?
-                task = collect_results_rover_covsel.create_task(stage_name="rover_covsel", directory=self.directory,
-                                                                compute_resources=self.resources_path)
+                task = collect_results_rover_covsel.create_task(
+                    compute_resources=self.resources_path,
+                    stage_name="rover_covsel",
+                    directory=self.directory)
             case "collect_results_spxmod":
                 # the stage name is also in action.kwargs["stage_name"]
-                task = collect_results_spxmod.create_task(wf, stage_name="spxmod", directory=self.directory,
-                                                          compute_resources=self.resources_path)
+                task = collect_results_spxmod.create_task(
+                    compute_resources=self.resources_path,
+                    stage_name="spxmod",
+                    directory=self.directory)
             case "collect_results_weave":
                 # task_template_callable = create_collection_template
                 # Can this be specialized?
-                task = collect_results_weave.create_task(wf, stage_name="weave", directory=self.directory,
-                                                         compute_resources=self.resources_path)
+                task = collect_results_weave.create_task(
+                    compute_resources=self.resources_path,
+                    stage_name="weave",
+                    directory=self.directory,
+                )
             case "delete_results":
                 # task_template_callable = create_deletion_template
-                task = delete_results.create_task(wf, result=self.directory + "/results",
-                                                  compute_resources=self.resources_path)
+                task = delete_results.create_task(
+                    compute_resources=self.resources_path,
+                    result=self.directory + "/results")
             case "rover_covsel_model":
                 # task_template_callable = create_collection_template
                 # Can this be specialized?
-                task = rover_covsel_model.create_task(wf, directory=self.directory, submodel_id=action.kwargs["submodel_id"],
-                                                      compute_resources=self.resources_path)
+                task = rover_covsel_model.create_task(
+                    compute_resources=self.resources_path,
+                    directory=self.directory,
+                    submodel_id=action.kwargs["submodel_id"],
+                )
             case "weave_model":
                 # task_template_callable = create_collection_template
                 # Can this be specialized?
-                task = weave_model.create_task(wf, directory=self.directory, submodel_id=action.kwargs["submodel_id"],
-                                               compute_resources=self.resources_path)
+                task = weave_model.create_task(
+                    compute_resources=self.resources_path,
+                    directory=self.directory,
+                    submodel_id=action.kwargs["submodel_id"]
+                )
             case "spxmod_model":
                 # task_template_callable = create_collection_template
                 # Can this be specialized?
-                task = spxmod_model.create_task(wf, directory=self.directory, submodel_id=action.kwargs["submodel_id"],
-                                                compute_resources=self.resources_path)
+                task = spxmod_model.create_task(
+                    compute_resources=self.resources_path,
+                    directory=self.directory,
+                    submodel_id=action.kwargs["submodel_id"])
             case _:
                 raise ValueError(f"Invalid action name: {action.name}")
 
