@@ -145,18 +145,14 @@ class Scheduler:
             case "collect_results_rover_covsel":
                 task = collect_results_rover_covsel.create_task(
                     compute_resources=self.resources_path,
-                    stage_name="rover_covsel",
                     directory=self.directory)
             case "collect_results_spxmod":
-                # the stage name is also in action.kwargs["stage_name"]
                 task = collect_results_spxmod.create_task(
                     compute_resources=self.resources_path,
-                    stage_name="spxmod",
                     directory=self.directory)
             case "collect_results_weave":
                 task = collect_results_weave.create_task(
                     compute_resources=self.resources_path,
-                    stage_name="weave",
                     directory=self.directory
                 )
             case "delete_results":
