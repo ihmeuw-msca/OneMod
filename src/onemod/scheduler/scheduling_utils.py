@@ -111,27 +111,19 @@ def upstream_task_callback(action: Action) -> list[Task]:
     for local execution anyway.
     """
 
+    # Stricly linear order of tasks.  initialiase_results -> covsel -> spxmod -> weave
+    # Each model stage  has a collect results task as well (fork and join pattern)
     order_map = {
         "initialize_results": [],
+
         "rover_covsel_model": ["initialize_results"],
-        "spxmod_model": ["collect_results", "initialize_results"],
-        "weave_model": [
-            "collect_results",
-            "collect_results",
-            "initialize_results",
-        ],
-        "ensemble_model": 3 * ["collect_results"] + ["initialize_results"],
-        # Logic for collect results: set all modeling tasks as dependencies.
-        # Due to traversal order of the generator, the rover collection task must be created
-        # prior to weave modeling tasks being instantiated, therefore this is
-        # theoretically safe to do.
-        # Vice versa: when spxmod_model's task is created, there can be at most one
-        # previously created collect task (for rover)
-        "collect_results": [
-            "rover_covsel_model",
-            "spxmod_model",
-            "weave_model",
-        ],
+        "collect_results_rover_covsel": ["rover_covsel_model"],
+
+        "spxmod_model": ["collect_results_rover_covsel", "initialize_results"],
+        "collect_results_spxmod_model": [ "spxmod_model"],
+
+        "weave_model": [ "collect_results_spxmod_model"],
+        "collect_results_weave_model": ["weave_model"],
     }
     func_name = action.name
     upstream_action_names = order_map[func_name]
