@@ -1,6 +1,5 @@
 """Run weave model."""
 
-import fire
 import numpy as np
 import os
 from jobmon.core.task_generator import task_generator
@@ -112,12 +111,12 @@ def weave_model(directory: str, submodel_id: str) -> None:
     df_pred = df_pred[config.ids + ["residual", "residual_se", config.pred]]
     dataif.dump_weave(df_pred, f"submodels/{submodel_id}.parquet")
 
-
-def main() -> None:
-    """Main entry point of the module.
-
-    This function uses the Fire library to allow the weave_model
-    function to be invoked from the command line.
-
-    """
-    fire.Fire(weave_model)
+#
+# def main() -> None:
+#     """Main entry point of the module.
+#
+#     This function uses the Fire library to allow the weave_model
+#     function to be invoked from the command line.
+#
+#     """
+#     fire.Fire(weave_model)

@@ -13,7 +13,7 @@ from onemod.actions.data.collect_results import (
     collect_results_weave
 )
 from onemod.actions.data.initialize_results import initialize_results
-from onemod.actions.models import weave_model, spxmod_model, rover_covsel_model
+from onemod.actions.models import ( weave_model, spxmod_model, rover_covsel_model )
 from onemod.application.api import get_application_class
 from onemod.scheduler.scheduling_utils import (
     ParentTool,

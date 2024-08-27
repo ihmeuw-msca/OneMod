@@ -7,7 +7,6 @@ intercepts and spline variables that vary by dimensions such as age
 and/or location.
 
 """
-import fire
 import numpy as np
 import os
 import pandas as pd
@@ -258,6 +257,6 @@ def spxmod_model(directory: str, submodel_id: str) -> None:
     )
     dataif.dump_spxmod(df_coef, f"submodels/{submodel_id}/coef.csv")
 
-
-def main() -> None:
-    fire.Fire(spxmod_model)
+#
+# def main() -> None:
+#     fire.Fire(spxmod_model)
