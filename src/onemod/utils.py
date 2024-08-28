@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from functools import cache
 from itertools import product
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -438,7 +439,7 @@ def _get_weave_columns(
 
 
 def get_submodels(
-    stage: str, directory: str, save_file: bool = False
+    stage: str, directory: Path, save_file: bool = False
 ) -> list[str]:
     """Get stage submodel IDs and save subsets."""
     dataif, config = get_handle(directory)

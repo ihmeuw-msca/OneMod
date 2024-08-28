@@ -128,13 +128,13 @@ def _plot_spxmod_results(
 
 
 @task_generator(
-    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
+    serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory"]
 )
-def collect_results_rover_covsel(directory: str | Path) -> None:
+def collect_results_rover_covsel(directory: Path) -> None:
     """Collect rover covariate selection results.
 
     Collect covariate summaries from submodels, select covariates based
@@ -161,13 +161,13 @@ def collect_results_rover_covsel(directory: str | Path) -> None:
 
 
 @task_generator(
-    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
+    serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory"],
 )
-def collect_results_spxmod(directory: str | Path) -> None:
+def collect_results_spxmod(directory: Path) -> None:
     """This step is used for creating diagnostics."""
     dataif, _ = get_handle(directory)
 
@@ -203,13 +203,13 @@ def collect_results_spxmod(directory: str | Path) -> None:
 
 
 @task_generator(
-    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
+    serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory"],
 )
-def collect_results_weave(directory: str | Path) -> None:
+def collect_results_weave(directory: Path) -> None:
     """Collect weave submodel results."""
     dataif, config = get_handle(directory)
 
@@ -239,21 +239,3 @@ script_path = os.path.abspath(__file__)
 # Resolve any symbolic links (if necessary)
 full_script_path = os.path.realpath(script_path)
 
-
-
-# def collect_results(stage_name: str, directory: str) -> None:
-#     callable_map = {
-#         "rover_covsel": collect_results_rover_covsel,
-#         "spxmod": collect_results_spxmod,
-#         "weave": collect_results_weave,
-#     }
-#     try:
-#         func = callable_map[stage_name]
-#     except KeyError:
-#         raise ValueError(f"Stage name {stage_name} is not valid.")
-#
-#     func(directory)
-
-#
-# def main() -> None:
-#     fire.Fire(collect_results)
