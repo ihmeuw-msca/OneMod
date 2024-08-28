@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import shutil
 
-import fire
 from jobmon.core.task_generator import task_generator
 from pplkit.data.interface import DataInterface
 
@@ -81,6 +80,3 @@ def _initialize_ensemble_results(dataif: DataInterface) -> None:
     # Create ensemble subsets
     get_submodels("ensemble", dataif.experiment, save_file=True)
 
-
-def main() -> None:
-    fire.Fire(initialize_results)

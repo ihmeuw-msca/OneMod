@@ -131,9 +131,9 @@ class Scheduler:
         # Quick type coercion: the Fire library has strange handling of lists.
         # Force to a string without any spaces
         # This is a catch-all solution but technically only affects initialize_results
-        for arg, value in action.kwargs.items():
-            if isinstance(value, list):
-                action.kwargs[arg] = f"[{','.join(value)}]"
+        # for arg, value in action.kwargs.items():
+        #     if isinstance(value, list):
+        #         action.kwargs[arg] = f"[{','.join(value)}]"
 
         loaded_resources = self.load_resources_from_file(self.resources_path)
         task: Task  # helps with type hinting
