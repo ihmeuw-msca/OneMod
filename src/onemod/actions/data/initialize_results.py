@@ -17,7 +17,7 @@ full_script_path = os.path.realpath(script_path)
 
 
 @task_generator(
-    serializers={Path: (str, path_to_str)},
+    serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,

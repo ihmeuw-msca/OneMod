@@ -17,12 +17,12 @@ from onemod.actions.data.serializers import path_to_str, str_to_path
 
 
 @task_generator(
-    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
+    serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
     max_attempts=2,
     naming_args=["directory", "submodel_id"]
 )
-def rover_covsel_model(directory: str | Path, submodel_id: str) -> None:
+def rover_covsel_model(directory: Path, submodel_id: str) -> None:
     """Run rover covariate selection model by submodel ID.
 
     Parameters
