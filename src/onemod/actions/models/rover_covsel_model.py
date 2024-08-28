@@ -11,10 +11,6 @@ from onemod.utils import Subsets, get_handle
 from onemod.actions.data.serializers import path_to_str, str_to_path
 
 
-# script_path = os.path.abspath(__file__)
-# # Resolve any symbolic links (if necessary)
-# full_script_path = os.path.realpath(script_path)
-
 
 @task_generator(
     serializers={Path: (str, str_to_path)},

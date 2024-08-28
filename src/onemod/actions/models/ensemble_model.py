@@ -253,6 +253,8 @@ full_script_path = os.path.realpath(script_path)
 def ensemble_model(directory: str, *args: Any, **kwargs: Any) -> None:
     """Run ensemble model on smoother predictions.
 
+    THIS IS DEAD CODE. DO NOT USE.
+
     Parameters
     ----------
     directory : str

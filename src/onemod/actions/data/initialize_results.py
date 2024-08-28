@@ -1,6 +1,5 @@
 """Initialize onemod stage results."""
 
-import os
 from pathlib import Path
 import shutil
 
@@ -8,17 +7,12 @@ from jobmon.core.task_generator import task_generator
 from pplkit.data.interface import DataInterface
 
 from onemod.utils import get_handle, get_submodels
-from onemod.actions.data.serializers import path_to_str, str_to_path
-
-script_path = os.path.abspath(__file__)
-# Resolve any symbolic links (if necessary)
-full_script_path = os.path.realpath(script_path)
+from onemod.actions.data.serializers import str_to_path
 
 
 @task_generator(
     serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
-    module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory", "stages"],
 )

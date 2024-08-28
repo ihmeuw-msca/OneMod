@@ -17,17 +17,12 @@ from onemod.utils import (
     parse_weave_submodel,
 )
 
-from onemod.actions.data.serializers import path_to_str, str_to_path
-
-script_path = os.path.abspath(__file__)
-# Resolve any symbolic links (if necessary)
-full_script_path = os.path.realpath(script_path)
+from onemod.actions.data.serializers import str_to_path
 
 
 @task_generator(
     serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
-    module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory", "submodel_id"],
 )

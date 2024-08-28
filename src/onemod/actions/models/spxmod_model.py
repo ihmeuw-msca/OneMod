@@ -9,7 +9,6 @@ and/or location.
 """
 import logging
 
-import loguru
 import numpy as np
 import os
 import pandas as pd
@@ -165,15 +164,10 @@ def _build_xmodel_args(
     return xmodel_args
 
 
-script_path = os.path.abspath(__file__)
-# Resolve any symbolic links (if necessary)
-full_script_path = os.path.realpath(script_path)
-
 
 @task_generator(
     serializers={Path: (str, str_to_path)},
     tool_name="onemod_tool",
-    module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory", "submodel_id"],
 )
