@@ -128,7 +128,6 @@ class Scheduler:
 
         logger.debug(f"Creating Task for action: {action.name} over {action.kwargs}")
 
-        upstream_tasks = upstream_task_callback(action)
         # Quick type coercion: the Fire library has strange handling of lists.
         # Force to a string without any spaces
         # This is a catch-all solution but technically only affects initialize_results
@@ -136,21 +135,14 @@ class Scheduler:
             if isinstance(value, list):
                 action.kwargs[arg] = f"[{','.join(value)}]"
 
-        with open(self.resources_path, "r") as stream:
-            try:
-                loaded_resources = yaml.safe_load(stream)
-            except yaml.YAMLError as exc:
-                raise Exception(
-                    f"Unable to read resources from {self.resources_path}. "
-                    f"Exception: {exc}"
-                )
+        loaded_resources = self.load_resources_from_file(self.resources_path)
         match action.name:
             case "initialize_results":
                 task = initialize_results.create_task(
                     compute_resources=loaded_resources,
                     directory=self.directory,
                     stages=self.stages
-                )  # upstream_tasks=upstream_tasks
+                )
             case "collect_results_rover_covsel":
                 task = collect_results_rover_covsel.create_task(
                     compute_resources=loaded_resources,
@@ -190,4 +182,21 @@ class Scheduler:
 
         # Store the task for later lookup
         TaskRegistry.put(action.name, task)
+        # And connect the upstream tasks
+        upstream_tasks = upstream_task_callback(action)
+        task.set_upstream_tasks(upstream_tasks)
+        logger.debug(f"  Upstreams are {upstream_tasks}")
         return task
+
+
+    @staticmethod
+    def load_resources_from_file(path: str) -> dict:
+        with open(path, "r") as stream:
+            try:
+                loaded_resources = yaml.safe_load(stream)
+            except yaml.YAMLError as exc:
+                raise Exception(
+                    f"Unable to read resources from {path}. "
+                    f"Exception: {exc}"
+                )
+        return loaded_resources

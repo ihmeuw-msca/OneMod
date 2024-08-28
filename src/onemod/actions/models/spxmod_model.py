@@ -7,6 +7,9 @@ intercepts and spline variables that vary by dimensions such as age
 and/or location.
 
 """
+import logging
+
+import loguru
 import numpy as np
 import os
 import pandas as pd
@@ -204,6 +207,8 @@ def spxmod_model(directory: Path, submodel_id: str) -> None:
         Predictions with residual information.
 
     """
+    logger.level("DEBUG")
+    logging.info("SPX spxmod started")
     dataif, config = get_handle(directory)
     stage_config = config.spxmod
 
@@ -213,6 +218,8 @@ def spxmod_model(directory: Path, submodel_id: str) -> None:
     )
     subset_id = int(submodel_id.removeprefix("subset"))
     df = subsets.filter_subset(dataif.load_data(), subset_id)
+
+    logging.info("  SPX spxmod on subset {subset_id}")
 
     # Add spline basis
     spline_vars = []
@@ -260,7 +267,3 @@ def spxmod_model(directory: Path, submodel_id: str) -> None:
         f"submodels/{submodel_id}/predictions.parquet",
     )
     dataif.dump_spxmod(df_coef, f"submodels/{submodel_id}/coef.csv")
-
-#
-# def main() -> None:
-#     fire.Fire(spxmod_model)
