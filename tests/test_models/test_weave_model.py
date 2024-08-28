@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 from onemod.actions.models.weave_model import weave_model
-from onemod.utils import get_weave_submodels
+# from onemod.utils import get_weave_submodels
 
 
 def test_weave_model(sample_input_data, temporary_directory):
@@ -26,7 +26,7 @@ def test_weave_model(sample_input_data, temporary_directory):
     sample_input_data.to_parquet(spxmod_path)
 
     # Initialize weave directories and parameter files
-    get_weave_submodels(temporary_directory, save_files=True)
+    # get_weave_submodels(temporary_directory, save_files=True)
     submodel_id = "model1_param0_subset0_holdout1_batch0"
     weave_model.task_function(directory=temporary_directory, submodel_id=submodel_id)
     expected_data_path = Path(
