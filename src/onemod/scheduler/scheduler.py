@@ -1,3 +1,4 @@
+import yaml
 from loguru import logger
 from pathlib import Path
 import shutil
@@ -135,45 +136,53 @@ class Scheduler:
             if isinstance(value, list):
                 action.kwargs[arg] = f"[{','.join(value)}]"
 
+        with open(self.resources_path, "r") as stream:
+            try:
+                loaded_resources = yaml.safe_load(stream)
+            except yaml.YAMLError as exc:
+                raise Exception(
+                    f"Unable to read resources from {self.resources_path}. "
+                    f"Exception: {exc}"
+                )
         match action.name:
             case "initialize_results":
                 task = initialize_results.create_task(
-                    compute_resources=self.resources_path,
+                    compute_resources=loaded_resources,
                     directory=self.directory,
                     stages=self.stages
                 )  # upstream_tasks=upstream_tasks
             case "collect_results_rover_covsel":
                 task = collect_results_rover_covsel.create_task(
-                    compute_resources=self.resources_path,
+                    compute_resources=loaded_resources,
                     directory=self.directory)
             case "collect_results_spxmod":
                 task = collect_results_spxmod.create_task(
-                    compute_resources=self.resources_path,
+                    compute_resources=loaded_resources,
                     directory=self.directory)
             case "collect_results_weave":
                 task = collect_results_weave.create_task(
-                    compute_resources=self.resources_path,
+                    compute_resources=loaded_resources,
                     directory=self.directory
                 )
             case "delete_results":
                 task = delete_results.create_task(
-                    compute_resources=self.resources_path,
-                    result=self.directory + "/results")
+                    compute_resources=loaded_resources,
+                    result=self.directory.joinpath("/results"))
             case "rover_covsel_model":
                 task = rover_covsel_model.create_task(
-                    compute_resources=self.resources_path,
+                    compute_resources=loaded_resources,
                     directory=self.directory,
                     submodel_id=action.kwargs["submodel_id"]
                 )
             case "weave_model":
                 task = weave_model.create_task(
-                    compute_resources=self.resources_path,
+                    compute_resources=loaded_resources,
                     directory=self.directory,
                     submodel_id=action.kwargs["submodel_id"]
                 )
             case "spxmod_model":
                 task = spxmod_model.create_task(
-                    compute_resources=self.resources_path,
+                    compute_resources=loaded_resources,
                     directory=self.directory,
                     submodel_id=action.kwargs["submodel_id"])
             case _:
