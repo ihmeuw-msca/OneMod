@@ -17,13 +17,13 @@ full_script_path = os.path.realpath(script_path)
 
 
 @task_generator(
-    serializers={str | Path: (str, path_to_str), str | Path: (Path, str_to_path)},
+    serializers={Path: (str, path_to_str)},
     tool_name="onemod_tool",
     module_source_path=full_script_path,
     max_attempts=2,
     naming_args=["directory", "stages"],
 )
-def initialize_results(directory: str | Path, stages: list[str]) -> None:
+def initialize_results(directory: Path, stages: list[str]) -> None:
     stage_init_map: dict[str, callable] = {
         "rover_covsel": _initialize_rover_covsel_results,
         "spxmod": _initialize_spxmod_results,

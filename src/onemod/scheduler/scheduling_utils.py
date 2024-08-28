@@ -111,7 +111,7 @@ def upstream_task_callback(action: Action) -> list[Task]:
     for local execution anyway.
     """
 
-    # Stricly linear order of tasks.  initialiase_results -> covsel -> spxmod -> weave
+    # Strictly linear order of tasks.  initialize_results -> covsel -> spxmod -> weave
     # Each model stage  has a collect results task as well (fork and join pattern)
     order_map = {
         "initialize_results": [],

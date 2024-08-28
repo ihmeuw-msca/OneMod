@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 class Scheduler:
     def __init__(
         self,
-        directory: str | Path,
+        directory: Path,
         config: OneModConfig,
         stages: list[str],
         resources_path: str = "",
