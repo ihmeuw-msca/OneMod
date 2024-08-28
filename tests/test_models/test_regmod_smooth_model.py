@@ -19,7 +19,7 @@ def test_spxmod(temporary_directory):
     with open(yaml_path, "w") as f:
         yaml.dump(selected_covs, f)
 
-    spxmod_model.task_function(directory=temporary_directory)
+    spxmod_model.task_function(directory=temporary_directory, submodel_id="0")
 
     expected_data_path = Path(
         temporary_directory / "results" / "spxmod" / "predictions.parquet"
