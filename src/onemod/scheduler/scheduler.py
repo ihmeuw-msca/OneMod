@@ -136,6 +136,7 @@ class Scheduler:
                 action.kwargs[arg] = f"[{','.join(value)}]"
 
         loaded_resources = self.load_resources_from_file(self.resources_path)
+        task: Task  # helps with type hinting
         match action.name:
             case "initialize_results":
                 task = initialize_results.create_task(
@@ -184,7 +185,7 @@ class Scheduler:
         TaskRegistry.put(action.name, task)
         # And connect the upstream tasks
         upstream_tasks = upstream_task_callback(action)
-        task.set_upstream_tasks(upstream_tasks)
+        task.add_upstreams(upstream_tasks)
         logger.debug(f"  Upstreams are {upstream_tasks}")
         return task
 
