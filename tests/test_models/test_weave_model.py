@@ -28,7 +28,7 @@ def test_weave_model(sample_input_data, temporary_directory):
     # Initialize weave directories and parameter files
     get_weave_submodels(temporary_directory, save_files=True)
     submodel_id = "model1_param0_subset0_holdout1_batch0"
-    weave_model(directory=temporary_directory, submodel_id=submodel_id)
+    weave_model.task_function(directory=temporary_directory, submodel_id=submodel_id)
     expected_data_path = Path(
         temporary_directory
         / "results"

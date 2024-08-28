@@ -592,7 +592,7 @@ def get_handle(directory: str) -> tuple[DataInterface, OneModConfig]:
     dataif.add_dir("weave", dataif.results / "weave")
     dataif.add_dir("ensemble", dataif.results / "ensemble")
 
-    # create confiuration file
+    # create configuration file
     config = OneModConfig(**dataif.load_settings())
 
     # For pre-workflow use of data, add raw data path
