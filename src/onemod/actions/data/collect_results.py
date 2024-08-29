@@ -88,7 +88,7 @@ def _get_selected_covs(
                     f"{id_name}: {id_val}"
                     for id_name, id_val in zip(groupby, group)
                 ]
-                + [f"covs: {selected["cov"].values}"]
+                + [f"covs: {selected['cov'].values}"]
             )
         )
     return pd.concat(selected_covs)
@@ -152,7 +152,7 @@ def collect_results_rover_covsel(directory: Path) -> None:
 def collect_results_spxmod(directory: Path) -> None:
     """This step is used for creating diagnostics.
     FIXME: assumes rover stage has been run"""
-    dataif, _ = get_handle(directory)
+    dataif, config = get_handle(directory)
 
     # Collect submodel predictions
     predictions = []
