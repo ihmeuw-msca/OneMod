@@ -1,4 +1,4 @@
-from pydantic import model_validator
+from pydantic import NonNegativeInt, model_validator
 
 from onemod.schema.base import Config, StageConfig
 
@@ -107,12 +107,13 @@ class RoverCovselConfig(StageConfig):
     rover: RoverInit = RoverInit()
     rover_fit: RoverFit = RoverFit()
     t_threshold: float = 1.0
-    min_covs: float | None = None
-    max_covs: float | None = None
+    min_covs: NonNegativeInt | None = None
+    max_covs: NonNegativeInt | None = None
 
     @model_validator(mode="after")
     def check_min_max(self):
         """Make sure min_covs <= max_covs."""
-        if self.min_covs > self.max_covs:
-            raise ValueError("min_covs > max_covs")
+        if self.min_covs is not None and self.max_covs is not None:
+            if self.min_covs > self.max_covs:
+                raise ValueError("min_covs > max_covs")
         return self
