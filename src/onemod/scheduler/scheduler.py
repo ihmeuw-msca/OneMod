@@ -48,7 +48,6 @@ class Scheduler:
         self.config = config
         self.stages = stages
         self.default_cluster_name = default_cluster_name
-        self.configure_resources = configure_resources
         self._upstream_task_registry: dict[str, list["Task"]] = {}
         self.resources_yaml = resources_yaml
         self._upstream_task_registry: dict[str, list["Task"]] = {}
@@ -73,8 +72,6 @@ class Scheduler:
         logger.level("DEBUG")
         if scheduler_type == SchedulerType.run_local:
             logger.info("Using local Scheduler")
-    def run(self, scheduler_type: SchedulerType) -> None:
-        if scheduler_type == SchedulerType.run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
         else:
@@ -86,7 +83,7 @@ class Scheduler:
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
             tasks = [
-                self.create_task_generators(workflow, action)
+                self.create_task_generators(action)
                 for action in self.parent_action_generator()
             ]
             workflow.add_tasks(tasks)

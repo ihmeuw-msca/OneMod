@@ -11,11 +11,6 @@ try:
 except ImportError:
     pass
 
-try:
-    from jobmon.client.status_commands import resume_workflow_from_id
-except ImportError:
-    pass
-
 
 
 from onemod.scheduler.scheduling_utils import SchedulerType
@@ -29,7 +24,6 @@ def run_pipeline(
     stages: list[str] | None = None,
     cluster_name: str = "slurm",
     run_local: bool = False,
-    jobmon: bool = False,
     jobmon: bool = False
 ) -> None:
     """Run onemod pipeline.
@@ -59,7 +53,7 @@ def run_pipeline(
         jobmon = True
 
     scheduler_type: SchedulerType = SchedulerType.jobmon if jobmon else SchedulerType.run_local
-    _run_pipeline(directory, stages, cluster_name, configure_resources, scheduler_type)
+    _run_pipeline(directory, stages, cluster_name, scheduler_type)
 
 def _run_pipeline(
     directory: str,
