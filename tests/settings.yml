@@ -1,85 +1,113 @@
-# OneMod settings
-input_path: /path/to/input/data.parquet
-ids: [age_group_id, location_id, sex_id, year_id]
+input_path: /ihme/homes/gphipps/onemod/experiments/kelseyMort1/config/data.parquet
+ids: [location_id, age_group_id, sex_id, year_id]
 id_subsets:
-  age_group_id: [8, 9, 10]
-  location_id: [13, 14]
-  sex_id: [1, 2]
-  year_id: [1980, 1981, 1982]
-obs: obs_rate
-pred: pred_rate
-holdouts: [holdout1, holdout2]
-test: test
+  super_region_id: [64, 103]
+  age_group_id: [10, 11, 12, 13, 14, 15]
+groupby: [sex_id]
+obs: mx
+pred: pred
 mtype: binomial
-max_attempts: 1
-groupby: [age_group_id, sex_id]
-
+weights: population
+holdouts: [holdout1, holdout2, holdout3, holdout4, holdout5]
+test: test
 rover_covsel:
-  groupby: [age_group_id, sex_id]
+  groupby: [age_group_id]
   rover:
+    cov_exploring:
+    - adult_hiv_death_rate
+    - covid_inf_pc
+    - diabetes_prev_agespec
+    - education_yrs_pc
+    - hiv_mort_rate
+    - LDI_pc
+    - maternal_educ_yrs_pc
+    - mean_BMI
+    - sdi
+    - SEV_scalar__all
+    - smoking_prev
+    - TB_prev
+    - total_covid
+    - u5_hiv_death_rate
     cov_fixed: [intercept]
-    cov_exploring: [cov1, cov2, cov3]
-    weights: population
   rover_fit:
     strategies: [forward]
-    top_pct_score: 1.0
     top_pct_learner: 0.5
-
-# SPxMod settings
+    top_pct_score: 1.0
+  t_threshold: 0.0
 spxmod:
-  model:
-    var_groups:
-      # Intercept relisted multiple times,
-      # Could compress, list different dimensions/priors as sub keys
-      - col: "intercept"
-      - col: "intercept"
-        dim: "super_region_id"
-        gprior: [0, 0.35]
-    weights: population
-    coef_bounds:
-      LDI_pc: [-inf, 0]
-      education_yrs_pc: [-inf, 0]
-    dims:
-      - name: "age_mid"
-        type: "numerical"
-      - name: "super_region_id"
-        type: "categorical"
-  regmod_fit:
+  groupby: [super_region_id]
+  xmodel:
+    lam: 2000.0
+    spaces:
+    - name: age_mid
+      dims:
+      - name: age_mid
+        dim_type: numerical
+    - name: region_id*age_mid
+      dims:
+      - name: region_id
+        dim_type: categorical
+      - name: age_mid
+        dim_type: numerical
+    - name: location_id*age_mid
+      dims:
+      - name: location_id
+        dim_type: categorical
+      - name: age_mid
+        dim_type: numerical
+    var_builders:
+    - name: intercept
+      space: age_mid
+      lam: 1.0
+    - name: intercept
+      space: region_id*age_mid
+      lam: 10.0
+    - name: intercept
+      space: location_id*age_mid
+      lam: 10.0
+    - name: spline
+      space: age_mid
+      lam: 100.0
+    - name: spline
+      space: region_id*age_mid
+      lam: 10.0
+    - name: spline
+      space: location_id*age_mid
+      lam: 10.0
+    - name: covid_inf_pc
+      space: age_mid
+      lam: 100.0
+    spline_config:
+      name: year_id
+      knots: [0.0, 0.33, 0.67, 1.0]
+      r_linear: true
+      include_first_basis: false 
+  xmodel_fit:
     options:
-      verbose: false
-
-# WeAve settings
-weave:
-  max_attempts: 1
-  models:
-    model1:
-      max_batch: 5000
-      groupby: [sex_id, super_region_id]
-      dimensions:
-        age:
-          name: age_group_id
-          coordinates: age_mid
-          kernel: exponential
-          radius: [0.75]
-        location:
-          name: location_id
-          coordinates: [location_id]
-          kernel: depth
-          radius: [0.7, 0.8]
-    model2:
-      groupby: [age_group_id, sex_id]
-      max_batch: 12
-      dimensions:
-        year:
-          name: year_id
-          kernel: tricubic
-          exponent: [0.5]
-
-# Ensemble settings
+      verbose: true
+      gtol: 0.000001
+      mat_solve_method: cg
+kreg:
+  groupby: [super_region_id]
+  kreg_model:
+    age_scale: 0.1
+    gamma_age: 8
+    gamma_year: 12
+    alpha_year: 2
+    exp_location: 0.25
+    exp_sex: 0.25
+    lam: 500
+    nugget: 0.0001
+  kreg_fit:
+    gtol: 5e-4
+    max_iter: 20
+    cg_maxiter: 100
+    cg_maxiter_increment: 0
+    nystroem_rank: 10
+  kreg_uncertainty:
+    num_samples: 50
+    lanczos_order: 150
 ensemble:
-  max_attempts: 1
-  groupby: [sex_id, super_region_id]
+  groupby: [super_region_id]
   metric: rmse
-  score: rover
-  top_pct_score: 1
-  top_pct_model: 1
+  score: best
