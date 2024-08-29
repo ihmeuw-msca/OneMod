@@ -18,10 +18,10 @@ from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.api import get_application_class
 from onemod.scheduler.scheduling_utils import (
     ParentTool,
+    SchedulerType,
     TaskRegistry,
     TaskTemplateFactory,
     upstream_task_callback,
-    SchedulerType
 )
 from onemod.schema import OneModConfig
 
@@ -45,7 +45,6 @@ class Scheduler:
         self.config = config
         self.stages = stages
         self.default_cluster_name = default_cluster_name
-        self._upstream_task_registry: dict[str, list["Task"]] = {}
         self.resources_yaml = resources_yaml
         self._upstream_task_registry: dict[str, list["Task"]] = {}
 
@@ -75,7 +74,6 @@ class Scheduler:
             logger.info("Using Jobmon and Slurm")
             ParentTool.initialize_tool(
                 default_cluster_name=self.default_cluster_name,
-                resources_yaml=self.resources_yaml,
             )
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()

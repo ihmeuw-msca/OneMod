@@ -1,16 +1,17 @@
 """Collect onemod stage submodel results."""
 
-import warnings
-import os
-from pathlib import Path
-from warnings import warn
 
+import warnings
+from pathlib import Path
+
+import os
 import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
 
-from onemod.diagnostics import plot_rover_covsel_results, plot_spxmod_results
 from jobmon.core.task_generator import task_generator
+
+from onemod.diagnostics import plot_rover_covsel_results, plot_spxmod_results
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
 from onemod.actions.data.serializers import str_to_path
@@ -101,7 +102,7 @@ def _get_selected_covs(
     max_attempts=2,
     naming_args=["directory"]
 )
-def collect_results_rover_covsel(directory: Path) -> None:
+def collect_results_rover_covsel(directory: str) -> None:
     """Collect rover covariate selection results.
 
     Collect covariate summaries from submodels, select covariates based

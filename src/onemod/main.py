@@ -40,6 +40,8 @@ def run_pipeline(
         If True use Jobmon. Default is True.
     jobmon : bool, optional
         If True use Jobmon. Default is True.
+    jobmon : bool, optional
+        If True use Jobmon. Default is True.
     """
     if run_local and jobmon:
         raise ValueError("Exactly one of run_local and jobmon can be True")
@@ -63,6 +65,31 @@ def _run_pipeline(
     """
 
     all_stages = ["rover_covsel", "spxmod", "weave"]
+    if run_local and jobmon:
+        raise ValueError("Exactly one of run_local and jobmon can be True")
+
+    # If both false then use jobmon because it means they did not specify anything on the command line
+    if not run_local and not jobmon:
+        jobmon = True
+
+    scheduler_type: SchedulerType = (
+        SchedulerType.jobmon if jobmon else SchedulerType.run_local
+    )
+    _run_pipeline(directory, stages, cluster_name, scheduler_type)
+
+
+def _run_pipeline(
+    directory: str,
+    stages: list[str] | None = None,
+    cluster_name: str = "slurm",
+    scheduler_type: SchedulerType = SchedulerType.jobmon,
+) -> None:
+    """
+    Internal function that uses an enum for the scheduler type for clarity.
+    Fire cannot handle enums.
+    """
+
+    all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
     if stages is None:
         stages = all_stages
     for stage in stages:

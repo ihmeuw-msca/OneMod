@@ -1,6 +1,5 @@
 from collections import defaultdict
 from typing import TYPE_CHECKING
-from enum import StrEnum
 
 try:
     from jobmon.client.api import Tool
@@ -8,6 +7,8 @@ try:
     from jobmon.client.task_template import TaskTemplate
 except ImportError:
     pass
+
+
 
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
