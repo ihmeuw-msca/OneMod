@@ -92,6 +92,10 @@ class TaskRegistry:
     def put(cls, function_name: str, task: "Task") -> None:
         cls.registry[function_name].add(task)
 
+    @classmethod
+    def reset(cls) -> None:
+        cls.registry.clear()
+
 
 def upstream_task_callback(action: Action) -> list["Task"]:
     """Return upstream tasks for a given action.

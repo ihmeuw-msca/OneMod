@@ -76,6 +76,7 @@ class Scheduler:
             )
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
+            TaskRegistry.reset()
             tasks = [
                 self.create_task(action)
                 for action in self.parent_action_generator()
