@@ -1,13 +1,15 @@
 """Collect onemod stage submodel results."""
+
+import warnings
 import os
 from pathlib import Path
 from warnings import warn
 
-import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
 from pplkit.data.interface import DataInterface
 
+from onemod.diagnostics import plot_rover_covsel_results, plot_spxmod_results
 from jobmon.core.task_generator import task_generator
 from onemod.utils import get_handle, get_submodels, parse_weave_submodel
 
@@ -20,11 +22,16 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
     # Collect coefficient summaries
     summaries = []
     for subset_id in subsets["subset_id"]:
-        summary = dataif.load_rover_covsel(
-            f"submodels/subset{subset_id}/summary.csv"
-        )
-        summary["subset_id"] = subset_id
-        summaries.append(summary)
+        try:
+            summary = dataif.load_rover_covsel(
+                f"submodels/subset{subset_id}/summary.csv"
+            )
+            summary["subset_id"] = subset_id
+            summaries.append(summary)
+        except FileNotFoundError:
+            warnings.warn(
+                f"rover_covsel subset {subset_id} missing summary.csv"
+            )
     summaries = pd.concat(summaries)
 
     # Merge with existing subsets and add statistic
@@ -34,93 +41,58 @@ def _get_rover_covsel_summaries(dataif: DataInterface) -> pd.DataFrame:
 
 
 def _get_selected_covs(
-    summaries: pd.DataFrame, groupby: list[str], t_threshold: float
-) -> pd.DataFrame:
-    selected_covs = (
-        summaries.groupby(groupby + ["cov"])["abs_t_stat"]
-        .mean()
-        .reset_index()
-        .query(f"abs_t_stat >= {t_threshold}")
-    )
-    logger.info(
-        f"Selected covariates: {selected_covs['cov'].unique().tolist()}"
-    )
-    return selected_covs
-
-
-def _plot_rover_covsel_results(
-    dataif: DataInterface,
     summaries: pd.DataFrame,
-    covs: list[str] | None = None,
-) -> plt.Figure:
-    """TODO: We hard-coded that the submodels for rover_covsel model are vary
-    across age groups and use age mid as x axis of the plot.
+    groupby: list[str],
+    t_threshold: float,
+    min_covs: float | None = None,
+    max_covs: float | None = None,
+) -> pd.DataFrame:
+    """Select covariates from cov_exploring.
+    Parameters
+    ----------
+    summaries : pandas.DataFrame
+        Covariate summaries across rover models.
+    groupby : list[str]
+        List of ID columns to group data by when running separate models
+        for each sex_id, age_group_id, super_region_id, etc.
+    t_threshold : float
+        T-statistic threshold to consider as a covariate selection
+        criterion.
+    min_covs, max_covs : float or None, optional
+        Minimum/maximum number of covariates to select from
+        cov_exploring, regardless of t_threshold value. Default is None.
+    Returns
+    -------
+    pandas.DataFrame
+        Selected covariates and their t-statistics.
     """
-    # TODO: Plot by submodel?
-    logger.info("Plotting coefficient magnitudes by age.")
-
-    # add age_mid to summary
-    df_age = dataif.load_data(
-        columns=["age_group_id", "age_mid"]
-    ).drop_duplicates()
-
-    summaries = summaries.merge(df_age, on="age_group_id", how="left")
-    df_covs = summaries.groupby("cov")
-    covs = covs or list(df_covs.groups.keys())
-    logger.info(
-        f"Starting to plot for {len(covs)} groups of data of size {df_age.shape}"
-    )
-
-    fig, ax = plt.subplots(len(covs), 1, figsize=(8, 2 * len(covs)))
-    ax = [ax] if len(covs) == 1 else ax
-    for i, cov in enumerate(covs):
-        df_cov = df_covs.get_group(cov).sort_values(by="age_mid")
-        if i % 5 == 0:
-            logger.info(f"Plotting for group {i}")
-        ax[i].errorbar(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            yerr=1.96 * df_cov["coef_sd"],
-            fmt="o-",
-            alpha=0.5,
-            label="rover_covsel",
+    selected_covs = []
+    logger.info("Selecting covariates")
+    for group, df in summaries.groupby(groupby):
+        t_stats = (
+            df.groupby(groupby + ["cov"])["abs_t_stat"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+            .eval(f"selected = abs_t_stat >= {t_threshold}")
         )
-        ax[i].set_ylabel(cov)
-        ax[i].axhline(0.0, linestyle="--")
-
-    logger.info("Completed plotting of rover results.")
-    return fig
-
-
-def _plot_spxmod_results(
-    dataif: DataInterface, summaries: pd.DataFrame
-) -> plt.Figure | None:
-    """TODO: same with _plot_rover_covsel_results"""
-    # TODO: Plot by submodel?
-    selected_covs = (
-        dataif.load_rover_covsel("selected_covs.csv")["cov"].unique().tolist()
-    )
-    if not selected_covs:
-        warn("There are no covariates selected, skip `plot_spxmod_results`")
-        return None
-
-    df_covs = dataif.load_spxmod("coef.csv").groupby("cov")
-
-    fig = _plot_rover_covsel_results(dataif, summaries, covs=selected_covs)
-    logger.info(
-        f"Plotting smoothed covariates for {len(selected_covs)} covariates."
-    )
-    for ax, cov in zip(fig.axes, selected_covs):
-        df_cov = df_covs.get_group(cov)
-        ax.plot(
-            df_cov["age_mid"],
-            df_cov["coef"],
-            "o-",
-            alpha=0.5,
-            label="spxmod",
+        if min_covs is not None and t_stats["selected"].sum() < min_covs:
+            t_stats.loc[: min_covs - 1, "selected"] = True
+        if max_covs is not None and t_stats["selected"].sum() > max_covs:
+            t_stats.loc[max_covs:, "selected"] = False
+        selected = t_stats.query("selected").drop(columns="selected")
+        selected_covs.append(selected)
+        logger.info(
+            ", ".join(
+                [
+                    f"{id_name}: {id_val}"
+                    for id_name, id_val in zip(groupby, group)
+                ]
+                + [f"covs: {selected["cov"].values}"]
+            )
         )
-        ax.legend(fontsize="xx-small")
-    return fig
+    return pd.concat(selected_covs)
+
 
 
 @task_generator(
@@ -135,6 +107,8 @@ def collect_results_rover_covsel(directory: Path) -> None:
     Collect covariate summaries from submodels, select covariates based
     on t-statistic and save as ``selected_covs.csv``, and plot
     covariate coefficients by age group.
+
+    TODO: separate plots by groupings other than sex_id
 
     """
     dataif, config = get_handle(directory)
@@ -151,8 +125,22 @@ def collect_results_rover_covsel(directory: Path) -> None:
     dataif.dump_rover_covsel(selected_covs, "selected_covs.csv")
 
     # Plot coefficients and save
-    fig = _plot_rover_covsel_results(dataif, summaries)
-    fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
+    summaries = summaries.merge(
+        dataif.load_data(columns=["age_group_id", "age_mid"]).drop_duplicates(),
+        on="age_group_id",
+        how="left",
+    )
+    if config.plots:
+        if "sex_id" in config.groupby:
+            for sex_id, df in summaries.groupby("sex_id"):
+                fig = plot_rover_covsel_results(df)
+                fig.savefig(
+                    dataif.rover_covsel / f"coef_{sex_id}.pdf",
+                    bbox_inches="tight",
+                )
+        else:
+            fig = plot_rover_covsel_results(summaries)
+            fig.savefig(dataif.rover_covsel / "coef.pdf", bbox_inches="tight")
 
 
 @task_generator(
@@ -162,7 +150,8 @@ def collect_results_rover_covsel(directory: Path) -> None:
     naming_args=["directory"],
 )
 def collect_results_spxmod(directory: Path) -> None:
-    """This step is used for creating diagnostics."""
+    """This step is used for creating diagnostics.
+    FIXME: assumes rover stage has been run"""
     dataif, _ = get_handle(directory)
 
     # Collect submodel predictions
@@ -190,10 +179,25 @@ def collect_results_spxmod(directory: Path) -> None:
     dataif.dump_spxmod(coef, "coef.csv")
 
     # Plot coefficients
-    summaries = _get_rover_covsel_summaries(dataif)
-    fig = _plot_spxmod_results(dataif, summaries)
-    if fig is not None:
-        fig.savefig(dataif.spxmod / "smooth_coef.pdf", bbox_inches="tight")
+    if config.plots:
+        summaries = pd.merge(
+            left=dataif.load_rover_covsel("summaries.csv"),
+            right=dataif.load_data(
+                columns=["age_group_id", "age_mid"]
+            ).drop_duplicates(),
+            how="left",
+        )
+        for subset_id, df in coef.groupby("subset_id"):
+            if "sex_id" in config.groupby:
+                sex_id = df["sex_id"].unique()[0]
+                fig = plot_spxmod_results(
+                    summaries.query("sex_id == @sex_id"), df
+                )
+            else:
+                fig = plot_spxmod_results(summaries, df)
+        fig.savefig(
+            dataif.spxmod / f"smooth_coef_{subset_id}.pdf", bbox_inches="tight"
+        )
 
 
 @task_generator(

@@ -1,6 +1,6 @@
 from collections import defaultdict
-from enum import StrEnum
 from typing import TYPE_CHECKING
+from enum import StrEnum
 
 try:
     from jobmon.client.api import Tool
@@ -29,17 +29,21 @@ class ParentTool:
 
     @classmethod
     def initialize_tool(
-        cls,
-        resources_yaml: str,
-        default_cluster_name: str,
+        cls, default_cluster_name: str, resources_yaml: str = ""
     ) -> None:
         if cls.tool is None:
             cls.tool = Tool(name="onemod_tool")
             cls.tool.set_default_cluster_name(default_cluster_name)
-            cls.tool.set_default_compute_resources_from_yaml(
-                default_cluster_name=default_cluster_name,
-                yaml_file=resources_yaml,
-            )
+            if default_cluster_name == "dummy":
+                cls.tool.set_default_compute_resources_from_dict(
+                    cluster_name=default_cluster_name,
+                    compute_resources={"queue": "null.q"},
+                )
+            else:
+                cls.tool.set_default_compute_resources_from_yaml(
+                    default_cluster_name=default_cluster_name,
+                    yaml_file=resources_yaml,
+                )
 
     @classmethod
     def get_tool(cls) -> "Tool":
@@ -55,10 +59,7 @@ class TaskTemplateFactory:
 
     @classmethod
     def get_task_template(
-        cls,
-        action_name: str,
-        resources_path: str = "",
-        configure_resources: bool = True,
+        cls, action_name: str, resources_yaml: str = ""
     ) -> "TaskTemplate":
         tool = ParentTool.get_tool()
 
@@ -76,8 +77,7 @@ class TaskTemplateFactory:
         task_template = task_template_callable(
             tool=tool,
             task_template_name=action_name,
-            resources_path=resources_path,
-            configure_resources=configure_resources,
+            resources_yaml=resources_yaml,
         )
 
         return task_template
@@ -93,15 +93,15 @@ class TaskRegistry:
     registry: defaultdict[str, set["Task"]] = defaultdict(set)
 
     @classmethod
-    def get(cls, function_name: str) -> list[Task]:
+    def get(cls, function_name: str) -> list["Task"]:
         return list(cls.registry[function_name])
 
     @classmethod
-    def put(cls, function_name: str, task: Task) -> None:
+    def put(cls, function_name: str, task: "Task") -> None:
         cls.registry[function_name].add(task)
 
 
-def upstream_task_callback(action: Action) -> list[Task]:
+def upstream_task_callback(action: Action) -> list["Task"]:
     """
     Given an action, we should know (based on the action name) what the relevant upstream tasks
     are.

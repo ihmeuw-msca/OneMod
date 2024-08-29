@@ -9,15 +9,13 @@ if TYPE_CHECKING:
         pass
 
 
-
 def _create_task_template(
     tool: "Tool",
     task_template_name: str,
     node_args: list[str],
     task_args: list[str] | None = None,
     op_args: list[str] | None = None,
-    configure_resources: bool = True,
-    resources_path: str | Path | None = None,
+    resources_yaml: str | Path | None = None,
 ) -> "TaskTemplate":
     """Create a Jobmon task template from provided arguments.
 
@@ -40,7 +38,7 @@ def _create_task_template(
         The list of task arguments to use for the task template, by default None.
     op_args : list[str], optional
         The list of operation arguments to use for the task template, by default None.
-    resources_path : str or Path, optional
+    resources_yaml : str or Path, optional
         The path to the resources file to use for the task template, by default "".
 
     Returns
@@ -79,42 +77,43 @@ def _create_task_template(
 
     joined_template = " ".join(command_template)
 
-    template = tool.get_task_template(
-        template_name=task_template_name,
-        command_template=joined_template,
-        node_args=node_args,
-        task_args=task_args,
-        op_args=op_args,
-        default_cluster_name=tool.default_cluster_name,
-        default_resource_scales={"memory": 0.5, "runtime": 0.5},
-        yaml_file=resources_path if configure_resources else None,
-    )
+    template_args = {
+        "template_name": task_template_name,
+        "command_template": joined_template,
+        "node_args": node_args,
+        "task_args": task_args,
+        "op_args": op_args,
+        "default_cluster_name": tool.default_cluster_name,
+    }
+    if tool.default_cluster_name == "dummy":
+        template = tool.get_task_template(
+            default_compute_resources={"queue": "null.q"}, **template_args
+        )
+    else:
+        template = tool.get_task_template(
+            default_resource_scales={"memory": 0.5, "runtime": 0.5},
+            yaml_file=resources_yaml,
+            **template_args,
+        )
 
     return template
 
 
 def create_initialization_template(
-    tool: "Tool",
-    task_template_name: str,
-    resources_path: str,
-    configure_resources: bool = True,
+    tool: "Tool", task_template_name: str, resources_yaml: str = ""
 ) -> "TaskTemplate":
     template = _create_task_template(
         tool=tool,
         task_template_name=task_template_name,
         node_args=["stages"],
         task_args=["directory"],
-        resources_path=resources_path,
-        configure_resources=configure_resources,
+        resources_yaml=resources_yaml,
     )
     return template
 
 
 def create_modeling_template(
-    tool: "Tool",
-    task_template_name: str,
-    resources_path: str | Path,
-    configure_resources: bool = True,
+    tool: "Tool", task_template_name: str, resources_yaml: str = ""
 ) -> "TaskTemplate":
     """Stage modeling template.
 
@@ -124,9 +123,8 @@ def create_modeling_template(
         The Jobmon Tool instance to use for creating the task template.
     task_template_name : str
         The name of the task template.
-    resources_path : str or Path, optional
+    resources_yaml : str, optional
         The path to the resources file to use for the task template, by default "".
-
 
     Returns
     -------
@@ -150,18 +148,14 @@ def create_modeling_template(
         task_template_name=task_template_name,
         node_args=node_args,
         task_args=["directory"],
-        resources_path=resources_path,
-        configure_resources=configure_resources,
+        resources_yaml=resources_yaml,
     )
 
     return template
 
 
 def create_collection_template(
-    tool: "Tool",
-    task_template_name: str,
-    resources_path: str | Path,
-    configure_resources: bool = True,
+    tool: "Tool", task_template_name: str, resources_yaml: str = ""
 ) -> "TaskTemplate":
     """Stage collection template.
 
@@ -182,17 +176,13 @@ def create_collection_template(
         task_template_name=task_template_name,
         node_args=["stage_name"],
         task_args=["directory"],
-        resources_path=resources_path,
-        configure_resources=configure_resources,
+        resources_yaml=resources_yaml,
     )
     return template
 
 
 def create_deletion_template(
-    tool: "Tool",
-    task_template_name: str,
-    resources_path: str | Path,
-    configure_resources: bool = True,
+    tool: "Tool", task_template_name: str, resources_yaml: str = ""
 ) -> "TaskTemplate":
     """Stage deletion template.
 
@@ -202,7 +192,7 @@ def create_deletion_template(
         The Jobmon Tool instance to use for creating the task template.
     task_template_name : str
         The name of the task template.
-    resources_path : str or Path, optional
+    resources_yaml : str, optional
 
     Returns
     -------
@@ -215,7 +205,6 @@ def create_deletion_template(
         tool=tool,
         task_template_name=task_template_name,
         node_args=["result"],
-        resources_path=resources_path,
-        configure_resources=configure_resources,
+        resources_yaml=resources_yaml,
     )
     return template

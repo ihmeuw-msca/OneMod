@@ -20,6 +20,7 @@ from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.api import get_application_class
 from onemod.scheduler.scheduling_utils import (
     ParentTool,
+    SchedulerType,
     TaskRegistry,
     TaskTemplateFactory,
     upstream_task_callback,
@@ -40,16 +41,16 @@ class Scheduler:
         directory: Path,
         config: OneModConfig,
         stages: list[str],
-        resources_path: str = "",
         default_cluster_name: str = "slurm",
-        configure_resources: bool = True,
+        resources_yaml: str = "",
     ):
         self.directory = directory
         self.config = config
         self.stages = stages
-        self.resources_path = resources_path
         self.default_cluster_name = default_cluster_name
         self.configure_resources = configure_resources
+        self._upstream_task_registry: dict[str, list["Task"]] = {}
+        self.resources_yaml = resources_yaml
         self._upstream_task_registry: dict[str, list["Task"]] = {}
 
     def parent_action_generator(self) -> Generator[Action, None, None]:
@@ -72,13 +73,15 @@ class Scheduler:
         logger.level("DEBUG")
         if scheduler_type == SchedulerType.run_local:
             logger.info("Using local Scheduler")
+    def run(self, scheduler_type: SchedulerType) -> None:
+        if scheduler_type == SchedulerType.run_local:
             for action in self.parent_action_generator():
                 action.evaluate()
         else:
             logger.info("Using Jobmon and Slurm")
             ParentTool.initialize_tool(
-                resources_yaml=self.resources_path,
                 default_cluster_name=self.default_cluster_name,
+                resources_yaml=self.resources_yaml,
             )
             tool = ParentTool.get_tool()
             workflow = tool.create_workflow()
@@ -93,16 +96,15 @@ class Scheduler:
                 # TODO: Summarize errors in workflow
                 raise ValueError(
                     f"workflow {workflow.name} failed: {status},"
-                    f"see https://jobmon-gui.ihme.washington.edu/#/workflow/{workflow.workflow_id}/tasks")
+                    f"Lookup this workflow id {workflow.workflow_id} in your local Jobmon GUI"
+                )
 
-    def create_task_xx(self, action: Action) -> "Task":
+    def create_task(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""
 
         # Unpack kwargs into a string for naming purposes
         task_template = TaskTemplateFactory.get_task_template(
-            action_name=action.name,
-            resources_path=self.resources_path,
-            configure_resources=self.configure_resources,
+            action_name=action.name, resources_yaml=self.resources_yaml
         )
         upstream_tasks = upstream_task_callback(action)
 
