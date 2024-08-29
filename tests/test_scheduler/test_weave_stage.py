@@ -14,7 +14,7 @@ def test_rover_tasks(
     )
 
     tasks = [
-        scheduler.create_task(action)
+        scheduler.create_task_generators(action)
         for action in scheduler.parent_action_generator()
     ]
     # Breakdown: Model1 has 2 parameters - age and location

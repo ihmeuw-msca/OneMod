@@ -16,7 +16,7 @@ def test_rover_tasks(
     )
 
     tasks = [
-        scheduler.create_task(action)
+        scheduler.create_task_generators(action)
         for action in scheduler.parent_action_generator()
     ]
     # 3 tasks - initialization, modeling and collection

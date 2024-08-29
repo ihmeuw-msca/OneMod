@@ -16,7 +16,7 @@ def test_rover_tasks(
     )
 
     tasks = [
-        scheduler.create_task(action)
+        scheduler.create_task_generators(action)
         for action in scheduler.parent_action_generator()
     ]
     # Inspecting the settings, we are grouping by sex and age. 3 ages + 2 sexes = 6 tasks

@@ -95,7 +95,7 @@ class Scheduler:
                     f"workflow {workflow.name} failed: {status},"
                     f"see https://jobmon-gui.ihme.washington.edu/#/workflow/{workflow.workflow_id}/tasks")
 
-    def create_task(self, action: Action) -> "Task":
+    def create_task_xx(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""
 
         # Unpack kwargs into a string for naming purposes
@@ -123,7 +123,7 @@ class Scheduler:
         TaskRegistry.put(action.name, task)
         return task
 
-    def create_task_generators(self, wf: Workflow, action: Action) -> "Task":
+    def create_task_generators(self, action: Action) -> "Task":
         """Create a Jobmon task from a given action."""
 
         logger.debug(f"Creating Task for action: {action.name} over {action.kwargs}")
