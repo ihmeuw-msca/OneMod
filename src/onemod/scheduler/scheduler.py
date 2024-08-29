@@ -4,8 +4,6 @@ from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING, Generator
 
-from jobmon.client.workflow import Workflow
-
 from onemod.actions.action import Action
 from onemod.actions.data.delete_results import delete_results
 from onemod.actions.data.collect_results import (
@@ -20,7 +18,6 @@ from onemod.actions.models.rover_covsel_model import rover_covsel_model
 from onemod.application.api import get_application_class
 from onemod.scheduler.scheduling_utils import (
     ParentTool,
-    SchedulerType,
     TaskRegistry,
     TaskTemplateFactory,
     upstream_task_callback,
@@ -127,14 +124,7 @@ class Scheduler:
 
         logger.debug(f"Creating Task for action: {action.name} over {action.kwargs}")
 
-        # Quick type coercion: the Fire library has strange handling of lists.
-        # Force to a string without any spaces
-        # This is a catch-all solution but technically only affects initialize_results
-        # for arg, value in action.kwargs.items():
-        #     if isinstance(value, list):
-        #         action.kwargs[arg] = f"[{','.join(value)}]"
-
-        loaded_resources = self.load_resources_from_file(self.resources_path)
+        loaded_resources = self.load_resources_from_file(self.resources_yaml)
         task: Task  # helps with type hinting
         match action.name:
             case "initialize_results":

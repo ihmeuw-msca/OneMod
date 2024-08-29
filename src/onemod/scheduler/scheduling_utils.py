@@ -9,7 +9,6 @@ try:
 except ImportError:
     pass
 
-
 from onemod.actions.action import Action
 from onemod.scheduler.templates import (
     create_collection_template,

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-
 import fire
 
 try:
@@ -11,9 +10,6 @@ try:
 except ImportError:
     pass
 
-
-
-from onemod.scheduler.scheduling_utils import SchedulerType
 from onemod.scheduler.scheduler import Scheduler
 from onemod.scheduler.scheduling_utils import SchedulerType
 from onemod.utils import format_input, get_handle
@@ -59,16 +55,14 @@ def _run_pipeline(
     directory: str,
     stages: list[str] | None = None,
     cluster_name: str = "slurm",
-    configure_resources: bool = True,
     scheduler_type: SchedulerType = SchedulerType.jobmon
 ) -> None:
     """
-    Internal function that uses an enum for the sechduelr type for clarity.
+    Internal function that uses an enum for the scheduler type for clarity.
     Fire cannot handle enums.
     """
 
-
-    all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
+    all_stages = ["rover_covsel", "spxmod", "weave"]
     if stages is None:
         stages = all_stages
     for stage in stages:
