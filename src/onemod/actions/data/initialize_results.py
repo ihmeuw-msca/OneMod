@@ -41,6 +41,11 @@ def _initialize_rover_covsel_results(dataif: DataInterface) -> None:
     get_submodels("rover_covsel", dataif.experiment, save_file=True)
 
 
+def initialize_rover_covsel_results(directory: str) -> None:
+   dataif, _ = get_handle(directory)
+   return _initialize_rover_covsel_results(dataif)
+
+
 def _initialize_spxmod_results(dataif: DataInterface) -> None:
     # Initialize directories
     if dataif.spxmod.exists():
@@ -49,6 +54,11 @@ def _initialize_spxmod_results(dataif: DataInterface) -> None:
 
     # Create spxmod subsets
     get_submodels("spxmod", dataif.experiment, save_file=True)
+
+
+def initialize_spxmod_results(directory: str) -> None:
+    dataif, _ = get_handle(directory)
+    return _initialize_spxmod_results(dataif)
 
 
 def _initialize_weave_results(dataif: DataInterface) -> None:
@@ -63,8 +73,13 @@ def _initialize_weave_results(dataif: DataInterface) -> None:
     get_submodels("weave", dataif.experiment, save_file=True)
 
 
+def initialize_weave_results(directory: str) -> None:
+    dataif, _ = get_handle(directory)
+    return _initialize_weave_results(dataif)
+
+
 def _initialize_ensemble_results(dataif: DataInterface) -> None:
-    """Initialize ensemble results."""
+    """Initialize ensemble results. DEAD CODE"""
 
     # Initialize directory
     if dataif.ensemble.exists():

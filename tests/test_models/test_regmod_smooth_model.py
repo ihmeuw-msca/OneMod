@@ -8,8 +8,8 @@ from onemod.actions.models.spxmod_model import spxmod_model
 
 def test_spxmod(temporary_directory):
     # Mock the rover output - selected_covs.yaml
-    _initialize_rover_covsel_results(dataif=temporary_directory)
-    _initialize_spxmod_results(dataif=temporary_directory)
+    # _initialize_rover_covsel_results(dataif=temporary_directory)
+    # _initialize_spxmod_results(dataif=temporary_directory)
     selected_covs = ["cov1", "cov2"]
     yaml_path = (
         temporary_directory / "results" / "rover_covsel" / "selected_covs.yaml"
@@ -19,7 +19,7 @@ def test_spxmod(temporary_directory):
     with open(yaml_path, "w") as f:
         yaml.dump(selected_covs, f)
 
-    spxmod_model.task_function(directory=temporary_directory, submodel_id="0")
+    spxmod_model.task_function(directory=temporary_directory)
 
     expected_data_path = Path(
         temporary_directory / "results" / "spxmod" / "predictions.parquet"
