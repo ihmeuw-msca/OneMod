@@ -1,9 +1,11 @@
-input_path: /ihme/homes/gphipps/onemod/experiments/kelseyMort1/config/data.parquet
+input_path:  /path/to/input/data.parquet
 ids: [location_id, age_group_id, sex_id, year_id]
 id_subsets:
-  super_region_id: [64, 103]
-  age_group_id: [10, 11, 12, 13, 14, 15]
-groupby: [sex_id]
+  age_group_id: [8, 9, 10]
+  location_id: [13, 14]
+  sex_id: [1, 2]
+  year_id: [1980, 1981, 1982]
+groupby: [age_group_id, sex_id]
 obs: mx
 pred: pred
 mtype: binomial
@@ -11,7 +13,7 @@ weights: population
 holdouts: [holdout1, holdout2, holdout3, holdout4, holdout5]
 test: test
 rover_covsel:
-  groupby: [age_group_id]
+  groupby: [age_group_id, sex_id]
   rover:
     cov_exploring:
     - adult_hiv_death_rate
