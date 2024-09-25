@@ -1,7 +1,7 @@
 import pytest
 
-from onemod.redesign.pipeline import Pipeline
-from onemod.redesign.stage import Stage
+from onemod.pipeline import Pipeline
+from onemod.stage import Stage
 
 
 def test_pipeline_initialization(tmp_path):
