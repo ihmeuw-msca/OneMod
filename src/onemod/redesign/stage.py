@@ -8,6 +8,9 @@ from abc import ABC
 from pathlib import Path
 from typing import Any
 
+from pandas import DataFrame
+from pydantic import BaseModel, ConfigDict, computed_field
+
 from onemod.redesign.config import (
     CrossedConfig,
     GroupedConfig,
@@ -16,8 +19,6 @@ from onemod.redesign.config import (
 )
 from onemod.redesign.parameters import create_params, get_params
 from onemod.redesign.subsets import create_subsets, get_subset
-from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, computed_field
 
 
 class Stage(BaseModel, ABC):
@@ -108,13 +109,17 @@ class GroupedStage(Stage, ABC):
 
     config: GroupedConfig
     groupby: set[str] = set()
-    subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
+    _subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
+
+    @property
+    def subset_ids(self) -> set[int]:
+        return self._subset_ids
 
     def create_stage_subsets(self, data: DataFrame) -> None:
         """Create stage data subsets from groupby."""
         subsets = create_subsets(self.groupby, data)
         if subsets is not None:
-            self.subset_ids = list(subsets["subset_id"])
+            self._subset_ids = list(subsets["subset_id"])
             subsets.to_csv(self.directory / "subsets.csv", index=False)
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
@@ -160,19 +165,19 @@ class CrossedStage(Stage, ABC):
     """
 
     config: CrossedConfig
-    crossby: set[str] = set()  # set by Stage.create_params
-    param_ids: set[int] = set()  # set by Stage.create_params
+    crossby: set[str] = set()  # set by Stage.create_stage_params
+    _param_ids: set[int] = set()  # set by Stage.create_stage_params
 
     @property
-    def crossable_params(self) -> set[str]:
-        return self._crossable_params
+    def param_ids(self) -> set[int]:
+        return self._param_ids
 
     def create_stage_params(self) -> None:
         """Create stage parameter sets from crossby."""
         params = create_params(self.config)
         if params is not None:
             self.crossby = params.drop(columns="param_id").columns
-            self.param_ids = params["param_id"]
+            self._param_ids = params["param_id"]
             params.to_csv(self.directory / "params.csv", index=False)
 
     def set_params(self, param_id: int) -> Any:
