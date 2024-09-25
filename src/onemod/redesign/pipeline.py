@@ -100,7 +100,7 @@ class Pipeline(BaseModel):
             stage.groupby.update(self.groupby)
             stage.create_stage_subsets(self.data)
         if isinstance(stage, CrossedStage):
-            if stage.crossable_params:
+            if stage.config.crossable_params:
                 stage.create_stage_params()
         self._stages[stage.name] = stage
 
