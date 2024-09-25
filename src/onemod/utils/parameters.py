@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from onemod.redesign.config import CrossedConfig
+
+from onemod.config import CrossedConfig
 
 
 def create_params(config: CrossedConfig) -> pd.DataFrame | None:

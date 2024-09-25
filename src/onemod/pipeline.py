@@ -8,26 +8,12 @@ from pathlib import Path
 
 from pydantic import BaseModel, computed_field
 
-from onemod.redesign.config import PipelineConfig
-from onemod.redesign.examples import (
-    KregStage,
-    PreprocessingStage,
-    RoverStage,
-    SpxmodStage,
-)
-from onemod.redesign.stage import CrossedStage, GroupedStage, Stage
-
-STAGE_DICT = {
-    "PreprocessingStage": PreprocessingStage,
-    "RoverStage": RoverStage,
-    "SpxmodStage": SpxmodStage,
-    "KregStage": KregStage,
-}
+from onemod.config import PipelineConfig
+from onemod.stage import CrossedStage, GroupedStage, Stage
 
 
 class Pipeline(BaseModel):
-    """Pipeline class.
-
+    """
     Notes
     -----
     * `data` is raw input data used to figure out grouped stage subsets

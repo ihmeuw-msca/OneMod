@@ -11,14 +11,9 @@ from typing import Any
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from onemod.redesign.config import (
-    CrossedConfig,
-    GroupedConfig,
-    ModelConfig,
-    StageConfig,
-)
-from onemod.redesign.parameters import create_params, get_params
-from onemod.redesign.subsets import create_subsets, get_subset
+from onemod.config import StageConfig, GroupedConfig, CrossedConfig, ModelConfig
+from onemod.utils.parameters import create_params, get_params
+from onemod.utils.subsets import create_subsets, get_subset
 
 
 class Stage(BaseModel, ABC):
@@ -251,8 +246,4 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
 
     def predict(self, subset_id: int | None, param_id: int | None) -> None:
         """Predict stage submodel."""
-        raise NotImplementedError()
-
-    def collect(self, subset_id: int | None, param_id: int | None) -> None:
-        """Collect stage submodel results."""
         raise NotImplementedError()
