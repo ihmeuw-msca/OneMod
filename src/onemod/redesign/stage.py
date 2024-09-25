@@ -15,7 +15,7 @@ from onemod.redesign.config import (
     StageConfig,
 )
 from onemod.redesign.parameters import create_params, get_params
-from onemod.redesign.subsets import create_subsets, filter_subset
+from onemod.redesign.subsets import create_subsets, get_subset
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field
 
@@ -108,18 +108,18 @@ class GroupedStage(Stage, ABC):
 
     config: GroupedConfig
     groupby: set[str] = set()
-    subset_ids: set[int] = set()  # set by Stage.create_subsets
+    subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
 
-    def create_subsets(self, data: DataFrame) -> None:
+    def create_stage_subsets(self, data: DataFrame) -> None:
         """Create stage data subsets from groupby."""
         subsets = create_subsets(self.groupby, data)
         if subsets is not None:
             self.subset_ids = list(subsets["subset_id"])
             subsets.to_csv(self.directory / "subsets.csv", index=False)
 
-    def get_subset(self, subset_id: int) -> DataFrame:
+    def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
-        return filter_subset(
+        return get_subset(
             self.config.data, self.directory / "subsets.csv", subset_id
         )
 
@@ -167,7 +167,7 @@ class CrossedStage(Stage, ABC):
     def crossable_params(self) -> set[str]:
         return self._crossable_params
 
-    def create_params(self) -> None:
+    def create_stage_params(self) -> None:
         """Create stage parameter sets from crossby."""
         params = create_params(self.config)
         if params is not None:

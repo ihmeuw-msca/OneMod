@@ -18,10 +18,10 @@ def create_subsets(groupby: set[str], data: Path | str) -> pd.DataFrame | None:
     return subsets[["subset_id", *groupby]]
 
 
-def filter_subset(
+def get_subset(
     data: Path | str, subsets: Path | str, subset_id: int
 ) -> pd.DataFrame:
-    """Filter data by subset_id."""
+    """Get data subset by subset_id."""
     subset = pd.read_csv(subsets).query("subset_id == @subset_id")
     id_subsets = {key: {value.item()} for key, value in subset.items()}
     return filter_data(data, id_subsets)
