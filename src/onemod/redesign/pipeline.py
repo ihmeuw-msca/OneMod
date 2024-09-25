@@ -6,6 +6,8 @@ import json
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+from pydantic import BaseModel, computed_field
+
 from onemod.redesign.config import PipelineConfig
 from onemod.redesign.examples import (
     KregStage,
@@ -14,7 +16,6 @@ from onemod.redesign.examples import (
     SpxmodStage,
 )
 from onemod.redesign.stage import CrossedStage, GroupedStage, Stage
-from pydantic import BaseModel, computed_field
 
 STAGE_DICT = {
     "PreprocessingStage": PreprocessingStage,
@@ -97,10 +98,10 @@ class Pipeline(BaseModel):
             if self.data is None:
                 raise ValueError("data is required for GroupedStage")
             stage.groupby.update(self.groupby)
-            stage.create_subsets(self.data)
+            stage.create_stage_subsets(self.data)
         if isinstance(stage, CrossedStage):
             if stage.crossable_params:
-                stage.create_params()
+                stage.create_stage_params()
         self._stages[stage.name] = stage
 
     def _stage_from_json(self, stage: str, filepath: Path | str) -> Stage:
