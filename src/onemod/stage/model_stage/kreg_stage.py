@@ -9,7 +9,7 @@ from onemod.stage import ModelStage
 class KregStage(ModelStage):
     """Kreg stage."""
 
-    config: KregConfig
+    config: KregConfig = KregConfig()
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None

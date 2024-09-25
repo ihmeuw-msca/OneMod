@@ -9,7 +9,7 @@ from onemod.stage import ModelStage
 class SpxmodStage(ModelStage):
     """Spxmod stage."""
 
-    config: SpxmodConfig
+    config: SpxmodConfig = SpxmodConfig()
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
