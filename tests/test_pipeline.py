@@ -100,6 +100,26 @@ def test_pipeline_from_json_with_undefined_dependencies(tmp_path):
     with pytest.raises(ValueError, match="Dependency 'stage_a' not found in pipeline."):
         pipeline = Pipeline.from_json(pipeline_json)
 
+def test_build_dag_no_stages(tmp_path):
+    pipeline_dir = tmp_path / "empty_pipeline"
+    pipeline = Pipeline(name="empty_pipeline", config={}, directory=pipeline_dir)
+    dag = pipeline.build_dag()
+    assert dag == {}
+
+def test_build_dag_multiple_stages(tmp_path):
+    pipeline_dir = tmp_path / "multi_stage_pipeline"
+    pipeline = Pipeline(name="multi_stage_pipeline", config={}, directory=pipeline_dir)
+    stage_a = Stage(name="stage_a", config={})
+    stage_b = Stage(name="stage_b", config={})
+    pipeline.add_stage(stage_a)
+    pipeline.add_stage(stage_b, dependencies=["stage_a"])
+    dag = pipeline.build_dag()
+    expected_dag = {
+        "stage_b": ["stage_a"],
+        "stage_a": []
+    }
+    assert dag == expected_dag
+
 def test_validate():
     """
     Test the validate method of the Pipeline class.

@@ -129,6 +129,11 @@ class Pipeline(BaseModel):
         spec.loader.exec_module(module_from_spec(spec))
         stage_class = module.__getattribute(stage_type)
         return stage_class(**stage_json)
+
+    def build_dag(self) -> dict[str, list[str]]:
+        """Build directed acyclic graph (DAG) from the stages and their dependencies."""
+        # TODO: Placeholder until DAG class is implemented, assuming we need one
+        return self._dependencies
     
     # TODO: This currently handles graph cycle detection AND topological sorting (DRY and feeding two birds with one scone), but the argument could be made that these are two separate concerns and should be separated into two functions, validatie_no_cycles() or similar and get_execution_order().
     def get_execution_order(self) -> list[str]:
