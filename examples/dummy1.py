@@ -8,6 +8,7 @@ from onemod.stage.model_stage import RoverStage, SpxmodStage, KregStage
 
 preprocessing = PreprocessingStage(
     # Input: FilePath
+    inputs = [ onemod.types.filepath],
     name="1_preprocessing", config=dict(data="/path/to/data.parquet")
     # ToDo What can be stated about the data:
     # Static Dimensionality, for each colum
@@ -17,9 +18,27 @@ preprocessing = PreprocessingStage(
     # e.g 0..1
     # strictly positive
     # 0..10 billion for populations
+
+  outputs = [onemod.types.data{
+    "age_group_id": {
+        type = onemod.types.integer,
+        constrint = onemod.types.bound(0, 100),
+    },
+    "location_id": onemod.types.integer,
+    onemod.types.some_other_stuff  # special keyword for ....
+  }],
 )
 
 covariate_selection = RoverStage(
+inputs = [onemod.types.data{
+    "age_group_id": {
+        type = onemod.types.integer,
+        constrint = onemod.types.bound(0, 100),
+    },
+    "location_id": onemod.types.integer,
+    onemod.types.some_other_stuff  # special keyword for ....
+  }
+
     name="2_covariate_selection",
     config=dict(cov_exploring=["cov1", "cov2", "cov3"]),
     groupby=["age_group_id"],
@@ -59,4 +78,8 @@ location_offset = location_model(data=data, offset=global_offset)
 predictions = smoothing(data=data, offset=location_offset)
 
 dummy_pipeline.compile()
+  # This call walks through the pipeline from start to finish and checks that the current stage produces
+  # sufficient outputs for the immediate downstream stages.
+  # Bonus points: check that any range-constraints or bound constraints are compatible.
+  # Result of the compile is either a serialsisd pipeline or a set of error messages.
 dummy_pipeline.run()
