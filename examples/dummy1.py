@@ -4,8 +4,19 @@ from onemod import Pipeline
 from onemod.stage.data_stage import PreprocessingStage
 from onemod.stage.model_stage import RoverStage, SpxmodStage, KregStage
 
+# Adding TypeHints
+
 preprocessing = PreprocessingStage(
+    # Input: FilePath
     name="1_preprocessing", config=dict(data="/path/to/data.parquet")
+    # ToDo What can be stated about the data:
+    # Static Dimensionality, for each colum
+    #  -Name of col
+    #  -Data type of column
+    # Bound constraints:
+    # e.g 0..1
+    # strictly positive
+    # 0..10 billion for populations
 )
 
 covariate_selection = RoverStage(
