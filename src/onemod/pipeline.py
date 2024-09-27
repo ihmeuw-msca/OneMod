@@ -135,7 +135,31 @@ class Pipeline(BaseModel):
         # TODO: Placeholder until DAG class is implemented, assuming we need one
         return self._dependencies
     
-    # TODO: This currently handles graph cycle detection AND topological sorting (DRY and feeding two birds with one scone), but the argument could be made that these are two separate concerns and should be separated into two functions, validatie_no_cycles() or similar and get_execution_order().
+    def validate_dag(self):
+        """Validate that the DAG structure is correct."""
+        for stage, dependencies in self._dependencies.items():
+            # Check for undefined dependencies
+            for dep in dependencies:
+                if dep not in self._stages:
+                    raise ValueError(f"Stage '{dep}' is not defined, but '{stage}' depends on it.")
+
+            # Check for self-dependencies
+            if stage in dependencies:
+                raise ValueError(f"Stage '{stage}' cannot depend on itself.")
+
+            # Check for duplicate dependencies
+            if len(dependencies) != len(set(dependencies)):
+                raise ValueError(f"Duplicate dependencies found for stage '{stage}'.")
+
+        # Check for isolated nodes
+        # TODO: are there cases where isolated nodes would be valid for OneMod?
+        all_stages = set(self._stages.keys())
+        dependent_stages = set(stage for deps in self._dependencies.values() for stage in deps)
+        isolated_stages = all_stages - dependent_stages - set(self._dependencies.keys())
+        if isolated_stages:
+            # TODO: implement logging
+            log.warning(f"The following stages are isolated and not part of the DAG: {isolated_stages}")
+    
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
