@@ -61,6 +61,12 @@ class Stage(BaseModel, ABC):
         stage.directory = pipeline_json["directory"]
         return stage
 
+    def to_json(self, filepath: Path | str | None = None) -> None:
+        """Save stage object as JSON file."""
+        filepath = filepath or self.directory.parent / (self.name + ".json")
+        with open(filepath, "w") as f:
+            f.write(self.model_dump_json(indent=4))
+
     @classmethod
     def evaluate(
         cls,
