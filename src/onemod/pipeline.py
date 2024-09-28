@@ -35,7 +35,7 @@ class Pipeline(BaseModel):
 
     @computed_field
     @property
-    def stages(self) -> set[str]:
+    def stages(self) -> dict[str, Stage]:
         return self._stages
 
     def model_post_init(self, *args, **kwargs) -> None:
