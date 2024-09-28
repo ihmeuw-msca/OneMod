@@ -53,12 +53,23 @@ class Stage(BaseModel, ABC):
         return self._skip_if
 
     @classmethod
-    def from_json(cls, filepath: Path | str, name: str) -> Stage:
+    def from_json(
+        cls,
+        filepath: Path | str,
+        name: str | None = None,
+        from_pipeline: bool = False,
+    ) -> Stage:
         """Create stage object from JSON file."""
-        with open(filepath, "r") as f:
-            pipeline_json = json.load(f)
-        stage = cls(**pipeline_json["stages"][name])
-        stage.directory = pipeline_json["directory"]
+        if from_pipeline:
+            with open(filepath, "r") as f:
+                pipeline_json = json.load(f)
+            stage = cls(**pipeline_json["stages"][name])
+            stage.directory = pipeline_json["directory"]
+        else:
+            with open(filepath, "r") as f:
+                stage_json = json.load(f)
+            stage = cls(**stage_json)
+            stage.directory = Path(filepath).parent
         return stage
 
     def to_json(self, filepath: Path | str | None = None) -> None:
