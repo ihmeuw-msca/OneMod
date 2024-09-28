@@ -91,17 +91,21 @@ class Pipeline(BaseModel):
         self._stages[stage.name] = stage
 
     def _stage_from_json(self, stage: str, filepath: Path | str) -> Stage:
-        """Load stage object from JSON."""
+        """Load stage object from JSON.
+
+        Notes
+        -----
+        * There may be an easier way to load built-in stages
+
+        """
         if stage in self.stages:
             raise ValueError(f"stage '{stage}' already exists")
         with open(filepath, "r") as f:
             stage_json = json.load(f)
-        if stage_type := stage_json["type"] in STAGE_DICT:
-            return STAGE_DICT[stage_json["name"]](**stage_json)
         spec = spec_from_file_location(stage_json["module"])
         module = module_from_spec(spec)
         spec.loader.exec_module(module_from_spec(spec))
-        stage_class = module.__getattribute(stage_type)
+        stage_class = module.__getattribute__(stage_json["type"])
         return stage_class(**stage_json)
 
     def run(self) -> None:
