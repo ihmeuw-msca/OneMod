@@ -83,6 +83,7 @@ class Stage(BaseModel, ABC):
         cls,
         filepath: Path | str,
         name: str,
+        from_pipeline: bool = True,
         method: str = "run",
         *args,
         **kwargs,
@@ -95,10 +96,13 @@ class Stage(BaseModel, ABC):
         * Creates stage instance and calls stage method
 
         """
-        stage = cls.from_json(filepath, name)
+        stage = cls.from_json(filepath, name, from_pipeline)
         if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(*args, **kwargs)
+            raise AttributeError(f"{self.name} skips {method} method")
+        try:
+            stage.__getattribute__(method)(*args, **kwargs)
+        except AttributeError:
+            raise AttributeError(f"{self.name} does not have {method} method")
 
     def run(self) -> None:
         """Run stage."""
