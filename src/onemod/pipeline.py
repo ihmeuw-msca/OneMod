@@ -44,20 +44,41 @@ class Pipeline(BaseModel):
 
     @classmethod
     def from_json(cls, filepath: Path | str) -> Pipeline:
-        """Load pipeline object from JSON file."""
+        """Load pipeline from JSON file.
+
+        Parameters
+        ----------
+        filepath : Path or str
+            Path to config file.
+
+        Returns
+        -------
+        Pipeline
+            Pipeline instance.
+
+        """
         with open(filepath, "r") as f:
-            pipeline_json = json.load(f)
-        stages = pipeline_json.pop("stages", None)
-        pipeline = cls(**pipeline_json)
+            config = json.load(f)
+        stages = config.pop("stages", None)
+        pipeline = cls(**config)
         if stages is not None:
             pipeline.add_stages(stages)
         return pipeline
 
     def to_json(self, filepath: Path | str | None = None) -> None:
-        """Save pipeline object as JSON file."""
+        """Save pipeline as JSON file.
+
+        Parameters
+        ----------
+        filepath : Path, str, or None, optional
+            Where to save config file. If None, file is saved at
+            pipeline.directory / (pipeline.name + ".json").
+            Default is None.
+
+        """
         filepath = filepath or self.directory / (self.name + ".json")
         with open(filepath, "w") as f:
-            f.write(self.model_dump_json(indent=4))
+            f.write(self.model_dump_json(indent=4, serialize_as_any=True))
 
     def add_stages(
         self, stages: list[Stage | str], filepath: Path | str | None = None
