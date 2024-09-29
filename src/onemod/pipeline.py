@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 from importlib.util import module_from_spec, spec_from_file_location
+from inspect import getmodulename
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, computed_field
 
@@ -62,7 +64,14 @@ class Pipeline(BaseModel):
         stages = config.pop("stages", None)
         pipeline = cls(**config)
         if stages is not None:
-            pipeline.add_stages(stages)
+            pipeline.add_stages(
+                [
+                    pipeline.stage_from_json(
+                        filepath, stage, from_pipeline=True
+                    )
+                    for stage in stages
+                ]
+            )
         return pipeline
 
     def to_json(self, filepath: Path | str | None = None) -> None:
@@ -80,30 +89,40 @@ class Pipeline(BaseModel):
         with open(filepath, "w") as f:
             f.write(self.model_dump_json(indent=4, serialize_as_any=True))
 
-    def add_stages(
-        self, stages: list[Stage | str], filepath: Path | str | None = None
-    ) -> None:
-        """Add stages to pipeline."""
+    def add_stages(self, stages: list[Stage]) -> None:
+        """Add stages to pipeline.
+
+        Parameters
+        ----------
+        stages : list of Stage
+            Stages to add to the pipeline.
+
+        """
         for stage in stages:
-            self.add_stage(stage, filepath)
+            self.add_stage(stage)
 
-    def add_stage(
-        self, stage: Stage | str, filepath: Path | str | None = None
-    ) -> None:
-        """Add stage to pipeline."""
-        if isinstance(stage, str):
-            stage = self._stage_from_json(stage, filepath)
-        self._add_stage(stage)
+    def add_stage(self, stage: Stage) -> None:
+        """Add stage to pipeline.
 
-    def _add_stage(self, stage: Stage) -> None:
-        """Add stage object to pipeline."""
+        Parameters
+        ----------
+        stage : Stage
+            Stage to add to the pipeline.
+
+        Notes
+        -----
+        * Maybe move most of this into pipeline.compile?
+        * Some steps may be unncessary if loading from previously
+          compiled config.
+
+        """
         if stage.name in self.stages:
             raise ValueError(f"stage '{stage.name}' already exists")
         stage.config.update(self.config)
         stage.directory = self.directory / stage.name
         if isinstance(stage, GroupedStage):
             if self.data is None:
-                raise ValueError("data is required for GroupedStage")
+                raise AttributeError("data field is required for GroupedStage")
             stage.groupby.update(self.groupby)
             stage.create_stage_subsets(self.data)
         if isinstance(stage, CrossedStage):
@@ -111,23 +130,44 @@ class Pipeline(BaseModel):
                 stage.create_stage_params()
         self._stages[stage.name] = stage
 
-    def _stage_from_json(self, stage: str, filepath: Path | str) -> Stage:
-        """Load stage object from JSON.
+    @classmethod
+    def stage_from_json(
+        cls,
+        filepath: Path | str,
+        name: str | None = None,
+        from_pipeline: bool = False,
+    ) -> Stage:
+        """Load stage from JSON file.
+
+        filepath : Path or str
+            Path to config file.
+        name : str or None, optional
+            Stage name, required if `from_pipeline` is True.
+            Default is None.
+        from_pipeline : bool, optional
+            Whether `filepath` is a pipeline or stage config file.
+            Default is False.
+
+        Returns
+        -------
+        Stage
+            Stage instance.
 
         Notes
         -----
-        * There may be an easier way to load built-in stages
+        There may be an easier way to load onemod stages vs. custom.
 
         """
-        if stage in self.stages:
-            raise ValueError(f"stage '{stage}' already exists")
         with open(filepath, "r") as f:
-            stage_json = json.load(f)
-        spec = spec_from_file_location(stage_json["module"])
+            config = json.load(f)
+        if from_pipeline:
+            config = config["stages"][name]
+        module_path = Path(config["module"])
+        spec = spec_from_file_location(getmodulename(module_path), module_path)
         module = module_from_spec(spec)
-        spec.loader.exec_module(module_from_spec(spec))
-        stage_class = module.__getattribute__(stage_json["type"])
-        return stage_class(**stage_json)
+        spec.loader.exec_module(module)
+        stage_class = module.__getattribute__(config["type"])
+        return stage_class(**config)
 
     def run(self) -> None:
         """Run pipeline.
@@ -137,6 +177,8 @@ class Pipeline(BaseModel):
         * These functions will handle workflow creation
         * Maybe allow subsets of the DAG to be run (e.g., predict for a
           single location)
+        * TODO: run for selected stages
+        # TODO: run for selected subsets or params
 
         """
         raise NotImplementedError()
