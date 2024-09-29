@@ -16,7 +16,7 @@ class SpxmodStage(ModelStage):
     ) -> None:
         """Run spxmod submodel."""
         print(
-            f"running spxmod submodel: subset {subset_id}, param set {param_id}"
+            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
         self.fit(subset_id, param_id)
         self.predict(subset_id, param_id)

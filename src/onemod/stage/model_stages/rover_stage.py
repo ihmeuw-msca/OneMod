@@ -17,7 +17,7 @@ class RoverStage(ModelStage):
     ) -> None:
         """Run rover submodel."""
         print(
-            f"running rover submodel: subset {subset_id}, param set {param_id}"
+            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
         self.fit(subset_id, param_id)
 
