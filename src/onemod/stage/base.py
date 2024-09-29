@@ -59,22 +59,53 @@ class Stage(BaseModel, ABC):
         name: str | None = None,
         from_pipeline: bool = False,
     ) -> Stage:
-        """Create stage object from JSON file."""
+        """Load stage from JSON file.
+
+        Parameters
+        ----------
+        filepath : Path or str
+            Path to config file.
+        name : str or None, optional
+            Stage name, required if `from_pipeline` is True.
+            Default is None.
+        from_pipeline : bool, optional
+            Whether `filepath` is a pipeline or stage config file.
+            Default is False.
+
+        Returns
+        -------
+        Stage
+            Stage instance.
+
+        Notes
+        -----
+        If `from_pipeline` is True, the stage directory is set to
+        pipeline.directory / stage.name. Otherwise, the stage directory
+        is set to the parent directory of `filepath`.
+
+        """
+        with open(filepath, "r") as f:
+            config = json.load(f)
         if from_pipeline:
-            with open(filepath, "r") as f:
-                pipeline_json = json.load(f)
-            stage = cls(**pipeline_json["stages"][name])
-            stage.directory = pipeline_json["directory"]
+            stage = cls(**config["stages"][name])
+            stage.directory = Path(config["directory"]) / stage.name
         else:
-            with open(filepath, "r") as f:
-                stage_json = json.load(f)
-            stage = cls(**stage_json)
+            stage = cls(**config)
             stage.directory = Path(filepath).parent
         return stage
 
     def to_json(self, filepath: Path | str | None = None) -> None:
-        """Save stage object as JSON file."""
-        filepath = filepath or self.directory.parent / (self.name + ".json")
+        """Save stage as JSON file.
+
+        Parameters
+        ----------
+        filepath : Path, str or None, optional
+            Where to save the config file. If None, file is saved at
+            stage.directory / (stage.name + ."json").
+            Default is None.
+
+        """
+        filepath = filepath or self.directory / (self.name + ".json")
         with open(filepath, "w") as f:
             f.write(self.model_dump_json(indent=4))
 
@@ -82,27 +113,43 @@ class Stage(BaseModel, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        name: str,
-        from_pipeline: bool = True,
+        name: str | None = None,
+        from_pipeline: bool = False,
         method: str = "run",
         *args,
         **kwargs,
     ) -> None:
         """Evaluate stage method.
 
+        Parameters
+        ----------
+        filepath : Path or str
+            Path to config file.
+        name : str or None, optional
+            Stage name, required if `from_pipeline` is True.
+            Default is None.
+        from_pipeline : bool, optional
+            Whether `filepath` is a pipeline or stage config file.
+            Default is False.
+        method : str, optional
+            Name of stage method to evaluate. Default is 'run'.
+
         Notes
         -----
-        * Method designed to be called from the command line
-        * Creates stage instance and calls stage method
+        This class method is designed to be called from the command
+        line. It creates a stage instance from the config file, then
+        calls the stage method.
 
         """
         stage = cls.from_json(filepath, name, from_pipeline)
         if method in stage.skip_if:
-            raise AttributeError(f"{self.name} skips {method} method")
+            raise AttributeError(f"{stage.name} skips the '{method}' method")
         try:
             stage.__getattribute__(method)(*args, **kwargs)
         except AttributeError:
-            raise AttributeError(f"{self.name} does not have {method} method")
+            raise AttributeError(
+                f"{stage.name} does not have a '{method}' method"
+            )
 
     def run(self) -> None:
         """Run stage."""
