@@ -11,6 +11,7 @@ from typing import Any
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field
 
+import onemod.stage as onemod_stages
 from onemod.config import StageConfig, GroupedConfig, CrossedConfig, ModelConfig
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
@@ -23,7 +24,8 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
-    _directory: Path | None = None  # set by Pipeline.add_stage
+    _directory: Path | None = None  # set by Stage.from_json, Pipeline.add_stage
+    _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
 
     @computed_field
@@ -33,8 +35,19 @@ class Stage(BaseModel, ABC):
 
     @computed_field
     @property
-    def module(self) -> str:
-        return inspect.getfile(self.__class__)
+    def module(self) -> str | None:
+        if self._module is None and not hasattr(
+            onemod_stages, self.type
+        ):  # custom stage
+            try:
+                return inspect.getfile(self.__class__)
+            except TypeError:
+                raise TypeError(f"Could not find module for {self.name} stage")
+        return self._module
+
+    @module.setter
+    def module(self, module: str | None) -> None:
+        self._module = module
 
     @property
     def directory(self) -> Path:
@@ -80,18 +93,20 @@ class Stage(BaseModel, ABC):
         Notes
         -----
         If `from_pipeline` is True, the stage directory is set to
-        pipeline.directory / stage.name. Otherwise, the stage directory
-        is set to the parent directory of `filepath`.
+        pipeline.directory / `name`. Otherwise, the stage directory is
+        set to the parent directory of `filepath`.
 
         """
         with open(filepath, "r") as f:
             config = json.load(f)
         if from_pipeline:
-            stage = cls(**config["stages"][name])
-            stage.directory = Path(config["directory"]) / stage.name
+            directory = Path(config["directory"]) / name
+            config = config["stages"][name]
         else:
-            stage = cls(**config)
-            stage.directory = Path(filepath).parent
+            directory = Path(filepath).parent
+        stage = cls(**config)
+        stage.directory = directory
+        stage.module = config.get("module")
         return stage
 
     def to_json(self, filepath: Path | str | None = None) -> None:
@@ -107,7 +122,7 @@ class Stage(BaseModel, ABC):
         """
         filepath = filepath or self.directory / (self.name + ".json")
         with open(filepath, "w") as f:
-            f.write(self.model_dump_json(indent=4))
+            f.write(self.model_dump_json(indent=4, exclude_none=True))
 
     @classmethod
     def evaluate(
