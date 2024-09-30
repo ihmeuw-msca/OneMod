@@ -6,10 +6,10 @@ import json
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel, computed_field
 
+import onemod.stage as onemod_stages
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
 
@@ -87,7 +87,11 @@ class Pipeline(BaseModel):
         """
         filepath = filepath or self.directory / (self.name + ".json")
         with open(filepath, "w") as f:
-            f.write(self.model_dump_json(indent=4, serialize_as_any=True))
+            f.write(
+                self.model_dump_json(
+                    indent=4, exclude_none=True, serialize_as_any=True
+                )
+            )
 
     def add_stages(self, stages: list[Stage]) -> None:
         """Add stages to pipeline.
@@ -112,8 +116,9 @@ class Pipeline(BaseModel):
         Notes
         -----
         * Maybe move most of this into pipeline.compile?
-        * Some steps may be unncessary if loading from previously
-          compiled config.
+        * Some steps may be unnecessary if stage loaded from previously
+          compiled config (update config, set directory, create subsets
+          and params)
 
         """
         if stage.name in self.stages:
@@ -153,21 +158,22 @@ class Pipeline(BaseModel):
         Stage
             Stage instance.
 
-        Notes
-        -----
-        There may be an easier way to load onemod stages vs. custom.
-
         """
         with open(filepath, "r") as f:
             config = json.load(f)
         if from_pipeline:
             config = config["stages"][name]
-        module_path = Path(config["module"])
-        spec = spec_from_file_location(getmodulename(module_path), module_path)
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)
-        stage_class = module.__getattribute__(config["type"])
-        return stage_class(**config)
+        if hasattr(onemod_stages, stage_type := config["type"]):
+            stage_class = getattr(onemod_stages, stage_type)
+        else:  # custom stage
+            module_path = Path(config["module"])
+            spec = spec_from_file_location(
+                getmodulename(module_path), module_path
+            )
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+            stage_class = getattr(module, stage_type)
+        return stage_class.from_json(filepath, name, from_pipeline)
 
     def run(self) -> None:
         """Run pipeline.
