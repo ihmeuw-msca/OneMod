@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import deque
 from importlib.util import module_from_spec, spec_from_file_location
 import json
+import logging
 from pathlib import Path
 
 from pydantic import BaseModel, computed_field
@@ -12,6 +13,7 @@ from pydantic import BaseModel, computed_field
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
 
+logger = logging.getLogger(__name__)
 
 class Pipeline(BaseModel):
     """
@@ -161,8 +163,7 @@ class Pipeline(BaseModel):
         dependent_stages = set(stage for deps in self._dependencies.values() for stage in deps)
         isolated_stages = all_stages - dependent_stages - set(self._dependencies.keys())
         if isolated_stages:
-            # TODO: implement logging
-            log.warning(f"The following stages are isolated and not part of the DAG: {isolated_stages}")
+            logger.warning(f"The following stages are isolated and not part of the DAG: {isolated_stages}")
     
     def get_execution_order(self) -> list[str]:
         """
