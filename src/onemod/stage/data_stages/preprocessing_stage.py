@@ -2,7 +2,7 @@
 
 import fire
 
-from onemod.config.data_config import PreprocessingConfig
+from onemod.config import PreprocessingConfig
 from onemod.stage import Stage
 
 

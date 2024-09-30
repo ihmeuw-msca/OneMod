@@ -2,7 +2,7 @@
 
 import fire
 
-from onemod.config.model_config import KregConfig
+from onemod.config import KregConfig
 from onemod.stage import ModelStage
 
 

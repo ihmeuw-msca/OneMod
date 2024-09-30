@@ -2,7 +2,7 @@
 
 import fire
 
-from onemod.config.model_config import RoverConfig
+from onemod.config import RoverConfig
 from onemod.stage import ModelStage
 
 

@@ -2,7 +2,7 @@
 
 import fire
 
-from onemod.config.model_config import SpxmodConfig
+from onemod.config import SpxmodConfig
 from onemod.stage import ModelStage
 
 
