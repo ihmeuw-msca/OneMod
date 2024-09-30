@@ -137,9 +137,3 @@ def test_validate_dag_with_duplicate_dependencies(tmp_path):
     
     with pytest.raises(ValueError, match="Duplicate dependencies found for stage 'stage_b'"):
         pipeline.validate_dag()
-
-def test_compile():
-    """
-    Test the compile method of the Pipeline class.
-    """
-    pass
