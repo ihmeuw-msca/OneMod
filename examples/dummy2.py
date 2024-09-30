@@ -1,8 +1,8 @@
 """Dummy example."""
 
 from onemod import Pipeline
-from onemod.stage.data_stage import PreprocessingStage
-from onemod.stage.model_stage import RoverStage, SpxmodStage, KregStage
+from onemod.stage.data_stages import PreprocessingStage
+from onemod.stage.model_stages import RoverStage, SpxmodStage, KregStage
 
 preprocessing = PreprocessingStage(
     name="1_preprocessing", config=dict(data="/path/to/data.parquet")
