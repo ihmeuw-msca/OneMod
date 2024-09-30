@@ -77,15 +77,13 @@ class Pipeline(BaseModel):
         for stage in stages:
             self.add_stage(stage, filepath)
     
-    # TODO: getting too specific? Could be merged with `add_stages()`.
-    # pros/cons of: More functions with specific purposes vs. Fewer, general purpose functions
     def add_stages_with_dependencies(self, stages_with_deps: dict[str, list[str]]) -> None:
         """Add multiple stages with their corresponding dependencies."""
         for stage_name, dependencies in stages_with_deps.items():
             self.add_stage(stage_name, dependencies=dependencies)
 
     def add_stage(
-        self, stage: Stage | str, filepath: Path | str | None = None, dependencies: list[str] = [] # TODO: Decision - list instead of set for dependencies, mostly just for consistency with JSON use and possibly more used to lists, also not expecting dependencies list to be large
+        self, stage: Stage | str, filepath: Path | str | None = None, dependencies: list[str] = []
     ) -> None:
         """Add stage to pipeline."""
         if isinstance(stage, str):
