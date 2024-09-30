@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 from abc import ABC
+from inspect import getfile
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +40,7 @@ class Stage(BaseModel, ABC):
             onemod_stages, self.type
         ):  # custom stage
             try:
-                return inspect.getfile(self.__class__)
+                return getfile(self.__class__)
             except TypeError:
                 raise TypeError(f"Could not find module for {self.name} stage")
         return self._module
