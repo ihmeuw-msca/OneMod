@@ -8,10 +8,9 @@ from collections import deque
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
-from pydantic import BaseModel, computed_field
-
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
+from pydantic import BaseModel, computed_field
 
 logger = logging.getLogger(__name__)
 
@@ -58,15 +57,21 @@ class Pipeline(BaseModel):
         with open(filepath, "r") as f:
             pipeline_json = json.load(f)
 
-        stages = pipeline_json.pop("stages", None)
+        stages = pipeline_json.pop("stages", {})
         dependencies = pipeline_json.pop("dependencies", {})
 
         pipeline = cls(**pipeline_json)
 
-        if stages is not None:
-            pipeline.add_stages(stages)
-        if dependencies:
-            pipeline.add_stages_with_dependencies(dependencies)
+        if stages:
+            pipeline.add_stages(
+                [
+                    pipeline.stage_from_json(
+                        filepath, stage, from_pipeline=True
+                    )
+                    for stage in stages
+                ],
+                dependencies,
+            )
 
         return pipeline
 
@@ -77,18 +82,11 @@ class Pipeline(BaseModel):
             f.write(self.model_dump_json(indent=4))
 
     def add_stages(
-        self, stages: list[Stage | str], filepath: Path | str | None = None
+        self, stages: list[Stage | str], dependencies: dict[str, list[str]] = {}
     ) -> None:
-        """Add stages to pipeline."""
+        """Add stages and dependencies to pipeline."""
         for stage in stages:
-            self.add_stage(stage, filepath)
-
-    def add_stages_with_dependencies(
-        self, stages_with_deps: dict[str, list[str]]
-    ) -> None:
-        """Add multiple stages with their corresponding dependencies."""
-        for stage_name, dependencies in stages_with_deps.items():
-            self.add_stage(stage_name, dependencies=dependencies)
+            self.add_stage(stage, dependencies.get(stage.name, []))
 
     def add_stage(self, stage: Stage, dependencies: list[str] = []) -> None:
         """Add stage and dependencies to pipeline."""
