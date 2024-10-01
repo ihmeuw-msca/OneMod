@@ -1,5 +1,3 @@
-from onemod.redesign.config.data_config.preprocessing_config import (
-    PreprocessingStage,
-)
+from onemod.config.data_config.preprocessing_config import PreprocessingConfig
 
-__all__ = [PreprocessingStage]
+__all__ = [PreprocessingConfig]

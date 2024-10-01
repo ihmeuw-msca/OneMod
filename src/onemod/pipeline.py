@@ -6,11 +6,14 @@ import json
 import logging
 from collections import deque
 from importlib.util import module_from_spec, spec_from_file_location
+from inspect import getmodulename
 from pathlib import Path
 
+from pydantic import BaseModel, computed_field
+
+import onemod.stage as onemod_stages
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
-from pydantic import BaseModel, computed_field
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +42,7 @@ class Pipeline(BaseModel):
 
     @computed_field
     @property
-    def stages(self) -> set[str]:
+    def stages(self) -> dict[str, Stage]:
         return self._stages
 
     @computed_field
@@ -53,14 +56,26 @@ class Pipeline(BaseModel):
 
     @classmethod
     def from_json(cls, filepath: Path | str) -> Pipeline:
-        """Load pipeline object from JSON file."""
+        """Load pipeline from JSON file.
+
+        Parameters
+        ----------
+        filepath : Path or str
+            Path to config file.
+
+        Returns
+        -------
+        Pipeline
+            Pipeline instance.
+
+        """
         with open(filepath, "r") as f:
-            pipeline_json = json.load(f)
+            config = json.load(f)
 
-        stages = pipeline_json.pop("stages", {})
-        dependencies = pipeline_json.pop("dependencies", {})
+        stages = config.pop("stages", {})
+        dependencies = config.pop("dependencies", {})
 
-        pipeline = cls(**pipeline_json)
+        pipeline = cls(**config)
 
         if stages:
             pipeline.add_stages(
@@ -76,10 +91,23 @@ class Pipeline(BaseModel):
         return pipeline
 
     def to_json(self, filepath: Path | str | None = None) -> None:
-        """Save pipeline object as JSON file."""
+        """Save pipeline as JSON file.
+
+        Parameters
+        ----------
+        filepath : Path, str, or None, optional
+            Where to save config file. If None, file is saved at
+            pipeline.directory / (pipeline.name + ".json").
+            Default is None.
+
+        """
         filepath = filepath or self.directory / (self.name + ".json")
         with open(filepath, "w") as f:
-            f.write(self.model_dump_json(indent=4))
+            f.write(
+                self.model_dump_json(
+                    indent=4, exclude_none=True, serialize_as_any=True
+                )
+            )
 
     def add_stages(
         self, stages: list[Stage | str], dependencies: dict[str, list[str]] = {}
@@ -96,7 +124,21 @@ class Pipeline(BaseModel):
             self._add_dependencies(stage, dependencies)
 
     def _add_stage(self, stage: Stage) -> None:
-        """Add stage to pipeline."""
+        """Add stage to pipeline.
+
+        Parameters
+        ----------
+        stage : Stage
+            Stage to add to the pipeline.
+
+        Notes
+        -----
+        * Maybe move most of this into pipeline.compile?
+        * Some steps may be unnecessary if stage loaded from previously
+          compiled config (update config, set directory, create subsets
+          and params)
+
+        """
         if stage.name in self.stages:
             raise ValueError(f"stage '{stage.name}' already exists")
         stage.config.update(self.config)
@@ -105,7 +147,7 @@ class Pipeline(BaseModel):
         # Create data subsets
         if isinstance(stage, GroupedStage):
             if self.data is None:
-                raise ValueError("data is required for GroupedStage")
+                raise AttributeError("data field is required for GroupedStage")
             stage.groupby.update(self.groupby)
             stage.create_stage_subsets(self.data)
 
@@ -127,23 +169,45 @@ class Pipeline(BaseModel):
                 raise ValueError(f"Dependency '{dep}' not found in pipeline.")
             self._dependencies[stage.name].append(dep)
 
-    def _stage_from_json(self, stage: str, filepath: Path | str) -> Stage:
-        """Load stage object from JSON.
+    @classmethod
+    def stage_from_json(
+        cls,
+        filepath: Path | str,
+        name: str | None = None,
+        from_pipeline: bool = False,
+    ) -> Stage:
+        """Load stage from JSON file.
 
-        Notes
-        -----
-        * There may be an easier way to load built-in stages
+        filepath : Path or str
+            Path to config file.
+        name : str or None, optional
+            Stage name, required if `from_pipeline` is True.
+            Default is None.
+        from_pipeline : bool, optional
+            Whether `filepath` is a pipeline or stage config file.
+            Default is False.
+
+        Returns
+        -------
+        Stage
+            Stage instance.
 
         """
-        if stage in self.stages:
-            raise ValueError(f"stage '{stage}' already exists")
         with open(filepath, "r") as f:
-            stage_json = json.load(f)
-        spec = spec_from_file_location(stage_json["module"])
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module_from_spec(spec))
-        stage_class = module.__getattribute__(stage_json["type"])
-        return stage_class(**stage_json)
+            config = json.load(f)
+        if from_pipeline:
+            config = config["stages"][name]
+        if hasattr(onemod_stages, stage_type := config["type"]):
+            stage_class = getattr(onemod_stages, stage_type)
+        else:  # custom stage
+            module_path = Path(config["module"])
+            spec = spec_from_file_location(
+                getmodulename(module_path), module_path
+            )
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+            stage_class = getattr(module, stage_type)
+        return stage_class.from_json(filepath, name, from_pipeline)
 
     def build_dag(self) -> dict[str, list[str]]:
         """Build directed acyclic graph (DAG) from the stages and their dependencies."""
@@ -243,6 +307,8 @@ class Pipeline(BaseModel):
         * These functions will handle workflow creation
         * Maybe allow subsets of the DAG to be run (e.g., predict for a
           single location)
+        * TODO: run for selected stages
+        # TODO: run for selected subsets or params
 
         """
         raise NotImplementedError()
