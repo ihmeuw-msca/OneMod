@@ -90,48 +90,44 @@ class Pipeline(BaseModel):
         for stage_name, dependencies in stages_with_deps.items():
             self.add_stage(stage_name, dependencies=dependencies)
 
-    def add_stage(
-        self,
-        stage: Stage | str,
-        filepath: Path | str | None = None,
-        dependencies: list[str] = [],
-    ) -> None:
-        """Add stage to pipeline."""
-        if isinstance(stage, str):
-            stage = self._stage_from_json(stage, filepath)
-
+    def add_stage(self, stage: Stage, dependencies: list[str] = []) -> None:
+        """Add stage and dependencies to pipeline."""
         self._add_stage(stage)
-
+        self._dependencies[stage.name] = []
         if dependencies:
-            if len(dependencies) != len(set(dependencies)):
-                raise ValueError(
-                    f"Duplicate dependencies found for stage '{stage.name}'"
-                )
-            for dep in dependencies:
-                if dep not in self.stages:
-                    raise ValueError(
-                        f"Dependency '{dep}' not found in pipeline."
-                    )
-                self._dependencies[stage.name] = self._dependencies.get(
-                    stage.name, []
-                ) + [dep]
+            self._add_dependencies(stage, dependencies)
 
     def _add_stage(self, stage: Stage) -> None:
-        """Add stage object to pipeline."""
+        """Add stage to pipeline."""
         if stage.name in self.stages:
             raise ValueError(f"stage '{stage.name}' already exists")
         stage.config.update(self.config)
         stage.directory = self.directory / stage.name
+
+        # Create data subsets
         if isinstance(stage, GroupedStage):
             if self.data is None:
                 raise ValueError("data is required for GroupedStage")
             stage.groupby.update(self.groupby)
             stage.create_stage_subsets(self.data)
+
+        # Create parameter sets
         if isinstance(stage, CrossedStage):
             if stage.config.crossable_params:
                 stage.create_stage_params()
+
         self._stages[stage.name] = stage
-        self._dependencies[stage.name] = []
+
+    def _add_dependencies(self, stage: Stage, dependencies: list[str]) -> None:
+        """Add stage dependencies to pipeline."""
+        if len(dependencies) != len(set(dependencies)):
+            raise ValueError(
+                f"Duplicate dependencies found for stage '{stage.name}'"
+            )
+        for dep in dependencies:
+            if dep not in self.stages:
+                raise ValueError(f"Dependency '{dep}' not found in pipeline.")
+            self._dependencies[stage.name].append(dep)
 
     def _stage_from_json(self, stage: str, filepath: Path | str) -> Stage:
         """Load stage object from JSON.
