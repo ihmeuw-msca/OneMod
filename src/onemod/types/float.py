@@ -3,12 +3,12 @@ from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field, field_validator
 
-class BoundedFloat(BaseModel):
+class Float(BaseModel):
     value: Annotated[float, Field]
     
     @classmethod
     def with_bounds(cls, ge: float | None = None, le: float | None = None, allow_nan: bool = False) -> BaseModel:
-        """Factory method to create a custom bound BoundedFloat model"""
+        """Factory method to create a custom bounded Float model"""
         field_args = {}
         if ge is None:
             field_args['le'] = le
