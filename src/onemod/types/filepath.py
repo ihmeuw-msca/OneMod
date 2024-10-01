@@ -1,6 +1,7 @@
 from pydantic import BaseModel, FilePath as PydanticFilePath, field_validator
 from pathlib import Path
 
+
 class FilePath(BaseModel):
     path: PydanticFilePath
     extension: str | None = None

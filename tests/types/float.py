@@ -14,12 +14,12 @@ def test_float_no_bounds():
 def test_float_invalid_outside_bounds():
     TestFloat = Float.with_bounds(ge=-1.0, le=1.0)
     with pytest.raises(ValueError):
-        out_of_bounds_float = TestFloat(1.01) # Greater than maximum
+        out_of_bounds_float = TestFloat(1.01)  # Greater than maximum
 
 def test_float_invalid_nan():
     TestFloat = Float()
     with pytest.raises(ValueError):
-        nan_float = TestFloat(float('nan')) # Not a number
+        nan_float = TestFloat(float('nan'))  # Not a number
         
 def test_float_valid_nan():
     TestFloat = Float()
@@ -29,4 +29,4 @@ def test_float_valid_nan():
 def test_float_invalid_inf():
     TestFloat = Float()
     with pytest.raises(ValueError):
-        inf_float = TestFloat(float('inf')) # Infinity value
+        inf_float = TestFloat(float('inf'))  # Infinity value

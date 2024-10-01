@@ -3,6 +3,7 @@ from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field, field_validator
 
+
 class Float(BaseModel):
     value: Annotated[float, Field]
     

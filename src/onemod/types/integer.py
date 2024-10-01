@@ -2,6 +2,7 @@ from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field
 
+
 class Integer(BaseModel):
     value: Annotated[int, Field]
     
