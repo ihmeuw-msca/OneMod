@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections import deque
-from importlib.util import module_from_spec, spec_from_file_location
 import json
 import logging
+from collections import deque
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 from pydantic import BaseModel, computed_field
@@ -14,6 +14,7 @@ from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
 
 logger = logging.getLogger(__name__)
+
 
 class Pipeline(BaseModel):
     """
@@ -51,17 +52,17 @@ class Pipeline(BaseModel):
         """Load pipeline object from JSON file."""
         with open(filepath, "r") as f:
             pipeline_json = json.load(f)
-        
+
         stages = pipeline_json.pop("stages", None)
         dependencies = pipeline_json.pop("dependencies", {})
-        
+
         pipeline = cls(**pipeline_json)
-        
+
         if stages is not None:
             pipeline.add_stages(stages)
         if dependencies:
             pipeline.add_stages_with_dependencies(dependencies)
-        
+
         return pipeline
 
     def to_json(self, filepath: Path | str | None = None) -> None:
@@ -76,28 +77,39 @@ class Pipeline(BaseModel):
         """Add stages to pipeline."""
         for stage in stages:
             self.add_stage(stage, filepath)
-    
-    def add_stages_with_dependencies(self, stages_with_deps: dict[str, list[str]]) -> None:
+
+    def add_stages_with_dependencies(
+        self, stages_with_deps: dict[str, list[str]]
+    ) -> None:
         """Add multiple stages with their corresponding dependencies."""
         for stage_name, dependencies in stages_with_deps.items():
             self.add_stage(stage_name, dependencies=dependencies)
 
     def add_stage(
-        self, stage: Stage | str, filepath: Path | str | None = None, dependencies: list[str] = []
+        self,
+        stage: Stage | str,
+        filepath: Path | str | None = None,
+        dependencies: list[str] = [],
     ) -> None:
         """Add stage to pipeline."""
         if isinstance(stage, str):
             stage = self._stage_from_json(stage, filepath)
-        
+
         self._add_stage(stage)
-        
+
         if dependencies:
             if len(dependencies) != len(set(dependencies)):
-                raise ValueError(f"Duplicate dependencies found for stage '{stage.name}'")
+                raise ValueError(
+                    f"Duplicate dependencies found for stage '{stage.name}'"
+                )
             for dep in dependencies:
                 if dep not in self.stages:
-                    raise ValueError(f"Dependency '{dep}' not found in pipeline.")
-                self._dependencies[stage.name] = self._dependencies.get(stage.name, []) + [dep]
+                    raise ValueError(
+                        f"Dependency '{dep}' not found in pipeline."
+                    )
+                self._dependencies[stage.name] = self._dependencies.get(
+                    stage.name, []
+                ) + [dep]
 
     def _add_stage(self, stage: Stage) -> None:
         """Add stage object to pipeline."""
@@ -138,14 +150,16 @@ class Pipeline(BaseModel):
         """Build directed acyclic graph (DAG) from the stages and their dependencies."""
         # TODO: Placeholder until DAG class is implemented, assuming we need one
         return self._dependencies
-    
+
     def validate_dag(self):
         """Validate that the DAG structure is correct."""
         for stage, dependencies in self._dependencies.items():
             # Check for undefined dependencies
             for dep in dependencies:
                 if dep not in self._stages:
-                    raise ValueError(f"Stage '{dep}' is not defined, but '{stage}' depends on it.")
+                    raise ValueError(
+                        f"Stage '{dep}' is not defined, but '{stage}' depends on it."
+                    )
 
             # Check for self-dependencies
             if stage in dependencies:
@@ -153,16 +167,24 @@ class Pipeline(BaseModel):
 
             # Check for duplicate dependencies
             if len(dependencies) != len(set(dependencies)):
-                raise ValueError(f"Duplicate dependencies found for stage '{stage}'.")
+                raise ValueError(
+                    f"Duplicate dependencies found for stage '{stage}'."
+                )
 
         # Check for isolated nodes
         # TODO: are there cases where isolated nodes would be valid for OneMod?
         all_stages = set(self._stages.keys())
-        dependent_stages = set(stage for deps in self._dependencies.values() for stage in deps)
-        isolated_stages = all_stages - dependent_stages - set(self._dependencies.keys())
+        dependent_stages = set(
+            stage for deps in self._dependencies.values() for stage in deps
+        )
+        isolated_stages = (
+            all_stages - dependent_stages - set(self._dependencies.keys())
+        )
         if isolated_stages:
-            logger.warning(f"The following stages are isolated and not part of the DAG: {isolated_stages}")
-    
+            logger.warning(
+                f"The following stages are isolated and not part of the DAG: {isolated_stages}"
+            )
+
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
@@ -192,21 +214,25 @@ class Pipeline(BaseModel):
                 in_degree[dep] -= 1
                 if in_degree[dep] == 0:
                     queue.append(dep)
-                    
+
             # Track current processing path for cycle detection
             rec_stack.add(stage)
-            
+
             # Detect cycles in dependent stages
             for dep in self._dependencies.get(stage, []):
                 if dep in rec_stack:
-                    raise ValueError(f"Cycle detected! The cycle involves: {list(rec_stack)}")
-            
+                    raise ValueError(
+                        f"Cycle detected! The cycle involves: {list(rec_stack)}"
+                    )
+
             rec_stack.remove(stage)
 
         # If there is a cycle, the topological order will not include all stages
         if len(topological_order) != len(self._stages):
             unvisited = set(self._stages) - visited
-            raise ValueError(f"Cycle detected! Unable to process the following stages: {unvisited}")
+            raise ValueError(
+                f"Cycle detected! Unable to process the following stages: {unvisited}"
+            )
 
         return topological_order
 
