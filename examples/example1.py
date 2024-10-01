@@ -1,40 +1,27 @@
-"""Dummy example."""
+"""Define dependencies after adding stages."""
 
 from onemod import Pipeline
 from onemod.stage.data_stages import PreprocessingStage
-from onemod.stage.model_stages import RoverStage, SpxmodStage, KregStage
+from onemod.stage.model_stages import KregStage, RoverStage, SpxmodStage
 
+# Create stages
 preprocessing = PreprocessingStage(
     name="1_preprocessing", config=dict(data="/path/to/data.parquet")
 )
 
 covariate_selection = RoverStage(
     name="2_covariate_selection",
-    config=dict(
-        data=preprocessing.data, cov_exploring=["cov1", "cov2", "cov3"]
-    ),
+    config=dict(cov_exploring=["cov1", "cov2", "cov3"]),
     groupby=["age_group_id"],
 )
 
-global_model = SpxmodStage(
-    name="3_global_model",
-    config=dict(
-        data=preprocessing.data, selected_covs=covariate_selection.selected_covs
-    ),
-)
+global_model = SpxmodStage(name="3_global_model")
 
-location_model = SpxmodStage(
-    name="4_location_model",
-    config=dict(data=preprocessing.data, offset=global_model.predictions),
-    groupby=["location_id"],
-)
+location_model = SpxmodStage(name="4_location_model", groupby=["location_id"])
 
-smoothing = KregStage(
-    name="5_smoothing",
-    config=dict(data=preprocessing.data, offset=location_model.predictions),
-    groupby=["region_id"],
-)
+smoothing = KregStage(name="5_smoothing", groupby=["region_id"])
 
+# Create pipeline
 dummy_pipeline = Pipeline(
     name="dummy_pipeline",
     config=dict(
@@ -46,6 +33,7 @@ dummy_pipeline = Pipeline(
     groupby=["sex_id"],
 )
 
+# Add stages
 dummy_pipeline.add_stages(
     [
         preprocessing,
@@ -56,5 +44,16 @@ dummy_pipeline.add_stages(
     ]
 )
 
+# Define dependencies
+covariate_selection(data=preprocessing.data)
+global_model(
+    data=preprocessing.data, selected_covs=covariate_selection.selected_covs
+)
+location_model(data=preprocessing.data, offset=global_model.predictions)
+predictions = smoothing(
+    data=preprocessing.data, offset=location_model.predictions
+)
+
+# Run pipeline
 dummy_pipeline.compile()
 dummy_pipeline.run()
