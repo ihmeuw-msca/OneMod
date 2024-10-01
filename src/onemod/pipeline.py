@@ -43,6 +43,11 @@ class Pipeline(BaseModel):
     def stages(self) -> set[str]:
         return self._stages
 
+    @computed_field
+    @property
+    def dependencies(self) -> dict[str, list[str]]:
+        return self._dependencies
+
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
             self.directory.mkdir(parents=True)
