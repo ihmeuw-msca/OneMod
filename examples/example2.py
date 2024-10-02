@@ -14,7 +14,7 @@ preprocessing = PreprocessingStage(
 covariate_selection = RoverStage(
     name="2_covariate_selection",
     config=dict(cov_exploring=["cov1", "cov2", "cov3"]),
-    input=dict(data=preprocessing.data),
+    input=dict(data=preprocessing.output["data"]),
     groupby=["age_group_id"],
 )
 
@@ -22,21 +22,28 @@ global_model = SpxmodStage(
     name="3_global_model",
     config=dict(),
     input=dict(
-        data=preprocessing.data, selected_covs=covariate_selection.selected_covs
+        data=preprocessing.output["data"],
+        selected_covs=covariate_selection.output["selected_covs"],
     ),
 )
 
 location_model = SpxmodStage(
     name="4_location_model",
     config=dict(),
-    input=dict(data=preprocessing.data, offset=global_model.predictions),
+    input=dict(
+        data=preprocessing.output["data"],
+        offset=global_model.output["predictions"],
+    ),
     groupby=["location_id"],
 )
 
 smoothing = KregStage(
     name="5_smoothing",
     config=dict(),
-    input=dict(data=preprocessing.data, offset=location_model.predictions),
+    input=dict(
+        data=preprocessing.output["data"],
+        offset=location_model.output["predictions"],
+    ),
     groupby=["region_id"],
 )
 

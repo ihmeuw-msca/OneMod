@@ -5,9 +5,7 @@ from onemod.stage.data_stages import PreprocessingStage
 from onemod.stage.model_stages import KregStage, RoverStage, SpxmodStage
 
 # Create stages
-preprocessing = PreprocessingStage(
-    name="1_preprocessing", config=dict(data="/path/to/data.parquet")
-)
+preprocessing = PreprocessingStage(name="1_preprocessing")
 
 covariate_selection = RoverStage(
     name="2_covariate_selection",
@@ -45,13 +43,18 @@ dummy_pipeline.add_stages(
 )
 
 # Define dependencies
-covariate_selection(data=preprocessing.data)
+preprocessing(data="/path/to/input/data.parquet")
+covariate_selection(data=preprocessing.output["data"])
 global_model(
-    data=preprocessing.data, selected_covs=covariate_selection.selected_covs
+    data=preprocessing.output["data"],
+    selected_covs=covariate_selection.output["selected_covs"],
 )
-location_model(data=preprocessing.data, offset=global_model.predictions)
+location_model(
+    data=preprocessing.output["data"], offset=global_model.output["predictions"]
+)
 predictions = smoothing(
-    data=preprocessing.data, offset=location_model.predictions
+    data=preprocessing.output["data"],
+    offset=location_model.output["predictions"],
 )
 
 # Run pipeline
