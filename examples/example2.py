@@ -1,40 +1,52 @@
-"""Dummy example."""
+"""Define dependencies before adding stages."""
 
 from onemod import Pipeline
-from onemod.stage.data_stages import PreprocessingStage
-from onemod.stage.model_stages import RoverStage, SpxmodStage, KregStage
+from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
 
+# Create stages
 preprocessing = PreprocessingStage(
-    name="1_preprocessing", config=dict(data="/path/to/data.parquet")
+    name="1_preprocessing",
+    config=dict(),
+    input=dict(data="/path/to/data.parquet"),
 )
 
 covariate_selection = RoverStage(
     name="2_covariate_selection",
-    config=dict(
-        data=preprocessing.data, cov_exploring=["cov1", "cov2", "cov3"]
-    ),
+    config=dict(cov_exploring=["cov1", "cov2", "cov3"]),
+    input=dict(data=preprocessing.output["data"]),
     groupby=["age_group_id"],
 )
 
 global_model = SpxmodStage(
     name="3_global_model",
-    config=dict(
-        data=preprocessing.data, selected_covs=covariate_selection.selected_covs
+    config=dict(),
+    input=dict(
+        data=preprocessing.output["data"],
+        selected_covs=covariate_selection.output["selected_covs"],
     ),
 )
 
 location_model = SpxmodStage(
     name="4_location_model",
-    config=dict(data=preprocessing.data, offset=global_model.predictions),
+    config=dict(),
+    input=dict(
+        data=preprocessing.output["data"],
+        offset=global_model.output["predictions"],
+    ),
     groupby=["location_id"],
 )
 
 smoothing = KregStage(
     name="5_smoothing",
-    config=dict(data=preprocessing.data, offset=location_model.predictions),
+    config=dict(),
+    input=dict(
+        data=preprocessing.output["data"],
+        offset=location_model.output["predictions"],
+    ),
     groupby=["region_id"],
 )
 
+# Create pipeline
 dummy_pipeline = Pipeline(
     name="dummy_pipeline",
     config=dict(
@@ -46,6 +58,7 @@ dummy_pipeline = Pipeline(
     groupby=["sex_id"],
 )
 
+# Add stages
 dummy_pipeline.add_stages(
     [
         preprocessing,
@@ -56,5 +69,6 @@ dummy_pipeline.add_stages(
     ]
 )
 
+# Run pipeline
 dummy_pipeline.compile()
 dummy_pipeline.run()

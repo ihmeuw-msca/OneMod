@@ -1,12 +1,10 @@
-"""Dummy example."""
+"""Define dependencies after adding stages."""
 
 from onemod import Pipeline
-from onemod.stage.data_stages import PreprocessingStage
-from onemod.stage.model_stages import RoverStage, SpxmodStage, KregStage
+from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
 
-preprocessing = PreprocessingStage(
-    name="1_preprocessing", config=dict(data="/path/to/data.parquet")
-)
+# Create stages
+preprocessing = PreprocessingStage(name="1_preprocessing")
 
 covariate_selection = RoverStage(
     name="2_covariate_selection",
@@ -20,6 +18,7 @@ location_model = SpxmodStage(name="4_location_model", groupby=["location_id"])
 
 smoothing = KregStage(name="5_smoothing", groupby=["region_id"])
 
+# Create pipeline
 dummy_pipeline = Pipeline(
     name="dummy_pipeline",
     config=dict(
@@ -31,6 +30,7 @@ dummy_pipeline = Pipeline(
     groupby=["sex_id"],
 )
 
+# Add stages
 dummy_pipeline.add_stages(
     [
         preprocessing,
@@ -41,11 +41,21 @@ dummy_pipeline.add_stages(
     ]
 )
 
-data = preprocessing()
-selected_covs = covariate_selection(data=data)
-global_offset = global_model(data=data, selected_covs=selected_covs)
-location_offset = location_model(data=data, offset=global_offset)
-predictions = smoothing(data=data, offset=location_offset)
+# Define dependencies
+preprocessing(data="/path/to/input/data.parquet")
+covariate_selection(data=preprocessing.output["data"])
+global_model(
+    data=preprocessing.output["data"],
+    selected_covs=covariate_selection.output["selected_covs"],
+)
+location_model(
+    data=preprocessing.output["data"], offset=global_model.output["predictions"]
+)
+smoothing(
+    data=preprocessing.output["data"],
+    offset=location_model.output["predictions"],
+)
 
+# Run pipeline
 dummy_pipeline.compile()
 dummy_pipeline.run()

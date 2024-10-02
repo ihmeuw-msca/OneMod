@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 from abc import ABC
+from inspect import getfile
 from pathlib import Path
 from typing import Any
 
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from onemod.config import StageConfig, GroupedConfig, CrossedConfig, ModelConfig
+import onemod.stage as onemod_stages
+from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
+
+
+class Data(BaseModel):
+    """Dummy data class."""
+
+    stage: str
+    path: Path
 
 
 class Stage(BaseModel, ABC):
@@ -23,7 +31,9 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
-    _directory: Path | None = None  # set by Pipeline.add_stage
+    input: dict[str, Data] = {}  # also set by Stage.__call__
+    _directory: Path | None = None  # set by Stage.from_json, Pipeline.add_stage
+    _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
 
     @computed_field
@@ -33,8 +43,19 @@ class Stage(BaseModel, ABC):
 
     @computed_field
     @property
-    def module(self) -> str:
-        return inspect.getfile(self.__class__)
+    def module(self) -> str | None:
+        if self._module is None and not hasattr(
+            onemod_stages, self.type
+        ):  # custom stage
+            try:
+                return getfile(self.__class__)
+            except TypeError:
+                raise TypeError(f"Could not find module for {self.name} stage")
+        return self._module
+
+    @module.setter
+    def module(self, module: str | None) -> None:
+        self._module = module
 
     @property
     def directory(self) -> Path:
@@ -52,46 +73,119 @@ class Stage(BaseModel, ABC):
     def skip_if(self) -> set[str]:
         return self._skip_if
 
+    @property
+    def dependencies(self) -> set[str]:
+        return set(input_item.stage for input_item in self.input.values())
+
     @classmethod
-    def from_json(cls, filepath: Path | str, name: str) -> Stage:
-        """Create stage object from JSON file."""
+    def from_json(
+        cls,
+        filepath: Path | str,
+        name: str | None = None,
+        from_pipeline: bool = False,
+    ) -> Stage:
+        """Load stage from JSON file.
+
+        Parameters
+        ----------
+        filepath : Path or str
+            Path to config file.
+        name : str or None, optional
+            Stage name, required if `from_pipeline` is True.
+            Default is None.
+        from_pipeline : bool, optional
+            Whether `filepath` is a pipeline or stage config file.
+            Default is False.
+
+        Returns
+        -------
+        Stage
+            Stage instance.
+
+        Notes
+        -----
+        If `from_pipeline` is True, the stage directory is set to
+        pipeline.directory / `name`. Otherwise, the stage directory is
+        set to the parent directory of `filepath`.
+
+        """
         with open(filepath, "r") as f:
-            pipeline_json = json.load(f)
-        stage = cls(**pipeline_json["stages"][name])
-        stage.directory = pipeline_json["directory"]
+            config = json.load(f)
+        if from_pipeline:
+            directory = Path(config["directory"]) / name
+            config = config["stages"][name]
+        else:
+            directory = Path(filepath).parent
+        stage = cls(**config)
+        stage.directory = directory
+        stage.module = config.get("module")
         return stage
 
     def to_json(self, filepath: Path | str | None = None) -> None:
-        """Save stage object as JSON file."""
-        filepath = filepath or self.directory.parent / (self.name + ".json")
+        """Save stage as JSON file.
+
+        Parameters
+        ----------
+        filepath : Path, str or None, optional
+            Where to save the config file. If None, file is saved at
+            stage.directory / (stage.name + ."json").
+            Default is None.
+
+        """
+        filepath = filepath or self.directory / (self.name + ".json")
         with open(filepath, "w") as f:
-            f.write(self.model_dump_json(indent=4))
+            f.write(self.model_dump_json(indent=4, exclude_none=True))
 
     @classmethod
     def evaluate(
         cls,
         filepath: Path | str,
-        name: str,
+        name: str | None = None,
+        from_pipeline: bool = False,
         method: str = "run",
         *args,
         **kwargs,
     ) -> None:
         """Evaluate stage method.
 
+        Parameters
+        ----------
+        filepath : Path or str
+            Path to config file.
+        name : str or None, optional
+            Stage name, required if `from_pipeline` is True.
+            Default is None.
+        from_pipeline : bool, optional
+            Whether `filepath` is a pipeline or stage config file.
+            Default is False.
+        method : str, optional
+            Name of stage method to evaluate. Default is 'run'.
+
         Notes
         -----
-        * Method designed to be called from the command line
-        * Creates stage instance and calls stage method
+        This class method is designed to be called from the command
+        line. It creates a stage instance from the config file, then
+        calls the stage method.
 
         """
-        stage = cls.from_json(filepath, name)
+        stage = cls.from_json(filepath, name, from_pipeline)
         if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(*args, **kwargs)
+            raise AttributeError(f"{stage.name} skips the '{method}' method")
+        try:
+            stage.__getattribute__(method)(*args, **kwargs)
+        except AttributeError:
+            raise AttributeError(
+                f"{stage.name} does not have a '{method}' method"
+            )
 
     def run(self) -> None:
         """Run stage."""
         raise NotImplementedError()
+
+    def __call__(self, **input: Data) -> None:
+        """Define stage dependencies."""
+        # TODO: Validation
+        self.input = input
 
     def __repr__(self) -> str:
         return f"{self.type}({self.name})"
