@@ -7,12 +7,13 @@ from abc import ABC
 from inspect import getfile
 from pathlib import Path
 from typing import Any
+from warnings import warn
 
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field
 
 import onemod.stage as onemod_stages
-from onemod.config import StageConfig, GroupedConfig, CrossedConfig, ModelConfig
+from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 
@@ -24,6 +25,7 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
+    input: dict[str, Path] = {}  # also set by Stage.__call__
     _directory: Path | None = None  # set by Stage.from_json, Pipeline.add_stage
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
@@ -169,6 +171,11 @@ class Stage(BaseModel, ABC):
     def run(self) -> None:
         """Run stage."""
         raise NotImplementedError()
+
+    def __call__(self, **input: Path) -> None:
+        """Define stage dependencies."""
+        # TODO: Validation
+        self.input = input
 
     def __repr__(self) -> str:
         return f"{self.type}({self.name})"
