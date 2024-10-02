@@ -7,7 +7,6 @@ from abc import ABC
 from inspect import getfile
 from pathlib import Path
 from typing import Any
-from warnings import warn
 
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field
@@ -18,6 +17,13 @@ from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 
 
+class Data(BaseModel):
+    """Dummy data class."""
+
+    stage: str
+    path: Path
+
+
 class Stage(BaseModel, ABC):
     """Stage base class."""
 
@@ -25,7 +31,7 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
-    input: dict[str, Path] = {}  # also set by Stage.__call__
+    input: dict[str, Data] = {}  # also set by Stage.__call__
     _directory: Path | None = None  # set by Stage.from_json, Pipeline.add_stage
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
@@ -66,6 +72,10 @@ class Stage(BaseModel, ABC):
     @property
     def skip_if(self) -> set[str]:
         return self._skip_if
+
+    @property
+    def dependencies(self) -> set[str]:
+        return set(input_item.stage for input_item in self.input.values())
 
     @classmethod
     def from_json(
@@ -172,7 +182,7 @@ class Stage(BaseModel, ABC):
         """Run stage."""
         raise NotImplementedError()
 
-    def __call__(self, **input: Path) -> None:
+    def __call__(self, **input: Data) -> None:
         """Define stage dependencies."""
         # TODO: Validation
         self.input = input
