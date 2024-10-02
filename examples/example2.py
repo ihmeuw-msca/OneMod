@@ -1,8 +1,7 @@
 """Define dependencies before adding stages."""
 
 from onemod import Pipeline
-from onemod.stage.data_stages import PreprocessingStage
-from onemod.stage.model_stages import KregStage, RoverStage, SpxmodStage
+from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
 
 # Create stages
 preprocessing = PreprocessingStage(

@@ -1,22 +1,7 @@
-"""Define dependencies after adding stages."""
+"""Define stages within pipeline definition."""
 
 from onemod import Pipeline
 from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
-
-# Create stages
-preprocessing = PreprocessingStage(name="1_preprocessing")
-
-covariate_selection = RoverStage(
-    name="2_covariate_selection",
-    config=dict(cov_exploring=["cov1", "cov2", "cov3"]),
-    groupby=["age_group_id"],
-)
-
-global_model = SpxmodStage(name="3_global_model")
-
-location_model = SpxmodStage(name="4_location_model", groupby=["location_id"])
-
-smoothing = KregStage(name="5_smoothing", groupby=["region_id"])
 
 # Create pipeline
 dummy_pipeline = Pipeline(
@@ -28,17 +13,27 @@ dummy_pipeline = Pipeline(
     directory="/path/to/project/directory",
     data="/path/to/data.parquet",
     groupby=["sex_id"],
-)
-
-# Add stages
-dummy_pipeline.add_stages(
-    [
-        preprocessing,
-        covariate_selection,
-        global_model,
-        location_model,
-        smoothing,
-    ]
+    stages={
+        "preprocessing": (
+            preprocessing := PreprocessingStage(name="1_preprocessing")
+        ),
+        "covariate_selection": (
+            covariate_selection := RoverStage(
+                name="2_covariate_selection",
+                config=dict(cov_exploring=["cov1", "cov2", "cov3"]),
+                groupby=["age_group_id"],
+            )
+        ),
+        "global_model": (global_model := SpxmodStage(name="3_global_model")),
+        "location_model": (
+            location_model := SpxmodStage(
+                name="4_location_model", groupby=["location_id"]
+            )
+        ),
+        "smoothing": (
+            smoothing := KregStage(name="5_smoothing", groupby=["region_id"])
+        ),
+    },
 )
 
 # Define dependencies
