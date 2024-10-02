@@ -235,7 +235,6 @@ class Pipeline(BaseModel):
                 )
 
         # Check for isolated nodes
-        # TODO: are there cases where isolated nodes would be valid for OneMod?
         all_stages = set(self._stages.keys())
         dependent_stages = set(
             stage for deps in self._dependencies.values() for stage in deps
@@ -251,20 +250,17 @@ class Pipeline(BaseModel):
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
-        Uses of Kahn's algorithm to find the topological order of the stages.
+        Uses Kahn's algorithm to find the topological order of the stages.
         """
-        # Track in-degrees of all nodes
-        in_degree = {stage: 0 for stage in self._stages}
-
-        # Populate in-degree based on dependencies
-        for stage, dependencies in self._dependencies.items():
-            for dep in dependencies:
+        reverse_graph = {stage: [] for stage in self._dependencies}
+        in_degree = {stage: 0 for stage in self._dependencies}
+        for stage, deps in self._dependencies.items():
+            for dep in deps:
+                reverse_graph[dep].append(stage)
                 in_degree[stage] += 1
-
-        # Use a deque to process nodes with zero in-degree (no dependencies)
+        
         queue = deque([stage for stage, deg in in_degree.items() if deg == 0])
         topological_order = []
-        rec_stack = set()
         visited = set()
 
         while queue:
@@ -272,27 +268,15 @@ class Pipeline(BaseModel):
             topological_order.append(stage)
             visited.add(stage)
 
-            # Reduce the in-degree of dependent stages
-            for dep in self._dependencies.get(stage, []):
-                in_degree[dep] -= 1
-                if in_degree[dep] == 0:
-                    queue.append(dep)
-
-            # Track current processing path for cycle detection
-            rec_stack.add(stage)
-
-            # Detect cycles in dependent stages
-            for dep in self._dependencies.get(stage, []):
-                if dep in rec_stack:
-                    raise ValueError(
-                        f"Cycle detected! The cycle involves: {list(rec_stack)}"
-                    )
-
-            rec_stack.remove(stage)
+            # Reduce the in-degree of downstream stages
+            for downstream_dep in reverse_graph[stage]:
+                in_degree[downstream_dep] -= 1
+                if in_degree[downstream_dep] == 0:
+                    queue.append(downstream_dep)
 
         # If there is a cycle, the topological order will not include all stages
-        if len(topological_order) != len(self._stages):
-            unvisited = set(self._stages) - visited
+        if len(topological_order) != len(self._dependencies):
+            unvisited = set(self._dependencies) - visited
             raise ValueError(
                 f"Cycle detected! Unable to process the following stages: {unvisited}"
             )
