@@ -234,19 +234,6 @@ class Pipeline(BaseModel):
                     f"Duplicate dependencies found for stage '{stage}'."
                 )
 
-        # Check for isolated nodes
-        all_stages = set(self._stages.keys())
-        dependent_stages = set(
-            stage for deps in self._dependencies.values() for stage in deps
-        )
-        isolated_stages = (
-            all_stages - dependent_stages - set(self._dependencies.keys())
-        )
-        if isolated_stages:
-            logger.warning(
-                f"The following stages are isolated and not part of the DAG: {isolated_stages}"
-            )
-
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
