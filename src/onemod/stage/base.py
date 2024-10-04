@@ -4,24 +4,19 @@ from __future__ import annotations
 
 import json
 from abc import ABC
+from functools import cached_property
 from inspect import getfile
 from pathlib import Path
 from typing import Any
 
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, computed_field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
+from onemod.io import Data, Input, Output
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
-
-
-class Data(BaseModel):
-    """Dummy data class."""
-
-    stage: str
-    path: Path
 
 
 class Stage(BaseModel, ABC):
@@ -31,10 +26,13 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
-    input: dict[str, Data] = {}  # also set by Stage.__call__
+    input: Input | dict[str, Path | Data] | None = None  # ???
     _directory: Path | None = None  # set by Stage.from_json, Pipeline.add_stage
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
+    _required_input: set[str] = set()  # name.extension, defined by class
+    _optional_input: set[str] = set()  # name.extension, defined by class
+    _output: set[str] = set()  # name.extension, defined by class
 
     @computed_field
     @property
@@ -64,18 +62,38 @@ class Stage(BaseModel, ABC):
         return self._directory
 
     @directory.setter
-    def directory(self, directory: Path) -> None:
-        if not directory.exists():
-            directory.mkdir()
-        self._directory = directory
+    def directory(self, directory: Path | str) -> None:
+        self._directory = Path(directory)
+        if not self._directory.exists():
+            self._directory.mkdir()
 
     @property
     def skip_if(self) -> set[str]:
         return self._skip_if
 
+    @cached_property
+    def output(self) -> Output:
+        output = Output(stage=self.name)
+        for item in self._output:
+            item_name = item.split(".")[0]  # remove extension
+            output[item_name] = Data(
+                stage=self.name, path=self.directory / item
+            )
+        return output
+
     @property
     def dependencies(self) -> set[str]:
-        return set(input_item.stage for input_item in self.input.values())
+        return self.input.dependencies
+
+    def model_post_init(self, *args, **kwargs) -> None:
+        input_items = self.input or {}
+        self.input = Input(
+            stage=self.name,
+            required=self._required_input,
+            optional=self._optional_input,
+        )
+        if input_items:
+            self.input.add_input(**input_items)
 
     @classmethod
     def from_json(
@@ -182,10 +200,11 @@ class Stage(BaseModel, ABC):
         """Run stage."""
         raise NotImplementedError()
 
-    def __call__(self, **input: Data) -> None:
+    @validate_call
+    def __call__(self, **input: Path | Data) -> None:
         """Define stage dependencies."""
-        # TODO: Validation
-        self.input = input
+        self.input.add_input(**input)
+        self.input.validate()
 
     def __repr__(self) -> str:
         return f"{self.type}({self.name})"
@@ -205,6 +224,7 @@ class GroupedStage(Stage, ABC):
     config: GroupedConfig
     groupby: set[str] = set()
     _subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
+    _required_input: set[str] = {"data"}
 
     @property
     def subset_ids(self) -> set[int]:
