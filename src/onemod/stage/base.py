@@ -73,27 +73,25 @@ class Stage(BaseModel, ABC):
 
     @cached_property
     def output(self) -> Output:
-        output = Output(stage=self.name)
+        output_items = {}
         for item in self._output:
             item_name = item.split(".")[0]  # remove extension
-            output[item_name] = Data(
+            output_items[item_name] = Data(
                 stage=self.name, path=self.directory / item
             )
-        return output
+        return Output(stage=self.name, items=output_items)
 
     @property
     def dependencies(self) -> set[str]:
         return self.input.dependencies
 
     def model_post_init(self, *args, **kwargs) -> None:
-        input_items = self.input or {}
         self.input = Input(
             stage=self.name,
             required=self._required_input,
             optional=self._optional_input,
+            items=self.input or {},
         )
-        if input_items:
-            self.input.add_input(**input_items)
 
     @classmethod
     def from_json(
@@ -158,7 +156,7 @@ class Stage(BaseModel, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        name: str | None = None,
+        stage_name: str | None = None,
         from_pipeline: bool = False,
         method: str = "run",
         *args,
@@ -170,7 +168,7 @@ class Stage(BaseModel, ABC):
         ----------
         filepath : Path or str
             Path to config file.
-        name : str or None, optional
+        stage_name : str or None, optional
             Stage name, required if `from_pipeline` is True.
             Default is None.
         from_pipeline : bool, optional
@@ -186,7 +184,7 @@ class Stage(BaseModel, ABC):
         calls the stage method.
 
         """
-        stage = cls.from_json(filepath, name, from_pipeline)
+        stage = cls.from_json(filepath, stage_name, from_pipeline)
         if method in stage.skip_if:
             raise AttributeError(f"{stage.name} skips the '{method}' method")
         try:
@@ -203,8 +201,8 @@ class Stage(BaseModel, ABC):
     @validate_call
     def __call__(self, **input: Path | Data) -> None:
         """Define stage dependencies."""
-        self.input.add_input(**input)
-        self.input.validate()
+        self.input.update(input)
+        self.input.check_missing()
 
     def __repr__(self) -> str:
         return f"{self.type}({self.name})"
@@ -247,14 +245,14 @@ class GroupedStage(Stage, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        name: str,
+        stage_name: str,
         method: str = "run",
         subset_id: int | None = None,
         *args,
         **kwargs,
     ) -> None:
         """Evaluate stage method."""
-        stage = cls.from_json(filepath, name)
+        stage = cls.from_json(filepath, stage_name)
         if method in stage.skip_if:
             raise ValueError(f"invalid method: {method}")
         stage.__getattribute__(method)(subset_id, *args, **kwargs)
@@ -305,14 +303,14 @@ class CrossedStage(Stage, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        name: str,
+        stage_name: str,
         method: str = "run",
         param_id: int | None = None,
         *args,
         **kwargs,
     ) -> None:
         """Evaluate stage method."""
-        stage = cls.from_json(filepath, name)
+        stage = cls.from_json(filepath, stage_name)
         if method in stage.skip_if:
             raise ValueError(f"invalid method: {method}")
         stage.__getattribute__(method)(param_id, *args, **kwargs)
@@ -343,7 +341,7 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        name: str,
+        stage_name: str,
         method: str = "run",
         subset_id: int | None = None,
         param_id: int | None = None,
@@ -351,7 +349,7 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
         **kwargs,
     ) -> None:
         "Evaluate stage method."
-        stage = cls.from_json(filepath, name)
+        stage = cls.from_json(filepath, stage_name)
         if method in stage.skip_if:
             raise ValueError(f"invalid method: {method}")
         stage.__getattribute__(method)(subset_id, param_id, *args, **kwargs)
