@@ -15,7 +15,7 @@ import onemod.stage as onemod_stages
 from onemod.config import PipelineConfig
 from onemod.serializers import deserialize, serialize
 from onemod.stage import CrossedStage, GroupedStage, Stage
-from onemod.validation import ValidationErrorCollector
+from onemod.validation import validation_context, ValidationErrorCollector
 
 logger = logging.getLogger(__name__)
 
@@ -294,15 +294,15 @@ class Pipeline(BaseModel):
     
     def validate(self) -> None:
         """Validate pipeline."""
-        collector = ValidationErrorCollector()
-        # Validate DAG structure
-        self.validate_dag(collector)
-        # Validate specified Input, Output types between dependent stages
-        self.validate_stages(collector)
-        
-        if collector.has_errors():
-            self.save_validation_report(collector)
-            raise ValueError(f"Pipeline validation failed. See {self.directory / 'validation' / 'validation_report.json'} for details.")
+        with validation_context() as collector:
+            # Validate DAG structure
+            self.validate_dag(collector)
+            # Validate specified Input, Output types between dependent stages
+            self.validate_stages(collector)
+            
+            if collector.has_errors():
+                self.save_validation_report(collector)
+                raise ValueError(f"Pipeline validation failed. See {self.directory / 'validation' / 'validation_report.json'} for details.")
         
     def save_validation_report(self, collector: ValidationErrorCollector):
         validation_dir = self.directory / 'validation'

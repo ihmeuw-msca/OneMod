@@ -24,14 +24,14 @@ class ValidationErrorCollector(BaseModel):
     def get_errors(self) -> list[ValidationErrorReport]:
         return self.errors
 
-collector = None
+validation_collector = None
 
 @contextmanager
 def validation_context() -> Generator[ValidationErrorCollector, None, None]:
     """Context manager for managing validation error collection."""
-    global collector
-    collector = ValidationErrorCollector()
+    global validation_collector
+    validation_collector = ValidationErrorCollector()
     try:
-        yield collector
+        yield validation_collector
     finally:
-        collector = None  # Clean up after validation
+        validation_collector = None  # Clean up after validation

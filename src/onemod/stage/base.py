@@ -17,7 +17,7 @@ from onemod.io import Input, Output
 from onemod.types import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
-from onemod.validation import collector as validation_collector, validation_context
+from onemod.validation import validation_context, ValidationErrorCollector
 
 
 class Stage(BaseModel, ABC):
@@ -198,19 +198,19 @@ class Stage(BaseModel, ABC):
                 f"{stage.name} does not have a '{method}' method"
             )
     
-    def validate_inputs(self) -> None:
+    def validate_inputs(self, collector: ValidationErrorCollector) -> None:
         """Validate stage inputs."""
         self.input.validate()
 
         for key, value in self.input.items():
             if isinstance(value, Data):
-                value.validate_data()
+                value.validate_data(collector)
         
-    def validate_outputs(self) -> None:
+    def validate_outputs(self, collector: ValidationErrorCollector) -> None:
         """Validate stage outputs."""
         for key, value in self.output.items():
             if isinstance(value, Data):
-                value.validate_data()
+                value.validate_data(collector)
         
     def run(self, subset_id: int | None = None, param_id: int | None = None) -> None:
         """User-defined method to run stage."""
@@ -218,14 +218,21 @@ class Stage(BaseModel, ABC):
         
     def execute(self, subset_id: int | None = None, param_id: int | None = None) -> None:
         """Execute stage."""
-        with validation_context(self.name) as context:
-            self.validate_inputs()
-            self.run(subset_id, param_id)
-            self.validate_outputs()
+        with validation_context() as collector:
+            self.validate_inputs(collector)
             
-            if context.errors:
-                errors = context.get_errors()
-                raise ValueError(f"Validation failed for stage {self.name}: {errors}")
+            if collector.errors:
+                errors = collector.get_errors()
+                raise ValueError(f"Validation failed for stage {self.name} inputs: {errors}")
+        
+        self.run(subset_id, param_id)
+        
+        with validation_context() as collector:
+            self.validate_outputs(collector)
+            
+            if collector.errors:
+                errors = collector.get_errors()
+                raise ValueError(f"Validation failed for stage {self.name} outputs: {errors}")
 
     def __call__(self, **input: Data) -> None:
         """Define stage dependencies."""
