@@ -13,7 +13,9 @@ from pydantic import BaseModel, computed_field
 
 import onemod.stage as onemod_stages
 from onemod.config import PipelineConfig
+from onemod.serializers import deserialize, serialize
 from onemod.stage import CrossedStage, GroupedStage, Stage
+from onemod.validation import ValidationErrorCollector
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +71,7 @@ class Pipeline(BaseModel):
             Pipeline instance.
 
         """
-        with open(filepath, "r") as f:
-            config = json.load(f)
+        config = deserialize(filepath)
 
         stages = config.pop("stages", {})
         dependencies = config.pop("dependencies", {})
@@ -102,12 +103,7 @@ class Pipeline(BaseModel):
 
         """
         filepath = filepath or self.directory / (self.name + ".json")
-        with open(filepath, "w") as f:
-            f.write(
-                self.model_dump_json(
-                    indent=4, exclude_none=True, serialize_as_any=True
-                )
-            )
+        serialize(self, filepath)
 
     def add_stages(
         self, stages: list[Stage | str], dependencies: dict[str, list[str]] = {}
@@ -178,6 +174,8 @@ class Pipeline(BaseModel):
     ) -> Stage:
         """Load stage from JSON file.
 
+        Parameters
+        ----------
         filepath : Path or str
             Path to config file.
         name : str or None, optional
@@ -208,46 +206,7 @@ class Pipeline(BaseModel):
             spec.loader.exec_module(module)
             stage_class = getattr(module, stage_type)
         return stage_class.from_json(filepath, name, from_pipeline)
-
-    def build_dag(self) -> dict[str, list[str]]:
-        """Build directed acyclic graph (DAG) from the stages and their dependencies."""
-        # TODO: Placeholder until DAG class is implemented, assuming we need one
-        return self._dependencies
-
-    def validate_dag(self):
-        """Validate that the DAG structure is correct."""
-        for stage, dependencies in self._dependencies.items():
-            # Check for undefined dependencies
-            for dep in dependencies:
-                if dep not in self._stages:
-                    raise ValueError(
-                        f"Stage '{dep}' is not defined, but '{stage}' depends on it."
-                    )
-
-            # Check for self-dependencies
-            if stage in dependencies:
-                raise ValueError(f"Stage '{stage}' cannot depend on itself.")
-
-            # Check for duplicate dependencies
-            if len(dependencies) != len(set(dependencies)):
-                raise ValueError(
-                    f"Duplicate dependencies found for stage '{stage}'."
-                )
-
-        # Check for isolated nodes
-        # TODO: are there cases where isolated nodes would be valid for OneMod?
-        all_stages = set(self._stages.keys())
-        dependent_stages = set(
-            stage for deps in self._dependencies.values() for stage in deps
-        )
-        isolated_stages = (
-            all_stages - dependent_stages - set(self._dependencies.keys())
-        )
-        if isolated_stages:
-            logger.warning(
-                f"The following stages are isolated and not part of the DAG: {isolated_stages}"
-            )
-
+    
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
@@ -299,7 +258,112 @@ class Pipeline(BaseModel):
 
         return topological_order
 
-    def run(self) -> None:
+    def build_dag(self) -> dict[str, list[str]]:
+        """Build directed acyclic graph (DAG) from the stages and their dependencies."""
+        # TODO: Placeholder until DAG class is implemented, assuming we need one
+        return self._dependencies
+
+    def validate_dag(self, collector: ValidationErrorCollector) -> None:
+        """Validate that the DAG structure is correct."""
+        for stage, dependencies in self._dependencies.items():
+            # Check for undefined dependencies
+            for dep in dependencies:
+                if dep not in self._stages:
+                    collector.add_error(stage, "DAG validation", f"Upstream dependency '{dep}' is not defined.")
+
+            # Check for self-dependencies
+            if stage in dependencies:
+                collector.add_error(stage, "DAG validation", f"Stage cannot depend on itself.")
+
+            # Check for duplicate dependencies
+            if len(dependencies) != len(set(dependencies)):
+                collector.add_error(stage, "DAG validation", f"Duplicate dependencies found.")
+                
+    def validate_stages(self, collector: ValidationErrorCollector) -> None:
+        """Validate that the specified Input, Output types between dependent stages are compatible."""
+        for stage, dependencies in self._dependencies.items():
+            # Dependency validation
+            for dep in dependencies:
+                # Check if output of upstream dependency is compatible with input of current stage
+                if not self.stages[dep].output.is_compatible(self.stages[stage].input): # TODO: implement is_compatible or similar
+                    collector.add_error(
+                        stage,
+                        "Stage validation",
+                        f"Output of upstream stage '{dep}' is not compatible with input of '{stage}'."
+                    )
+    
+    def validate(self) -> None:
+        """Validate pipeline."""
+        collector = ValidationErrorCollector()
+        # Validate DAG structure
+        self.validate_dag(collector)
+        # Validate specified Input, Output types between dependent stages
+        self.validate_stages(collector)
+        
+        if collector.has_errors():
+            self.save_validation_report(collector)
+            raise ValueError(f"Pipeline validation failed. See {self.directory / 'validation' / 'validation_report.json'} for details.")
+        
+    def save_validation_report(self, collector: ValidationErrorCollector):
+        validation_dir = self.directory / 'validation'
+        validation_dir.mkdir(exist_ok=True)
+        report_path = validation_dir / 'validation_report.json'
+        serialize(collector, report_path)
+    
+    def build(self) -> dict:
+        """
+        Assembles the Pipeline into a serializable structure.
+        
+        Notes
+        -----
+        * TODO: Include (?) OneMod, project version info
+        * TODO: execution/orchestration-related metadata
+        * TODO: Nest the pipeline configuration within a 'config' key?
+        """
+        pipeline_dict = {
+            "name": self.name,
+            "directory": str(self.directory),
+            # "config": self.config.to_dict(), # for instance
+            "ids": self.config.ids,
+            "obs": self.config.obs,
+            "pred": self.config.pred,
+            "weights": self.config.weights,
+            "test": self.config.test,
+            "holdouts": self.config.holdouts,
+            "mtype": self.config.mtype,
+            "groupby": self.groupby or [],
+            "stages": {},
+            "dependencies": {},
+            "execution": {}  # TODO: execution-related metadata
+        }
+
+        for stage_name, stage in self._stages.items():
+            pipeline_dict["stages"][stage_name] = stage.to_dict()
+
+        pipeline_dict["dependencies"] = {
+            stage_name: dependencies
+            for stage_name, dependencies in self._dependencies.items()
+        }
+
+        # Placeholder for execution-related metadata (orchestration tool, cluster settings)
+        pipeline_dict["execution"] = {
+            "tool": "sequential",  # Placeholder for orchestration tool
+            "cluster_name": None,  # Placeholder for cluster name
+            "config": {}  # Placeholder for orchestration configurations
+        }
+
+        return pipeline_dict
+    
+    def save(self, filepath: Path | str) -> None:
+        """Save pipeline to file."""
+        serialize(self.build(), filepath)
+
+    def run(
+        self,
+        tool: str = "jobmon",
+        config: dict | None = None,
+        config_file: Path | None = None,
+    ) -> None:
         """Run pipeline.
 
         Notes
@@ -311,7 +375,25 @@ class Pipeline(BaseModel):
         # TODO: run for selected subsets or params
 
         """
-        raise NotImplementedError()
+        # validate
+        self.validate()
+        # build
+        self.build()
+        # save built representation of Pipeline
+        self.save()
+        
+        # run
+        match tool:
+            case 'jobmon':
+                raise NotImplementedError()
+            case 'sequential':
+                # PoC: simply run stages in sequence (no concurrency)
+                for stage in self.get_execution_order():
+                    self.stages[stage].validate_inputs()
+                    self.stages[stage].run()
+                    self.stages[stage].validate_outputs()
+            case _:
+                raise ValueError(f"Unsupported execution tool: {tool}")
 
     def resume(self) -> None:
         """Resume pipeline."""
