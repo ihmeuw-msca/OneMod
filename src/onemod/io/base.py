@@ -43,6 +43,13 @@ class IO(BaseModel, ABC):
             return default
         return self.__getitem__(key)
 
+    def remove(self, key: str) -> None:
+        if self.__contains__(key):
+            del self.items[key]
+
+    def clear(self) -> None:
+        self.items.clear()
+
     def __getitem__(self, key: str) -> Path | Data:
         raise NotImplementedError()
 
