@@ -60,7 +60,7 @@ def test_contains():
 
 def test_frozen():
     with pytest.raises(ValidationError):
-        TEST_OUTPUT.items = "dummy"
+        TEST_OUTPUT.items = {}
 
 
 def test_no_setitem():
