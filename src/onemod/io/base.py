@@ -19,12 +19,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-
-class Data(BaseModel):
-    """Dummy data class."""
-
-    stage: str
-    path: Path
+from onemod.types import Data
 
 
 class IO(BaseModel, ABC):
@@ -34,6 +29,13 @@ class IO(BaseModel, ABC):
 
     stage: str
     data = dict[str, Path | Data] = Field(default={}, exclude=True)
+
+    @staticmethod
+    def deserialize_item(value: dict) -> Any:
+        """Helper function to deserialize an individual input/output."""
+        if isinstance(value, dict) and value.get("type") == "Data":
+            return Data.from_dict(value["data"])
+        return value
 
     def get(self, key: str, default: Any = None) -> Any:
         if not self.__contains__(key):
@@ -66,6 +68,32 @@ class Input(IO):
             for value in self._data.values()
             if isinstance(value, Data)
         )
+        
+    @classmethod
+    def from_dict(cls, data_dict: dict) -> 'Input':
+        """Reconstruct an Input object from a dictionary."""
+        required = {
+            key: cls.deserialize_item(value)
+            for key, value in data_dict.get("required", {}).items()
+        }
+        optional = {
+            key: cls.deserialize_item(value)
+            for key, value in data_dict.get("optional", {}).items()
+        }
+        return cls(required=required, optional=optional)
+
+    def to_dict(self) -> dict:
+        """Convert Input to a dictionary."""
+        return {
+            "required": {
+                key: value.to_dict() if isinstance(value, Data) else value
+                for key, value in self.required.items()
+            },
+            "optional": {
+                key: value.to_dict() if isinstance(value, Data) else value
+                for key, value in self.optional.items()
+            }
+        }
 
     def validate(self) -> None:
         self._check_missing()
@@ -96,3 +124,21 @@ class Output(IO):
     """Stage output class."""
 
     data = dict[str, Data] = Field(default={}, exclude=True)
+
+    @classmethod
+    def from_dict(cls, data_dict: dict) -> 'Output':
+        """Reconstruct an Output object from a dictionary."""
+        data = {
+            key: cls.deserialize_item(value)
+            for key, value in data_dict.get("data", {}).items()
+        }
+        return cls(data=data)
+
+    def to_dict(self) -> dict:
+        """Convert Output to a dictionary."""
+        return {
+            "data": {
+                key: value.to_dict() if isinstance(value, Data) else value
+                for key, value in self.data.items()
+            }
+        }
