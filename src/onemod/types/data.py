@@ -1,13 +1,14 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, ClassVar, Dict, Optional, Union
 
 from polars import Boolean, DataFrame, Int64, Float64, String
 from pydantic import BaseModel
 
 from onemod.constraints import Constraint
-from onemod.io import DataIOHandler
+from onemod.io.data_io_handler import DataIOHandler
 from onemod.serializers import deserialize, serialize
-from onemod.types import ColumnSpec, FilePath
+from onemod.types.column_spec import ColumnSpec
+from onemod.types.filepath import FilePath
 from onemod.validation import collector as validation_collector
 
 
@@ -17,8 +18,7 @@ class Data(BaseModel):
     format: str = "parquet"
     shape: Optional[tuple[int, int]] = None
     columns: Optional[Dict[str, ColumnSpec]] = None
-    
-    TYPE_MAPPING = {
+    type_mapping: ClassVar[Dict[type, Any]] = {
         bool: Boolean,
         int: Int64,
         float: Float64,
@@ -119,7 +119,7 @@ class Data(BaseModel):
             constraints = col_spec.get('constraints', [])
             
             if expected_type:
-                polars_type = self.TYPE_MAPPING.get(expected_type)  # TODO: better ways to handle this?
+                polars_type = self.type_mapping.get(expected_type)  # TODO: better ways to handle this?
                 if not polars_type:
                     validation_collector.add_error(self.stage, "Data validation", f"Unsupported type {expected_type}.")
                 if data[col_name].dtype != polars_type:

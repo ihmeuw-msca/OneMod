@@ -34,8 +34,8 @@ class Stage(BaseModel, ABC):
     _directory: Path | None = None  # set by Stage.from_json, Pipeline.add_stage
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
-    _inputs: set[Union[type | BaseModel]] = set()  # defined by class
-    _outputs: set[Union[type | BaseModel]] = set()  # defined by class
+    _inputs: set[str] = set()  # defined by class
+    _outputs: set[str] = set()  # defined by class
 
     @computed_field
     @property

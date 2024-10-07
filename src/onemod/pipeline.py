@@ -317,7 +317,7 @@ class Pipeline(BaseModel):
         Notes
         -----
         * TODO: Include (?) OneMod, project version info
-        * TODO: execution/orchestration-related metadata
+        * TODO: execution/orchestration-related metadata (sold separately?)
         * TODO: Nest the pipeline configuration within a 'config' key?
         """
         pipeline_dict = {
@@ -334,7 +334,7 @@ class Pipeline(BaseModel):
             "groupby": self.groupby or [],
             "stages": {},
             "dependencies": {},
-            "execution": {}  # TODO: execution-related metadata
+            # "execution": {}  # TODO: execution-related metadata
         }
 
         for stage_name, stage in self._stages.items():
@@ -346,11 +346,11 @@ class Pipeline(BaseModel):
         }
 
         # Placeholder for execution-related metadata (orchestration tool, cluster settings)
-        pipeline_dict["execution"] = {
-            "tool": "sequential",  # Placeholder for orchestration tool
-            "cluster_name": None,  # Placeholder for cluster name
-            "config": {}  # Placeholder for orchestration configurations
-        }
+        # pipeline_dict["execution"] = {
+        #     "tool": "sequential",  # Placeholder for orchestration tool
+        #     "cluster_name": None,  # Placeholder for cluster name
+        #     "config": {}  # Placeholder for orchestration configurations
+        # }
 
         return pipeline_dict
     
@@ -371,20 +371,19 @@ class Pipeline(BaseModel):
         * These functions will handle workflow creation
         * Maybe allow subsets of the DAG to be run (e.g., predict for a
           single location)
+        * TODO: consume orchestration tool config, set and validate execution options
         * TODO: run for selected stages
-        # TODO: run for selected subsets or params
+        * TODO: run for selected subsets or params
 
         """
-        # validate
         self.validate()
-        # build
         self.build()
-        # save built representation of Pipeline
         self.save()
         
         # run
         match tool:
             case 'jobmon':
+                # TODO: set execution-related metadata here and/or call jobmon module?
                 raise NotImplementedError()
             case 'sequential':
                 # PoC: simply run stages in sequence (no concurrency)

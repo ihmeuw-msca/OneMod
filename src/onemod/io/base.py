@@ -28,7 +28,7 @@ class IO(BaseModel, ABC):
     model_config = ConfigDict(validate_assignment=True)
 
     stage: str
-    data = dict[str, Path | Data] = Field(default={}, exclude=True)
+    data: dict[str, Path | Data] = Field(default={}, exclude=True)
 
     @staticmethod
     def deserialize_item(value: dict) -> Any:
@@ -123,7 +123,7 @@ class Input(IO):
 class Output(IO):
     """Stage output class."""
 
-    data = dict[str, Data] = Field(default={}, exclude=True)
+    data: dict[str, Data] = Field(default={}, exclude=True)
 
     @classmethod
     def from_dict(cls, data_dict: dict) -> 'Output':

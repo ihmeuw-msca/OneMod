@@ -51,11 +51,3 @@ rover_covsel_model = "onemod.actions.models.rover_covsel_model:main"
 spxmod_model = "onemod.actions.models.spxmod_model:main"
 weave_model = "onemod.actions.models.weave_model:main"
 ensemble_model = "onemod.actions.models.ensemble_model:main"
-
-[tools.pytest.ini_options]
-minversion = "6.0"
-testpaths = [
-    "tests/e2e"
-    "tests/integration"
-    "tests/unit"
-]

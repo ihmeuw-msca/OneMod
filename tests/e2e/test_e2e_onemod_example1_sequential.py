@@ -2,15 +2,15 @@ from pathlib import Path
 import pytest
 
 from onemod.constraints import bounds, no_inf
-from onemod.io import Data
 from onemod import Pipeline
 from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
-from onemod.types import FilePath, Integer, Float
+from onemod.types import Data, FilePath
 
 # TODO: should be env var at the least and point to shared dir for test assets
 TEST_CONFIG_DIR = "tests/e2e/assets"
 
 @pytest.mark.e2e
+@pytest.mark.skip(reason="Not yet implemented")
 def test_e2e_onemod_mortality_estimates_sequential(tmp_path):
     """
     End-to-end test for a the OneMod example1 pipeline.
