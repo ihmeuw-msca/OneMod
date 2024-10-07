@@ -5,7 +5,9 @@ from onemod.types import Data
 
 @pytest.mark.unit
 def test_data_with_missing_column_in_dataframe():
-    schema = Data.use_validation(
+    schema = Data(
+        stage="test",
+        path="test.parquet",
         columns=dict(
             age_group_id={},
             location_id={}
@@ -19,11 +21,13 @@ def test_data_with_missing_column_in_dataframe():
 
     with pytest.raises(ValueError) as excinfo:
         schema.validate_columns(invalid_data)
-    assert "Missing required column" in str(excinfo.value)
+    assert "Column 'location_id' is missing from the data" in str(excinfo.value)
 
 @pytest.mark.unit
 def test_data_with_extra_column():
-    schema = Data.use_validation(
+    schema = Data(
+        stage="test",
+        path="test.parquet",
         columns=dict(
             age_group_id={},
             location_id={}
@@ -40,14 +44,18 @@ def test_data_with_extra_column():
     
 @pytest.mark.unit
 def test_data_with_integer_valid():
-    schema = Data.use_validation(dict(
-        age_group_id=dict(
-            type=int
-        ),
-        location_id=dict(
-            type=int
+    schema = Data(
+        stage="test",
+        path="test.parquet",
+        columns=dict(
+            age_group_id=dict(
+                type=int,
+            ),
+            location_id=dict(
+                type=int
+            )
         )
-    ))
+    )
 
     valid_data = DataFrame({
         "age_group_id": [50, 30, 20],
@@ -58,10 +66,12 @@ def test_data_with_integer_valid():
 
 @pytest.mark.unit
 def test_data_with_type_mismatch_in_dataframe():
-    schema = Data.use_validation(
+    schema = Data(
+        stage="test",
+        path="test.parquet",
         columns=dict(
             age_group_id=dict(
-                type=int
+                type=int,
             ),
             location_id=dict(
                 type=int
@@ -76,4 +86,4 @@ def test_data_with_type_mismatch_in_dataframe():
 
     with pytest.raises(ValueError) as excinfo:
         schema.validate_columns(invalid_data)
-    assert "expected to be of type" in str(excinfo.value)
+    assert "Column 'location_id' must be of type" in str(excinfo.value)
