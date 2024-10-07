@@ -43,13 +43,6 @@ class IO(BaseModel, ABC):
             return default
         return self.__getitem__(key)
 
-    def remove(self, key: str) -> None:
-        if self.__contains__(key):
-            del self.items[key]
-
-    def clear(self) -> None:
-        self.items.clear()
-
     def __getitem__(self, key: str) -> Path | Data:
         raise NotImplementedError()
 
@@ -60,8 +53,8 @@ class IO(BaseModel, ABC):
 class Input(IO):
     """Stage input class."""
 
-    required: set[str] = set()  # defined by stage class
-    optional: set[str] = set()  # defined by stage class
+    required: set[str] = set()  # name.extension, defined by stage class
+    optional: set[str] = set()  # name.extension, defined by stage class
     _expected_names: set[str]
     _expected_types: dict[str, str]
 
@@ -80,6 +73,9 @@ class Input(IO):
             item_name, item_type = item.split(".")
             self._expected_types[item_name] = item_type
         if self.items:
+            for item_name in list(self.items.keys()):
+                if item_name not in self._expected_names:
+                    del self.items[item_name]
             self._check_cycles()
             self._check_types()
 
@@ -88,7 +84,15 @@ class Input(IO):
         self._check_cycles(items)
         self._check_types(items)
         for item_name, item_value in items.items():
-            self.items[item_name] = item_value
+            if item_name in self._expected_names:
+                self.items[item_name] = item_value
+
+    def remove(self, item: str) -> None:
+        if self.__contains__(item):
+            del self.items[item]
+
+    def clear(self) -> None:
+        self.items.clear()
 
     def check_missing(self) -> None:
         missing_items = [
