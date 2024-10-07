@@ -6,7 +6,7 @@ import json
 from abc import ABC, abstractmethod
 from inspect import getfile
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field
@@ -410,23 +410,24 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
         """Execute stage submodel."""
         self.validate_inputs()
         
-        if subset_id is None:
-            for subset in self._subset_ids:
-                if param_id is None:
-                    for param in self._param_ids:
-                        self.fit(subset, param)
-                        self.predict(subset, param)
-                else:
-                    self.fit(subset, param_id)
-                    self.predict(subset, param_id)
-        else:
-            if param_id is None:
-                for param in self._param_ids:
-                    self.fit(subset_id, param)
-                    self.predict(subset_id, param)
-            else:
-                self.fit(subset_id, param_id)
-                self.predict(subset_id, param_id)
+        self.run(subset_id, param_id)
+        # if subset_id is None:
+        #     for subset in self._subset_ids:
+        #         if param_id is None:
+        #             for param in self._param_ids:
+        #                 self.fit(subset, param)
+        #                 self.predict(subset, param)
+        #         else:
+        #             self.fit(subset, param_id)
+        #             self.predict(subset, param_id)
+        # else:
+        #     if param_id is None:
+        #         for param in self._param_ids:
+        #             self.fit(subset_id, param)
+        #             self.predict(subset_id, param)
+        #     else:
+        #         self.fit(subset_id, param_id)
+        #         self.predict(subset_id, param_id)
                 
         self.validate_outputs()
 

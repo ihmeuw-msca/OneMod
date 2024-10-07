@@ -26,6 +26,7 @@ dependencies = [
     "modrover @ git+https://github.com/ihmeuw-msca/modrover.git@v0.1.3",
     "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@v0.2.1",
     "pandas",
+    "polars",
     "pyarrow",
     "pydantic",
     "scipy",
