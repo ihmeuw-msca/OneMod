@@ -77,10 +77,10 @@ class Input(IO):
             self._check_types()
 
     @validate_call
-    def update(self, new_items: dict[str, Path | Data]) -> None:
-        self._check_cycles(new_items)
-        self._check_types(new_items)
-        for item_name, item_value in new_items.items():
+    def update(self, items: dict[str, Path | Data]) -> None:
+        self._check_cycles(items)
+        self._check_types(items)
+        for item_name, item_value in items.items():
             self.items[item_name] = item_value
 
     def check_missing(self) -> None:
@@ -138,12 +138,14 @@ class Input(IO):
                     f"Invalid type for {self.stage} input: {item_name}"
                 )
 
-    def __getitem__(self, key: str) -> Path | Data:
-        if not self.__contains__(key):
-            if key not in self._expected_names:
-                raise ValueError(f"{self.stage} input {key} has not been set")
-            raise KeyError(f"{self.stage} does not contain input '{key}'")
-        return self.items[key]
+    def __getitem__(self, item_name: str) -> Path | Data:
+        if not self.__contains__(item_name):
+            if item_name in self._expected_names:
+                raise ValueError(
+                    f"{self.stage} input '{item_name}' has not been set"
+                )
+            raise KeyError(f"{self.stage} does not contain input '{item_name}'")
+        return self.items[item_name]
 
     @validate_call
     def __setitem__(self, item_name: str, item_value: Path | Data) -> None:
