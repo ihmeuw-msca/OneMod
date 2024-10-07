@@ -65,7 +65,7 @@ class Input(IO):
     def dependencies(self) -> set[str]:
         return set(
             value.stage
-            for value in self._data.values()
+            for value in self.data.values()
             if isinstance(value, Data)
         )
         

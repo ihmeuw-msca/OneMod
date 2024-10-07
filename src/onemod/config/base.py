@@ -44,7 +44,7 @@ class PipelineConfig(Config):
     weights: str = "weights"
     test: str = "test"
     holdouts: set[str] = set()
-    mtype: Literal["binomial", "gaussian", "poisson"]
+    mtype: Literal["binomial", "gaussian", "poisson"] = "binomial"
 
 
 class StageConfig(Config):

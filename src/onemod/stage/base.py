@@ -76,7 +76,7 @@ class Stage(BaseModel, ABC):
 
     @property
     def dependencies(self) -> set[str]:
-        return set(input_item.stage for input_item in self.input.values())
+        return self.input.dependencies
 
     def to_dict(self) -> dict:
         """Convert stage to dictionary representaion."""
