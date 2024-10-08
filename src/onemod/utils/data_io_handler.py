@@ -11,12 +11,13 @@ class DataIOHandler:
     _____
     * Future: Add support for other file formats.
     """
+    supported_formats: set[str] = {'parquet'}
     
     @staticmethod
     def read_data(path: Path) -> DataFrame:
         """Read data from a Parquet file and return it as a Polars DataFrame."""
-        if path.suffix != '.parquet':
-            raise ValueError(f"Unsupported file format: {path.suffix}.")
+        if path.suffix.lstrip('.') not in DataIOHandler.supported_formats:
+            raise ValueError(f"Unsupported file format {path.suffix}.")
         
         try:
             df = read_parquet(path)

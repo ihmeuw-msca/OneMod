@@ -17,7 +17,7 @@ from onemod.io import Input, Output
 from onemod.types import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
-from onemod.validation import validation_context, ValidationErrorCollector
+from onemod.validation import ValidationErrorCollector, validation_context
 
 
 class Stage(BaseModel, ABC):

@@ -9,7 +9,7 @@ from onemod.serializers import deserialize, serialize
 from onemod.types.column_spec import ColumnSpec
 from onemod.types.filepath import FilePath
 from onemod.utils import DataIOHandler
-from onemod.validation.error_handling import ValidationErrorCollector
+from onemod.validation.error_handling import ValidationErrorCollector, handle_error
 
 
 class Data(BaseModel):
@@ -93,25 +93,26 @@ class Data(BaseModel):
     def validate_metadata(self, collector: ValidationErrorCollector | None = None) -> None:
         """One-time validation for instance metadata."""
         if not self.path:
-            if collector:
-                collector.add_error(self.stage, "Data validation", "File path is required.")
-            else:
-                raise ValueError("File path is required.")
+            handle_error(self.stage, "Data validation", ValueError,
+                         "File path is required.", collector)
+        else:
+            if not self.path.exists():
+                handle_error(self.stage, "Data validation", FileNotFoundError,
+                             f"File {self.path} does not exist.", collector)
+            if self.format not in DataIOHandler.supported_formats:
+                handle_error(self.stage, "Data validation", ValueError,
+                             f"Unsupported file format {self.format}.", collector)
         
         if self.shape:
             if not isinstance(self.shape, tuple) or len(self.shape) != 2:
-                if collector:
-                    collector.add_error(self.stage, "Data validation", "Shape must be a tuple of (rows, columns).")
-                else:
-                    raise ValueError("Shape must be a tuple of (rows, columns).")
+                handle_error(self.stage, "Data validation", ValueError,
+                             "Shape must be a tuple of (rows, columns).", collector)
 
     def validate_shape(self, data: DataFrame, collector: ValidationErrorCollector | None = None) -> None:
         """Validate the shape of the data."""
         if data.shape != self.shape:
-            if collector:
-                collector.add_error(self.stage, "Data validation", f"Expected DataFrame shape {self.shape}, got {data.shape}.")
-            else:
-                raise ValueError(f"Expected DataFrame shape {self.shape}, got {data.shape}.")
+            handle_error(self.stage, "Data validation", ValueError,
+                         f"Expected DataFrame shape {self.shape}, got {data.shape}.", collector)
 
     def validate_data(self, data: DataFrame | None, collector: ValidationErrorCollector | None = None) -> None:
         """Validate the columns and shape of the data."""
@@ -128,10 +129,8 @@ class Data(BaseModel):
         """Validate columns based on specified types and constraints."""
         for col_name, col_spec in self.columns.items():
             if col_name not in data.columns:
-                if collector:
-                    collector.add_error(self.stage, "Data validation", f"Column '{col_name}' is missing from the data.")
-                else:
-                    raise ValueError(f"Column '{col_name}' is missing from the data.")
+                handle_error(self.stage, "Data validation", ValueError,
+                             f"Column '{col_name}' is missing from the data.", collector)
             
             expected_type = col_spec.get('type')
             constraints = col_spec.get('constraints', [])
@@ -139,15 +138,11 @@ class Data(BaseModel):
             if expected_type:
                 polars_type = self.type_mapping.get(expected_type)  # TODO: better ways to handle this?
                 if not polars_type:
-                    if collector:
-                        collector.add_error(self.stage, "Data validation", f"Unsupported type {expected_type}.")
-                    else:
-                        raise ValueError(f"Unsupported type {expected_type}.")
+                    handle_error(self.stage, "Data validation", ValueError,
+                                 f"Unsupported type {expected_type}.", collector)
                 if data[col_name].dtype != polars_type:
-                    if collector:
-                        collector.add_error(self.stage, "Data validation", f"Column '{col_name}' must be of type {expected_type.__name__}.")
-                    else:
-                        raise ValueError(f"Column '{col_name}' must be of type {expected_type.__name__}.")
+                    handle_error(self.stage, "Data validation", ValueError,
+                                 f"Column '{col_name}' must be of type {expected_type.__name__}.", collector)
             
             for constraint in constraints:
                 constraint(data[col_name])
