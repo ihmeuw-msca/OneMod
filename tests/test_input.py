@@ -201,6 +201,11 @@ def test_dependencies():
     assert test_input.dependencies == {"first_stage", "second_stage"}
 
 
+def test_no_dependencies():
+    test_input = get_input(items={"data": "/path/to/predictions.parquet"})
+    assert test_input.dependencies == set()
+
+
 def test_missing():
     test_input = get_input()
     with pytest.raises(KeyError) as error:

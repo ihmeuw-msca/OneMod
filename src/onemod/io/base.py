@@ -59,7 +59,7 @@ class Input(IO):
     _expected_types: dict[str, str]
 
     @property
-    def dependencies(self) -> set[str] | None:
+    def dependencies(self) -> set[str]:
         return set(
             item.stage for item in self.items.values() if isinstance(item, Data)
         )
