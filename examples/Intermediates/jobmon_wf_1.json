@@ -12,39 +12,17 @@
       "_comment_2": "Tool version is not specified, so defaults ot the latest.",
       "_comment_3": "In general, what to do about versions of objects? This object is really a TTV?",
       "formal_args": [],
-      "nodes": [
-        {
-          "arg_text": "groupby",
-          "dag_type" : "node_arg"
-        },
-        {
-          "arg_text": "t_threshold",
-          "dag_type" : "op_arg"
-        },
-        {
-          "arg_text": "rover.cov_exploring",
-          "dag_type" : "node_arg"
-        },
-        {
-          "arg_text": "rover.cov_fixed",
-          "dag_type" : "op_arg"
-        },
-        {
-          "arg_text": "fit.strategies",
-          "dag_type" : "op_arg"
-        },
-        {
-          "arg_text": "fit.top_pct_learner",
-          "dag_type" : "op_arg"
-        },
-        {
-          "arg_text": "fi.top_pct_score",
-          "dag_type" : "op_arg"
-        },
-        {
-          "arg_text": "debug_level",
-          "dag_arg_type": "task_arg"
-        }
+      "formal_arguments_aka_nodes": [
+        { "arg_text": "groupby", "dag_type" : "node_arg"},
+        { "arg_text": "rover.cov_exploring", "dag_type" : "node_arg"},
+
+        { "arg_text": "rover.cov_fixed", "dag_type" : "op_arg"},
+        { "arg_text": "fit.strategies", "dag_type" : "op_arg"},
+        { "arg_text": "fit.top_pct_learner", "dag_type" : "op_arg"},
+        { "arg_text": "fi.top_pct_score", "dag_type" : "op_arg"},
+        { "arg_text": "t_threshold", "dag_type" : "op_arg"},
+
+        { "arg_text": "debug_level", "dag_arg_type": "task_arg"}
       ],
       "_comment_4": "Entry point or 'python <module>'",
       "command": "rover_covsel -@ToDo -subset_id {subset_id} --param_id {param_id}",
@@ -61,7 +39,7 @@
     "name": "workflow_todo_insert_user_name_here",
     "description": "OneMod Workflow for todo-insert-user-name-here",
     "workflow_args": [
-      "ToDo What arguments to add that are specific to this workflow? Path to config file?"
+      "ToDo What arguments to add that are specific to this workflow? Path to settings.yaml file? what if it changes?"
     ],
     "workflow_attributes": [
       {
@@ -72,8 +50,9 @@
       }
     ],
     "dag": {
-      "_comment_9": "Theis is a list of AllTask-Concrete-Task Templates, i.e. Task with their dag-forming arguments bound",
-      "one": [
+      "_comment_9": "Theis is a list ofTaskTemplateExpansion, i.e. Task with their dag-forming arguments bound",
+      "_comment_10": "In fact task and op arguments are also bound",
+      "stages": [
         {
           "name": "rover_covsel_stage",
           "template": "rover_covsel",
@@ -84,7 +63,8 @@
             "rover.cov_fixed": "intercept",
             "fit.strategies": "forward",
             "fit.top_pct_learner": 0.5,
-            "fi.ttop_pct_score": 1.0
+            "fi.ttop_pct_score": 1.0,
+            "debug_level": "info"
           }
         },
         {
