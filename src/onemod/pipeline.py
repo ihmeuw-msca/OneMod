@@ -19,24 +19,29 @@ logger = logging.getLogger(__name__)
 
 
 class Pipeline(BaseModel):
-    """
-    Notes
-    -----
-    * `data` is raw input data used to figure out grouped stage subsets
-       when initializing the pipeline; stages will get their data from
-       other stages (with the exception of any preprocessing stages)
-    * `data` is only required if using grouped stages
-    * TODO: Define dependencies between stages
-    * TODO: DAG creation, validation
-    * TODO: Run locally or on Jobmon
+    """Pipeline class.
+
+    Attributes
+    ----------
+    name : str
+        Pipeline name.
+    config : PipelineConfig
+        Pipeline configuration.
+    directory : Path
+        Experiment directory.
+    data : Path or None, optional
+        Input data used to create data subsets. Required for pipeline or
+        stage `groupby` attribute. Default is None.
+    groupby : set[str] or None, optional
+        ID names used to create data subsets. Default is None.
 
     """
 
     name: str
     config: PipelineConfig
-    directory: Path
+    directory: Path  # TODO: replace with DataInterface
     data: Path | None = None
-    groupby: set[str] = set()
+    groupby: set[str] | None = None
     _stages: dict[str, Stage] = {}  # set by Pipeline.add_stage
     _dependencies: dict[str, list[str]] = {}
 
@@ -148,7 +153,8 @@ class Pipeline(BaseModel):
         if isinstance(stage, GroupedStage):
             if self.data is None:
                 raise AttributeError("data field is required for GroupedStage")
-            stage.groupby.update(self.groupby)
+            if self.groupby is not None:
+                stage.groupby.update(self.groupby)
             stage.create_stage_subsets(self.data)
 
         # Create parameter sets
@@ -245,7 +251,7 @@ class Pipeline(BaseModel):
             for dep in deps:
                 reverse_graph[dep].append(stage)
                 in_degree[stage] += 1
-        
+
         queue = deque([stage for stage, deg in in_degree.items() if deg == 0])
         topological_order = []
         visited = set()
