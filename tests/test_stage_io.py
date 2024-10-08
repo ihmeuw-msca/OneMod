@@ -19,15 +19,9 @@ class DummyStage(Stage):
 
 @pytest.fixture(scope="module")
 def stage_1(tmp_path_factory):
-    stage_1 = DummyStage(
-        name="stage_1",
-        config={},
-        input={
-            "data": "/path/to/data.parquet",
-            "covariates": "/path/to/covariates.csv",
-        },
-    )
+    stage_1 = DummyStage(name="stage_1", config={})
     stage_1.directory = tmp_path_factory.mktemp("example") / stage_1.name
+    stage_1(data="/path/to/data.parquet", covariates="/path/to/covariates.csv")
     return stage_1
 
 
@@ -41,7 +35,7 @@ def stage_2(stage_1):
     return stage_2
 
 
-def test_input_from_init(stage_1):
+def test_input(stage_1):
     assert stage_1.input == Input(
         stage=stage_1.name,
         items={
@@ -69,7 +63,7 @@ def test_output(stage_1):
     )
 
 
-def test_input_from_call(stage_1, stage_2):
+def test_input_with_dependency(stage_1, stage_2):
     assert stage_2.input == Input(
         stage=stage_2.name,
         items={
@@ -82,9 +76,10 @@ def test_input_from_call(stage_1, stage_2):
         required=stage_1._required_input,
         optional=stage_1._optional_input,
     )
+    assert stage_2.dependencies == {"stage_1"}
 
 
-def test_input_from_call_missing():
+def test_input_with_missing():
     stage_3 = DummyStage(name="stage_3", config={})
     with pytest.raises(KeyError) as error:
         stage_3(priors="/path/to/priors.pkl")
@@ -119,7 +114,6 @@ def test_to_json(stage_1, stage_2):
         },
         "covariates": "/path/to/covariates.csv",
     }
-    assert "output" not in config
 
 
 def test_to_json_no_input(tmp_path):
@@ -128,8 +122,7 @@ def test_to_json_no_input(tmp_path):
     stage_3.to_json()
     with open(stage_3.directory / (stage_3.name + ".json"), "r") as f:
         config = json.load(f)
-    assert config["input"] is None  # FIXME: wanted to exclude if None
-    assert "output" not in config
+    assert "input" not in config
 
 
 def test_from_json(stage_2):

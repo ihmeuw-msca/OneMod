@@ -26,34 +26,13 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
-    input: Input | dict[str, Path | Data] | None = None  # ???
-    _directory: Path | None = None  # set by Stage.from_json, Pipeline.add_stage
+    _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
+    _input: Input | None = None  # set by Stage.__call__, Stage.from_json
+    _output: set[str] = set()  # name.extension, defined by class
     _required_input: set[str] = set()  # name.extension, defined by class
     _optional_input: set[str] = set()  # name.extension, defined by class
-    _output: set[str] = set()  # name.extension, defined by class
-
-    @computed_field
-    @property
-    def type(self) -> str:
-        return type(self).__name__
-
-    @computed_field
-    @property
-    def module(self) -> str | None:
-        if self._module is None and not hasattr(
-            onemod_stages, self.type
-        ):  # custom stage
-            try:
-                return getfile(self.__class__)
-            except TypeError:
-                raise TypeError(f"Could not find module for {self.name} stage")
-        return self._module
-
-    @module.setter
-    def module(self, module: str | None) -> None:
-        self._module = module
 
     @property
     def directory(self) -> Path:
@@ -67,9 +46,26 @@ class Stage(BaseModel, ABC):
         if not self._directory.exists():
             self._directory.mkdir()
 
+    @computed_field
+    @property
+    def module(self) -> str | None:
+        if self._module is None and not hasattr(
+            onemod_stages, self.type
+        ):  # custom stage
+            try:
+                return getfile(self.__class__)
+            except TypeError:
+                raise TypeError(f"Could not find module for {self.name} stage")
+        return self._module
+
     @property
     def skip_if(self) -> set[str]:
         return self._skip_if
+
+    @computed_field
+    @property
+    def input(self) -> Input | None:
+        return self._input
 
     @cached_property
     def output(self) -> Output:
@@ -83,15 +79,14 @@ class Stage(BaseModel, ABC):
 
     @property
     def dependencies(self) -> set[str]:
+        if self.input is None:
+            return set()
         return self.input.dependencies
 
-    def model_post_init(self, *args, **kwargs) -> None:
-        self.input = Input(
-            stage=self.name,
-            required=self._required_input,
-            optional=self._optional_input,
-            items=self.input or {},
-        )
+    @computed_field
+    @property
+    def type(self) -> str:
+        return type(self).__name__
 
     @classmethod
     def from_json(
@@ -134,7 +129,10 @@ class Stage(BaseModel, ABC):
             directory = Path(filepath).parent
         stage = cls(**config)
         stage.directory = directory
-        stage.module = config.get("module")
+        if "module" in config:
+            stage._module = config["module"]
+        if "input" in config:
+            stage(**config["input"])
         return stage
 
     def to_json(self, filepath: Path | str | None = None) -> None:
@@ -201,6 +199,12 @@ class Stage(BaseModel, ABC):
     @validate_call
     def __call__(self, **input: Path | Data) -> None:
         """Define stage dependencies."""
+        if self.input is None:
+            self._input = Input(
+                stage=self.name,
+                required=self._required_input,
+                optional=self._optional_input,
+            )
         self.input.check_missing({**self.input.items, **input})
         self.input.update(input)
 
