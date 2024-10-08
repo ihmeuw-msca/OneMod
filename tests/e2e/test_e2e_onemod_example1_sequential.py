@@ -13,7 +13,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
     """
     End-to-end test for a the OneMod example1 pipeline.
     """
-    test_input_data_path = Path(test_assets_dir / "e2e" / "example1" / "data" / "input_data.parquet")
+    test_input_data_path = Path(test_assets_dir, "e2e", "example1", "data", "input_data.parquet")
     
     # Define Stages
     preprocessing = PreprocessingStage(
@@ -36,7 +36,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             items=dict(
                 data=Data(
                     stage="1_preprocessing",
-                    path=Path(tmp_path / "data" / "preprocessed_data.parquet"),
+                    path=Path(tmp_path, "data", "preprocessed_data.parquet"),
                     format="parquet"
                 )
             )   
@@ -53,7 +53,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             required=dict(
                 data=Data(
                     stage="2_covariate_selection",
-                    path=Path(tmp_path / "data" / "preprocessed_data.parquet"),
+                    path=Path(tmp_path, "data", "preprocessed_data.parquet"),
                     format="parquet"
                 )
             )
@@ -63,7 +63,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             items=dict(
                 selected_covs=Data(
                     stage="2_covariate_selection",
-                    path=Path(tmp_path / "data" / "selected_covs.parquet"),
+                    path=Path(tmp_path, "data", "selected_covs.parquet"),
                     format="parquet"
                 )
             )
@@ -78,12 +78,12 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             required=dict(
                 data=Data(
                     stage="3_global_model",
-                    path=Path(tmp_path / "data" / "preprocessed_data.parquet"),
+                    path=Path(tmp_path, "data", "preprocessed_data.parquet"),
                     format="parquet"
                 ),
                 selected_covs=Data(
                     stage="3_global_model",
-                    path=Path(tmp_path / "data" / "selected_covs.parquet"),
+                    path=Path(tmp_path, "data", "selected_covs.parquet"),
                     format="parquet"
                 )
             )
@@ -93,7 +93,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             items=dict(
                 predictions=Data(
                     stage="3_global_model",
-                    path=Path(tmp_path / "data" / "global_predictions.parquet"),
+                    path=Path(tmp_path, "data", "global_predictions.parquet"),
                     format="parquet"
                 )
             )
@@ -109,12 +109,12 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             required=dict(
                 data=Data(
                     stage="4_location_model",
-                    path=Path(tmp_path / "data" / "preprocessed_data.parquet"),
+                    path=Path(tmp_path, "data", "preprocessed_data.parquet"),
                     format="parquet"
                 ),
                 offset=Data(
                     stage="4_location_model",
-                    path=Path(tmp_path / "data" / "global_predictions.parquet"),
+                    path=Path(tmp_path, "data", "global_predictions.parquet"),
                     format="parquet"
                 )
             )
@@ -124,7 +124,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             items=dict(
                 predictions=Data(
                     stage="4_location_model",
-                    path=Path(tmp_path / "data" / "location_predictions.parquet"),
+                    path=Path(tmp_path, "data", "location_predictions.parquet"),
                     format="parquet"
                 )
             )
@@ -140,12 +140,12 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             required=dict(
                 data=Data(
                     stage="5_smoothing",
-                    path=Path(tmp_path / "data" / "preprocessed_data.parquet"),
+                    path=Path(tmp_path, "data", "preprocessed_data.parquet"),
                     format="parquet"
                 ),
                 offset=Data(
                     stage="5_smoothing",
-                    path=Path(tmp_path / "data" / "location_predictions.parquet"),
+                    path=Path(tmp_path, "data", "location_predictions.parquet"),
                     format="parquet"
                 )
             )
@@ -155,7 +155,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             items=dict(
                 predictions=Data(
                     stage="5_smoothing",
-                    path=Path(tmp_path / "data" / "smoothed_predictions.parquet"),
+                    path=Path(tmp_path, "data", "smoothed_predictions.parquet"),
                     format="parquet"
                 )
             )
@@ -170,7 +170,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
             mtype="binomial",
         ),
         directory=tmp_path,
-        data=Path(tmp_path / "data" / "data.parquet"),
+        data=Path(tmp_path, "data", "data.parquet"),
         groupby=["sex_id"],
     )
 
@@ -186,7 +186,7 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
     )
 
     # Define dependencies
-    preprocessing(data=Path(tmp_path / "data" / "input_data.parquet"))
+    preprocessing(data=Path(tmp_path, "data", "input_data.parquet"))
     covariate_selection(data=preprocessing.output["data"])
     global_model(
         data=preprocessing.output["data"],

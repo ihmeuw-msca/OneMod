@@ -19,7 +19,7 @@ def sample_stage(tmp_path):
             required=dict(
                 input_data=Data(
                     stage="example_stage",
-                    path=Path(tmp_path / "data.parquet"),
+                    path=Path(tmp_path, "data.parquet"),
                     format="parquet",
                     shape=(1, 2),
                     columns=dict(
@@ -34,7 +34,7 @@ def sample_stage(tmp_path):
             data=dict(
                 output_data=Data(
                     stage="example_stage",
-                    path=Path(tmp_path / "output.parquet"),
+                    path=Path(tmp_path, "output.parquet"),
                     format="parquet",
                     shape=(3, 4),
                     columns=dict(
