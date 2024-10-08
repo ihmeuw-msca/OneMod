@@ -206,7 +206,7 @@ def test_no_dependencies():
     assert test_input.dependencies == set()
 
 
-def test_missing():
+def test_missing_self():
     test_input = get_input()
     with pytest.raises(KeyError) as error:
         test_input.check_missing()
@@ -218,9 +218,30 @@ def test_missing():
     )
 
 
+def test_missing_items():
+    test_input = get_input()
+    with pytest.raises(KeyError) as error:
+        test_input.check_missing(
+            {"priors": Data(stage="second_stage", path="/path/to/model.pkl")}
+        )
+    observed = str(error.value).strip('"')
+    expected = f"{test_input.stage} missing required input: "
+    assert (
+        observed == expected + "['data', 'covariates']"
+        or observed == expected + "['covariates', 'data']"
+    )
+
+
 def test_serialize():
     test_input = get_input(VALID_ITEMS)
-    assert test_input.model_dump() == test_input.items
+    assert test_input.model_dump() == {
+        "data": "/path/to/predictions.parquet",
+        "covariates": {
+            "stage": "first_stage",
+            "path": "/path/to/selected_covs.csv",
+        },
+        "priors": {"stage": "second_stage", "path": "/path/to/model.pkl"},
+    }
     assert get_input().model_dump() is None
 
 
