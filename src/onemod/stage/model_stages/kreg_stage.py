@@ -2,7 +2,7 @@
 
 import fire
 
-from onemod.config.model_config import KregConfig
+from onemod.config import KregConfig
 from onemod.stage import ModelStage
 
 
@@ -16,7 +16,7 @@ class KregStage(ModelStage):
     ) -> None:
         """Run kreg submodel."""
         print(
-            f"running kreg submodel: subset {subset_id}, param set {param_id}"
+            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
         self.fit(subset_id, param_id)
         self.predict(subset_id, param_id)

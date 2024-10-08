@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from onemod.redesign.config import StageConfig
+from onemod.config import StageConfig
 
 
 class PreprocessingConfig(StageConfig):
