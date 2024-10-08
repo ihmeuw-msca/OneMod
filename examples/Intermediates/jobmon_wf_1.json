@@ -56,7 +56,7 @@
         {
           "name": "rover_covsel_stage",
           "template": "rover_covsel",
-          "node_args": {
+          "actual_arguments_aka_node_args": {
             "groupby": "age_group_id",
             "t_threshold": 0.0,
             "rover.cov_exploring": "adult_hiv_death_rate, covid_inf_pc, diabetes_prev_agespec, education_yrs_pc, hiv_mort_rate, LDI_pc, maternal_educ_yrs_pc, mean_BMI, sdi, SEV_scalar__all, smoking_prev, TB_prev, total_covid, u5_hiv_death_rate ",
