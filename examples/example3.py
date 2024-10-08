@@ -1,4 +1,9 @@
-"""Define stages within pipeline definition."""
+"""Define stages within pipeline definition.
+
+I don't think this will currently work, because Pipeline.stages is a
+computed field and not set from init.
+
+"""
 
 from onemod import Pipeline
 from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
