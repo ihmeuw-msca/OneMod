@@ -1,4 +1,9 @@
-"""Define dependencies before adding stages."""
+"""Define dependencies before adding stages.
+
+Calling stage.output["item_name"] won't work unless stage.directory has
+been set!
+
+"""
 
 from onemod import Pipeline
 from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
