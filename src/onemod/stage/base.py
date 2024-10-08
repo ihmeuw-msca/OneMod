@@ -201,8 +201,8 @@ class Stage(BaseModel, ABC):
     @validate_call
     def __call__(self, **input: Path | Data) -> None:
         """Define stage dependencies."""
+        self.input.check_missing({**self.input.items, **input})
         self.input.update(input)
-        self.input.check_missing()
 
     def __repr__(self) -> str:
         return f"{self.type}({self.name})"
