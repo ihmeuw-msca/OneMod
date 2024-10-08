@@ -1,9 +1,12 @@
 import os
 from typing import Generator
 
+from dotenv import load_dotenv
 import pytest
 
 from onemod.validation.error_handling import validation_context, ValidationErrorCollector
+
+load_dotenv()
 
 @pytest.fixture(scope="session")
 def test_assets_dir():

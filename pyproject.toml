@@ -29,6 +29,7 @@ dependencies = [
     "polars",
     "pyarrow",
     "pydantic",
+    "python-dotenv >= 1.0.0",
     "scipy",
     "seaborn",
     "regmod == 0.1.2",
