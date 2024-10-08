@@ -33,9 +33,20 @@ class IO(BaseModel, ABC):
     items: dict[str, Path | Data] = {}
 
     @model_serializer
-    def serialize_io(self) -> dict[str, Path | Data] | None:
+    def serialize_io(self) -> dict[str, str | dict[str, str]] | None:
+        # Simplify output to config files
+        # TODO: Will have to modify for new onemod data types
         if self.items:
-            return self.items
+            input_dict = {}
+            for item_name, item_value in self.items.items():
+                if isinstance(item_value, Path):
+                    input_dict[item_name] = str(item_value)
+                else:
+                    input_dict[item_name] = {
+                        "stage": item_value.stage,
+                        "path": str(item_value.path),
+                    }
+            return input_dict
         return None
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -94,11 +105,14 @@ class Input(IO):
     def clear(self) -> None:
         self.items.clear()
 
-    def check_missing(self) -> None:
+    def check_missing(
+        self, items: dict[str, Path | Data] | None = None
+    ) -> None:
+        items = items or self.items
         missing_items = [
             item_name
             for item in self.required
-            if (item_name := item.split(".")[0]) not in self.items
+            if (item_name := item.split(".")[0]) not in items
         ]
         if missing_items:
             raise KeyError(
