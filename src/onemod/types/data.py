@@ -5,10 +5,10 @@ from polars import Boolean, DataFrame, Int64, Float64, String
 from pydantic import BaseModel
 
 from onemod.constraints import Constraint
-from onemod.io.data_io_handler import DataIOHandler
 from onemod.serializers import deserialize, serialize
 from onemod.types.column_spec import ColumnSpec
 from onemod.types.filepath import FilePath
+from onemod.utils import DataIOHandler
 from onemod.validation.error_handling import ValidationErrorCollector
 
 

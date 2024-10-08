@@ -8,7 +8,7 @@ from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
 from onemod.types import Data
 
 # TODO: should be env var at the least and point to shared dir for test assets
-TEST_CONFIG_DIR = "tests/e2e/assets"
+# TEST_CONFIG_DIR = Path(ENV_VAR_FOR_SHARED_MSCA_ASSETS_DIR / "tests" / "e2e" / "assets")
 
 @pytest.mark.e2e
 def test_e2e_onemod_example1_sequential(tmp_path):
