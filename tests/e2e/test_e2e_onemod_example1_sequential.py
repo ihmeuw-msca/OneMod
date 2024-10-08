@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import pytest
 
 from onemod import Pipeline
@@ -7,26 +8,25 @@ from onemod.io import Input, Output
 from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
 from onemod.types import Data
 
-# TODO: should be env var at the least and point to shared dir for test assets
-# TEST_CONFIG_DIR = Path(ENV_VAR_FOR_SHARED_MSCA_ASSETS_DIR / "tests" / "e2e" / "assets")
-
 @pytest.mark.e2e
-def test_e2e_onemod_example1_sequential(tmp_path):
+def test_e2e_onemod_example1_sequential(test_assets_dir, tmp_path):
     """
     End-to-end test for a the OneMod example1 pipeline.
     """
+    test_input_data_path = Path(test_assets_dir / "e2e" / "example1" / "data" / "input_data.parquet")
+    
     # Define Stages
     preprocessing = PreprocessingStage(
         name="1_preprocessing",
         config=PreprocessingConfig(
-            data=tmp_path / "data" / "input_data.parquet"
+            data=test_input_data_path
         ),
         input=Input(
             stage="1_preprocessing",
             required=dict(
                 data=Data(
                     stage="1_preprocessing",
-                    path=Path(tmp_path / "data" / "input_data.parquet"),
+                    path=test_input_data_path,
                     format="parquet"
                 )
             )
