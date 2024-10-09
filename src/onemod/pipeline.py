@@ -339,6 +339,22 @@ class Pipeline(BaseModel):
         else:
             print(f"Workflow {workflow.workflow_id} finished")
 
+    def run(self, *args, **kwargs) -> None:
+        """Run pipeline."""
+        self.evaluate(method="run", *args, **kwargs)
+
+    def fit(self, *args, **kwargs) -> None:
+        """Fit pipeline model."""
+        self.evaluate(method="fit", *args, **kwargs)
+
+    def predict(self, *args, **kwargs) -> None:
+        """Predict pipeline model."""
+        self.evaluate(method="predict", *args, **kwargs)
+
+    def resume(self) -> None:
+        """Resume pipeline."""
+        raise NotImplementedError()
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.name})"
 
