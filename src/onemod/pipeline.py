@@ -6,9 +6,11 @@ import fire
 import json
 import logging
 from collections import deque
-
+from itertools import product
 from pathlib import Path
+import sys
 
+from jobmon.client.api import Tool
 from pydantic import BaseModel, computed_field
 
 import onemod
@@ -220,7 +222,9 @@ class Pipeline(BaseModel):
 
         return topological_order
 
-    def evaluate(self, method: str = "run", *args, **kwargs) -> None:
+    def evaluate(
+        self, method: str = "run", use_jobmon: bool = False, *args, **kwargs
+    ) -> None:
         """Evaluate pipeline method.
 
         Parameters
@@ -228,51 +232,112 @@ class Pipeline(BaseModel):
         method : str, optional
             Name of method to evaluate. Default is 'run'.
 
-        """
-        try:
-            self.__getattribute__(method)(*args, **kwargs)
-        except AttributeError:
-            raise AttributeError(
-                f"{self.name} does not have a '{method}' method"
-            )
-
-    def run(self) -> None:
-        """Run pipeline.
-
-        Notes
-        -----
-        * These functions will handle workflow creation
-        * Maybe allow subsets of the DAG to be run (e.g., predict for a
-          single location)
-        * TODO: run for selected stages
-        # TODO: run for selected subsets or params
+        TODO: Add options to run subset of stages
+        TODO: Add options to run subset of IDs
 
         """
-        raise NotImplementedError()
+        if use_jobmon:
+            self.evaluate_jobmon(method=method, *args, **kwargs)
+        else:
+            self.evaluate_local(method=method, *args, **kwargs)
 
-    def resume(self) -> None:
-        """Resume pipeline."""
-        raise NotImplementedError()
+    def evaluate_local(self, method: str = "run", *args, **kwargs) -> None:
+        for stage in self.stages.values():
+            if method not in stage._skip_if:
+                subset_ids = getattr(stage, "subset_ids", None)
+                param_ids = getattr(stage, "param_ids", None)
+                if subset_ids is not None or param_ids is not None:
+                    for subset_id, param_id in product(
+                        subset_ids or [None], param_ids or [None]
+                    ):
+                        stage.evaluate(
+                            method=method,
+                            subset_id=subset_id,
+                            param_id=param_id,
+                        )
+                    stage.collect()
+                else:
+                    stage.evaluate(method=method)
 
-    def fit(self) -> None:
-        """Fit pipeline model.
+    def evaluate_jobmon(
+        self,
+        cluster_name: str,
+        resources_yaml: str,
+        method: str = "run",
+        *args,
+        **kwargs,
+    ) -> None:
+        # Create tool
+        tool = Tool(name="example_tool")
+        tool.set_default_cluster_name(cluster_name)
+        tool.set_default_compute_resources_from_yaml(
+            cluster_name, resources_yaml, set_task_templates=True
+        )
 
-        Notes
-        -----
-        * Skip any stage that has 'fit' in `skip_if` attribute
+        # Create tasks
+        tasks = []
+        upstream_tasks = []
+        task_args = {
+            "python": sys.executable,
+            "filepath": self.directory / (self.name + ".json"),
+        }
+        for stage in self.stages.values():
+            if method not in stage._skip_if:
+                node_args = {}
+                if isinstance(stage, GroupedStage) and stage.subset_ids:
+                    node_args["subset_id"] = stage.subset_ids
+                if isinstance(stage, CrossedStage) and stage.param_ids:
+                    node_args["param_id"] = stage.param_ids
 
-        """
-        raise NotImplementedError()
+                task_template = onemod.get_task_template(
+                    tool=tool,
+                    stage_name=stage.name,
+                    method=method,
+                    subsets="subset_id" in node_args,
+                    params="param_id" in node_args,
+                )
 
-    def predict(self) -> None:
-        """Predict pipeline model.
+                if "subset_id" in node_args or "param_id" in node_args:
+                    upstream_tasks = task_template.create_tasks(
+                        name=f"{stage.name}_{method}_task",
+                        upstream_tasks=upstream_tasks,
+                        max_attempts=1,
+                        **{**task_args, **node_args},
+                    )
+                    tasks.extend(upstream_tasks)
 
-        Notes
-        -----
-        * Skip any stage that has 'predict' in `skip_if` attribute
+                    upstream_tasks = [
+                        onemod.get_task_template(
+                            tool=tool, stage_name=stage.name, method="collect"
+                        ).create_task(
+                            name=f"{stage.name}_collect_task",
+                            upstream_tasks=upstream_tasks,
+                            max_attempts=1,
+                            **task_args,
+                        )
+                    ]
+                    tasks.extend(upstream_tasks)
+                else:
+                    upstream_tasks = [
+                        task_template.create_task(
+                            name=f"{stage.name}_{method}_task",
+                            upstream_tasks=upstream_tasks,
+                            max_attempts=1,
+                            **task_args,
+                        )
+                    ]
+                    tasks.extend(upstream_tasks)
 
-        """
-        raise NotImplementedError()
+        # Create and run workflow
+        workflow = tool.create_workflow(name="example_workflow")
+        workflow.add_tasks(tasks)
+        workflow.bind()
+        print(f"workflow_id: {workflow.workflow_id}")
+        status = workflow.run()
+        if status != "D":
+            raise ValueError(f"Workflow {workflow.workflow_id} failed")
+        else:
+            print(f"Workflow {workflow.workflow_id} finished")
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.name})"
