@@ -158,5 +158,9 @@ def evaluate(
         stage.evaluate(method, *args, **kwargs)
 
 
-if __name__ == "__main__":
+def main():
     fire.Fire(evaluate)
+
+
+if __name__ == "__main__":
+    main()
