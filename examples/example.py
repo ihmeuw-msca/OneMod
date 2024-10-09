@@ -1,4 +1,4 @@
-"""Define dependencies after adding stages."""
+"""Example OneMod pipeline."""
 
 from onemod import Pipeline
 from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
@@ -22,8 +22,8 @@ location_model = SpxmodStage(
 smoothing = KregStage(name="5_smoothing", config={}, groupby=["region_id"])
 
 # Create pipeline
-dummy_pipeline = Pipeline(
-    name="dummy_pipeline",
+example_pipeline = Pipeline(
+    name="example_pipeline",
     config={
         "ids": ["age_group_id", "location_id", "sex_id", "year_id"],
         "mtype": "binomial",
@@ -34,7 +34,7 @@ dummy_pipeline = Pipeline(
 )
 
 # Add stages
-dummy_pipeline.add_stages(
+example_pipeline.add_stages(
     [
         preprocessing,
         covariate_selection,
@@ -46,7 +46,7 @@ dummy_pipeline.add_stages(
 
 # Define dependencies
 # Is this where data validation (where possible) should happen? Or in compile?
-preprocessing(data=dummy_pipeline.data)
+preprocessing(data=example_pipeline.data)
 covariate_selection(data=preprocessing.output["data"])
 global_model(
     data=preprocessing.output["data"],
@@ -66,14 +66,14 @@ smoothing(
 # - Pass pipeline directory and config to stages
 # - Create stage subsets and parameter sets
 # - Save pipeline JSON
-dummy_pipeline.compile()
+example_pipeline.compile()
 
 # Run (fit and predict) entire pipeline
-dummy_pipeline.run()
+example_pipeline.run()
 
 # Fit some stages
-dummy_pipeline.fit(stages=["preprocessing", "covariate_selection"])
+example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
 
 # Predict for some locations
 # What's the best syntax for this?
-dummy_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
+example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
