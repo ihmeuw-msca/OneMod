@@ -1,27 +1,38 @@
 """Just something to get my example working."""
 
-from __future__ import annotations
-
 import fire
 import json
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
 from pathlib import Path
+from typing import Literal
 
-from jobmon.client.api import Tool
-from jobmon.client.task_template import TaskTemplate
+from pydantic import validate_call
 
 import onemod.stage as onemod_stages
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
-def load_pipeline(filepath: str) -> Pipeline:
-    return Pipeline.from_json(filepath)
+def load_pipeline(config: str) -> Pipeline:
+    """Load pipeline instance from JSON file.
+
+    Parameters
+    ----------
+    config : Path or str
+        Path to config file.
+
+    Returns
+    -------
+    Pipeline
+        Pipeline instance.
+
+    """
+    return Pipeline.from_json(config)
 
 
 def load_stage(
-    filepath: Path | str,
+    config: Path | str,
     stage_name: str | None = None,
     from_pipeline: bool = False,
 ) -> Stage:
@@ -29,7 +40,7 @@ def load_stage(
 
     Parameters
     ----------
-    filepath : Path or str
+    config : Path or str
         Path to config file.
     stage_name : str or None, optional
         Stage name, required if `from_pipeline` is True.
@@ -44,12 +55,12 @@ def load_stage(
         Stage instance.
 
     """
-    stage_class = get_stage(filepath, stage_name, from_pipeline)
-    return stage_class.from_json(filepath, stage_name, from_pipeline)
+    stage_class = get_stage(config, stage_name, from_pipeline)
+    return stage_class.from_json(config, stage_name, from_pipeline)
 
 
 def get_stage(
-    filepath: Path | str,
+    config: Path | str,
     stage_name: str | None = None,
     from_pipeline: bool = False,
 ) -> Stage:
@@ -57,7 +68,7 @@ def get_stage(
 
     Parameters
     ----------
-    filepath : Path or str
+    config : Path or str
         Path to config file.
     stage_name : str or None, optional
         Stage name, required if `from_pipeline` is True.
@@ -72,20 +83,20 @@ def get_stage(
         Stage class.
 
     """
-    with open(filepath, "r") as f:
-        config = json.load(f)
+    with open(config, "r") as f:
+        config_dict = json.load(f)
     if from_pipeline:
         try:
-            config = config["stages"][stage_name]
+            config_dict = config_dict["stages"][stage_name]
         except KeyError:
             raise AttributeError(
-                f"{config.name} does not have a '{stage_name}' stage"
+                f"{config_dict['name']} does not have a '{stage_name}' stage"
             )
     try:
-        if hasattr(onemod_stages, stage_type := config["type"]):
+        if hasattr(onemod_stages, stage_type := config_dict["type"]):
             return getattr(onemod_stages, stage_type)
         else:  # custom stage
-            module_path = Path(config["module"])
+            module_path = Path(config_dict["module"])
             spec = spec_from_file_location(
                 getmodulename(module_path), module_path
             )
@@ -98,64 +109,40 @@ def get_stage(
         )
 
 
-def get_task_template(
-    tool: Tool,
-    stage_name: str,
-    method: str,
-    subsets: bool = False,
-    params: bool = False,
-) -> TaskTemplate:
-    node_args = []
-    if subsets and method != "collect":
-        node_args.append("subset_id")
-    if params and method != "collect":
-        node_args.append("param_id")
-
-    return tool.get_task_template(
-        template_name=f"{stage_name}_{method}_template",
-        command_template=get_command_template(
-            stage_name, method, subsets, params
-        ),
-        node_args=node_args,
-        task_args=["filepath"],
-        op_args=["python"],
-    )
-
-
-def get_command_template(
-    stage_name: str, method: str, subsets: bool = False, params: bool = False
-) -> str:
-    command_template = (
-        "{python}"
-        f" {__file__}"
-        " --filepath {filepath}"
-        f" --stage_name {stage_name}"
-        f" --method {method}"
-        " --from_pipeline"
-    )
-
-    if subsets and method != "collect":
-        command_template += " --subset_id {subset_id}"
-    if params and method != "collect":
-        command_template += " --param_id {param_id}"
-
-    return command_template
-
-
+@validate_call
 def evaluate(
-    filepath: str,
+    config: Path | str,
     stage_name: str | None = None,
     from_pipeline: bool = False,
-    method: str = "run",
+    method: Literal["run", "fit", "predict", "collect"] = "run",
+    backend: Literal["local", "jobmon"] = "local",
     *args,
     **kwargs,
 ) -> None:
+    """Evaluate pipeline or stage method.
+
+    Parameters
+    ----------
+    config : Path or str
+        Path to config file.
+    stage_name : str or None, optional
+        Stage name, required if `from_pipeline` is True.
+        Default is None.
+    from_pipeline : bool, optional
+        Whether `filepath` is a pipeline or stage config file.
+        Default is False.
+    method : str, optional
+        Name of method to evaluate. Default is 'run'.
+    backend : str, optional
+        Whether to evaluate the method locally or with Jobmon.
+
+    """
     if stage_name is None:
-        pipeline = load_pipeline(filepath)
-        pipeline.evaluate(filepath, method, *args, **kwargs)
+        pipeline = load_pipeline(config)
+        pipeline.evaluate(method, backend, *args, **kwargs)
     else:
-        stage = load_stage(filepath, stage_name, from_pipeline)
-        stage.evaluate(method, *args, **kwargs)
+        stage = load_stage(config, stage_name, from_pipeline)
+        stage.evaluate(method, backend, *args, **kwargs)
 
 
 def main():

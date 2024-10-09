@@ -8,12 +8,12 @@ import logging
 from collections import deque
 from itertools import product
 from pathlib import Path
-import sys
+from typing import Literal
 
-from jobmon.client.api import Tool
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, computed_field, validate_call
 
-import onemod
+import onemod  # load_stage
+from onemod.backend import evaluate_with_jobmon
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
 
@@ -34,7 +34,7 @@ class Pipeline(BaseModel):
     data : Path or None, optional
         Input data used to create data subsets. Required for pipeline or
         stage `groupby` attribute. Default is None.
-    groupby : set[str] or None, optional
+    groupby : set of str or None, optional
         ID names used to create data subsets. Default is None.
 
     """
@@ -63,12 +63,12 @@ class Pipeline(BaseModel):
             self.directory.mkdir(parents=True)
 
     @classmethod
-    def from_json(cls, filepath: Path | str) -> Pipeline:
+    def from_json(cls, config: Path | str) -> Pipeline:
         """Load pipeline from JSON file.
 
         Parameters
         ----------
-        filepath : Path or str
+        config : Path or str
             Path to config file.
 
         Returns
@@ -77,36 +77,35 @@ class Pipeline(BaseModel):
             Pipeline instance.
 
         """
-        with open(filepath, "r") as f:
-            config = json.load(f)
+        with open(config, "r") as f:
+            config_dict = json.load(f)
 
-        stages = config.pop("stages", {})
+        stages = config_dict.pop("stages", {})
 
-        pipeline = cls(**config)
+        pipeline = cls(**config_dict)
 
         if stages:
             pipeline.add_stages(
                 [
-                    onemod.load_stage(filepath, stage, from_pipeline=True)
+                    onemod.load_stage(config, stage, from_pipeline=True)
                     for stage in stages
                 ]
             )
 
         return pipeline
 
-    def to_json(self, filepath: Path | str | None = None) -> None:
+    def to_json(self, config: Path | str | None = None) -> None:
         """Save pipeline as JSON file.
 
         Parameters
         ----------
-        filepath : Path, str, or None, optional
+        config : Path, str, or None, optional
             Where to save config file. If None, file is saved at
             pipeline.directory / (pipeline.name + ".json").
             Default is None.
 
         """
-        filepath = filepath or self.directory / (self.name + ".json")
-        with open(filepath, "w") as f:
+        with open(config or self.directory / (self.name + ".json"), "w") as f:
             f.write(
                 self.model_dump_json(
                     indent=4, exclude_none=True, serialize_as_any=True
@@ -118,7 +117,7 @@ class Pipeline(BaseModel):
 
         Parameters
         ----------
-        stages : list[Stage]
+        stages : list of Stage
             Stages to add to the pipeline.
 
         """
@@ -222,8 +221,13 @@ class Pipeline(BaseModel):
 
         return topological_order
 
+    @validate_call
     def evaluate(
-        self, method: str = "run", use_jobmon: bool = False, *args, **kwargs
+        self,
+        method: Literal["run", "fit", "predict"] = "run",
+        backend: Literal["local", "jobmon"] = "local",
+        *args,
+        **kwargs,
     ) -> None:
         """Evaluate pipeline method.
 
@@ -231,113 +235,32 @@ class Pipeline(BaseModel):
         ----------
         method : str, optional
             Name of method to evaluate. Default is 'run'.
+        backend : str, optional
+            How to evaluate the method. Default is 'local'.
 
         TODO: Add options to run subset of stages
         TODO: Add options to run subset of IDs
 
         """
-        if use_jobmon:
-            self.evaluate_jobmon(method=method, *args, **kwargs)
+        if backend == "jobmon":
+            evaluate_with_jobmon(pipeline=self, method=method, *args, **kwargs)
         else:
-            self.evaluate_local(method=method, *args, **kwargs)
-
-    def evaluate_local(self, method: str = "run", *args, **kwargs) -> None:
-        for stage in self.stages.values():
-            if method not in stage._skip_if:
-                subset_ids = getattr(stage, "subset_ids", None)
-                param_ids = getattr(stage, "param_ids", None)
-                if subset_ids is not None or param_ids is not None:
-                    for subset_id, param_id in product(
-                        subset_ids or [None], param_ids or [None]
-                    ):
-                        stage.evaluate(
-                            method=method,
-                            subset_id=subset_id,
-                            param_id=param_id,
-                        )
-                    stage.collect()
-                else:
-                    stage.evaluate(method=method)
-
-    def evaluate_jobmon(
-        self,
-        cluster_name: str,
-        resources_yaml: str,
-        method: str = "run",
-        *args,
-        **kwargs,
-    ) -> None:
-        # Create tool
-        tool = Tool(name="onemod_tool")
-        tool.set_default_cluster_name(cluster_name)
-        tool.set_default_compute_resources_from_yaml(
-            cluster_name, resources_yaml, set_task_templates=True
-        )
-
-        # Create tasks
-        tasks = []
-        upstream_tasks = []
-        task_args = {
-            "python": sys.executable,
-            "filepath": self.directory / (self.name + ".json"),
-        }
-        for stage in self.stages.values():
-            if method not in stage._skip_if:
-                node_args = {}
-                if isinstance(stage, GroupedStage) and stage.subset_ids:
-                    node_args["subset_id"] = stage.subset_ids
-                if isinstance(stage, CrossedStage) and stage.param_ids:
-                    node_args["param_id"] = stage.param_ids
-
-                task_template = onemod.get_task_template(
-                    tool=tool,
-                    stage_name=stage.name,
-                    method=method,
-                    subsets="subset_id" in node_args,
-                    params="param_id" in node_args,
-                )
-
-                if "subset_id" in node_args or "param_id" in node_args:
-                    upstream_tasks = task_template.create_tasks(
-                        name=f"{stage.name}_{method}_task",
-                        upstream_tasks=upstream_tasks,
-                        max_attempts=1,
-                        **{**task_args, **node_args},
-                    )
-                    tasks.extend(upstream_tasks)
-
-                    upstream_tasks = [
-                        onemod.get_task_template(
-                            tool=tool, stage_name=stage.name, method="collect"
-                        ).create_task(
-                            name=f"{stage.name}_collect_task",
-                            upstream_tasks=upstream_tasks,
-                            max_attempts=1,
-                            **task_args,
-                        )
-                    ]
-                    tasks.extend(upstream_tasks)
-                else:
-                    upstream_tasks = [
-                        task_template.create_task(
-                            name=f"{stage.name}_{method}_task",
-                            upstream_tasks=upstream_tasks,
-                            max_attempts=1,
-                            **task_args,
-                        )
-                    ]
-                    tasks.extend(upstream_tasks)
-
-        # Create and run workflow
-        workflow = tool.create_workflow(name="onemod_workflow")
-        workflow.add_tasks(tasks)
-        workflow.bind()
-        print(f"Starting workflow {workflow.workflow_id}")
-        status = workflow.run()
-        if status != "D":
-            raise ValueError(f"Workflow {workflow.workflow_id} failed")
-        else:
-            print(f"Workflow {workflow.workflow_id} finished")
+            for stage in self.stages.values():
+                if method not in stage._skip_if:
+                    subset_ids = getattr(stage, "subset_ids", None)
+                    param_ids = getattr(stage, "param_ids", None)
+                    if subset_ids is not None or param_ids is not None:
+                        for subset_id, param_id in product(
+                            subset_ids or [None], param_ids or [None]
+                        ):
+                            stage.evaluate(
+                                method=method,
+                                subset_id=subset_id,
+                                param_id=param_id,
+                            )
+                        stage.collect()
+                    else:
+                        stage.evaluate(method=method)
 
     def run(self, *args, **kwargs) -> None:
         """Run pipeline."""
@@ -356,7 +279,7 @@ class Pipeline(BaseModel):
         raise NotImplementedError()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.name})"
+        return f"{type(self).__name__}({self.name}, stages={list(self.stages.values())})"
 
 
 if __name__ == "__main__":

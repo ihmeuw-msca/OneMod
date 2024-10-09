@@ -7,7 +7,7 @@ from abc import ABC
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field, validate_call
@@ -91,7 +91,7 @@ class Stage(BaseModel, ABC):
     @classmethod
     def from_json(
         cls,
-        filepath: Path | str,
+        config: Path | str,
         stage_name: str | None = None,
         from_pipeline: bool = False,
     ) -> Stage:
@@ -99,13 +99,13 @@ class Stage(BaseModel, ABC):
 
         Parameters
         ----------
-        filepath : Path or str
+        config : Path or str
             Path to config file.
         stage_name : str or None, optional
             Stage name, required if `from_pipeline` is True.
             Default is None.
         from_pipeline : bool, optional
-            Whether `filepath` is a pipeline or stage config file.
+            Whether `config` is a pipeline or stage config file.
             Default is False.
 
         Returns
@@ -117,27 +117,27 @@ class Stage(BaseModel, ABC):
         -----
         If `from_pipeline` is True, the stage directory is set to
         pipeline.directory / `stage_name`. Otherwise, the stage
-        directory is set to the parent directory of `filepath`.
+        directory is set to the parent directory of `config`.
 
         """
-        with open(filepath, "r") as f:
-            config = json.load(f)
+        with open(config, "r") as f:
+            config_dict = json.load(f)
         if from_pipeline:
-            directory = Path(config["directory"]) / stage_name
+            directory = Path(config_dict["directory"]) / stage_name
             try:
-                config = config["stages"][stage_name]
+                config_dict = config_dict["stages"][stage_name]
             except KeyError:
                 raise AttributeError(
-                    f"{config.name} does not have a '{stage_name}' stage"
+                    f"{config_dict.name} does not have a '{stage_name}' stage"
                 )
         else:
-            directory = Path(filepath).parent
-        stage = cls(**config)
+            directory = Path(config).parent
+        stage = cls(**config_dict)
         stage.directory = directory
-        if "module" in config:
-            stage._module = config["module"]
-        if "input" in config:
-            stage(**config["input"])
+        if "module" in config_dict:
+            stage._module = config_dict["module"]
+        if "input" in config_dict:
+            stage(**config_dict["input"])
         return stage
 
     def to_json(self, filepath: Path | str | None = None) -> None:
@@ -155,7 +155,13 @@ class Stage(BaseModel, ABC):
         with open(filepath, "w") as f:
             f.write(self.model_dump_json(indent=4, exclude_none=True))
 
-    def evaluate(self, method: str = "run", *args, **kwargs) -> None:
+    @validate_call
+    def evaluate(
+        self,
+        method: Literal["run", "fit", "predict", "collect"] = "run",
+        *args,
+        **kwargs,
+    ) -> None:
         """Evaluate stage method.
 
         Parameters
