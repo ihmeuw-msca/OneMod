@@ -19,7 +19,11 @@ class SpxmodStage(ModelStage):
     _output: set[str] = {"predictions.parquet", "model.pkl"}
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset_id: int | None = None,
+        param_id: int | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         """Run spxmod submodel."""
         print(
@@ -29,7 +33,11 @@ class SpxmodStage(ModelStage):
         self.predict(subset_id, param_id)
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset_id: int | None = None,
+        param_id: int | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         """Fit spxmod submodel."""
         print(
@@ -37,14 +45,18 @@ class SpxmodStage(ModelStage):
         )
 
     def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset_id: int | None = None,
+        param_id: int | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         "Create spxmod submodel predictions."
         print(
             f"predicting for {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
 
-    def collect(self) -> None:
+    def collect(self, *args, **kwargs) -> None:
         """Collect spxmod submodel results."""
         print(f"collecting {self.name} submodel results")
 

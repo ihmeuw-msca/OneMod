@@ -84,15 +84,18 @@ def get_stage(
     try:
         if hasattr(onemod_stages, stage_type := config["type"]):
             return getattr(onemod_stages, stage_type)
+        else:  # custom stage
+            module_path = Path(config["module"])
+            spec = spec_from_file_location(
+                getmodulename(module_path), module_path
+            )
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return getattr(module, stage_type)
     except KeyError:
         raise KeyError(
             "Stage config missing field 'type'; is this a pipeline config file?"
         )
-    module_path = Path(config["module"])  # custom stage
-    spec = spec_from_file_location(getmodulename(module_path), module_path)
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return getattr(module, stage_type)
 
 
 def get_task_template(
@@ -102,6 +105,26 @@ def get_task_template(
     subsets: bool = False,
     params: bool = False,
 ) -> TaskTemplate:
+    node_args = []
+    if subsets and method != "collect":
+        node_args.append("subset_id")
+    if params and method != "collect":
+        node_args.append("param_id")
+
+    return tool.get_task_template(
+        template_name=f"{stage_name}_{method}_template",
+        command_template=get_command_template(
+            stage_name, method, subsets, params
+        ),
+        node_args=node_args,
+        task_args=["filepath"],
+        op_args=["python"],
+    )
+
+
+def get_command_template(
+    stage_name: str, method: str, subsets: bool = False, params: bool = False
+) -> str:
     command_template = (
         "{python}"
         f" {__file__}"
@@ -111,21 +134,12 @@ def get_task_template(
         " --from_pipeline"
     )
 
-    node_args = []
     if subsets and method != "collect":
         command_template += " --subset_id {subset_id}"
-        node_args.append("subset_id")
     if params and method != "collect":
         command_template += " --param_id {param_id}"
-        node_args.append("param_id")
 
-    return tool.get_task_template(
-        template_name=f"{stage_name}_{method}_template",
-        command_template=command_template,
-        node_args=node_args,
-        task_args=["filepath"],
-        op_args=["python"],
-    )
+    return command_template
 
 
 def evaluate(
@@ -137,11 +151,12 @@ def evaluate(
     **kwargs,
 ) -> None:
     if stage_name is None:
-        Pipeline.evaluate(filepath, method, *args, **kwargs)
+        pipeline = load_pipeline(filepath)
+        pipeline.evaluate(filepath, method, *args, **kwargs)
     else:
-        stage_class = get_stage(filepath, stage_name, from_pipeline)
-        stage_class.evaluate(filepath, stage_name, from_pipeline, method)
+        stage = load_stage(filepath, stage_name, from_pipeline)
+        stage.evaluate(method, *args, **kwargs)
 
 
-def main():
+if __name__ == "__main__":
     fire.Fire(evaluate)

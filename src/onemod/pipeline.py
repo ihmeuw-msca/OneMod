@@ -220,26 +220,20 @@ class Pipeline(BaseModel):
 
         return topological_order
 
-    @classmethod
-    def evaluate(
-        cls, filepath: Path | str, method: str = "run", *args, **kwargs
-    ) -> None:
-        """Load pipeline and evaluate method.
+    def evaluate(self, method: str = "run", *args, **kwargs) -> None:
+        """Evaluate pipeline method.
 
         Parameters
         ----------
-        filepath : Path or str
-            Path to config file.
         method : str, optional
             Name of method to evaluate. Default is 'run'.
 
         """
-        pipeline = cls.from_json(filepath)
         try:
-            pipeline.__getattribute__(method)(*args, **kwargs)
+            self.__getattribute__(method)(*args, **kwargs)
         except AttributeError:
             raise AttributeError(
-                f"{pipeline.name} does not have a '{method}' method"
+                f"{self.name} does not have a '{method}' method"
             )
 
     def run(self) -> None:

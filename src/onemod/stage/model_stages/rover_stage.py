@@ -15,7 +15,11 @@ class RoverStage(ModelStage):
     _output: set[str] = {"selected_covs.csv"}
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset_id: int | None = None,
+        param_id: int | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         """Run rover submodel."""
         print(
@@ -24,14 +28,18 @@ class RoverStage(ModelStage):
         self.fit(subset_id, param_id)
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset_id: int | None = None,
+        param_id: int | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         """Fit rover submodel."""
         print(
             f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
 
-    def collect(self) -> None:
+    def collect(self, *args, **kwargs) -> None:
         """Collect rover submodel results."""
         print(f"collecting {self.name} submodel results")
 

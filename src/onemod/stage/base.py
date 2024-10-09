@@ -155,43 +155,25 @@ class Stage(BaseModel, ABC):
         with open(filepath, "w") as f:
             f.write(self.model_dump_json(indent=4, exclude_none=True))
 
-    @classmethod
-    def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str | None = None,
-        from_pipeline: bool = False,
-        method: str = "run",
-        *args,
-        **kwargs,
-    ) -> None:
-        """Load stage and evaluate method.
+    def evaluate(self, method: str = "run", *args, **kwargs) -> None:
+        """Evaluate stage method.
 
         Parameters
         ----------
-        filepath : Path or str
-            Path to config file.
-        stage_name : str or None, optional
-            Stage name, required if `from_pipeline` is True.
-            Default is None.
-        from_pipeline : bool, optional
-            Whether `filepath` is a pipeline or stage config file.
-            Default is False.
         method : str, optional
             Name of method to evaluate. Default is 'run'.
 
         """
-        stage = cls.from_json(filepath, stage_name, from_pipeline)
-        if method in stage.skip_if:
-            raise AttributeError(f"{stage.name} skips the '{method}' method")
+        if method in self.skip_if:
+            raise AttributeError(f"{self.name} skips the '{method}' method")
         try:
-            stage.__getattribute__(method)(*args, **kwargs)
+            self.__getattribute__(method)(*args, **kwargs)
         except AttributeError:
             raise AttributeError(
-                f"{stage.name} does not have a '{method}' method"
+                f"{self.name} does not have a '{method}' method"
             )
 
-    def run(self) -> None:
+    def run(self, *args, **kwargs) -> None:
         """Run stage."""
         raise NotImplementedError()
 
@@ -244,33 +226,11 @@ class GroupedStage(Stage, ABC):
             self.config.data, self.directory / "subsets.csv", subset_id
         )
 
-    @classmethod
-    def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str | None = None,
-        from_pipeline: bool = False,
-        method: str = "run",
-        subset_id: int | None = None,
-        *args,
-        **kwargs,
-    ) -> None:
-        """Load stage and evaluate method."""
-        stage = cls.from_json(filepath, stage_name, from_pipeline)
-        if method in stage.skip_if:
-            raise AttributeError(f"{stage.name} skips the '{method}' method")
-        try:
-            stage.__getattribute__(method)(*args, **kwargs)
-        except AttributeError:
-            raise AttributeError(
-                f"{stage.name} does not have a '{method}' method"
-            )
-
-    def run(self, subset_id: int) -> None:
+    def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run stage submodel."""
         raise NotImplementedError()
 
-    def collect(self) -> None:
+    def collect(self, *args, **kwargs) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError()
 
@@ -308,33 +268,11 @@ class CrossedStage(Stage, ABC):
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
-    @classmethod
-    def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str | None = None,
-        from_pipeline: bool = False,
-        method: str = "run",
-        param_id: int | None = None,
-        *args,
-        **kwargs,
-    ) -> None:
-        """Load stage and evaluate method."""
-        stage = cls.from_json(filepath, stage_name, from_pipeline)
-        if method in stage.skip_if:
-            raise AttributeError(f"{stage.name} skips the '{method}' method")
-        try:
-            stage.__getattribute__(method)(*args, **kwargs)
-        except AttributeError:
-            raise AttributeError(
-                f"{stage.name} does not have a '{method}' method"
-            )
-
-    def run(self, param_id: int) -> None:
+    def run(self, param_id: int, *args, **kwargs) -> None:
         """Run stage submodel."""
         raise NotImplementedError()
 
-    def collect(self) -> None:
+    def collect(self, *args, **kwargs) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError()
 
@@ -352,37 +290,20 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
 
     config: ModelConfig
 
-    @classmethod
-    def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str | None = None,
-        from_pipeline: bool = False,
-        method: str = "run",
-        subset_id: int | None = None,
-        param_id: int | None = None,
-        *args,
-        **kwargs,
+    def run(
+        self, subset_id: int | None, param_id: int | None, *args, **kwargs
     ) -> None:
-        "Load stage and evaluate method."
-        stage = cls.from_json(filepath, stage_name, from_pipeline)
-        if method in stage.skip_if:
-            raise AttributeError(f"{stage.name} skips the '{method}' method")
-        try:
-            stage.__getattribute__(method)(*args, **kwargs)
-        except AttributeError:
-            raise AttributeError(
-                f"{stage.name} does not have a '{method}' method"
-            )
-
-    def run(self, subset_id: int | None, param_id: int | None) -> None:
         """Run stage submodel."""
         raise NotImplementedError()
 
-    def fit(self, subset_id: int | None, param_id: int | None) -> None:
+    def fit(
+        self, subset_id: int | None, param_id: int | None, *args, **kwargs
+    ) -> None:
         """Fit stage submodel."""
         raise NotImplementedError()
 
-    def predict(self, subset_id: int | None, param_id: int | None) -> None:
+    def predict(
+        self, subset_id: int | None, param_id: int | None, *args, **kwargs
+    ) -> None:
         """Predict stage submodel."""
         raise NotImplementedError()

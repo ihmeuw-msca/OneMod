@@ -1,25 +1,27 @@
 """Example OneMod pipeline."""
 
 from onemod import Pipeline
-from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
+from onemod.stage import PreprocessingStage, RoverStage, SpxmodStage, KregStage
+
+from custom_stage import CustomStage
+
+DIRECTORY = "/mnt/team/msca/priv/jira/MSCA-293-onemod-dev/example"
+DATA = "/mnt/team/msca/priv/jira/MSCA-293-onemod-dev/data/small_data.parquet"
 
 # Create stages
 # Where should stages and/or stage instances define input requirements?
-preprocessing = PreprocessingStage(name="1_preprocessing")
-
+preprocessing = PreprocessingStage(name="preprocessing", config={})
 covariate_selection = RoverStage(
-    name="2_covariate_selection",
+    name="covariate_selection",
     config={"cov_exploring": ["cov1", "cov2", "cov3"]},
     groupby=["age_group_id"],
 )
-
-global_model = SpxmodStage(name="3_global_model", config={})
-
+global_model = SpxmodStage(name="global_model", config={})
 location_model = SpxmodStage(
-    name="4_location_model", config={}, groupby=["location_id"]
+    name="location_model", config={}, groupby=["location_id"]
 )
-
-smoothing = KregStage(name="5_smoothing", config={}, groupby=["region_id"])
+smoothing = KregStage(name="smoothing", config={}, groupby=["region_id"])
+custom_stage = CustomStage(name="custom_stage")
 
 # Create pipeline
 example_pipeline = Pipeline(
@@ -28,8 +30,8 @@ example_pipeline = Pipeline(
         "ids": ["age_group_id", "location_id", "sex_id", "year_id"],
         "mtype": "binomial",
     },
-    directory="/path/to/project/directory",
-    data="/path/to/input/data.parquet",
+    directory=DIRECTORY,
+    data=DATA,
     groupby=["sex_id"],
 )
 
@@ -41,6 +43,7 @@ example_pipeline.add_stages(
         global_model,
         location_model,
         smoothing,
+        custom_stage,
     ]
 )
 
@@ -59,6 +62,13 @@ smoothing(
     data=preprocessing.output["data"],
     offset=location_model.output["predictions"],
 )
+custom_stage(
+    observations=preprocessing.output["data"],
+    predictions=smoothing.output["predictions"],
+)
+
+# Save pipeline config
+example_pipeline.to_json()
 
 # Compile pipeline
 # - Validate DAG
@@ -66,14 +76,14 @@ smoothing(
 # - Pass pipeline directory and config to stages
 # - Create stage subsets and parameter sets
 # - Save pipeline JSON
-example_pipeline.compile()
+# example_pipeline.compile()
 
 # Run (fit and predict) entire pipeline
-example_pipeline.run()
+# example_pipeline.run()
 
 # Fit some stages
-example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
+# example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
 
 # Predict for some locations
 # What's the best syntax for this?
-example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
+# example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
