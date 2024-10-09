@@ -106,8 +106,8 @@ def get_task_template(
         "{python}"
         f" {__file__}"
         " --filepath {filepath}"
-        " --stage_name stage_name"
-        " --method method"
+        f" --stage_name {stage_name}"
+        f" --method {method}"
         " --from_pipeline"
     )
 
