@@ -268,7 +268,7 @@ class Pipeline(BaseModel):
         **kwargs,
     ) -> None:
         # Create tool
-        tool = Tool(name="example_tool")
+        tool = Tool(name="onemod_tool")
         tool.set_default_cluster_name(cluster_name)
         tool.set_default_compute_resources_from_yaml(
             cluster_name, resources_yaml, set_task_templates=True
@@ -329,10 +329,10 @@ class Pipeline(BaseModel):
                     tasks.extend(upstream_tasks)
 
         # Create and run workflow
-        workflow = tool.create_workflow(name="example_workflow")
+        workflow = tool.create_workflow(name="onemod_workflow")
         workflow.add_tasks(tasks)
         workflow.bind()
-        print(f"workflow_id: {workflow.workflow_id}")
+        print(f"Starting workflow {workflow.workflow_id}")
         status = workflow.run()
         if status != "D":
             raise ValueError(f"Workflow {workflow.workflow_id} failed")
