@@ -39,30 +39,6 @@
         "age_group_id",
         "sex_id"
     ],
-    "execution": {
-        "tool": "jobmon",
-        "cluster_name": "slurm",
-        "config": "path/to/config",
-        "retry_policy": {
-            "max_retries": 3,
-            "delay_seconds": 300
-        },
-        "stage_settings": {
-            "preprocessing": {
-                "resources": {
-                    "memory": "16GB",
-                    "cpus": 4
-                }
-            },
-            "model_stage": {
-                "resources": {
-                    "memory": "32GB",
-                    "cpus": 8,
-                    "gpus": 1
-                }
-            }
-        }
-    },
     "stages": {
         "preprocessing": {
             "type": "PreprocessingStage",
@@ -184,5 +160,10 @@
                 }
             }
         }
+    },
+    "dependencies": {
+        "covariate_selection": [
+            "preprocessing"
+        ]
     }
 }
