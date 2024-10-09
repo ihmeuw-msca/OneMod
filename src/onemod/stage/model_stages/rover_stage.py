@@ -1,7 +1,5 @@
 """Rover stage."""
 
-import fire
-
 from onemod.config import RoverConfig
 from onemod.stage import ModelStage
 
@@ -42,7 +40,3 @@ class RoverStage(ModelStage):
     def collect(self, *args, **kwargs) -> None:
         """Collect rover submodel results."""
         print(f"collecting {self.name} submodel results")
-
-
-if __name__ == "__main__":
-    fire.Fire(RoverStage.evaluate)

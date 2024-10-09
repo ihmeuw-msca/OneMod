@@ -86,7 +86,9 @@ def run_pipeline(
     print(f"workflow_id: {workflow.workflow_id}")
     status = workflow.run()
     if status != "D":
-        raise ValueError("Workflow {workflow.workflow_id} failed")
+        raise ValueError(f"Workflow {workflow.workflow_id} failed")
+    else:
+        print(f"Workflow {workflow.workflow_id} finished")
 
 
 if __name__ == "__main__":

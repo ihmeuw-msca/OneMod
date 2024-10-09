@@ -1,7 +1,5 @@
 """Spxmod stage."""
 
-import fire
-
 from onemod.config import SpxmodConfig
 from onemod.stage import ModelStage
 
@@ -59,7 +57,3 @@ class SpxmodStage(ModelStage):
     def collect(self, *args, **kwargs) -> None:
         """Collect spxmod submodel results."""
         print(f"collecting {self.name} submodel results")
-
-
-if __name__ == "__main__":
-    fire.Fire(SpxmodStage.evaluate)

@@ -1,7 +1,5 @@
 """Example custom stage."""
 
-import fire
-
 from onemod.config import ModelConfig
 from onemod.stage import ModelStage
 
@@ -47,7 +45,3 @@ class CustomStage(ModelStage):
     def collect(self) -> None:
         """Collect custom submodel results."""
         print(f"collecting {self.name} submodel results")
-
-
-if __name__ == "__main__":
-    fire.Fire(CustomStage.evaluate)
