@@ -44,10 +44,3 @@ github = "https://github.com/ihmeuw-msca/OneMod"
 
 [project.scripts]
 onemod = "onemod.main:main"
-initialize_results = "onemod.actions.data.initialize_results:main"
-collect_results = "onemod.actions.data.collect_results:main"
-delete_results = "onemod.actions.data.delete_results:main"
-rover_covsel_model = "onemod.actions.models.rover_covsel_model:main"
-spxmod_model = "onemod.actions.models.spxmod_model:main"
-weave_model = "onemod.actions.models.weave_model:main"
-ensemble_model = "onemod.actions.models.ensemble_model:main"
