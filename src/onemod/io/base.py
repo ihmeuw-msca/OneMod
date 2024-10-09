@@ -5,11 +5,8 @@ Notes
 * Classes to organize stage input and output
 * Data class is just a placeholder for new onemod data types
 * Input and output treated like a dictionary
-  * Provides validation
-  * We can create subclasses for onemod stages
-  * User can create their own custom subclasses, but they don't need to
-* How can we define serialization to not show data field?
-* Lots of shared methods with Config...
+* Provides validation
+* No need to create stage-specific subclasses
 
 """
 
@@ -17,7 +14,7 @@ from abc import ABC
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, model_serializer, validate_call
 
 from onemod.types import Data
 
@@ -25,11 +22,12 @@ from onemod.types import Data
 class IO(BaseModel, ABC):
     """Stage input/output base class."""
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(frozen=True)
 
     stage: str
-    data: dict[str, Path | Data] = Field(default={}, exclude=True)
+    items: dict[str, Data | Path] = {}
 
+    # TODO: update or remove this. Seems duplicate with kelsey's updates (below)
     @staticmethod
     def deserialize_item(value: dict) -> Any:
         """Helper function to deserialize an individual input/output."""
@@ -37,36 +35,45 @@ class IO(BaseModel, ABC):
             return Data.from_dict(value["data"])
         return value
 
-    def get(self, key: str, default: Any = None) -> Any:
-        if not self.__contains__(key):
-            return default
-        return self.__getitem__(key)
+    @model_serializer
+    def serialize_io(self) -> dict[str, str | dict[str, str]] | None:
+        # Simplify output to config files
+        # TODO: Will have to modify for new onemod data types
+        if self.items:
+            input_dict = {}
+            for item_name, item_value in self.items.items():
+                if isinstance(item_value, Path):
+                    input_dict[item_name] = str(item_value)
+                else:
+                    input_dict[item_name] = {
+                        "stage": item_value.stage,
+                        "path": str(item_value.path),
+                    }
+            return input_dict
+        return None
 
-    def __getitem__(self, key: str) -> Data:
-        if not self.__contains__(key):
-            raise KeyError(f"invalid key: {key}")
-        return self.data[key]
+    def get(self, item_name: str, default: Any = None) -> Any:
+        return self.items.get(item_name, default)
 
-    def __setitem__(self, key: str, value: Data) -> None:
-        self.data[key] = value
+    def __getitem__(self, item_name: str) -> Data | Path:
+        return self.items[item_name]
 
-    def __contains__(self, key: str) -> bool:
-        return key in self.data
+    def __contains__(self, item_name: str) -> bool:
+        return item_name in self.items
 
 
 class Input(IO):
     """Stage input class."""
 
-    required: dict[str, Data] = {}  # defined by class
-    optional: dict[str, Data] = {}  # defined by class
+    required: set[str] = set()  # name.extension, defined by stage class
+    optional: set[str] = set()  # name.extension, defined by stage class
+    _expected_names: set[str]
+    _expected_types: dict[str, str]
 
-    @computed_field
     @property
     def dependencies(self) -> set[str]:
         return set(
-            value.stage
-            for value in self.data.values()
-            if isinstance(value, Data)
+            item.stage for item in self.items.values() if isinstance(item, Data)
         )
         
     @classmethod
@@ -95,35 +102,115 @@ class Input(IO):
             }
         }
 
-    def validate(self) -> None:
-        self._check_missing()
-        self._check_types()
+    def model_post_init(self, *args, **kwargs) -> None:
+        self._expected_names = {
+            item.split(".")[0] for item in {*self.required, *self.optional}
+        }
+        self._expected_types = {}
+        for item in {*self.required, *self.optional}:
+            item_name, item_type = item.split(".")
+            self._expected_types[item_name] = item_type
+        if self.items:
+            for item_name in list(self.items.keys()):
+                if item_name not in self._expected_names:
+                    del self.items[item_name]
+            self._check_cycles()
+            self._check_types()
 
-    def _check_missing(self) -> None:
-        missing_input = [key for key in self.required if key not in self._data]
-        if missing_input:
+    @validate_call
+    def update(self, items: dict[str, Data | Path]) -> None:
+        self._check_cycles(items)
+        self._check_types(items)
+        for item_name, item_value in items.items():
+            if item_name in self._expected_names:
+                self.items[item_name] = item_value
+
+    def remove(self, item: str) -> None:
+        if item in self.items:
+            del self.items[item]
+
+    def clear(self) -> None:
+        self.items.clear()
+
+    def check_missing(
+        self, items: dict[str, Data | Path] | None = None
+    ) -> None:
+        items = items or self.items
+        missing_items = [
+            item_name
+            for item in self.required
+            if (item_name := item.split(".")[0]) not in items
+        ]
+        if missing_items:
             raise KeyError(
-                f"{self.stage} missing required input: {missing_input}"
+                f"{self.stage} missing required input: {missing_items}"
             )
 
-    def _check_types(self) -> None:
-        wrong_types = []
-        for key, value in self._required.items():
-            if not isinstance(self._data[key], value):
-                wrong_types.append(key)
-        for key, value in self._optional.items():
-            if not isinstance(self._data[key], value):
-                wrong_types.append(key)
-        if wrong_types:
-            raise TypeError(
-                f"{self.stage} input has incorrect types: {wrong_types}"
+    def _check_cycles(
+        self, items: dict[str, Data | Path] | None = None
+    ) -> None:
+        cycles = []
+        items = items or self.items
+        for item_name, item_value in items.items():
+            try:
+                self._check_cycle(item_name, item_value)
+            except ValueError:
+                cycles.append(item_name)
+        if cycles:
+            raise ValueError(
+                f"Circular dependencies for {self.stage} input: {cycles}"
             )
+
+    def _check_cycle(self, item_name: str, item_value: Data | Path) -> None:
+        if isinstance(item_value, Data):
+            if item_value.stage == self.stage:
+                raise ValueError(
+                    f"Circular dependency for {self.stage} input: {item_name}"
+                )
+
+    def _check_types(self, items: dict[str, Data | Path] | None = None) -> None:
+        invalid_items = []
+        items = items or self.items
+        for item_name, item_value in items.items():
+            try:
+                self._check_type(item_name, item_value)
+            except TypeError:
+                invalid_items.append(item_name)
+        if invalid_items:
+            raise TypeError(
+                f"Invalid types for {self.stage} input: {invalid_items}"
+            )
+
+    def _check_type(self, item_name: str, item_value: Data | Path) -> None:
+        if item_name in self._expected_types:
+            if isinstance(item_value, Data):
+                item_value = item_value.path
+            if item_value.suffix[1:] != self._expected_types[item_name]:
+                raise TypeError(
+                    f"Invalid type for {self.stage} input: {item_name}"
+                )
+
+    def __getitem__(self, item_name: str) -> Data | Path:
+        if item_name not in self.items:
+            if item_name in self._expected_names:
+                raise ValueError(
+                    f"{self.stage} input '{item_name}' has not been set"
+                )
+            raise KeyError(f"{self.stage} does not contain input '{item_name}'")
+        return self.items[item_name]
+
+    @validate_call
+    def __setitem__(self, item_name: str, item_value: Data | Path) -> None:
+        if item_name in self._expected_names:
+            self._check_cycle(item_name, item_value)
+            self._check_type(item_name, item_value)
+            self.items[item_name] = item_value
 
 
 class Output(IO):
     """Stage output class."""
 
-    data: dict[str, Data] = Field(default={}, exclude=True)
+    items: dict[str, Data] = {}  # defined by stage class
 
     @classmethod
     def from_dict(cls, data_dict: dict) -> 'Output':
@@ -142,3 +229,10 @@ class Output(IO):
                 for key, value in self.data.items()
             }
         }
+
+    def __getitem__(self, item_name: str) -> Data:
+        if item_name not in self.items:
+            raise KeyError(
+                f"{self.stage} does not contain output '{item_name}'"
+            )
+        return self.items[item_name]

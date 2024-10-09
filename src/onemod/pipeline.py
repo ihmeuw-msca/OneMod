@@ -21,26 +21,30 @@ logger = logging.getLogger(__name__)
 
 
 class Pipeline(BaseModel):
-    """
-    Notes
-    -----
-    * `data` is raw input data used to figure out grouped stage subsets
-       when initializing the pipeline; stages will get their data from
-       other stages (with the exception of any preprocessing stages)
-    * `data` is only required if using grouped stages
-    * TODO: Define dependencies between stages
-    * TODO: DAG creation, validation
-    * TODO: Run locally or on Jobmon
+    """Pipeline class.
+
+    Attributes
+    ----------
+    name : str
+        Pipeline name.
+    config : PipelineConfig
+        Pipeline configuration.
+    directory : Path
+        Experiment directory.
+    data : Path or None, optional
+        Input data used to create data subsets. Required for pipeline or
+        stage `groupby` attribute. Default is None.
+    groupby : set[str] or None, optional
+        ID names used to create data subsets. Default is None.
 
     """
 
     name: str
     config: PipelineConfig
-    directory: Path
+    directory: Path  # TODO: replace with DataInterface
     data: Path | None = None
-    groupby: set[str] = set()
+    groupby: set[str] | None = None
     _stages: dict[str, Stage] = {}  # set by Pipeline.add_stage
-    _dependencies: dict[str, list[str]] = {}
 
     @computed_field
     @property
@@ -49,8 +53,8 @@ class Pipeline(BaseModel):
 
     @computed_field
     @property
-    def dependencies(self) -> dict[str, list[str]]:
-        return self._dependencies
+    def dependencies(self) -> dict[str, set[str]]:
+        return {stage.name: stage.dependencies for stage in self._stages}
 
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
@@ -74,7 +78,6 @@ class Pipeline(BaseModel):
         config = deserialize(filepath)
 
         stages = config.pop("stages", {})
-        dependencies = config.pop("dependencies", {})
 
         pipeline = cls(**config)
 
@@ -85,8 +88,7 @@ class Pipeline(BaseModel):
                         filepath, stage, from_pipeline=True
                     )
                     for stage in stages
-                ],
-                dependencies,
+                ]
             )
 
         return pipeline
@@ -105,21 +107,19 @@ class Pipeline(BaseModel):
         filepath = filepath or self.directory / (self.name + ".json")
         serialize(self, filepath)
 
-    def add_stages(
-        self, stages: list[Stage | str], dependencies: dict[str, list[str]] = {}
-    ) -> None:
-        """Add stages and dependencies to pipeline."""
+    def add_stages(self, stages: list[Stage]) -> None:
+        """Add stages to pipeline.
+
+        Parameters
+        ----------
+        stages : list[Stage]
+            Stages to add to the pipeline.
+
+        """
         for stage in stages:
-            self.add_stage(stage, dependencies.get(stage.name, []))
+            self.add_stage(stage)
 
-    def add_stage(self, stage: Stage, dependencies: list[str] = []) -> None:
-        """Add stage and dependencies to pipeline."""
-        self._add_stage(stage)
-        self._dependencies[stage.name] = []
-        if dependencies:
-            self._add_dependencies(stage, dependencies)
-
-    def _add_stage(self, stage: Stage) -> None:
+    def add_stage(self, stage: Stage) -> None:
         """Add stage to pipeline.
 
         Parameters
@@ -144,7 +144,8 @@ class Pipeline(BaseModel):
         if isinstance(stage, GroupedStage):
             if self.data is None:
                 raise AttributeError("data field is required for GroupedStage")
-            stage.groupby.update(self.groupby)
+            if self.groupby is not None:
+                stage.groupby.update(self.groupby)
             stage.create_stage_subsets(self.data)
 
         # Create parameter sets
@@ -153,17 +154,6 @@ class Pipeline(BaseModel):
                 stage.create_stage_params()
 
         self._stages[stage.name] = stage
-
-    def _add_dependencies(self, stage: Stage, dependencies: list[str]) -> None:
-        """Add stage dependencies to pipeline."""
-        if len(dependencies) != len(set(dependencies)):
-            raise ValueError(
-                f"Duplicate dependencies found for stage '{stage.name}'"
-            )
-        for dep in dependencies:
-            if dep not in self.stages:
-                raise ValueError(f"Dependency '{dep}' not found in pipeline.")
-            self._dependencies[stage.name].append(dep)
 
     @classmethod
     def stage_from_json(
@@ -206,24 +196,26 @@ class Pipeline(BaseModel):
             spec.loader.exec_module(module)
             stage_class = getattr(module, stage_type)
         return stage_class.from_json(filepath, name, from_pipeline)
-    
+
+    def build_dag(self) -> dict[str, list[str]]:
+        """Build directed acyclic graph (DAG) from the stages and their dependencies."""
+        # TODO: Placeholder until DAG class is implemented, assuming we need one
+        return self.dependencies
+
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
-        Uses of Kahn's algorithm to find the topological order of the stages.
+        Uses Kahn's algorithm to find the topological order of the stages.
         """
-        # Track in-degrees of all nodes
-        in_degree = {stage: 0 for stage in self._stages}
-
-        # Populate in-degree based on dependencies
-        for stage, dependencies in self._dependencies.items():
-            for dep in dependencies:
+        reverse_graph = {stage: [] for stage in self.dependencies}
+        in_degree = {stage: 0 for stage in self.dependencies}
+        for stage, deps in self.dependencies.items():
+            for dep in deps:
+                reverse_graph[dep].append(stage)
                 in_degree[stage] += 1
 
-        # Use a deque to process nodes with zero in-degree (no dependencies)
         queue = deque([stage for stage, deg in in_degree.items() if deg == 0])
         topological_order = []
-        rec_stack = set()
         visited = set()
 
         while queue:
@@ -231,41 +223,24 @@ class Pipeline(BaseModel):
             topological_order.append(stage)
             visited.add(stage)
 
-            # Reduce the in-degree of dependent stages
-            for dep in self._dependencies.get(stage, []):
-                in_degree[dep] -= 1
-                if in_degree[dep] == 0:
-                    queue.append(dep)
-
-            # Track current processing path for cycle detection
-            rec_stack.add(stage)
-
-            # Detect cycles in dependent stages
-            for dep in self._dependencies.get(stage, []):
-                if dep in rec_stack:
-                    raise ValueError(
-                        f"Cycle detected! The cycle involves: {list(rec_stack)}"
-                    )
-
-            rec_stack.remove(stage)
+            # Reduce the in-degree of downstream stages
+            for downstream_dep in reverse_graph[stage]:
+                in_degree[downstream_dep] -= 1
+                if in_degree[downstream_dep] == 0:
+                    queue.append(downstream_dep)
 
         # If there is a cycle, the topological order will not include all stages
-        if len(topological_order) != len(self._stages):
-            unvisited = set(self._stages) - visited
+        if len(topological_order) != len(self.dependencies):
+            unvisited = set(self.dependencies) - visited
             raise ValueError(
                 f"Cycle detected! Unable to process the following stages: {unvisited}"
             )
 
         return topological_order
 
-    def build_dag(self) -> dict[str, list[str]]:
-        """Build directed acyclic graph (DAG) from the stages and their dependencies."""
-        # TODO: Placeholder until DAG class is implemented, assuming we need one
-        return self._dependencies
-
     def validate_dag(self, collector: ValidationErrorCollector) -> None:
         """Validate that the DAG structure is correct."""
-        for stage, dependencies in self._dependencies.items():
+        for stage, dependencies in self.dependencies.items():
             # Check for undefined dependencies
             for dep in dependencies:
                 if dep not in self._stages:
@@ -281,7 +256,7 @@ class Pipeline(BaseModel):
                 
     def validate_stages(self, collector: ValidationErrorCollector) -> None:
         """Validate that the specified Input, Output types between dependent stages are compatible."""
-        for stage, dependencies in self._dependencies.items():
+        for stage, dependencies in self.dependencies.items():
             # Dependency validation
             for dep in dependencies:
                 # Check if output of upstream dependency is compatible with input of current stage

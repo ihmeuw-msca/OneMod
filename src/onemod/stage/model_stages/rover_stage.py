@@ -11,6 +11,8 @@ class RoverStage(ModelStage):
 
     config: RoverConfig
     _skip_if: set[str] = {"predict"}
+    _required_input: set[str] = {"data.parquet"}
+    _output: set[str] = {"selected_covs.csv"}
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
