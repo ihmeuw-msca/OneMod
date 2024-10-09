@@ -19,26 +19,30 @@ logger = logging.getLogger(__name__)
 
 
 class Pipeline(BaseModel):
-    """
-    Notes
-    -----
-    * `data` is raw input data used to figure out grouped stage subsets
-       when initializing the pipeline; stages will get their data from
-       other stages (with the exception of any preprocessing stages)
-    * `data` is only required if using grouped stages
-    * TODO: Define dependencies between stages
-    * TODO: DAG creation, validation
-    * TODO: Run locally or on Jobmon
+    """Pipeline class.
+
+    Attributes
+    ----------
+    name : str
+        Pipeline name.
+    config : PipelineConfig
+        Pipeline configuration.
+    directory : Path
+        Experiment directory.
+    data : Path or None, optional
+        Input data used to create data subsets. Required for pipeline or
+        stage `groupby` attribute. Default is None.
+    groupby : set[str] or None, optional
+        ID names used to create data subsets. Default is None.
 
     """
 
     name: str
     config: PipelineConfig
-    directory: Path
+    directory: Path  # TODO: replace with DataInterface
     data: Path | None = None
-    groupby: set[str] = set()
+    groupby: set[str] | None = None
     _stages: dict[str, Stage] = {}  # set by Pipeline.add_stage
-    _dependencies: dict[str, list[str]] = {}
 
     @computed_field
     @property
@@ -47,8 +51,8 @@ class Pipeline(BaseModel):
 
     @computed_field
     @property
-    def dependencies(self) -> dict[str, list[str]]:
-        return self._dependencies
+    def dependencies(self) -> dict[str, set[str]]:
+        return {stage.name: stage.dependencies for stage in self._stages}
 
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
@@ -73,7 +77,6 @@ class Pipeline(BaseModel):
             config = json.load(f)
 
         stages = config.pop("stages", {})
-        dependencies = config.pop("dependencies", {})
 
         pipeline = cls(**config)
 
@@ -84,8 +87,7 @@ class Pipeline(BaseModel):
                         filepath, stage, from_pipeline=True
                     )
                     for stage in stages
-                ],
-                dependencies,
+                ]
             )
 
         return pipeline
@@ -109,21 +111,19 @@ class Pipeline(BaseModel):
                 )
             )
 
-    def add_stages(
-        self, stages: list[Stage | str], dependencies: dict[str, list[str]] = {}
-    ) -> None:
-        """Add stages and dependencies to pipeline."""
+    def add_stages(self, stages: list[Stage]) -> None:
+        """Add stages to pipeline.
+
+        Parameters
+        ----------
+        stages : list[Stage]
+            Stages to add to the pipeline.
+
+        """
         for stage in stages:
-            self.add_stage(stage, dependencies.get(stage.name, []))
+            self.add_stage(stage)
 
-    def add_stage(self, stage: Stage, dependencies: list[str] = []) -> None:
-        """Add stage and dependencies to pipeline."""
-        self._add_stage(stage)
-        self._dependencies[stage.name] = []
-        if dependencies:
-            self._add_dependencies(stage, dependencies)
-
-    def _add_stage(self, stage: Stage) -> None:
+    def add_stage(self, stage: Stage) -> None:
         """Add stage to pipeline.
 
         Parameters
@@ -148,7 +148,8 @@ class Pipeline(BaseModel):
         if isinstance(stage, GroupedStage):
             if self.data is None:
                 raise AttributeError("data field is required for GroupedStage")
-            stage.groupby.update(self.groupby)
+            if self.groupby is not None:
+                stage.groupby.update(self.groupby)
             stage.create_stage_subsets(self.data)
 
         # Create parameter sets
@@ -157,17 +158,6 @@ class Pipeline(BaseModel):
                 stage.create_stage_params()
 
         self._stages[stage.name] = stage
-
-    def _add_dependencies(self, stage: Stage, dependencies: list[str]) -> None:
-        """Add stage dependencies to pipeline."""
-        if len(dependencies) != len(set(dependencies)):
-            raise ValueError(
-                f"Duplicate dependencies found for stage '{stage.name}'"
-            )
-        for dep in dependencies:
-            if dep not in self.stages:
-                raise ValueError(f"Dependency '{dep}' not found in pipeline.")
-            self._dependencies[stage.name].append(dep)
 
     @classmethod
     def stage_from_json(
@@ -178,6 +168,8 @@ class Pipeline(BaseModel):
     ) -> Stage:
         """Load stage from JSON file.
 
+        Parameters
+        ----------
         filepath : Path or str
             Path to config file.
         name : str or None, optional
@@ -212,11 +204,11 @@ class Pipeline(BaseModel):
     def build_dag(self) -> dict[str, list[str]]:
         """Build directed acyclic graph (DAG) from the stages and their dependencies."""
         # TODO: Placeholder until DAG class is implemented, assuming we need one
-        return self._dependencies
+        return self.dependencies
 
     def validate_dag(self):
         """Validate that the DAG structure is correct."""
-        for stage, dependencies in self._dependencies.items():
+        for stage, dependencies in self.dependencies.items():
             # Check for undefined dependencies
             for dep in dependencies:
                 if dep not in self._stages:
@@ -239,13 +231,13 @@ class Pipeline(BaseModel):
         Return topologically sorted order of stages, ensuring no cycles.
         Uses Kahn's algorithm to find the topological order of the stages.
         """
-        reverse_graph = {stage: [] for stage in self._dependencies}
-        in_degree = {stage: 0 for stage in self._dependencies}
-        for stage, deps in self._dependencies.items():
+        reverse_graph = {stage: [] for stage in self.dependencies}
+        in_degree = {stage: 0 for stage in self.dependencies}
+        for stage, deps in self.dependencies.items():
             for dep in deps:
                 reverse_graph[dep].append(stage)
                 in_degree[stage] += 1
-        
+
         queue = deque([stage for stage, deg in in_degree.items() if deg == 0])
         topological_order = []
         visited = set()
@@ -262,8 +254,8 @@ class Pipeline(BaseModel):
                     queue.append(downstream_dep)
 
         # If there is a cycle, the topological order will not include all stages
-        if len(topological_order) != len(self._dependencies):
-            unvisited = set(self._dependencies) - visited
+        if len(topological_order) != len(self.dependencies):
+            unvisited = set(self.dependencies) - visited
             raise ValueError(
                 f"Cycle detected! Unable to process the following stages: {unvisited}"
             )

@@ -10,6 +10,13 @@ class SpxmodStage(ModelStage):
     """Spxmod stage."""
 
     config: SpxmodConfig = SpxmodConfig()
+    _required_input: set[str] = {"data.parquet"}
+    _optional_input: set[str] = {
+        "selected_covs.csv",
+        "offset.parquet",
+        "priors.pkl",
+    }
+    _output: set[str] = {"predictions.parquet", "model.pkl"}
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
