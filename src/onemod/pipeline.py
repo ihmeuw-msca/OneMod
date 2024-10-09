@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
+import fire
 import json
 import logging
 from collections import deque
-from importlib.util import module_from_spec, spec_from_file_location
-from inspect import getmodulename
+
 from pathlib import Path
 
 from pydantic import BaseModel, computed_field
 
-import onemod.stage as onemod_stages
+import onemod
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
 
@@ -52,7 +52,9 @@ class Pipeline(BaseModel):
     @computed_field
     @property
     def dependencies(self) -> dict[str, set[str]]:
-        return {stage.name: stage.dependencies for stage in self._stages}
+        return {
+            stage.name: stage.dependencies for stage in self.stages.values()
+        }
 
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
@@ -83,9 +85,7 @@ class Pipeline(BaseModel):
         if stages:
             pipeline.add_stages(
                 [
-                    pipeline.stage_from_json(
-                        filepath, stage, from_pipeline=True
-                    )
+                    onemod.load_stage(filepath, stage, from_pipeline=True)
                     for stage in stages
                 ]
             )
@@ -159,48 +159,6 @@ class Pipeline(BaseModel):
 
         self._stages[stage.name] = stage
 
-    @classmethod
-    def stage_from_json(
-        cls,
-        filepath: Path | str,
-        name: str | None = None,
-        from_pipeline: bool = False,
-    ) -> Stage:
-        """Load stage from JSON file.
-
-        Parameters
-        ----------
-        filepath : Path or str
-            Path to config file.
-        name : str or None, optional
-            Stage name, required if `from_pipeline` is True.
-            Default is None.
-        from_pipeline : bool, optional
-            Whether `filepath` is a pipeline or stage config file.
-            Default is False.
-
-        Returns
-        -------
-        Stage
-            Stage instance.
-
-        """
-        with open(filepath, "r") as f:
-            config = json.load(f)
-        if from_pipeline:
-            config = config["stages"][name]
-        if hasattr(onemod_stages, stage_type := config["type"]):
-            stage_class = getattr(onemod_stages, stage_type)
-        else:  # custom stage
-            module_path = Path(config["module"])
-            spec = spec_from_file_location(
-                getmodulename(module_path), module_path
-            )
-            module = module_from_spec(spec)
-            spec.loader.exec_module(module)
-            stage_class = getattr(module, stage_type)
-        return stage_class.from_json(filepath, name, from_pipeline)
-
     def build_dag(self) -> dict[str, list[str]]:
         """Build directed acyclic graph (DAG) from the stages and their dependencies."""
         # TODO: Placeholder until DAG class is implemented, assuming we need one
@@ -211,7 +169,7 @@ class Pipeline(BaseModel):
         for stage, dependencies in self.dependencies.items():
             # Check for undefined dependencies
             for dep in dependencies:
-                if dep not in self._stages:
+                if dep not in self.stages:
                     raise ValueError(
                         f"Stage '{dep}' is not defined, but '{stage}' depends on it."
                     )
@@ -262,6 +220,28 @@ class Pipeline(BaseModel):
 
         return topological_order
 
+    @classmethod
+    def evaluate(
+        cls, filepath: Path | str, method: str = "run", *args, **kwargs
+    ) -> None:
+        """Load pipeline and evaluate method.
+
+        Parameters
+        ----------
+        filepath : Path or str
+            Path to config file.
+        method : str, optional
+            Name of method to evaluate. Default is 'run'.
+
+        """
+        pipeline = cls.from_json(filepath)
+        try:
+            pipeline.__getattribute__(method)(*args, **kwargs)
+        except AttributeError:
+            raise AttributeError(
+                f"{pipeline.name} does not have a '{method}' method"
+            )
+
     def run(self) -> None:
         """Run pipeline.
 
@@ -302,3 +282,7 @@ class Pipeline(BaseModel):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.name})"
+
+
+if __name__ == "__main__":
+    fire.Fire(Pipeline.evaluate)
