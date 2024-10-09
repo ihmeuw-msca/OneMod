@@ -1,16 +1,16 @@
 {
-  "_comment_0": "Arguments for the generator: Workflwo sortname, actual args for the stages, perhaps wokflwo args or they might be created from the stage args. Might all just be a path to a config file",
+  "_0": "Arguments for the generator: Workflow name, actual args for the stages, perhaps wokflow args or they might be created from the stage args. Might all just be a path to a config file",
   "tool": {
     "name": "OneMod generator"
   },
-  "_comment_1": "The standard task templates are 'included', probably by always emitting in the same file because JSON does not have an include directive.",
-  "_comment_2": "Where to put actual arguments (node_args) in jobmon terms",
+  "_1": "The standard task templates are 'included', probably by always emitting in the same file"
+  "_2": "because JSON does not have an include directive.",
   "task_templates": [
     {
       "name": "rover_covsel",
       "description": "Covariate selection, ToDo: perhaps something workflow specific? path to settings file? some contents of settings file",
-      "_comment_2": "Tool version is not specified, so defaults ot the latest.",
-      "_comment_3": "In general, what to do about versions of objects? This object is really a TTV?",
+      "_2": "Tool version is not specified, so defaults to the latest.",
+      "_3": "In general, what to do about versions of objects? This object is really a TTV?",
       "formal_args": [],
       "formal_arguments_aka_nodes": [
         { "arg_text": "groupby", "dag_type" : "node_arg"},
@@ -24,15 +24,15 @@
 
         { "arg_text": "debug_level", "dag_arg_type": "task_arg"}
       ],
-      "_comment_4": "Entry point or 'python <module>'",
+      "_4": "Entry point or 'python <module>'",
       "command": "rover_covsel -@ToDo -subset_id {subset_id} --param_id {param_id}",
-      "_comment_5": "This version does not read a settings file, maybe not a relevant comment. Do the current rover jobs read from teh settings file?",
+      "_5": "This version does not read a settings file, maybe not a relevant comment. Do the current rover jobs read from the settings file?",
       "max_concurrently_running": 500,
       "chunk_size": 50
     },
     {
       "name": "spxmod",
-      "_comment_5": "Similar to rover_covsel, but with different arguments."
+      "_5": "Similar to rover_covsel, but with different arguments."
     }
   ],
   "workflow": {
@@ -50,12 +50,16 @@
       }
     ],
     "dag": {
-      "_comment_9": "Theis is a list ofTaskTemplateExpansion, i.e. Task with their dag-forming arguments bound",
-      "_comment_10": "In fact task and op arguments are also bound",
+      "_9": "This is a list ofTaskTemplateExpansion, i.e. Task with all their  arguments bound. Type 1.",
+      "_10": "It works for OneMod because the stages are linear and end with a collect task.",
+      "_11": "The downstream TTE is cannot start until all upstreams are done.",
+      "_12": "That dependency is indicated by the pair (<upstream_stage_name>,all).",
+      "_13": "More complex dependencies are definitely not MVP and might always require python.",
+
       "stages": [
         {
           "name": "rover_covsel_stage",
-          "template": "rover_covsel",
+          "task_template": "rover_covsel",
           "actual_arguments_aka_node_args": {
             "groupby": "age_group_id",
             "t_threshold": 0.0,
@@ -69,8 +73,8 @@
         },
         {
           "name": "spxmod_stage",
-          "template": "spxmod",
-          "upstream_stage": "rover_covsel",
+          "task_template": "spxmod",
+          "upstream_stage": "(rover_covsel,all)",
           "node_args": {
             "groupby": "age_group_id",
             "xmodel.lam": 2000,
