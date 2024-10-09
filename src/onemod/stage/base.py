@@ -92,7 +92,7 @@ class Stage(BaseModel, ABC):
     def from_json(
         cls,
         filepath: Path | str,
-        name: str | None = None,
+        stage_name: str | None = None,
         from_pipeline: bool = False,
     ) -> Stage:
         """Load stage from JSON file.
@@ -101,7 +101,7 @@ class Stage(BaseModel, ABC):
         ----------
         filepath : Path or str
             Path to config file.
-        name : str or None, optional
+        stage_name : str or None, optional
             Stage name, required if `from_pipeline` is True.
             Default is None.
         from_pipeline : bool, optional
@@ -116,15 +116,20 @@ class Stage(BaseModel, ABC):
         Notes
         -----
         If `from_pipeline` is True, the stage directory is set to
-        pipeline.directory / `name`. Otherwise, the stage directory is
-        set to the parent directory of `filepath`.
+        pipeline.directory / `stage_name`. Otherwise, the stage
+        directory is set to the parent directory of `filepath`.
 
         """
         with open(filepath, "r") as f:
             config = json.load(f)
         if from_pipeline:
-            directory = Path(config["directory"]) / name
-            config = config["stages"][name]
+            directory = Path(config["directory"]) / stage_name
+            try:
+                config = config["stages"][stage_name]
+            except KeyError:
+                raise AttributeError(
+                    f"{config.name} does not have a '{stage_name}' stage"
+                )
         else:
             directory = Path(filepath).parent
         stage = cls(**config)
@@ -160,7 +165,7 @@ class Stage(BaseModel, ABC):
         *args,
         **kwargs,
     ) -> None:
-        """Evaluate stage method.
+        """Load stage and evaluate method.
 
         Parameters
         ----------
@@ -173,13 +178,7 @@ class Stage(BaseModel, ABC):
             Whether `filepath` is a pipeline or stage config file.
             Default is False.
         method : str, optional
-            Name of stage method to evaluate. Default is 'run'.
-
-        Notes
-        -----
-        This class method is designed to be called from the command
-        line. It creates a stage instance from the config file, then
-        calls the stage method.
+            Name of method to evaluate. Default is 'run'.
 
         """
         stage = cls.from_json(filepath, stage_name, from_pipeline)
@@ -249,17 +248,23 @@ class GroupedStage(Stage, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        stage_name: str,
+        stage_name: str | None = None,
+        from_pipeline: bool = False,
         method: str = "run",
         subset_id: int | None = None,
         *args,
         **kwargs,
     ) -> None:
-        """Evaluate stage method."""
-        stage = cls.from_json(filepath, stage_name)
+        """Load stage and evaluate method."""
+        stage = cls.from_json(filepath, stage_name, from_pipeline)
         if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(subset_id, *args, **kwargs)
+            raise AttributeError(f"{stage.name} skips the '{method}' method")
+        try:
+            stage.__getattribute__(method)(*args, **kwargs)
+        except AttributeError:
+            raise AttributeError(
+                f"{stage.name} does not have a '{method}' method"
+            )
 
     def run(self, subset_id: int) -> None:
         """Run stage submodel."""
@@ -307,17 +312,23 @@ class CrossedStage(Stage, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        stage_name: str,
+        stage_name: str | None = None,
+        from_pipeline: bool = False,
         method: str = "run",
         param_id: int | None = None,
         *args,
         **kwargs,
     ) -> None:
-        """Evaluate stage method."""
-        stage = cls.from_json(filepath, stage_name)
+        """Load stage and evaluate method."""
+        stage = cls.from_json(filepath, stage_name, from_pipeline)
         if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(param_id, *args, **kwargs)
+            raise AttributeError(f"{stage.name} skips the '{method}' method")
+        try:
+            stage.__getattribute__(method)(*args, **kwargs)
+        except AttributeError:
+            raise AttributeError(
+                f"{stage.name} does not have a '{method}' method"
+            )
 
     def run(self, param_id: int) -> None:
         """Run stage submodel."""
@@ -345,18 +356,24 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
     def evaluate(
         cls,
         filepath: Path | str,
-        stage_name: str,
+        stage_name: str | None = None,
+        from_pipeline: bool = False,
         method: str = "run",
         subset_id: int | None = None,
         param_id: int | None = None,
         *args,
         **kwargs,
     ) -> None:
-        "Evaluate stage method."
-        stage = cls.from_json(filepath, stage_name)
+        "Load stage and evaluate method."
+        stage = cls.from_json(filepath, stage_name, from_pipeline)
         if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(subset_id, param_id, *args, **kwargs)
+            raise AttributeError(f"{stage.name} skips the '{method}' method")
+        try:
+            stage.__getattribute__(method)(*args, **kwargs)
+        except AttributeError:
+            raise AttributeError(
+                f"{stage.name} does not have a '{method}' method"
+            )
 
     def run(self, subset_id: int | None, param_id: int | None) -> None:
         """Run stage submodel."""
