@@ -30,9 +30,9 @@ class Stage(BaseModel, ABC):
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
     _input: Input | None = None  # set by Stage.__call__, Stage.from_json
-    _output: set[str] = set()  # name.extension, defined by class
     _required_input: set[str] = set()  # name.extension, defined by class
     _optional_input: set[str] = set()  # name.extension, defined by class
+    _output: set[str] = set()  # name.extension, defined by class
 
     @property
     def directory(self) -> Path:
@@ -197,7 +197,7 @@ class Stage(BaseModel, ABC):
         raise NotImplementedError()
 
     @validate_call
-    def __call__(self, **input: Path | Data) -> None:
+    def __call__(self, **input: Data | Path) -> None:
         """Define stage dependencies."""
         if self.input is None:
             self._input = Input(

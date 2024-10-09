@@ -1,17 +1,9 @@
-"""Test output class.
-
-Notes
------
-Output objects are frozen and don't have a __setitem__ method, but there
-is currently nothing to prevent a user from setting items with
-`output.items[key] = `value`.
-
-"""
+"""Test output class."""
 
 from pathlib import Path
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from onemod.io import Data, Output
 
