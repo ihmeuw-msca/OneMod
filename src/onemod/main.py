@@ -5,7 +5,7 @@ import json
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import validate_call
 
@@ -95,18 +95,37 @@ def get_stage(
     try:
         if hasattr(onemod_stages, stage_type := config_dict["type"]):
             return getattr(onemod_stages, stage_type)
-        else:  # custom stage
-            module_path = Path(config_dict["module"])
-            spec = spec_from_file_location(
-                getmodulename(module_path), module_path
-            )
-            module = module_from_spec(spec)
-            spec.loader.exec_module(module)
-            return getattr(module, stage_type)
+        else:
+            if "module" not in config_dict:
+                raise KeyError(f"Missing module for {stage_type}")
+            return _get_custom_stage(stage_type, config_dict["module"])
     except KeyError:
         raise KeyError(
             "Stage config missing field 'type'; is this a pipeline config file?"
         )
+
+
+def _get_custom_stage(stage_type: str, module: str) -> Stage:
+    """Get custom stage class from JSON file.
+
+    Parameters
+    ----------
+    stage_type : str
+        Name of custom stage class.
+    module : str
+        Path to Python module containing custom stage class definition.
+
+    Returns
+    -------
+    Stage
+        Custom stage class.
+
+    """
+    module_path = Path(module)
+    spec = spec_from_file_location(getmodulename(module_path), module_path)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return getattr(module, stage_type)
 
 
 @validate_call
@@ -126,11 +145,11 @@ def evaluate(
     config : Path or str
         Path to config file.
     stage_name : str or None, optional
-        Stage name, required if `from_pipeline` is True.
+        Name of stage to evaluate. If None, evaluate pipeline.
         Default is None.
     from_pipeline : bool, optional
-        Whether `config` is a pipeline or stage config file.
-        Default is False.
+        Whether `config` is a pipeline or stage config file. Only used
+        if `stage_name` is not None. Default is False.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     backend : str, optional
