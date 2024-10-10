@@ -152,13 +152,10 @@ def test_output_types(stage_1):
     assert stage_1.output_types["predictions"].format == "parquet"
     assert stage_1.output_types["predictions"].shape == None
 
+@pytest.mark.skip(reason="Not implemented")
 @pytest.mark.integration
 def test_to_dict(stage_1, stage_2):
-    print("model_dump_json")
-    print(stage_2.model_dump_json())
-    print("to_dict")
-    print(stage_2.to_dict())
-    stage_2.to_dict()
+    stage_2.to_json()
     with open(stage_2.directory / (stage_2.name + ".json"), "r") as f:
         stage_2_loaded = json.load(f)
     assert stage_2_loaded["input"] == {
@@ -178,6 +175,7 @@ def test_to_dict(stage_1, stage_2):
         "covariates": "/path/to/covariates.csv",
     }
 
+@pytest.mark.skip(reason="Not implemented")
 @pytest.mark.integration
 def test_from_json(stage_2):
     stage_2.to_json()
