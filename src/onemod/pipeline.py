@@ -13,7 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, computed_field, validate_call
 
 from onemod.config import PipelineConfig
-from onemod.stage import CrossedStage, GroupedStage, Stage
+from onemod.stage import Stage, ModelStage
 
 
 logger = logging.getLogger(__name__)
@@ -147,15 +147,16 @@ class Pipeline(BaseModel):
         stage.directory = self.directory / stage.name
 
         # Create data subsets
-        if isinstance(stage, GroupedStage):
-            if self.data is None:
-                raise AttributeError("data field is required for GroupedStage")
+        if isinstance(stage, ModelStage):
             if self.groupby is not None:
                 stage.groupby.update(self.groupby)
-            stage.create_stage_subsets(self.data)
+            if stage.groupby:
+                if self.data is None:
+                    raise AttributeError("data is required for groupby")
+                stage.create_stage_subsets(self.data)
 
         # Create parameter sets
-        if isinstance(stage, CrossedStage):
+        if isinstance(stage, ModelStage):
             if stage.config.crossable_params:
                 stage.create_stage_params()
 
