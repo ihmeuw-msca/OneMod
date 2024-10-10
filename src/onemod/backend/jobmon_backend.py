@@ -11,6 +11,12 @@ try:
 except ImportError:
     pass
 
+from onemod.pipeline import Pipeline
+from onemod.stage import Stage, GroupedStage, CrossedStage, ModelStage
+
+
+Model = Pipeline | GroupedStage | CrossedStage | ModelStage
+
 
 def get_tool(name: str, cluster: str, resources: Path | str) -> Tool:
     """Get tool."""
@@ -35,27 +41,23 @@ def run_workflow(name: str, tool: Tool, tasks: list[Task]) -> None:
 
 def get_tasks(
     tool: Tool,
-    stage: "Stage",
+    stage: Stage,
     method: str,
     task_args: dict[str, str],
     upstream_tasks: list[Task] = [],
 ) -> list[Task]:
     """Get stage tasks."""
     node_args = {}
-    for id_name in ["subset_id", "param_id"]:
-        if hasattr(stage, id_name + "s"):
-            if len(id_vals := getattr(stage, id_name + "s")) > 0:
-                node_args[id_name] = id_vals
+    for node_arg in ["subset_id", "param_id"]:
+        if hasattr(stage, node_arg + "s"):
+            if len(node_vals := getattr(stage, node_arg + "s")) > 0:
+                node_args[node_arg] = node_vals
 
     task_template = get_task_template(
-        tool=tool,
-        stage_name=stage.name,
-        method=method,
-        subsets="subset_id" in node_args,
-        params="param_id" in node_args,
+        tool, stage.name, method, node_args.keys()
     )
 
-    if node_args and method != "collect":
+    if node_args:
         tasks = task_template.create_tasks(
             name=f"{stage.name}_{method}_task",
             upstream_tasks=upstream_tasks,
@@ -77,32 +79,20 @@ def get_tasks(
 
 
 def get_task_template(
-    tool: Tool,
-    stage_name: str,
-    method: str,
-    subsets: bool = False,
-    params: bool = False,
+    tool: Tool, stage_name: str, method: str, node_args: list[str]
 ) -> TaskTemplate:
     """Get stage task template."""
-    node_args = []
-    if subsets and method != "collect":
-        node_args.append("subset_id")
-    if params and method != "collect":
-        node_args.append("param_id")
-
     return tool.get_task_template(
         template_name=f"{stage_name}_{method}_template",
-        command_template=get_command_template(
-            stage_name, method, subsets, params
-        ),
+        command_template=get_command_template(stage_name, method, node_args),
         node_args=node_args,
-        task_args=["config"],
+        task_args=["config", "from_pipeline"],
         op_args=["python"],
     )
 
 
 def get_command_template(
-    stage_name: str, method: str, subsets: bool = False, params: bool = False
+    stage_name: str, method: str, node_args: list[str]
 ) -> str:
     """Get stage command template."""
     command_template = (
@@ -114,99 +104,71 @@ def get_command_template(
         f" --method {method}"
     )
 
-    if subsets and method != "collect":
-        command_template += " --subset_id {subset_id}"
-    if params and method != "collect":
-        command_template += " --param_id {param_id}"
+    for node_arg in node_args:
+        command_template += f" --{node_arg} {{{node_arg}}}"
 
     return command_template
 
 
-def evaluate_pipeline_with_jobmon(
-    pipeline: "Pipeline",
+def evaluate_with_jobmon(
+    model: Model,
     cluster: str,
     resources: Path | str,
     method: Literal["run", "fit", "predict"] = "run",
+    config: Path | str | None = None,
+    from_pipeline: bool = False,
 ) -> None:
-    """Evaluate pipeline with Jobmon.
+    """Evaluate pipeline or stage with Jobmon.
 
     Parameters
-    ----------
-    pipeline : Pipeline
-        Pipeline instance.
+    -----------
+    model : Pipeline or Stage
+        Pipeline or Stage instance, specifically stages with either
+        `groupby` or `crossby` attributes.
     cluster : str
         Cluster name.
     resources : Path or str
         Path to resources yaml file.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
+    config : Path, str or None, optional
+        Path to config file. Only used if `model` is a Stage instance.
+        If None, model.directory / (model.name + ".json") used.
+        Default is None.
+    from_pipeline : bool, optional
+        Whether `config` is a pipeline or stage config file. Only used
+        if `model` is a Stage instance. Default is False.
 
-    # TODO: Optional stage-specific resources
-    # TODO: Optional stage-specific python environments
+    TODO: Optional stage-specific python environments
 
     """
     # Get tool
-    tool = get_tool(pipeline.name, cluster, resources)
+    tool = get_tool(model.name, cluster, resources)
 
     # Create tasks
-    tasks = []
-    upstream_tasks = []
-    task_args = {
-        "python": sys.executable,
-        "config": str(pipeline.directory / (pipeline.name + ".json")),
-    }
-    for stage in pipeline.stages.values():
-        if method not in stage.skip_if:
-            upstream_tasks = get_tasks(
-                tool, stage, method, task_args, upstream_tasks
-            )
-            tasks.extend(upstream_tasks)
+    if isinstance(model, Pipeline):
+        tasks = []
+        upstream_tasks = []
+        task_args = {
+            "python": sys.executable,
+            "config": str(model.directory / (model.name + ".json")),
+            "from_pipeline": True,
+        }
+        task_args["config"] = str(model.directory / (model.name + ".json"))
+        task_args["from_pipeline"] = True
+        for stage in model.stages.values():
+            if method not in stage.skip_if:
+                upstream_tasks = get_tasks(
+                    tool, stage, method, task_args, upstream_tasks
+                )
+                tasks.extend(upstream_tasks)
+    else:
+        task_args = {
+            "python": sys.executable,
+            "config": config or str(model.directory / (model.name + ".json")),
+            "from_pipeline": from_pipeline,
+        }
+        tasks = get_tasks(tool, model, method, task_args)
 
     # Create and run workflow
-    run_workflow(pipeline.name, tool, tasks)
-
-
-def evaluate_stage_with_jobmon(
-    stage: "GroupedStage" | "CrossedStage" | "ModelStage",
-    config: Path | str,
-    from_pipeline: bool,
-    cluster: str,
-    resources: Path | str,
-    method: Literal["run", "fit", "predict"] = "run",
-) -> None:
-    """Evaluate stage with Jobmon.
-
-    stage : Stage
-        Stage instance.
-    config : Path or str
-        Path to config file.
-    from_pipeline : bool
-        Whether `config` is a pipeline or stage config file.
-    cluster : str
-        Cluster name.
-    resources : Path or str
-        Path to resources yaml file.
-    method : str, optional
-        Name of method to evaluate. Default is 'run'.
-
-    # TODO: See if this runs
-    # TODO: Make config and from_pipeline optional?
-    # TODO: Combine with evaluate_pipeline_from_jobmon?
-
-    """
-    if method in stage.skip_if:
-        raise AttributeError(f"{stage.name} skips the '{method}' method")
-    if not hasattr(stage, method):
-        raise AttributeError(f"{stage.name} does not have a '{method}' method")
-
-    # Create tool
-    tool = get_tool(stage.name, cluster, resources)
-
-    # Create tasks
-    if config is None:
-        config = str(stage.directory / (stage.name + "json"))
-    task_args = {"python": sys.executable, "config": config}
-    tasks = get_tasks(tool, stage, method, task_args)
-
-    # Create and run workflow
-    run_workflow(stage.name, tool, tasks)
+    run_workflow(model.name, tool, tasks)

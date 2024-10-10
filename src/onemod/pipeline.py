@@ -12,8 +12,6 @@ from typing import Literal
 
 from pydantic import BaseModel, computed_field, validate_call
 
-import onemod  # load_stage
-from onemod.backend import evaluate_pipeline_with_jobmon
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
 
@@ -86,9 +84,11 @@ class Pipeline(BaseModel):
         pipeline = cls(**config_dict)
 
         if stages:
+            from onemod.main import load_stage
+
             pipeline.add_stages(
                 [
-                    onemod.load_stage(config, stage, from_pipeline=True)
+                    load_stage(config, stage, from_pipeline=True)
                     for stage in stages
                 ]
             )
@@ -244,12 +244,12 @@ class Pipeline(BaseModel):
 
         """
         if backend == "jobmon":
-            evaluate_pipeline_with_jobmon(
-                pipeline=self, method=method, *args, **kwargs
-            )
+            from onemod.backend import evaluate_with_jobmon
+
+            evaluate_with_jobmon(model=self, method=method, *args, **kwargs)
         else:
             for stage in self.stages.values():
-                if method not in stage._skip_if:
+                if method not in stage.skip_if:
                     subset_ids = getattr(stage, "subset_ids", None)
                     param_ids = getattr(stage, "param_ids", None)
                     if subset_ids is not None or param_ids is not None:

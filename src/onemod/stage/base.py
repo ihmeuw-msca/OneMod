@@ -13,7 +13,6 @@ from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field, validate_call
 
 import onemod.stage as onemod_stages
-from onemod.backend import evaluate_stage_with_jobmon
 from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
 from onemod.io import Data, Input, Output
 from onemod.utils.parameters import create_params, get_params
@@ -21,7 +20,12 @@ from onemod.utils.subsets import create_subsets, get_subset
 
 
 class Stage(BaseModel, ABC):
-    """Stage base class."""
+    """Stage base class.
+
+    FIXME: If stage doesn't have fit or predict method, what do we do
+    if Pipeline.fit or Pipeline.predict is called?
+
+    """
 
     model_config = ConfigDict(validate_assignment=True)
 
@@ -188,21 +192,23 @@ class Stage(BaseModel, ABC):
         """
         if method in self.skip_if:
             raise AttributeError(f"{self.name} skips the '{method}' method")
+        if not hasattr(self, method):
+            raise AttributeError(
+                f"{self.name} does not have a '{method}' method"
+            )
         if backend == "jobmon":
-            evaluate_stage_with_jobmon(
-                stage=self,
+            from onemod.backend import evaluate_with_jobmon
+
+            evaluate_with_jobmon(
+                model=self,
                 config=config,
                 from_pipeline=from_pipeline,
                 method=method,
                 *args,
                 **kwargs,
             )
-        try:
-            self.__getattribute__(method)()
-        except AttributeError:
-            raise AttributeError(
-                f"{self.name} does not have a '{method}' method"
-            )
+        else:
+            self.__getattribute__(method)(*args, **kwargs)
 
     def run(self) -> None:
         """Run stage."""
