@@ -159,6 +159,7 @@ class Stage(BaseModel, ABC):
     def evaluate(
         self,
         method: Literal["run", "fit", "predict", "collect"] = "run",
+        backend: Literal["local", "jobmon"] = "local",
         *args,
         **kwargs,
     ) -> None:
@@ -168,10 +169,18 @@ class Stage(BaseModel, ABC):
         ----------
         method : str, optional
             Name of method to evaluate. Default is 'run'.
+        backend : str, optional
+            Whether to evaluate the method locally or with Jobmon.
+
+        # TODO: Decide how to deal with individual stages on Jobmon
+        # Would only want to use Jobmon if running for subset_id, param_id
+        # Would want to run method + collect
 
         """
         if method in self.skip_if:
             raise AttributeError(f"{self.name} skips the '{method}' method")
+        if backend == "jobmon":
+            raise NotImplementedError()
         try:
             self.__getattribute__(method)(*args, **kwargs)
         except AttributeError:

@@ -1,11 +1,15 @@
 """Jobmon functions to run pipelines and stages."""
 
 import sys
+from pathlib import Path
 from typing import Literal
 
-from jobmon.client.api import Tool
-from jobmon.client.task import Task
-from jobmon.client.task_template import TaskTemplate
+try:
+    from jobmon.client.api import Tool
+    from jobmon.client.task import Task
+    from jobmon.client.task_template import TaskTemplate
+except ImportError:
+    pass
 
 from onemod.stage import Stage, GroupedStage, CrossedStage
 
@@ -73,7 +77,7 @@ def get_task_template(
             stage_name, method, subsets, params
         ),
         node_args=node_args,
-        task_args=["filepath"],
+        task_args=["config"],
         op_args=["python"],
     )
 
@@ -84,8 +88,8 @@ def get_command_template(
     """Get stage command template."""
     command_template = (
         "{python}"
-        f" {__file__}"
-        " --filepath {filepath}"
+        f" {Path(__file__).parents[1] / "main.py"}"
+        " --config {config}"
         f" --stage_name {stage_name}"
         f" --method {method}"
         " --from_pipeline"
@@ -128,16 +132,14 @@ def evaluate_with_jobmon(
     # Create tool
     tool = Tool(name="onemod_tool")
     tool.set_default_cluster_name(cluster)
-    tool.set_default_compute_resources_from_yaml(
-        cluster, resources, set_task_templates=True
-    )
+    tool.set_default_compute_resources_from_yaml(cluster, resources)
 
     # Create tasks
     tasks = []
     upstream_tasks = []
     task_args = {
         "python": sys.executable,
-        "filepath": str(pipeline.directory / (pipeline.name + ".json")),
+        "config": str(pipeline.directory / (pipeline.name + ".json")),
     }
     for stage in pipeline.stages.values():
         if method not in stage._skip_if:
