@@ -12,10 +12,7 @@ except ImportError:
     pass
 
 from onemod.pipeline import Pipeline
-from onemod.stage import Stage, GroupedStage, CrossedStage, ModelStage
-
-
-Model = Pipeline | GroupedStage | CrossedStage | ModelStage
+from onemod.stage import ModelStage, Stage
 
 
 def get_tool(name: str, cluster: str, resources: Path | str) -> Tool:
@@ -111,7 +108,7 @@ def get_command_template(
 
 
 def evaluate_with_jobmon(
-    model: Model,
+    model: Pipeline | ModelStage,
     cluster: str,
     resources: Path | str,
     method: Literal["run", "fit", "predict"] = "run",

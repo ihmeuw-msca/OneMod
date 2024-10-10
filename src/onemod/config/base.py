@@ -2,18 +2,18 @@
 
 The configuration classes contain all of the settings needed to run a
 stage (i.e., they don't include settings needed to set up a workflow).
-Settings from PipelineConfig are passed to StageConfig when calling
-Pipeline.add_stage().
+Settings from PipelineConfig are passed to StageConfig.
 
 """
 
+from abc import ABC
 from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 
-class Config(BaseModel):
+class Config(BaseModel, ABC):
     """Base configuration class."""
 
     model_config = ConfigDict(validate_assignment=True)
@@ -67,23 +67,12 @@ class StageConfig(Config):
                 self[key] = value
 
 
-class GroupedConfig(StageConfig):
-    """Grouped stage configuration class."""
+class ModelConfig(StageConfig):
+    """Model stage configuration class."""
 
     data: Path | None = None
-
-
-class CrossedConfig(StageConfig):
-    """Crossed stage configuration class."""
-
     _crossable_params: set[str] = set()  # defined by class
 
     @property
     def crossable_params(self) -> set[str]:
         return self._crossable_params
-
-
-class ModelConfig(GroupedConfig, CrossedConfig):
-    """Model stage configuration class."""
-
-    pass

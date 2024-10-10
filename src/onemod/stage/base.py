@@ -7,25 +7,21 @@ from abc import ABC
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
+import pandas as pd
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field, validate_call
 
 import onemod.stage as onemod_stages
-from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
+from onemod.config import ModelConfig, StageConfig
 from onemod.io import Data, Input, Output
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 
 
 class Stage(BaseModel, ABC):
-    """Stage base class.
-
-    FIXME: If stage doesn't have fit or predict method, what do we do
-    if Pipeline.fit or Pipeline.predict is called?
-
-    """
+    """Stage base class."""
 
     model_config = ConfigDict(validate_assignment=True)
 
@@ -42,7 +38,7 @@ class Stage(BaseModel, ABC):
     @property
     def directory(self) -> Path:
         if self._directory is None:
-            raise ValueError(f"{self.name} directory has not been set")
+            raise AttributeError(f"{self.name} directory has not been set")
         return self._directory
 
     @directory.setter
@@ -124,9 +120,6 @@ class Stage(BaseModel, ABC):
         pipeline.directory / `stage_name`. Otherwise, the stage
         directory is set to the parent directory of `config`.
 
-        # TODO: Need to regenerate subset_ids, param_ids to be able to
-        # run evaluate_stage_with_jobmon
-
         """
         with open(config, "r") as f:
             config_dict = json.load(f)
@@ -184,18 +177,30 @@ class Stage(BaseModel, ABC):
             Whether `config` is a pipeline or stage config file.
             Default is False.
         method : str, optional
-            Name of method to evaluate. Default is 'run'.
+            Name of method to evaluate. If Default is 'run'.
         backend : str, optional
             Whether to evaluate the method locally or with Jobmon.
             Default is 'local'.
 
+        Raises
+        ------
+        AttributeError
+            If `method` in `stage.skip`.
+
+        Notes
+        -----
+        If `method` is not in `skip` but the stage does not have
+        `method`, the stage's `run` method will be evaluated. For
+        example, a data preprocessing stage might implement the `run`
+        method, skip the `predict` method, and evaluate the `run` method
+        when `fit` is called. Alternatively, a plotting stage might
+        implement the `run` method, skip the `fit` method, and evaluate
+        the `run` method when `predict` is called.
+
         """
         if method in self.skip:
             raise AttributeError(f"{self.name} skips the '{method}' method")
-        if not hasattr(self, method):
-            raise AttributeError(
-                f"{self.name} does not have a '{method}' method"
-            )
+        method = method if hasattr(self, method) else "run"
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 
@@ -230,102 +235,66 @@ class Stage(BaseModel, ABC):
         return f"{self.type}({self.name})"
 
 
-class GroupedStage(Stage, ABC):
-    """Grouped stage base class.
+class ModelStage(Stage, ABC):
+    """Model stage base class."""
 
-    Notes
-    -----
-    * Any stage that uses the `groupby` setting
-    * If you don't want to collect submodel results after stage is run,
-      don't implement `collect` method and add 'collect' to `skip`
-
-    """
-
-    config: GroupedConfig
+    config: ModelConfig
     groupby: set[str] = set()
+    crossby: set[str] = set()  # set by Stage.create_stage_params
     _subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
-    _required_input: set[str] = {"data"}
+    _param_ids: set[int] = set()  # set by Stage.create_stage_params
+    _required_input: set[str] = set()  # 'data' required for `groupby`
 
     @property
     def subset_ids(self) -> set[int]:
+        if self.groupby and not self._subset_ids:
+            try:
+                subsets = pd.read_csv(self.directory / "subsets.csv")
+                self._subset_ids = set(subsets["subset_id"])
+            except FileNotFoundError():
+                raise AttributeError(
+                    f"{self.name} data subsets have not been created"
+                )
         return self._subset_ids
+
+    @property
+    def param_ids(self) -> set[int]:
+        if self.crossby and not self._param_ids:
+            try:
+                params = pd.read_csv(self.directory / "parameters.csv")
+                self._params_ids = set(params["param_id"])
+            except FileNotFoundError():
+                raise AttributeError(
+                    f"{self.name} parameter sets have not been created"
+                )
+        return self._param_ids
 
     def create_stage_subsets(self, data: DataFrame) -> None:
         """Create stage data subsets from groupby."""
         subsets = create_subsets(self.groupby, data)
         if subsets is not None:
-            self._subset_ids = list(subsets["subset_id"])
+            self._subset_ids = set(subsets["subset_id"])
             subsets.to_csv(self.directory / "subsets.csv", index=False)
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
         return get_subset(
-            self.config.data, self.directory / "subsets.csv", subset_id
+            self.input["data"], self.directory / "subsets.csv", subset_id
         )
 
-    def run(self, subset_id: int) -> None:
-        """Run stage submodel."""
-        raise NotImplementedError()
-
-    def collect(self) -> None:
-        """Collect stage submodel results."""
-        raise NotImplementedError()
-
-
-class CrossedStage(Stage, ABC):
-    """Crossed stage base class.
-
-    Notes
-    -----
-    * Any stage that uses the `crossby` setting
-    * If you don't want to collect submodel results after stage is run,
-      don't implement `collect` method and add 'collect' to `skip`
-
-    """
-
-    config: CrossedConfig
-    crossby: set[str] = set()  # set by Stage.create_stage_params
-    _param_ids: set[int] = set()  # set by Stage.create_stage_params
-
-    @property
-    def param_ids(self) -> set[int]:
-        return self._param_ids
-
     def create_stage_params(self) -> None:
-        """Create stage parameter sets from crossby."""
+        """Create stage parameter sets from config."""
         params = create_params(self.config)
         if params is not None:
-            self.crossby = params.drop(columns="param_id").columns
-            self._param_ids = list(params["param_id"])
-            params.to_csv(self.directory / "params.csv", index=False)
+            self.crossby = set(params.drop(columns="param_id").columns)
+            self._param_ids = set(params["param_id"])
+            params.to_csv(self.directory / "parameters.csv", index=False)
 
-    def set_params(self, param_id: int) -> Any:
+    def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
         params = get_params(self.directory / "parameters.csv", param_id)
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
-
-    def run(self, param_id: int) -> None:
-        """Run stage submodel."""
-        raise NotImplementedError()
-
-    def collect(self) -> None:
-        """Collect stage submodel results."""
-        raise NotImplementedError()
-
-
-class ModelStage(GroupedStage, CrossedStage, ABC):
-    """Model stage base class.
-
-    Notes
-    -----
-    * Models that don't have any `groupby`/`crossby` settings and/or no
-      `collect` method should be handled differently (e.g., can skip
-      some steps, should save results differently)
-
-    """
-
-    config: ModelConfig
 
     def run(self, subset_id: int | None, param_id: int | None) -> None:
         """Run stage submodel."""
@@ -337,4 +306,8 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
 
     def predict(self, subset_id: int | None, param_id: int | None) -> None:
         """Predict stage submodel."""
+        raise NotImplementedError()
+
+    def collect(self) -> None:
+        """Collect stage submodel results."""
         raise NotImplementedError()
