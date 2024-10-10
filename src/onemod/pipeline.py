@@ -249,7 +249,7 @@ class Pipeline(BaseModel):
             evaluate_with_jobmon(model=self, method=method, *args, **kwargs)
         else:
             for stage in self.stages.values():
-                if method not in stage.skip_if:
+                if method not in stage.skip:
                     subset_ids = getattr(stage, "subset_ids", None)
                     param_ids = getattr(stage, "param_ids", None)
                     if subset_ids is not None or param_ids is not None:

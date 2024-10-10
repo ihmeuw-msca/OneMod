@@ -33,7 +33,7 @@ class Stage(BaseModel, ABC):
     config: StageConfig
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
-    _skip_if: set[str] = set()  # defined by class
+    _skip: set[str] = set()  # defined by class
     _input: Input | None = None  # set by Stage.__call__, Stage.from_json
     _required_input: set[str] = set()  # name.extension, defined by class
     _optional_input: set[str] = set()  # name.extension, defined by class
@@ -64,8 +64,8 @@ class Stage(BaseModel, ABC):
         return self._module
 
     @property
-    def skip_if(self) -> set[str]:
-        return self._skip_if
+    def skip(self) -> set[str]:
+        return self._skip
 
     @computed_field
     @property
@@ -190,7 +190,7 @@ class Stage(BaseModel, ABC):
             Default is 'local'.
 
         """
-        if method in self.skip_if:
+        if method in self.skip:
             raise AttributeError(f"{self.name} skips the '{method}' method")
         if not hasattr(self, method):
             raise AttributeError(
@@ -237,7 +237,7 @@ class GroupedStage(Stage, ABC):
     -----
     * Any stage that uses the `groupby` setting
     * If you don't want to collect submodel results after stage is run,
-      don't implement `collect` method and add 'collect' to `skip_if`
+      don't implement `collect` method and add 'collect' to `skip`
 
     """
 
@@ -279,7 +279,7 @@ class CrossedStage(Stage, ABC):
     -----
     * Any stage that uses the `crossby` setting
     * If you don't want to collect submodel results after stage is run,
-      don't implement `collect` method and add 'collect' to `skip_if`
+      don't implement `collect` method and add 'collect' to `skip`
 
     """
 

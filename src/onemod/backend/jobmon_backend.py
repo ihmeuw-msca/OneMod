@@ -157,7 +157,7 @@ def evaluate_with_jobmon(
         task_args["config"] = str(model.directory / (model.name + ".json"))
         task_args["from_pipeline"] = True
         for stage in model.stages.values():
-            if method not in stage.skip_if:
+            if method not in stage.skip:
                 upstream_tasks = get_tasks(
                     tool, stage, method, task_args, upstream_tasks
                 )
