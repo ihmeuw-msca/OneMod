@@ -1,12 +1,12 @@
-"""Just something to get my example working."""
+"""Run pipeline or stage."""
 
-import fire
 import json
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
+import fire
 from pydantic import validate_call
 
 import onemod.stage as onemod_stages

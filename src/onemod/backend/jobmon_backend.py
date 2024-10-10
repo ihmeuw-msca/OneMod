@@ -45,10 +45,11 @@ def get_tasks(
 ) -> list[Task]:
     """Get stage tasks."""
     node_args = {}
-    for node_arg in ["subset_id", "param_id"]:
-        if hasattr(stage, node_arg + "s"):
-            if len(node_vals := getattr(stage, node_arg + "s")) > 0:
-                node_args[node_arg] = node_vals
+    if isinstance(stage, ModelStage) and method != "collect":
+        for node_arg in ["subset_id", "param_id"]:
+            if hasattr(stage, node_arg + "s"):
+                if len(node_vals := getattr(stage, node_arg + "s")) > 0:
+                    node_args[node_arg] = node_vals
 
     task_template = get_task_template(
         tool, stage.name, method, node_args.keys()
@@ -61,7 +62,6 @@ def get_tasks(
             max_attempts=1,
             **{**task_args, **node_args},
         )
-        tasks.extend(get_tasks(tool, stage, "collect", task_args, tasks))
     else:
         tasks = [
             task_template.create_task(
@@ -71,6 +71,9 @@ def get_tasks(
                 **task_args,
             )
         ]
+
+    if isinstance(stage, ModelStage) and method != "collect":
+        tasks.extend(get_tasks(tool, stage, "collect", task_args, tasks))
 
     return tasks
 
@@ -111,6 +114,7 @@ def evaluate_with_jobmon(
     model: Pipeline | ModelStage,
     cluster: str,
     resources: Path | str,
+    python: Path | str | None = None,
     method: Literal["run", "fit", "predict"] = "run",
     config: Path | str | None = None,
     from_pipeline: bool = False,
@@ -126,6 +130,9 @@ def evaluate_with_jobmon(
         Cluster name.
     resources : Path or str
         Path to resources yaml file.
+    python : Path, str or None, optional
+        Path to python environment. If None, use sys.executable.
+        Default is None.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     config : Path, str or None, optional
@@ -137,6 +144,7 @@ def evaluate_with_jobmon(
         if `model` is a Stage instance. Default is False.
 
     TODO: Optional stage-specific python environments
+    TODO: User-defined max_attempts
 
     """
     # Get tool
@@ -147,12 +155,10 @@ def evaluate_with_jobmon(
         tasks = []
         upstream_tasks = []
         task_args = {
-            "python": sys.executable,
+            "python": python or sys.executable,
             "config": str(model.directory / (model.name + ".json")),
             "from_pipeline": True,
         }
-        task_args["config"] = str(model.directory / (model.name + ".json"))
-        task_args["from_pipeline"] = True
         for stage in model.stages.values():
             if method not in stage.skip:
                 upstream_tasks = get_tasks(

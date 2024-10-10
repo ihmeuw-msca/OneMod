@@ -8,6 +8,7 @@ class PreprocessingStage(Stage):
     """Preprocessing stage."""
 
     config: PreprocessingConfig
+    _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {
         "age_metadata.parquet",
