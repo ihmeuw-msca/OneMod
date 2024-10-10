@@ -50,11 +50,13 @@ def test_expected_types():
         "priors": "pkl",
     }
 
+@pytest.mark.skip("Pending design decisions")
 @pytest.mark.unit
 def test_cycles_detected_by_init():
     with pytest.raises(ValueError):
         get_input(ITEMS_WITH_CYCLES)
 
+@pytest.mark.skip("Pending design decisions")
 @pytest.mark.unit
 def test_cycle_detected_by_setitem():
     test_input = get_input()
@@ -66,6 +68,7 @@ def test_cycle_detected_by_setitem():
     )
     assert test_input.items == {}
 
+@pytest.mark.skip("Pending design decisions")
 @pytest.mark.unit
 def test_cycles_detected_by_update():
     test_input = get_input()

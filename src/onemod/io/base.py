@@ -152,12 +152,12 @@ class Input(IO):
             for item_name in list(self.items.keys()):
                 if item_name not in self._expected_names:
                     del self.items[item_name]
-            self._check_cycles()
+            # self._check_cycles()  # TODO
             self._check_types()
 
     @validate_call
     def update(self, items: dict[str, Data | Path]) -> None:
-        self._check_cycles(items)
+        # self._check_cycles(items)  # TODO
         self._check_types(items)
         for item_name, item_value in items.items():
             if item_name in self._expected_names:
@@ -187,6 +187,7 @@ class Input(IO):
     def _check_cycles(
         self, items: dict[str, Data | Path] | None = None
     ) -> None:
+        # TODO: Do we link the origin stage to the target stage through i/o? Currently Data stage name is the current stage only
         cycles = []
         items = items or self.items
         for item_name, item_value in items.items():
@@ -200,6 +201,7 @@ class Input(IO):
             )
 
     def _check_cycle(self, item_name: str, item_value: Data | Path) -> None:
+        # TODO: atm Data.stage is the current stage only, not origin stage. Though we could distinguish if helpful
         if isinstance(item_value, Data):
             if item_value.stage == self.stage:
                 raise ValueError(

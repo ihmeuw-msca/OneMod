@@ -129,4 +129,4 @@ class Data(BaseModel):
                                  f"Column '{col_name}' must be of type {expected_type.__name__}.", collector)
             
             for constraint in constraints:
-                constraint(data[col_name])
+                constraint.validate(data[col_name])

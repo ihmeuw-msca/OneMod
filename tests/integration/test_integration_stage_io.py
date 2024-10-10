@@ -35,7 +35,7 @@ def stage_2(stage_1):
     )
     return stage_2
 
-
+@pytest.mark.integration
 def test_input(stage_1):
     assert stage_1.input == Input(
         stage=stage_1.name,
@@ -49,6 +49,7 @@ def test_input(stage_1):
     assert stage_1.dependencies == set()
 
 
+@pytest.mark.integration
 def test_output(stage_1):
     assert stage_1.output == Output(
         stage=stage_1.name,
@@ -64,6 +65,7 @@ def test_output(stage_1):
     )
 
 
+@pytest.mark.integration
 def test_input_with_dependency(stage_1, stage_2):
     assert stage_2.input == Input(
         stage=stage_2.name,
@@ -108,7 +110,6 @@ def test_to_json(stage_1, stage_2):
     stage_2.to_json()
     with open(stage_2.directory / (stage_2.name + ".json"), "r") as f:
         config = json.load(f)
-    print(config)
     assert config["input"] == {
         "data": {
             "stage": stage_1.name,

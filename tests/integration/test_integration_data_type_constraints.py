@@ -1,7 +1,7 @@
 from polars import DataFrame
 import pytest
 
-from onemod.constraints import bounds
+from onemod.constraints import Constraint
 from onemod.types import Data
 
 @pytest.mark.integration
@@ -12,7 +12,7 @@ def test_data_with_integer_with_bounds_valid():
         columns=dict(
             age_group_id=dict(
                 type=int,
-                constraints=[bounds(0, 500)]
+                constraints=[Constraint("bounds", ge=0, le=500)]
             ),
             location_id=dict(
                 type=int
@@ -35,7 +35,7 @@ def test_data_with_integer_with_bounds_valid_shape():
         columns=dict(
             age_group_id=dict(
                 type=int,
-                constraints=[bounds(0, 500)]
+                constraints=[Constraint("bounds", ge=0, le=500)]
             ),
             location_id=dict(
                 type=int
@@ -59,7 +59,7 @@ def test_data_with_integer_with_bounds_invalid_shape():
         columns=dict(
             age_group_id=dict(
                 type=int,
-                constraints=[bounds(0, 500)]
+                constraints=[Constraint("bounds", ge=0, le=500)]
             ),
             location_id=dict(
                 type=int
@@ -87,7 +87,7 @@ def test_data_with_constraints_invalid_and_shape_invalid(validation_collector):
         columns=dict(
             age_group_id=dict(
                 type=int,
-                constraints=[bounds(0, 500)]
+                constraints=[Constraint("bounds", ge=0, le=500)]
             ),
             location_id=dict(
                 type=int

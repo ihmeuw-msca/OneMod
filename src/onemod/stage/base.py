@@ -143,7 +143,6 @@ class Stage(BaseModel, ABC):
             config = config["stages"][name]
         else:
             directory = Path(filepath).parent
-        # stage = cls(**config)
         stage = cls(
             name=config["name"],
             type=config["type"],

@@ -1,9 +1,9 @@
 from collections.abc import Collection
-from typing import Any
+from typing import Any, Callable
 
 from polars import Series
 
-def bounds(ge: float = None, le: float = None) -> callable:
+def bounds(ge: float = None, le: float = None) -> Callable[[Series], None]:
     """
     Returns a function that checks if all values in the column are within the specified bounds.
     
@@ -34,7 +34,7 @@ def bounds(ge: float = None, le: float = None) -> callable:
     
     return validate
 
-def is_in(other: Collection[Any]) -> callable:
+def is_in(other: Collection[Any]) -> Callable[[Series], None]:
     """
     Returns a function that checks if all values in the column are within the specified collection.
     
