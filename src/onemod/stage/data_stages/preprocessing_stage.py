@@ -15,6 +15,6 @@ class PreprocessingStage(Stage):
     }
     _output: set[str] = {"data.parquet"}
 
-    def run(self, *args, **kwargs) -> None:
+    def run(self) -> None:
         """Run preprocessing stage."""
         print(f"running {self.name}")

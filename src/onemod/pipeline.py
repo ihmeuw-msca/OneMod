@@ -13,7 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, computed_field, validate_call
 
 import onemod  # load_stage
-from onemod.backend import evaluate_with_jobmon
+from onemod.backend import evaluate_pipeline_with_jobmon
 from onemod.config import PipelineConfig
 from onemod.stage import CrossedStage, GroupedStage, Stage
 
@@ -244,7 +244,9 @@ class Pipeline(BaseModel):
 
         """
         if backend == "jobmon":
-            evaluate_with_jobmon(pipeline=self, method=method, *args, **kwargs)
+            evaluate_pipeline_with_jobmon(
+                pipeline=self, method=method, *args, **kwargs
+            )
         else:
             for stage in self.stages.values():
                 if method not in stage._skip_if:
@@ -263,17 +265,17 @@ class Pipeline(BaseModel):
                     else:
                         stage.evaluate(method=method)
 
-    def run(self, *args, **kwargs) -> None:
+    def run(self) -> None:
         """Run pipeline."""
-        self.evaluate(method="run", *args, **kwargs)
+        self.evaluate(method="run")
 
-    def fit(self, *args, **kwargs) -> None:
+    def fit(self) -> None:
         """Fit pipeline model."""
-        self.evaluate(method="fit", *args, **kwargs)
+        self.evaluate(method="fit")
 
-    def predict(self, *args, **kwargs) -> None:
+    def predict(self) -> None:
         """Predict pipeline model."""
-        self.evaluate(method="predict", *args, **kwargs)
+        self.evaluate(method="predict")
 
     def resume(self) -> None:
         """Resume pipeline."""

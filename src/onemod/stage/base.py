@@ -13,6 +13,7 @@ from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field, validate_call
 
 import onemod.stage as onemod_stages
+from onemod.backend import evaluate_stage_with_jobmon
 from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
 from onemod.io import Data, Input, Output
 from onemod.utils.parameters import create_params, get_params
@@ -119,6 +120,9 @@ class Stage(BaseModel, ABC):
         pipeline.directory / `stage_name`. Otherwise, the stage
         directory is set to the parent directory of `config`.
 
+        # TODO: Need to regenerate subset_ids, param_ids to be able to
+        # run evaluate_stage_with_jobmon
+
         """
         with open(config, "r") as f:
             config_dict = json.load(f)
@@ -158,6 +162,8 @@ class Stage(BaseModel, ABC):
     @validate_call
     def evaluate(
         self,
+        config: Path | str | None = None,
+        from_pipeline: bool = False,
         method: Literal["run", "fit", "predict", "collect"] = "run",
         backend: Literal["local", "jobmon"] = "local",
         *args,
@@ -167,28 +173,38 @@ class Stage(BaseModel, ABC):
 
         Parameters
         ----------
+        config : Path, str, or None, optional
+            Path to config file. Required if `backend` is 'jobmon'.
+            Default is None.
+        from_pipeline : bool, optional
+            Whether `config` is a pipeline or stage config file.
+            Default is False.
         method : str, optional
             Name of method to evaluate. Default is 'run'.
         backend : str, optional
             Whether to evaluate the method locally or with Jobmon.
-
-        # TODO: Decide how to deal with individual stages on Jobmon
-        # Would only want to use Jobmon if running for subset_id, param_id
-        # Would want to run method + collect
+            Default is 'local'.
 
         """
         if method in self.skip_if:
             raise AttributeError(f"{self.name} skips the '{method}' method")
         if backend == "jobmon":
-            raise NotImplementedError()
+            evaluate_stage_with_jobmon(
+                stage=self,
+                config=config,
+                from_pipeline=from_pipeline,
+                method=method,
+                *args,
+                **kwargs,
+            )
         try:
-            self.__getattribute__(method)(*args, **kwargs)
+            self.__getattribute__(method)()
         except AttributeError:
             raise AttributeError(
                 f"{self.name} does not have a '{method}' method"
             )
 
-    def run(self, *args, **kwargs) -> None:
+    def run(self) -> None:
         """Run stage."""
         raise NotImplementedError()
 
@@ -241,11 +257,11 @@ class GroupedStage(Stage, ABC):
             self.config.data, self.directory / "subsets.csv", subset_id
         )
 
-    def run(self, subset_id: int, *args, **kwargs) -> None:
+    def run(self, subset_id: int) -> None:
         """Run stage submodel."""
         raise NotImplementedError()
 
-    def collect(self, *args, **kwargs) -> None:
+    def collect(self) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError()
 
@@ -274,7 +290,7 @@ class CrossedStage(Stage, ABC):
         params = create_params(self.config)
         if params is not None:
             self.crossby = params.drop(columns="param_id").columns
-            self._param_ids = params["param_id"]
+            self._param_ids = list(params["param_id"])
             params.to_csv(self.directory / "params.csv", index=False)
 
     def set_params(self, param_id: int) -> Any:
@@ -283,11 +299,11 @@ class CrossedStage(Stage, ABC):
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
-    def run(self, param_id: int, *args, **kwargs) -> None:
+    def run(self, param_id: int) -> None:
         """Run stage submodel."""
         raise NotImplementedError()
 
-    def collect(self, *args, **kwargs) -> None:
+    def collect(self) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError()
 
@@ -305,20 +321,14 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
 
     config: ModelConfig
 
-    def run(
-        self, subset_id: int | None, param_id: int | None, *args, **kwargs
-    ) -> None:
+    def run(self, subset_id: int | None, param_id: int | None) -> None:
         """Run stage submodel."""
         raise NotImplementedError()
 
-    def fit(
-        self, subset_id: int | None, param_id: int | None, *args, **kwargs
-    ) -> None:
+    def fit(self, subset_id: int | None, param_id: int | None) -> None:
         """Fit stage submodel."""
         raise NotImplementedError()
 
-    def predict(
-        self, subset_id: int | None, param_id: int | None, *args, **kwargs
-    ) -> None:
+    def predict(self, subset_id: int | None, param_id: int | None) -> None:
         """Predict stage submodel."""
         raise NotImplementedError()

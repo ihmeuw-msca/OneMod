@@ -13,11 +13,7 @@ class KregStage(ModelStage):
     _output: set[str] = {"predictions.parquet", "model.pkl"}
 
     def run(
-        self,
-        subset_id: int | None = None,
-        param_id: int | None = None,
-        *args,
-        **kwargs,
+        self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Run kreg submodel."""
         print(
@@ -27,11 +23,7 @@ class KregStage(ModelStage):
         self.predict(subset_id, param_id)
 
     def fit(
-        self,
-        subset_id: int | None = None,
-        param_id: int | None = None,
-        *args,
-        **kwargs,
+        self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Fit kreg submodel."""
         print(
@@ -39,17 +31,13 @@ class KregStage(ModelStage):
         )
 
     def predict(
-        self,
-        subset_id: int | None = None,
-        param_id: int | None = None,
-        *args,
-        **kwargs,
+        self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         "Create kreg submodel predictions."
         print(
             f"predicting for {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
 
-    def collect(self, *args, **kwargs) -> None:
+    def collect(self) -> None:
         """Collect kreg submodel results."""
         print(f"collecting {self.name} submodel results")

@@ -129,12 +129,13 @@ def evaluate(
         Stage name, required if `from_pipeline` is True.
         Default is None.
     from_pipeline : bool, optional
-        Whether `filepath` is a pipeline or stage config file.
+        Whether `config` is a pipeline or stage config file.
         Default is False.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     backend : str, optional
         Whether to evaluate the method locally or with Jobmon.
+        Default is 'local'.
 
     """
     if stage_name is None:
@@ -142,7 +143,7 @@ def evaluate(
         pipeline.evaluate(method, backend, *args, **kwargs)
     else:
         stage = load_stage(config, stage_name, from_pipeline)
-        stage.evaluate(method, backend, *args, **kwargs)
+        stage.evaluate(config, from_pipeline, method, backend, *args, **kwargs)
 
 
 def main():
