@@ -42,7 +42,7 @@ class Data(BaseModel):
                     ]
                 }
                 for col_name, col_spec in data_dict.get("columns", {}).items()
-            }
+            } if data_dict.get("columns") else None
         )
 
     def to_dict(self) -> dict:
@@ -51,14 +51,14 @@ class Data(BaseModel):
             "stage": self.stage,
             "path": str(self.path),
             "format": self.format,
-            "shape": self.shape,
+            "shape": self.shape if self.shape else None,
             "columns": {
                 col_name: {
                     "type": col_spec["type"].__name__,
                     "constraints": [constraint.to_dict() for constraint in col_spec.get("constraints", [])]
                 }
                 for col_name, col_spec in (self.columns or {}).items()
-            }
+            } if self.columns else None
         }
     
     @classmethod
@@ -70,25 +70,6 @@ class Data(BaseModel):
     def to_config(self, config_path: Union[str, Path]) -> None:
         """Save the current Data configuration to a YAML or JSON file."""
         serialize(self, config_path)
-
-    # @classmethod
-    # def use_validation(
-    #     cls,
-    #     columns: Optional[Dict[str, ColumnSpec]] = None,
-    #     shape: Optional[tuple[int, int]] = None
-    # ) -> 'Data':
-    #     """Specify validation for shape, column types and column constraints."""
-    #     return cls(columns=columns, shape=shape)
-
-    # @classmethod
-    # def with_columns(cls, columns: Dict[str, ColumnSpec]) -> 'Data':
-    #     """Specify expected columns and their types."""
-    #     return cls(columns=columns)
-    
-    # @classmethod
-    # def with_shape(cls, rows: int, cols: int) -> 'Data':
-    #     """Specify the expected shape of the DataFrame (rows, columns)."""
-    #     return cls(shape=(rows, cols))
     
     def validate_metadata(self, collector: ValidationErrorCollector | None = None) -> None:
         """One-time validation for instance metadata."""
@@ -117,7 +98,10 @@ class Data(BaseModel):
     def validate_data(self, data: DataFrame | None, collector: ValidationErrorCollector | None = None) -> None:
         """Validate the columns and shape of the data."""
         if data is None:
-            data = DataIOHandler.read_data(self.path)
+            try:
+                data = DataIOHandler.read_data(self.path)
+            except Exception as e:
+                handle_error(self.stage, "Data validation", e.__class__, str(e), collector)
         
         if self.shape:
             self.validate_shape(data, collector)

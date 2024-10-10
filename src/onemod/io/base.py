@@ -3,7 +3,6 @@
 Notes
 -----
 * Classes to organize stage input and output
-* Data class is just a placeholder for new onemod data types
 * Input and output treated like a dictionary
 * Provides validation
 * No need to create stage-specific subclasses
@@ -12,11 +11,12 @@ Notes
 
 from abc import ABC
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, model_serializer, validate_call
 
 from onemod.types import Data
+from onemod.validation.error_handling import ValidationErrorCollector
 
 
 class IO(BaseModel, ABC):
@@ -26,31 +26,69 @@ class IO(BaseModel, ABC):
 
     stage: str
     items: dict[str, Data | Path] = {}
+    validation_schemas: Optional[Dict[str, Data]] = None
 
-    # TODO: update or remove this. Seems duplicate with kelsey's updates (below)
     @staticmethod
     def deserialize_item(value: dict) -> Any:
         """Helper function to deserialize an individual input/output."""
         if isinstance(value, dict) and value.get("type") == "Data":
-            return Data.from_dict(value["data"])
+            return Data.from_dict(value["items"])
         return value
 
     @model_serializer
     def serialize_io(self) -> dict[str, str | dict[str, str]] | None:
         # Simplify output to config files
-        # TODO: Will have to modify for new onemod data types
         if self.items:
             input_dict = {}
             for item_name, item_value in self.items.items():
                 if isinstance(item_value, Path):
                     input_dict[item_name] = str(item_value)
-                else:
-                    input_dict[item_name] = {
-                        "stage": item_value.stage,
-                        "path": str(item_value.path),
-                    }
+                elif isinstance(item_value, Data):
+                    input_dict[item_name] = item_value.to_dict()
             return input_dict
         return None
+    
+    def add_validation(self, item_name: str, schema: Data):
+        if self.validation_schemas is None:
+            self.validation_schemas = {}
+        self.validation_schemas[item_name] = schema
+
+    def get_validation(self, item_name: str) -> Optional[Data]:
+        if self.validation_schemas:
+            return self.validation_schemas.get(item_name)
+        return None
+
+    def remove_validation(self, item_name: str):
+        if self.validation_schemas and item_name in self.validation_schemas:
+            del self.validation_schemas[item_name]
+
+    def validate(self, collector: ValidationErrorCollector):
+        """Validate all items using their schemas."""
+        if not self.validation_schemas:
+            return  # No validation to perform
+
+        for item_name, schema in self.validation_schemas.items():
+            item = self.items.get(item_name)
+            if not item:
+                collector.add_error(
+                    self.stage,
+                    f"Expected item '{item_name}' not found in {type(self).__name__}."
+                )
+                continue
+
+            if isinstance(item, Path) and isinstance(self, Input):
+                # Create a Data instance using the schema and path
+                data_instance = schema.model_copy(update={'path': item})
+            elif isinstance(item, Data):
+                data_instance = item
+            else:
+                collector.add_error(
+                    self.stage,
+                    f"Invalid item type for '{item_name}' in {type(self).__name__}."
+                )
+                continue
+
+            data_instance.validate_data(collector)
 
     def get(self, item_name: str, default: Any = None) -> Any:
         return self.items.get(item_name, default)
@@ -81,11 +119,11 @@ class Input(IO):
         """Reconstruct an Input object from a dictionary."""
         required = {
             key: cls.deserialize_item(value)
-            for key, value in data_dict.get("required", {}).items()
+            for key, value in data_dict.get("required", {})
         }
         optional = {
             key: cls.deserialize_item(value)
-            for key, value in data_dict.get("optional", {}).items()
+            for key, value in data_dict.get("optional", {})
         }
         return cls(required=required, optional=optional)
 
@@ -94,11 +132,11 @@ class Input(IO):
         return {
             "required": {
                 key: value.to_dict() if isinstance(value, Data) else value
-                for key, value in self.required.items()
+                for key, value in self.required
             },
             "optional": {
                 key: value.to_dict() if isinstance(value, Data) else value
-                for key, value in self.optional.items()
+                for key, value in self.optional
             }
         }
 
@@ -211,22 +249,39 @@ class Output(IO):
     """Stage output class."""
 
     items: dict[str, Data] = {}  # defined by stage class
+    _expected_names: set[str]
+
+    def model_post_init(self, *args, **kwargs) -> None:
+        self._expected_names = {
+            item.split(".")[0] for item in self.items.keys()
+        }
+        self._expected_types = {}
+        if self.items:
+            for item_name in list(self.items.keys()):
+                if item_name not in self._expected_names:
+                    del self.items[item_name]
+    
+    @validate_call
+    def update(self, items: dict[str, Data | Path]) -> None:
+        for item_name, item_value in items.items():
+            if item_name in self._expected_names:
+                self.items[item_name] = item_value
 
     @classmethod
     def from_dict(cls, data_dict: dict) -> 'Output':
         """Reconstruct an Output object from a dictionary."""
-        data = {
+        items = {
             key: cls.deserialize_item(value)
-            for key, value in data_dict.get("data", {}).items()
+            for key, value in data_dict.get("items", {}).items()
         }
-        return cls(data=data)
+        return cls(items=items)
 
     def to_dict(self) -> dict:
         """Convert Output to a dictionary."""
         return {
-            "data": {
+            "items": {
                 key: value.to_dict() if isinstance(value, Data) else value
-                for key, value in self.data.items()
+                for key, value in self.items.items()
             }
         }
 

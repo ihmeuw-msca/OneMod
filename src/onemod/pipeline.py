@@ -7,9 +7,11 @@ import logging
 from collections import deque
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
+from itertools import product
 from pathlib import Path
+from typing import Literal
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, computed_field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import PipelineConfig
@@ -54,7 +56,7 @@ class Pipeline(BaseModel):
     @computed_field
     @property
     def dependencies(self) -> dict[str, set[str]]:
-        return {stage.name: stage.dependencies for stage in self._stages}
+        return {stage.name: stage.dependencies for stage in self.stages.values()}
 
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
@@ -298,7 +300,6 @@ class Pipeline(BaseModel):
         pipeline_dict = {
             "name": self.name,
             "directory": str(self.directory),
-            # "config": self.config.to_dict(), # for instance
             "ids": self.config.ids,
             "obs": self.config.obs,
             "pred": self.config.pred,
@@ -309,7 +310,6 @@ class Pipeline(BaseModel):
             "groupby": self.groupby or [],
             "stages": {},
             "dependencies": {},
-            # "execution": {}  # TODO: execution-related metadata
         }
 
         for stage_name, stage in self._stages.items():
@@ -317,15 +317,8 @@ class Pipeline(BaseModel):
 
         pipeline_dict["dependencies"] = {
             stage_name: dependencies
-            for stage_name, dependencies in self._dependencies.items()
+            for stage_name, dependencies in self.dependencies.items()
         }
-
-        # Placeholder for execution-related metadata (orchestration tool, cluster settings)
-        # pipeline_dict["execution"] = {
-        #     "tool": "sequential",  # Placeholder for orchestration tool
-        #     "cluster_name": None,  # Placeholder for cluster name
-        #     "config": {}  # Placeholder for orchestration configurations
-        # }
 
         return pipeline_dict
     
@@ -333,64 +326,61 @@ class Pipeline(BaseModel):
         """Save pipeline to file."""
         serialize(self.build(), filepath)
 
-    def run(
+    @validate_call
+    def evaluate(
         self,
-        tool: str = "jobmon",
-        config: dict | None = None,
-        config_file: Path | None = None,
+        method: Literal["run", "fit", "predict"] = "run",
+        backend: Literal["local", "jobmon"] = "local",
+        *args,
+        **kwargs,
     ) -> None:
-        """Run pipeline.
+        """Evaluate pipeline method.
 
-        Notes
-        -----
-        * These functions will handle workflow creation
-        * Maybe allow subsets of the DAG to be run (e.g., predict for a
-          single location)
-        * TODO: consume orchestration tool config, set and validate execution options
-        * TODO: run for selected stages
-        * TODO: run for selected subsets or params
+        Parameters
+        ----------
+        method : str, optional
+            Name of method to evaluate. Default is 'run'.
+        backend : str, optional
+            How to evaluate the method. Default is 'local'.
+
+        TODO: Add options to run subset of stages
+        TODO: Add options to run subset of IDs
 
         """
-        self.validate()
-        self.build()
-        self.save()
-        
-        # run
-        match tool:
-            case 'jobmon':
-                # TODO: set execution-related metadata here and/or call jobmon module?
-                raise NotImplementedError()
-            case 'sequential':
-                # PoC: simply run stages in sequence (no concurrency)
-                for stage in self.get_execution_order():
-                    self.stages[stage].validate_inputs()
-                    self.stages[stage].run()
-                    self.stages[stage].validate_outputs()
-            case _:
-                raise ValueError(f"Unsupported execution tool: {tool}")
+        if backend == "jobmon":
+            raise NotImplementedError("Jobmon backend not implemented yet.")
+        else:
+            for stage in self.stages.values():
+                if method not in stage._skip_if:
+                    subset_ids = getattr(stage, "subset_ids", None)
+                    param_ids = getattr(stage, "param_ids", None)
+                    if subset_ids is not None or param_ids is not None:
+                        for subset_id, param_id in product(
+                            subset_ids or [None], param_ids or [None]
+                        ):
+                            stage.evaluate(
+                                method=method,
+                                subset_id=subset_id,
+                                param_id=param_id,
+                            )
+                        stage.collect()
+                    else:
+                        stage.evaluate(method=method)
+
+    def run(self) -> None:
+        """Run pipeline."""
+        self.evaluate(method="run")
+
+    def fit(self) -> None:
+        """Fit pipeline model."""
+        self.evaluate(method="fit")
+
+    def predict(self) -> None:
+        """Predict pipeline model."""
+        self.evaluate(method="predict")
 
     def resume(self) -> None:
         """Resume pipeline."""
-        raise NotImplementedError()
-
-    def fit(self) -> None:
-        """Fit pipeline model.
-
-        Notes
-        -----
-        * Skip any stage that has 'fit' in `skip_if` attribute
-
-        """
-        raise NotImplementedError()
-
-    def predict(self) -> None:
-        """Predict pipeline model.
-
-        Notes
-        -----
-        * Skip any stage that has 'predict' in `skip_if` attribute
-
-        """
         raise NotImplementedError()
 
     def __repr__(self) -> str:
