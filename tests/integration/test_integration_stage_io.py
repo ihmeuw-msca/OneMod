@@ -6,8 +6,9 @@ from pathlib import Path
 import pytest
 
 from onemod.config import Config
-from onemod.io import Data, Input, Output
+from onemod.io import Input, Output
 from onemod.stage import Stage
+from onemod.types import Data
 
 
 class DummyStage(Stage):
@@ -78,7 +79,7 @@ def test_input_with_dependency(stage_1, stage_2):
     )
     assert stage_2.dependencies == {"stage_1"}
 
-
+@pytest.mark.unit
 def test_input_with_missing():
     stage_3 = DummyStage(name="stage_3", config={})
     with pytest.raises(KeyError) as error:
@@ -91,7 +92,7 @@ def test_input_with_missing():
     )
     assert stage_3.input.items == {}
 
-
+@pytest.mark.unit
 def test_dependencies(stage_1, stage_2):
     stage_3 = DummyStage(name="stage_3", config={})
     assert stage_3.dependencies == set()
@@ -102,20 +103,24 @@ def test_dependencies(stage_1, stage_2):
     )
     assert stage_3.dependencies == {"stage_1", "stage_2"}
 
-
+@pytest.mark.unit
 def test_to_json(stage_1, stage_2):
     stage_2.to_json()
     with open(stage_2.directory / (stage_2.name + ".json"), "r") as f:
         config = json.load(f)
+    print(config)
     assert config["input"] == {
         "data": {
             "stage": stage_1.name,
             "path": str(stage_1.output["predictions"].path),
+            "format": "parquet",
+            "shape": None,
+            "columns": None,
         },
         "covariates": "/path/to/covariates.csv",
     }
 
-
+@pytest.mark.unit
 def test_to_json_no_input(tmp_path):
     stage_3 = DummyStage(name="stage_3", config={})
     stage_3.directory = tmp_path
@@ -124,7 +129,7 @@ def test_to_json_no_input(tmp_path):
         config = json.load(f)
     assert "input" not in config
 
-
+@pytest.mark.unit
 def test_from_json(stage_2):
     stage_2.to_json()
     stage_2_new = DummyStage.from_json(
