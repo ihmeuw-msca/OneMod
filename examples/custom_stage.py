@@ -7,7 +7,8 @@ from onemod.stage import ModelStage
 class CustomConfig(ModelConfig):
     """Custom stage config."""
 
-    example_setting: int = 1
+    custom_param: int | set[int] = 1
+    _crossable_params: set[str] = {"custom_param"}
 
 
 class CustomStage(ModelStage):

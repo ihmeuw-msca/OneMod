@@ -22,7 +22,11 @@ def create_pipeline(directory: str, data: str):
         name="location_model", config={}, groupby=["location_id"]
     )
     smoothing = KregStage(name="smoothing", config={}, groupby=["region_id"])
-    custom_stage = CustomStage(name="custom_stage")
+    custom_stage = CustomStage(
+        name="custom_stage",
+        config={"custom_param": [1, 2]},
+        groupby=["super_region_id"],
+    )
 
     # Create pipeline
     example_pipeline = Pipeline(
