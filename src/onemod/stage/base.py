@@ -66,16 +66,9 @@ class Stage(BaseModel, ABC):
     def skip_if(self) -> set[str]:
         return self._skip_if
 
-    # @cached_property
     @computed_field
     @property
     def input(self) -> Input | None:
-        # self._input = Input(
-        #     stage=self.name,
-        #     required=self._required_input,
-        #     optional=self._optional_input,
-        #     validation_schema=self._set_default_validation_schemas(self.input_types),
-        # )
         return self._input
 
     @cached_property
@@ -259,6 +252,7 @@ class Stage(BaseModel, ABC):
         """User-defined method to run stage."""
         raise NotImplementedError("Subclasses must implement this method.")
         
+    # TODO: likely replacing with evaluate()
     def execute(self, subset_id: int | None = None, param_id: int | None = None) -> None:
         """Execute stage."""
         with validation_context() as collector:
@@ -327,17 +321,9 @@ class GroupedStage(Stage, ABC):
             self.config.data, self.directory / "subsets.csv", subset_id
         )
 
-    def execute(self, subset_id: int) -> None:
+    def run(self, subset_id = None, param_id = None):
         """Run stage submodel."""
-        self.validate_inputs()
-        
-        if subset_id is None:
-            for subset in self._subset_ids:
-                self.run(subset)
-        else:
-            self.run(subset_id)
-        
-        self.validate_outputs()
+        raise NotImplementedError()
 
     def collect(self) -> None:
         """Collect stage submodel results."""
@@ -377,19 +363,9 @@ class CrossedStage(Stage, ABC):
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
-    def execute(self, param_id: int) -> None:
+    def run(self, subset_id: int | None = None, param_id: int | None = None) -> None:
         """Run stage submodel."""
-        self.validate_inputs()
-        
-        if param_id is None:
-            for param in self._param_ids:
-                self.set_params(param)
-                self.run(param)
-        else:
-            self.set_params(param_id)
-            self.run(param_id)
-        
-        self.validate_outputs()
+        raise NotImplementedError()
 
     def collect(self) -> None:
         """Collect stage submodel results."""
@@ -409,6 +385,7 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
 
     config: ModelConfig
 
+    # TODO: likely replacing with evaluate()
     def execute(self, subset_id: int | None, param_id: int | None) -> None:
         """Execute stage submodel."""
         self.validate_inputs()
