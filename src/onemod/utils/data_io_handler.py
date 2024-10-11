@@ -10,6 +10,7 @@ class DataIOHandler:
     Notes
     _____
     * Future: Add support for other file formats.
+    * TODO: expanding this vs. using pplkit.DataInterface
     """
     supported_formats: set[str] = {'parquet'}
     
