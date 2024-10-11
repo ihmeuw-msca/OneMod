@@ -9,16 +9,14 @@ project_name/
     stages/
         custom_data_prep.py
         custom_spxmod.py
+        kreg/
+            kernel_functions/
+            custom_kreg.py
     config/
-        config.yaml
-    experiments/
-        config/
-            stage1/
-                config.yaml
-            pipeline_config.yaml
-            run_config.yaml
-    scripts/
-        run.py
+        pipeline_config.json
+        jobmon_config.json
+        airflow_config.json
+    pipeline_definition.py
     logs/
         errors.log
     README.md
