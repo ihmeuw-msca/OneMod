@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fire
 import json
 import logging
 from collections import deque
@@ -284,7 +283,3 @@ class Pipeline(BaseModel):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.name}, stages={list(self.stages.values())})"
-
-
-if __name__ == "__main__":
-    fire.Fire(Pipeline.evaluate)
