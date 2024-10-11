@@ -7,7 +7,6 @@ import pytest
 
 from onemod.config import Config
 from onemod.constraints import Constraint
-from onemod.io import Input, Output
 from onemod.stage import Stage
 from onemod.types import Data
 
@@ -152,27 +151,47 @@ def test_output_types(stage_1):
     assert stage_1.output_types["predictions"].format == "parquet"
     assert stage_1.output_types["predictions"].shape == None
 
-@pytest.mark.skip(reason="Not implemented")
 @pytest.mark.integration
 def test_to_dict(stage_1, stage_2):
-    stage_2.to_json()
-    with open(stage_2.directory / (stage_2.name + ".json"), "r") as f:
-        stage_2_loaded = json.load(f)
-    assert stage_2_loaded["input"] == {
-        "data": {
-            "stage": stage_1.name,
-            "path": str(stage_1.output["predictions"].path),
-            "format": "parquet",
-            "shape": None,
-            "columns": {
-                "id_col": {"type": "int"},
-                "prediction_col": {
-                    "type": "float",
-                    "constraints": [{"name": "bounds", "args": [0, 1]}]
+    assert stage_2.to_dict() == {
+        "name": "stage_2",
+        "type": "DummyStage",
+        "config": {},
+        "input": {
+            "data": {
+                "stage": "stage_1",
+                "path": str(stage_1.output["predictions"].path),
+                "format": "parquet",
+                "shape": None,
+                "columns": {
+                    "id_col": {"type": "int"},
+                    "prediction_col": {
+                        "type": "float",
+                        "constraints": [
+                            {"type": "bounds", "ge": 0, "le": 1}
+                        ]
+                    } 
+                }
+            },
+        },
+        "output": {
+            "data": {
+                "stage": "stage_2",
+                "path": str(stage_2.directory / "predictions.parquet"),
+                "format": "parquet",
+                "shape": None,
+                "columns": {
+                    "id_col": {"type": "int"},
+                    "prediction_col": {
+                        "type": "float",
+                        "constraints": [
+                            {"type": "bounds", "ge": -1, "le": 1}
+                        ]
+                    }
                 }
             }
         },
-        "covariates": "/path/to/covariates.csv",
+        "dependencies": {"stage_1"}
     }
 
 @pytest.mark.skip(reason="Not implemented")

@@ -34,6 +34,10 @@ class IO(BaseModel, ABC):
         if isinstance(value, dict) and value.get("type") == "Data":
             return Data.from_dict(value["items"])
         return value
+    
+    def to_dict(self) -> dict:
+        """Convert IO to a dictionary."""
+        return self.model_dump()
 
     @model_serializer
     def serialize_io(self) -> dict[str, str | dict[str, str]] | None:
@@ -126,20 +130,7 @@ class Input(IO):
             for key, value in data_dict.get("optional", {})
         }
         return cls(required=required, optional=optional)
-
-    def to_dict(self) -> dict:
-        """Convert Input to a dictionary."""
-        return {
-            "required": {
-                key: value.to_dict() if isinstance(value, Data) else value
-                for key, value in self.required
-            },
-            "optional": {
-                key: value.to_dict() if isinstance(value, Data) else value
-                for key, value in self.optional
-            }
-        }
-
+            
     def model_post_init(self, *args, **kwargs) -> None:
         self._expected_names = {
             item.split(".")[0] for item in {*self.required, *self.optional}
@@ -277,15 +268,6 @@ class Output(IO):
             for key, value in data_dict.get("items", {}).items()
         }
         return cls(items=items)
-
-    def to_dict(self) -> dict:
-        """Convert Output to a dictionary."""
-        return {
-            "items": {
-                key: value.to_dict() if isinstance(value, Data) else value
-                for key, value in self.items.items()
-            }
-        }
 
     def __getitem__(self, item_name: str) -> Data:
         if item_name not in self.items:

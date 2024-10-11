@@ -294,8 +294,6 @@ class Pipeline(BaseModel):
         Notes
         -----
         * TODO: Include (?) OneMod, project version info
-        * TODO: execution/orchestration-related metadata (sold separately?)
-        * TODO: Nest the pipeline configuration within a 'config' key?
         """
         pipeline_dict = {
             "name": self.name,

@@ -202,8 +202,8 @@ class Stage(BaseModel, ABC):
             "name": self.name,
             "type": self.type,
             "config": self.config.model_dump(),
-            "input_types": self.input_types,
-            "output_types": self.output_types,
+            "input": self.input.to_dict(),
+            "output": self.output.to_dict(),
             "dependencies": self.dependencies,
         }
 

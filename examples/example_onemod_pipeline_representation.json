@@ -47,36 +47,28 @@
                 "param1": "value1",
                 "param2": "value2"
             },
-            "inputs": {
-                "required": {
-                    "data_path": {
-                        "type": "FilePath",
-                        "data": "path/to/data"
-                    }
-                }
+            "input": {
+                "data_path": "path/to/data"
             },
-            "outputs": {
+            "output": {
                 "data": {
-                    "type": "Data",
-                    "data": {
-                        "path": "path/to/data",
-                        "format": "parquet",
-                        "shape": [
-                            100,
-                            5
-                        ],
-                        "columns": {
-                            "age_group_id": {
-                                "type": "int",
-                                "constraints": [
-                                    {
-                                        "name": "bounds",
-                                        "args": {
-                                            "ge": 0
-                                        }
+                    "path": "path/to/data",
+                    "format": "parquet",
+                    "shape": [
+                        100,
+                        5
+                    ],
+                    "columns": {
+                        "age_group_id": {
+                            "type": "int",
+                            "constraints": [
+                                {
+                                    "name": "bounds",
+                                    "args": {
+                                        "ge": 0
                                     }
-                                ]
-                            }
+                                }
+                            ]
                         }
                     }
                 }
@@ -92,69 +84,61 @@
                 "param1": "value1",
                 "param2": "value2"
             },
-            "inputs": {
-                "required": {
-                    "data": {
-                        "type": "Data",
-                        "data": {
-                            "path": "path/to/data",
-                            "format": "parquet",
-                            "shape": [
-                                100,
-                                5
-                            ],
-                            "columns": {
-                                "age_group_id": {
-                                    "type": "int",
-                                    "constraints": [
-                                        {
-                                            "name": "bounds",
-                                            "args": {
-                                                "ge": 0
-                                            }
-                                        }
-                                    ]
+            "input": {
+                "data": {
+                    "path": "path/to/data",
+                    "format": "parquet",
+                    "shape": [
+                        100,
+                        5
+                    ],
+                    "columns": {
+                        "age_group_id": {
+                            "type": "int",
+                            "constraints": [
+                                {
+                                    "name": "bounds",
+                                    "args": {
+                                        "ge": 0
+                                    }
                                 }
-                            }
+                            ]
                         }
                     }
                 }
             },
-            "outputs": {
+            "output": {
                 "data": {
-                    "type": "Data",
-                    "data": {
-                        "path": "path/to/data",
-                        "format": "parquet",
-                        "columns": {
-                            "covariate_id": {
-                                "type": "int",
-                                "constraints": [
-                                    {
-                                        "name": "bounds",
-                                        "args": {
-                                            "ge": 0
-                                        }
+                    "path": "path/to/data",
+                    "format": "parquet",
+                    "columns": {
+                        "covariate_id": {
+                            "type": "int",
+                            "constraints": [
+                                {
+                                    "name": "bounds",
+                                    "args": {
+                                        "ge": 0
                                     }
-                                ]
-                            },
-                            "covariate_name": {
-                                "type": "str",
-                                "constraints": [
-                                    { "name": "not_empty" },
-                                    { "name": "unique" },
-                                    {
-                                        "name": "is_in",
-                                        "args": {
-                                            "values": [
-                                                "cov1",
-                                                "cov2",
-                                                "cov3"
-                                            ]
-                                        }
+                                }
+                            ]
+                        },
+                        "covariate_name": {
+                            "type": "str",
+                            "constraints": [
+                                { "name": "not_empty" },
+                                { "name": "unique" },
+                                {
+                                    "name": "is_in",
+                                    "args": {
+                                        "values": [
+                                            "cov1",
+                                            "cov2",
+                                            "cov3"
+                                        ]
                                     }
-                                ]
-                            }
+                                }
+                            ]
                         }
                     }
                 }

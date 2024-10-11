@@ -110,6 +110,7 @@ def test_to_json(stage_1, stage_2):
     stage_2.to_json()
     with open(stage_2.directory / (stage_2.name + ".json"), "r") as f:
         config = json.load(f)
+    print(config)
     assert config["input"] == {
         "data": {
             "stage": stage_1.name,
@@ -138,3 +139,64 @@ def test_from_json(stage_2):
     )
     assert stage_2_new.input == stage_2.input
     assert stage_2_new.output == stage_2.output
+
+@pytest.mark.unit
+def test_to_dict(stage_1, stage_2):
+    assert stage_1.to_dict() == {
+        "name": "stage_1",
+        "type": "DummyStage",
+        "config": {},
+        "input": {
+            "data": "/path/to/data.parquet",
+            "covariates": "/path/to/covariates.csv",
+        },
+        "output": {
+            "predictions": {
+                "stage": "stage_1",
+                "path": str(stage_1.directory / "predictions.parquet"),
+                "format": "parquet",
+                "shape": None,
+                "columns": None,
+            },
+            "model": {
+                "stage": "stage_1",
+                "path": str(stage_1.directory / "model.pkl"),
+                "format": "parquet",
+                "shape": None,
+                "columns": None,
+            },
+        },
+        "dependencies": set(),
+    }
+    assert stage_2.to_dict() == {
+        "name": "stage_2",
+        "type": "DummyStage",
+        "config": {},
+        "input": {
+            "data": {
+                "stage": "stage_1",
+                "path": str(stage_1.directory / "predictions.parquet"),
+                "format": "parquet",
+                "shape": None,
+                "columns": None,
+            },
+            "covariates": "/path/to/covariates.csv",
+        },
+        "output": {
+            "predictions": {
+                "stage": "stage_2",
+                "path": str(stage_2.directory / "predictions.parquet"),
+                "format": "parquet",
+                "shape": None,
+                "columns": None,
+            },
+            "model": {
+                "stage": "stage_2",
+                "path": str(stage_2.directory / "model.pkl"),
+                "format": "parquet",
+                "shape": None,
+                "columns": None,
+            },
+        },
+        "dependencies": {"stage_1"},
+    }

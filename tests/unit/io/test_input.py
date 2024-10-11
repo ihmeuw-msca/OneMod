@@ -29,7 +29,6 @@ ITEMS_WITH_INVALID_TYPES = {
 }
 ITEMS_WITH_EXTRAS = {"dummy": "/path/to/dummy.parquet", **VALID_ITEMS}
 
-
 def get_input(items: dict[str, Path | Data] = {}) -> Input:
     return Input(
         stage="test_stage",
@@ -274,3 +273,24 @@ def test_clear():
 def test_frozen():
     with pytest.raises(ValidationError):
         get_input().items = VALID_ITEMS
+
+@pytest.mark.unit
+def test_to_dict():
+    test_input = get_input(VALID_ITEMS)
+    assert test_input.to_dict() == {
+        "data": "/path/to/predictions.parquet",
+        "covariates": {
+            "stage": "first_stage",
+            "path": "/path/to/selected_covs.csv",
+            "format": "parquet",
+            "shape": None,
+            "columns": None,
+        },
+        "priors": {
+            "stage": "second_stage",
+            "path": "/path/to/model.pkl",
+            "format": "parquet",
+            "shape": None,
+            "columns": None,
+        },
+    }

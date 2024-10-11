@@ -25,6 +25,12 @@ def deserialize(file_path: Union[str, Path]) -> dict:
 def serialize(model: Union[dict, BaseModel], file_path: Union[str, Path]) -> None:
     """Save to a YAML or JSON file."""
     file_format = _get_file_format(file_path)
+
+    if isinstance(model, dict):
+        for key, value in model.items():
+            if isinstance(value, set):
+                model[key] = list(value)
+    
     with open(file_path, 'w') as file:
         if file_format == 'json':
             if isinstance(model, BaseModel):

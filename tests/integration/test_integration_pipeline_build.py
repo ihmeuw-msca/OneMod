@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from onemod.config import Config, PipelineConfig, StageConfig
+from onemod.constraints import Constraint
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 from onemod.types import Data
@@ -10,78 +11,158 @@ from onemod.types import Data
 
 class DummyStage(Stage):
     config: Config
-    _required_input: set[str] = {"input_data.parquet"}
+    _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {"priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
 
 @pytest.fixture(scope="module")
-def sample_stage_dir(tmp_path_factory):
-    sample_stage_dir = tmp_path_factory.mktemp("example_stage")
-    return sample_stage_dir
+def test_base_dir(tmp_path_factory):
+    test_base_dir = tmp_path_factory.mktemp("test_base_dir")
+    return test_base_dir
 
 @pytest.fixture(scope="module")
-def example_stage(sample_stage_dir):
-    example_stage = DummyStage(
-        name="example_stage",
-        directory=sample_stage_dir,
-        config=StageConfig(ids={"age_group_id", "location_id"}),
+def stage_1(test_base_dir):
+    stage_1 = DummyStage(
+        name="stage_1",
+        directory=test_base_dir / "stage_1",
+        config=StageConfig(),
         input_types=dict(
-            input_data=Data(
-                stage="example_stage",
-                path=Path(sample_stage_dir, "input_data.parquet"),
+            data=Data(
+                stage="stage_1",
+                path=test_base_dir / "stage_1" / "data.parquet",
                 format="parquet",
-                shape=(1, 2),
                 columns=dict(
-                    age_group_id=dict(type=int),
-                    location_id=dict(type=int),
+                    id_col=dict(type=int),
+                    bounded_col=dict(
+                        type=float,
+                        constraints=[
+                            Constraint("bounds", ge=0, le=1)
+                        ]
+                    ),
+                    str_col=dict(
+                        type=str,
+                        constraints=[
+                            Constraint("is_in", other={"a", "b", "c"})
+                        ]
+                    )
+                )
+            ),
+            covariates=Data(
+                stage="stage_1",
+                path=test_base_dir / "stage_1" / "covariates.csv",
+                format="csv",
+                columns=dict(
+                    id_col=dict(type=int),
+                    str_col=dict(
+                        type=str,
+                        constraints=[
+                            Constraint("is_in", other=["cov1", "cov2", "cov3"])
+                        ]
+                    )
                 )
             )
         ),
         output_types=dict(
             predictions=Data(
-                stage="example_stage",
-                path=Path(sample_stage_dir, "predictions.parquet"),
+                stage="stage_1",
+                path=test_base_dir / "stage_1" / "predictions.parquet",
                 format="parquet",
-                shape=(3, 4),
                 columns=dict(
-                    age_group_id=dict(type=int),
-                    location_id=dict(type=int),
+                    id_col=dict(type=int),
+                    prediction_col=dict(
+                        type=float,
+                        constraints=[
+                            Constraint("bounds", ge=-1, le=1)
+                        ]
+                    )
                 )
             )
         )
     )
-    
-    return example_stage
+    stage_1.directory = test_base_dir / "stage_1"
+    stage_1(
+        data=test_base_dir / "stage_1" / "data.parquet",
+        covariates=test_base_dir / "stage_1" / "covariates.csv"
+    )
+    print(stage_1.to_dict())
+    return stage_1
 
 @pytest.fixture(scope="module")
-def pipeline_with_single_stage(sample_stage_dir, example_stage):
+def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
         config=PipelineConfig(ids=["age_group_id", "location_id"]),
-        directory=sample_stage_dir,
+        directory=test_base_dir,
         groupby=["age_group_id"]
     )
-    print(example_stage)
-    pipeline.add_stage(example_stage)
-    example_stage(input_data=sample_stage_dir / "input_data.parquet")
+    pipeline.add_stage(stage_1)
     
     return pipeline
 
 @pytest.mark.integration
-def test_pipeline_build_single_stage(sample_stage_dir, pipeline_with_single_stage):
+def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
     """Test building a pipeline with a single stage and no dependencies."""
     pipeline_dict = pipeline_with_single_stage.build()
-
-    # Check high-level pipeline metadata
-    assert pipeline_dict["name"] == "test_pipeline"
-    assert Path(pipeline_dict["directory"]) == sample_stage_dir
-    assert pipeline_dict["groupby"] == {"age_group_id"}
-
-    # Check that the stage is serialized correctly
-    assert "example_stage" in pipeline_dict["stages"]
-    assert pipeline_dict["stages"]["example_stage"]["name"] == "example_stage"
-    assert pipeline_dict["stages"]["example_stage"]["config"]["ids"] == {"age_group_id", "location_id"}
-
-    # Check that dependencies are empty
-    assert pipeline_dict["dependencies"] == {"example_stage": set()}
+    print(pipeline_dict)
+    
+    assert pipeline_dict == {
+        "name": "test_pipeline",
+        "directory": str(test_base_dir),
+        "ids": {"age_group_id", "location_id"},
+        "groupby": {"age_group_id"},
+        "obs": "obs",
+        "pred": "pred",
+        "weights": "weights",
+        "test": "test",
+        "holdouts": set(),
+        "mtype": "binomial",
+        "stages": {
+            "example_stage": {
+                "name": "example_stage",
+                "type": "DummyStage",
+                "config": {
+                    "ids": {"age_group_id", "location_id"},
+                    "obs": "obs",
+                    "pred": "pred",
+                    "weights": "weights",
+                    "test": "test",
+                    "holdouts": set(),
+                    "mtype": "binomial"
+                },
+                "input": {
+                    "data": {
+                        "stage": "example_stage",
+                        "path": str(test_base_dir / "data.parquet"),
+                        "format": "parquet",
+                        "shape": (1, 2),
+                        "columns": {
+                            "age_group_id": {"type": "int"},
+                            "location_id": {"type": "int"},
+                        }
+                    }
+                },
+                "output": {
+                    "predictions": {
+                        "stage": "example_stage",
+                        "path": str(test_base_dir / "predictions.parquet"),
+                        "format": "parquet",
+                        "shape": (3, 4),
+                        "columns": {
+                            "age_group_id": {"type": "int"},
+                            "location_id": {"type": "int"},
+                        }
+                    },
+                    "model": {
+                        "stage": "example_stage",
+                        "path": str(test_base_dir / "model.pkl"),
+                        "format": "parquet",
+                        "shape": None,
+                        "columns": None
+                    }
+                },
+                "dependencies": set()
+            }
+        },
+        "dependencies": {"example_stage": set()}
+    }

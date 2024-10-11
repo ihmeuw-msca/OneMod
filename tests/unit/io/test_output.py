@@ -60,3 +60,7 @@ def test_frozen():
 def test_no_setitem():
     with pytest.raises(TypeError):
         OUTPUT["item_name"] = "item_value"
+
+@pytest.mark.unit
+def test_to_dict():
+    assert OUTPUT.to_dict() == ITEMS
