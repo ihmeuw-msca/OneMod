@@ -1,4 +1,4 @@
-"""SpXMod stage settings.
+"""SpXMod regression stage settings.
 
 FIXME: Removed some defaults, make sure stage code still runs
 TODO: Update spline config and stage code for spxmod package updates
@@ -11,9 +11,8 @@ TODO: Should coef_bounds for rover and spxmod be moved to pipeline config?
 
 from typing import Any, Literal
 
-from pydantic import Annotated, Field
-
 from onemod.config import Config, ModelConfig
+from pydantic import Annotated, Field
 
 
 class SpxmodDimensionConfig(Config):
@@ -225,7 +224,7 @@ class SpxmodModelConfig(Config):
 
 
 class SpxmodConfig(ModelConfig):
-    """Spxmod stage settings.
+    """SpXMod regression stage settings.
 
     Attributes
     ----------

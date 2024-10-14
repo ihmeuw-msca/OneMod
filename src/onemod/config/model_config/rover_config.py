@@ -1,4 +1,4 @@
-"""Rover stage settings."""
+"""ModRover covariate selection stage settings."""
 
 from typing import Literal
 
@@ -8,7 +8,7 @@ from onemod.config import ModelConfig
 
 
 class RoverConfig(ModelConfig):
-    """Rover stage settings.
+    """ModRover covariate selection stage settings.
 
     For more details, please check out the ModRover package
     `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
