@@ -1,11 +1,4 @@
-"""Configuration classes.
-
-The configuration classes contain all of the settings needed to run a
-stage (i.e., they don't include settings needed to set up a workflow).
-Settings from PipelineConfig are passed to StageConfig when calling
-Pipeline.add_stage().
-
-"""
+"""Configuration classes."""
 
 from pathlib import Path
 from typing import Any, Literal
@@ -25,7 +18,7 @@ class Config(BaseModel):
 
     def __getitem__(self, key: str) -> Any:
         if not self.__contains__(key):
-            raise KeyError(f"invalid key: {key}")
+            raise KeyError(f"invalid config item: {key}")
         return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
@@ -36,29 +29,92 @@ class Config(BaseModel):
 
 
 class PipelineConfig(Config):
-    """Pipeline configuration class."""
+    """Pipeline configuration class.
 
-    ids: set[str]
-    obs: str = "obs"
-    pred: str = "pred"
-    weights: str = "weights"
-    test: str = "test"
-    holdouts: set[str] = set()
-    mtype: Literal["binomial", "gaussian", "poisson"]
+    Attributes
+    ----------
+    id_columns : set[str]
+        ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
+        or 'year_id'. ID columns should contain nonnegative integers.
+    model_type : str
+        Model type; either 'binomial', 'gaussian', or 'poisson'.
+    observation_column : str, optional
+        Observation column name for pipeline input. Default is 'obs'.
+    prediction_column : str, optional
+        Prediction column name for pipeline output. Default is 'pred'.
+    weights_column : str, optional
+        Weights column name for pipeline input. The weights column
+        should contain nonnegative floats. Default is 'weights'.
+    test_column : str, optional
+        Test column name. The test column should contain values 0
+        (train) or 1 (test). The test set is never used to train stage
+        models, so it can be used to evaluate out-of-sample performance
+        for the entire pipeline. If no test column is provided, all
+        missing observations will be treated as the test set. Default is
+        'test'.
+    holdout_columns : set[str], optional
+        Holdout column names. The holdout columns should contain values
+        0 (train), 1 (holdout), or NaN (missing observations). Holdout
+        sets are used to evaluate stage model out-of-sample performance.
+        Default is an empty set.
+
+    """
+
+    id_columns: set[str]
+    model_type: Literal["binomial", "gaussian", "poisson"]
+    observation_column: str = "obs"
+    prediction_column: str = "pred"
+    weight_column: str = "weights"
+    test_column: str = "test"
+    holdout_columns: set[str] = set()
 
 
 class StageConfig(Config):
-    """Stage configuration class."""
+    """Stage configuration class.
+
+    Settings from PipelineConfig are passed to StageConfig when calling
+    Pipeline.add_stage().
+
+    Attributes
+    ----------
+    id_columns : set[str] or None, optional
+        ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
+        or 'year_id'. ID columns should contain nonnegative integers.
+        Default is None.
+    model_type : str or None, optional
+        Model type; either 'binomial', 'gaussian', or 'poisson'.
+        Default is None.
+    observation_column : str or None, optional
+        Observation column name for pipeline input. Default is None.
+    prediction_column : str or None, optional
+        Prediction column name for pipeline output. Default is None.
+    weights_column : str or None, optional
+        Weights column name for pipeline input. The weights column
+        should contain nonnegative floats. Default is None.
+    test_column : str or None, optional
+        Test column name. The test column should contain values 0
+        (train) or 1 (test). The test set is never used to train stage
+        models, so it can be used to evaluate out-of-sample performance
+        for the entire pipeline. If no test column is provided, all
+        missing observations will be treated as the test set. Default is
+        None.
+    holdout_columns : set[str] or None, optional
+        Holdout column names. The holdout columns should contain values
+        0 (train), 1 (holdout), or NaN (missing observations). Holdout
+        sets are used to evaluate stage model out-of-sample performance.
+        Default is None.
+
+    """
 
     model_config = ConfigDict(extra="allow")
 
-    ids: set[str] | None = None
-    obs: str | None = None
-    pred: str | None = None
-    weights: str | None = None
-    test: str | None = None
-    holdouts: set[str] | None = None
-    mtype: Literal["binomial", "gaussian", "poisson"] | None = None
+    id_columns: set[str] | None = None
+    model_type: Literal["binomial", "gaussian", "poisson"] | None = None
+    observation_column: str | None = None
+    prediction_column: str | None = None
+    weight_column: str | None = None
+    test_column: str | None = None
+    holdout_columns: set[str] | None = None
 
     def update(self, config: PipelineConfig) -> None:
         """Inherit settings from pipeline."""
@@ -67,23 +123,19 @@ class StageConfig(Config):
                 self[key] = value
 
 
-class GroupedConfig(StageConfig):
-    """Grouped stage configuration class."""
+class ModelConfig(StageConfig):
+    """Model stage configuration class.
+
+    Attributes
+    ----------
+    data : Path or None, optional
+        Path to input data. Required for `groupby`. Default is None.
+
+    """
 
     data: Path | None = None
-
-
-class CrossedConfig(StageConfig):
-    """Crossed stage configuration class."""
-
     _crossable_params: set[str] = set()  # defined by class
 
     @property
     def crossable_params(self) -> set[str]:
         return self._crossable_params
-
-
-class ModelConfig(GroupedConfig, CrossedConfig):
-    """Model stage configuration class."""
-
-    pass
