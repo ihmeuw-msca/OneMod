@@ -1,4 +1,8 @@
-"""KReg kernel regression stage settings."""
+"""KReg kernel regression stage settings.
+
+TODO: Add descriptions and default values
+
+"""
 
 from onemod.config import Config, ModelConfig
 
