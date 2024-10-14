@@ -4,6 +4,8 @@ FIXME: Removed some defaults, make sure stage code still runs
 TODO: Update spline config and stage code for spxmod package updates
 TODO: Clarify how lam as dict used
 TODO: Update docstrings to clarify what spxmod defaults are (e.g., priors)
+FIXME: Updated coef_bounds format to match rover_config, make sure code still runs
+TODO: Should coef_bounds for rover and spxmod be moved to pipeline config?
 
 """
 
