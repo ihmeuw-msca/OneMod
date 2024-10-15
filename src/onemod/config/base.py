@@ -132,16 +132,8 @@ class StageConfig(Config):
 
 
 class ModelConfig(StageConfig):
-    """Model stage configuration class.
+    """Model stage configuration class."""
 
-    Attributes
-    ----------
-    data : Path or None, optional
-        Path to input data. Required for `groupby`. Default is None.
-
-    """
-
-    data: Path | None = None
     _crossable_params: set[str] = set()  # defined by class
 
     @property

@@ -9,6 +9,7 @@ from inspect import getfile
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, computed_field, validate_call
 
@@ -243,9 +244,11 @@ class GroupedStage(Stage, ABC):
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
-        return get_subset(
-            self.config.data, self.directory / "subsets.csv", subset_id
-        )
+        if isinstance(self.input["data"], Path):
+            data_path = self.input["data"]
+        else:
+            data_path = self.input["data"].path
+        return get_subset(data_path, self.directory / "subsets.csv", subset_id)
 
     @classmethod
     def evaluate(
