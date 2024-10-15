@@ -10,7 +10,7 @@ from custom_stage import CustomStage
 
 def create_pipeline(directory: str, data: str):
     # Create stages
-    # Where should stages and/or stage instances define input requirements?
+    # TODO: Does stage-specific validation info go here or in class definitions?
     preprocessing = PreprocessingStage(name="preprocessing", config={})
     covariate_selection = RoverStage(
         name="covariate_selection",
@@ -53,7 +53,6 @@ def create_pipeline(directory: str, data: str):
     )
 
     # Define dependencies
-    # Is this where data validation (where possible) should happen? Or in compile?
     preprocessing(data=example_pipeline.data)
     covariate_selection(data=preprocessing.output["data"])
     global_model(
@@ -73,31 +72,29 @@ def create_pipeline(directory: str, data: str):
         predictions=smoothing.output["predictions"],
     )
 
-    # Save pipeline config
+    # Serialize pipeline
     example_pipeline.to_json()
+
+    # TODO: Validate and serialize
+    # User could call this method themself, but run/fit/predict should
+    # probably also call it in case updates have been made to the
+    # pipeline (e.g., someone is experimenting with a pipeline in a
+    # a notebook)
+    example_pipeline.build()
+
+    # Run (fit and predict) entire pipeline
+    example_pipeline.run()
+
+    # TODO: Fit specific stages
+    example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
+
+    # TODO: Predict for specific locations
+    example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
 
 
 if __name__ == "__main__":
     fire.Fire(create_pipeline)
 
-
-# Compile pipeline
-# - Validate DAG
-# - Validate data?
-# - Pass pipeline directory and config to stages
-# - Create stage subsets and parameter sets
-# - Save pipeline JSON
-# example_pipeline.compile()
-
-# Run (fit and predict) entire pipeline
-# example_pipeline.run()
-
-# Fit some stages
-# example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
-
-# Predict for some locations
-# What's the best syntax for this?
-# example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
 
 # Run pipeline the command line
 # onemod --config /path/to/pipeline/config.json
@@ -105,6 +102,8 @@ if __name__ == "__main__":
 # Fit pipeline with jobmon from the command line
 # onemod --config /path/to/pipeline/config.json --method fit --backend jobmon --cluster cluster_name --resources /path/to/resources.yaml
 
-# Predict stage from the command line
+# Predict stage from the command line using pipeline config file
 # onemod --config /path/to/pipeline/config.json --stage_name stage_name --from_pipeline --method predict
+
+# Predict stage from command line using stage config file
 # onemod --config /path/to/stage/config.json --method predict
