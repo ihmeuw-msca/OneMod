@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 class Config(BaseModel, ABC):
     """Base configuration class."""
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(validate_assignment=True, protected_namespaces=())
 
     def get(self, key: str, default: Any = None) -> Any:
         if not self.__contains__(key):

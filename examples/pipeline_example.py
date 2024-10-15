@@ -17,11 +17,36 @@ def create_pipeline(directory: str, data: str):
         config={"cov_exploring": ["cov1", "cov2", "cov3"]},
         groupby=["age_group_id"],
     )
-    global_model = SpxmodStage(name="global_model", config={})
-    location_model = SpxmodStage(
-        name="location_model", config={}, groupby=["location_id"]
+    global_model = SpxmodStage(
+        name="global_model",
+        config={"xmodel": {"variables": [{"name": "var1"}, {"name": "var2"}]}},
     )
-    smoothing = KregStage(name="smoothing", config={}, groupby=["region_id"])
+    location_model = SpxmodStage(
+        name="location_model",
+        config={"xmodel": {"variables": [{"name": "var1"}, {"name": "var2"}]}},
+        groupby=["location_id"],
+    )
+    smoothing = KregStage(
+        name="smoothing",
+        config={
+            "kreg_model": {
+                "age_scale": 1,
+                "gamma_age": 1,
+                "gamma_year": 1,
+                "exp_location": 1,
+                "lam": 1,
+                "nugget": 1,
+            },
+            "kreg_fit": {
+                "gtol": 1,
+                "max_iter": 1,
+                "cg_maxiter": 1,
+                "cg_maxiter_increment": 1,
+                "nystroem_rank": 1,
+            },
+        },
+        groupby=["region_id"],
+    )
     custom_stage = CustomStage(
         name="custom_stage",
         config={"custom_param": [1, 2]},
@@ -32,8 +57,8 @@ def create_pipeline(directory: str, data: str):
     example_pipeline = Pipeline(
         name="example_pipeline",
         config={
-            "ids": ["age_group_id", "location_id", "sex_id", "year_id"],
-            "mtype": "binomial",
+            "id_columns": ["age_group_id", "location_id", "sex_id", "year_id"],
+            "model_type": "binomial",
         },
         directory=directory,
         data=data,
@@ -80,16 +105,16 @@ def create_pipeline(directory: str, data: str):
     # probably also call it in case updates have been made to the
     # pipeline (e.g., someone is experimenting with a pipeline in a
     # a notebook)
-    example_pipeline.build()
+    # example_pipeline.build()
 
     # Run (fit and predict) entire pipeline
-    example_pipeline.run()
+    # example_pipeline.run()
 
     # TODO: Fit specific stages
-    example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
+    # example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
 
     # TODO: Predict for specific locations
-    example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
+    # example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})
 
 
 if __name__ == "__main__":

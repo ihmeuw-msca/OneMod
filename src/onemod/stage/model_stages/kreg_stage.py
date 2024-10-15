@@ -7,7 +7,7 @@ from onemod.stage import ModelStage
 class KregStage(ModelStage):
     """Kreg stage."""
 
-    config: KregConfig = KregConfig()
+    config: KregConfig
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}

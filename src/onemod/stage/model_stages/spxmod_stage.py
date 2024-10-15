@@ -7,7 +7,7 @@ from onemod.stage import ModelStage
 class SpxmodStage(ModelStage):
     """Spxmod stage."""
 
-    config: SpxmodConfig = SpxmodConfig()
+    config: SpxmodConfig
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {
         "selected_covs.csv",
