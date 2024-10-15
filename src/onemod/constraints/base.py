@@ -1,22 +1,26 @@
 from typing import Any, Callable, Dict
 from polars import Series
 
-from pydantic import BaseModel, field_validator
+from pydantic import Field, field_validator
 
-from .functions import bounds, is_in
+from onemod.base_models import SerializableModel
+from onemod.constraints.functions import bounds, is_in
+
+# Global registry for constraints
+CONSTRAINT_REGISTRY: Dict[str, Callable] = {}
 
 
-class Constraint(BaseModel):
+class Constraint(SerializableModel):
     name: str
     args: Dict[str, Any]
     
-    func: Callable[[Series], None] = None
+    func: Callable[[Series], None] = Field(default=None, exclude=True)
     
-    def __init__(self, name: str, **kwargs):
-        super().__init__(name=name, args=kwargs)
-        self.func = CONSTRAINT_REGISTRY[name](**kwargs)
+    def model_post_init(self, __context):
+        """Reconstruct the `func` attribute after deserialization."""
+        self.func = CONSTRAINT_REGISTRY[self.name](**self.args)
 
-    @field_validator('name')
+    @field_validator("name")
     def validate_name(cls, value):
         """Ensure the constraint name is in the global registry."""
         if value not in CONSTRAINT_REGISTRY:
@@ -42,9 +46,6 @@ class Constraint(BaseModel):
         name = data["name"]
         args = data["args"]
         return cls(name=name, args=args)
-    
-# Global registry for constraints
-CONSTRAINT_REGISTRY: Dict[str, Callable] = {}
 
 def register_constraint(name: str, func: Callable) -> None:
     """

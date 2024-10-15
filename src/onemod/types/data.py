@@ -1,23 +1,23 @@
 from pathlib import Path
-from typing import Any, ClassVar, Dict, Optional, Union
+from typing import Any, ClassVar, Dict
 
 from polars import Boolean, DataFrame, Int64, Float64, String
-from pydantic import BaseModel
+from pydantic import field_serializer
 
+from onemod.base_models import SerializableModel
 from onemod.constraints import Constraint
-from onemod.serializers import deserialize, serialize
 from onemod.types.column_spec import ColumnSpec
 from onemod.types.filepath import FilePath
 from onemod.utils import DataIOHandler
 from onemod.validation.error_handling import ValidationErrorCollector, handle_error
 
 
-class Data(BaseModel):
+class Data(SerializableModel):
     stage: str
-    path: Union[Path | FilePath]
+    path: Path | FilePath
     format: str = "parquet"
-    shape: Optional[tuple[int, int]] = None
-    columns: Optional[Dict[str, ColumnSpec]] = None
+    shape: tuple[int, int] | None = None
+    columns: Dict[str, ColumnSpec] | None = None
     type_mapping: ClassVar[Dict[type, Any]] = {
         bool: Boolean,
         int: Int64,
@@ -25,59 +25,17 @@ class Data(BaseModel):
         str: String,
     }
     
-    @classmethod
-    def from_dict(cls, data_dict: dict) -> 'Data':
-        """Reconstruct a Data object from a dictionary."""
-        return cls(
-            stage=data_dict["stage"],
-            path=Path(data_dict["path"]),
-            format=data_dict.get("format", "parquet"),
-            shape=tuple(data_dict["shape"]) if data_dict.get("shape") else None,
-            columns={
-                col_name: {
-                    "type": col_spec.get("type", Any),
-                    "constraints": [
-                        Constraint.from_dict(constraint)
-                        for constraint in col_spec.get("constraints", [])
-                    ]
-                }
-                for col_name, col_spec in data_dict.get("columns", {}).items()
-            } if data_dict.get("columns") else None
-        )
-
-    def to_dict(self) -> dict:
-        """Convert the Data object to a dictionary."""
-        return {
-            "stage": self.stage,
-            "path": str(self.path),
-            "format": self.format,
-            "shape": self.shape if self.shape else None,
-            "columns": {
-                col_name: {
-                    "type": col_spec["type"].__name__,
-                    "constraints": [constraint.to_dict() for constraint in col_spec.get("constraints", [])]
-                }
-                for col_name, col_spec in (self.columns or {}).items()
-            } if self.columns else None
-        }
+    @field_serializer("path")
+    def serialize_path(self, path, info):
+        return str(path) if path else None
     
-    @classmethod
-    def from_config(cls, config_path: Union[str, Path]) -> 'Data':
-        """Load a Data configuration from a YAML or JSON file."""
-        config = deserialize(config_path)
-        return cls(**config)
-
-    def to_config(self, config_path: Union[str, Path]) -> None:
-        """Save the current Data configuration to a YAML or JSON file."""
-        serialize(self, config_path)
-    
-    def validate_metadata(self, collector: ValidationErrorCollector | None = None) -> None:
+    def validate_metadata(self, kind: str, collector: ValidationErrorCollector | None = None) -> None:
         """One-time validation for instance metadata."""
         if not self.path:
             handle_error(self.stage, "Data validation", ValueError,
                          "File path is required.", collector)
         else:
-            if not self.path.exists():
+            if kind == "input" and not self.path.exists():
                 handle_error(self.stage, "Data validation", FileNotFoundError,
                              f"File {self.path} does not exist.", collector)
             if self.format not in DataIOHandler.supported_formats:
@@ -88,7 +46,18 @@ class Data(BaseModel):
             if not isinstance(self.shape, tuple) or len(self.shape) != 2:
                 handle_error(self.stage, "Data validation", ValueError,
                              "Shape must be a tuple of (rows, columns).", collector)
-
+                
+        if self.columns:
+            for col_name, col_spec in self.columns.items():
+                if "type" in col_spec and col_spec["type"] not in self.type_mapping:
+                    handle_error(self.stage, "Data validation", ValueError,
+                                 f"Unsupported type {col_spec['type']} for column {col_name}.", collector)
+                if "constraints" in col_spec:
+                    for constraint in col_spec["constraints"]:
+                        if not isinstance(constraint, Constraint):
+                            handle_error(self.stage, "Data validation", ValueError,
+                                         f"Invalid constraint specified for column {col_name}.", collector)
+                    
     def validate_shape(self, data: DataFrame, collector: ValidationErrorCollector | None = None) -> None:
         """Validate the shape of the data."""
         if data.shape != self.shape:
@@ -116,8 +85,8 @@ class Data(BaseModel):
                 handle_error(self.stage, "Data validation", ValueError,
                              f"Column '{col_name}' is missing from the data.", collector)
             
-            expected_type = col_spec.get('type')
-            constraints = col_spec.get('constraints', [])
+            expected_type = col_spec.type or None
+            constraints = col_spec.constraints or []
             
             if expected_type:
                 polars_type = self.type_mapping.get(expected_type)  # TODO: better ways to handle this?
