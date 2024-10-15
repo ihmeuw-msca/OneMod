@@ -7,29 +7,30 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal
 
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, computed_field, validate_call
+from pydantic import ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
+from onemod.base_models import SerializableModel
 from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
 from onemod.io import Input, Output
 from onemod.types import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
-from onemod.validation import ValidationErrorCollector, validation_context
+from onemod.validation import ValidationErrorCollector, handle_error
 
 
-class Stage(BaseModel, ABC):
+class Stage(SerializableModel, ABC):
     """Stage base class."""
 
     model_config = ConfigDict(validate_assignment=True)
 
     name: str
     config: StageConfig
-    input_types: dict[str, Path | Data] | None = None
-    output_types: dict[str, Path | Data] | None = None
+    input_validation: Dict[str, Data] = Field(default_factory=dict)
+    output_validation: Dict[str, Data] = Field(default_factory=dict)
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
@@ -80,11 +81,7 @@ class Stage(BaseModel, ABC):
                 stage=self.name,
                 path=self.directory / item,
             )
-        return Output(
-            stage=self.name,
-            items=output_items,
-            validation_schema=self._set_default_validation_schemas(self.output_types),
-        )
+        return Output(stage=self.name, items=output_items)
     
     @property
     def dependencies(self) -> set[str]:
@@ -136,15 +133,7 @@ class Stage(BaseModel, ABC):
             config = config["stages"][name]
         else:
             directory = Path(filepath).parent
-        stage = cls(
-            name=config["name"],
-            type=config["type"],
-            config=config["config"],
-            module=config.get("module"),
-            input_types=config.get("input_types"),
-            output_types=config.get("output_types"),
-            dependencies=config.get("dependencies", set()),
-        )
+        stage = cls(**config)
         stage.directory = directory
         if "module" in config:
             stage._module = config["module"]
@@ -152,28 +141,6 @@ class Stage(BaseModel, ABC):
             stage(**config["input"])
         return stage
     
-    def _set_default_validation_schemas(
-        self,
-        schemas: Optional[Dict[str, Data | Path]]
-    ) -> Optional[Dict[str, Data | Path]]:
-        """Set default stage for validation schemas if not provided."""
-        if schemas is None:
-            return None
-
-        updated_schemas = {}
-        for item_name, schema in schemas.items():
-            if isinstance(schema, Data):
-                updated_schema = schema.model_copy(
-                    update={
-                        "stage": self.name,
-                        "path": self.directory / item_name
-                    }
-                )
-                updated_schemas[item_name] = updated_schema
-            else:
-                updated_schemas[item_name] = schema
-        return updated_schemas
-
     def to_json(self, filepath: Path | str | None = None) -> None:
         """Save stage as JSON file.
 
@@ -189,17 +156,6 @@ class Stage(BaseModel, ABC):
         with open(filepath, "w") as f:
             f.write(self.model_dump_json(indent=4, exclude_none=True))
             
-    def to_dict(self) -> dict:
-        """Convert stage to dictionary representaion."""
-        return {
-            "name": self.name,
-            "type": self.type,
-            "config": self.config.model_dump(),
-            "input": self.input.to_dict(),
-            "output": self.output.to_dict(),
-            "dependencies": self.dependencies,
-        }
-
     @validate_call
     def evaluate(
         self,
@@ -238,39 +194,48 @@ class Stage(BaseModel, ABC):
                 f"{self.name} does not have a '{method}' method"
             )
     
-    def validate_inputs(self, collector: ValidationErrorCollector) -> None:
-        """Validate stage inputs."""
-        if self.input:
-            self.input.validate(collector)
-        
+    def validate_build(self, collector: ValidationErrorCollector) -> None:
+        """Perfom build-time validation."""
+        if self.input_validation:
+            for item_name, schema in self.input_validation.items():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="input", collector=collector)
+                    
+        if self.output_validation:
+            for item_name, schema in self.output_validation.items():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="output", collector=collector)
+                    
+    def validate_run(self, collector: ValidationErrorCollector) -> None:
+        """Perfom run-time validation."""
+        if self.input_validation:
+            for item_name, schema in self.input_validation.items():
+                data_path = self.input.get(item_name)
+                if data_path:
+                    schema.path = Path(data_path)
+                    schema.validate_data(collector)
+                else:
+                    handle_error(self.name, "Input validation", ValueError,
+                        f"Input data path for '{item_name}' not found in stage inputs.", collector)
+                    
     def validate_outputs(self, collector: ValidationErrorCollector) -> None:
-        """Validate stage outputs."""
-        if self.output:
-            self.output.validate(collector)
+        """Perform post-run validation of outputs."""
+        if self.output_validation:
+            for item_name, data_spec in self.output_validation.items():
+                data_output = self.output.get(item_name)
+                if data_output:
+                    data_spec.path = Path(data_output.path)
+                    data_spec.validate_data(collector)
+                else:
+                    handle_error(
+                        self.name, "Output Validation", KeyError,
+                        f"Output data '{item_name}' not found after stage execution.", collector
+                    )
         
-    def run(self, subset_id: int | None = None, param_id: int | None = None) -> None:
-        """User-defined method to run stage."""
-        raise NotImplementedError("Subclasses must implement this method.")
+    def run(self) -> None:
+        """Run stage."""
+        raise NotImplementedError()
         
-    # TODO: likely replacing with evaluate()
-    def execute(self, subset_id: int | None = None, param_id: int | None = None) -> None:
-        """Execute stage."""
-        with validation_context() as collector:
-            self.validate_inputs(collector)
-            
-            if collector.errors:
-                errors = collector.get_errors()
-                raise ValueError(f"Validation failed for stage {self.name} inputs: {errors}")
-        
-        self.run(subset_id, param_id)
-        
-        with validation_context() as collector:
-            self.validate_outputs(collector)
-            
-            if collector.errors:
-                errors = collector.get_errors()
-                raise ValueError(f"Validation failed for stage {self.name} outputs: {errors}")
-
     @validate_call
     def __call__(self, **input: Data | Path) -> None:
         """Define stage dependencies."""
@@ -279,7 +244,6 @@ class Stage(BaseModel, ABC):
                 stage=self.name,
                 required=self._required_input,
                 optional=self._optional_input,
-                validation_schema=self._set_default_validation_schemas(self.input_types),
             )
         self.input.check_missing({**self.input.items, **input})
         self.input.update(input)
@@ -385,13 +349,6 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
 
     config: ModelConfig
 
-    # TODO: likely replacing with evaluate()
-    def execute(self, subset_id: int | None, param_id: int | None) -> None:
-        """Execute stage submodel."""
-        self.validate_inputs()
-        self.run(subset_id, param_id)
-        self.validate_outputs()
-        
     @abstractmethod
     def run(self, subset_id: int | None, param_id: int | None) -> None:
         """Run stage submodel."""
