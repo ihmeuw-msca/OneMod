@@ -174,7 +174,6 @@ class Output(IO):
     """Stage output class."""
 
     items: dict[str, Data] = {}  # defined by stage class
-    _expected_names: set[str]
 
     def __getitem__(self, item_name: str) -> Data:
         if item_name not in self.items:
