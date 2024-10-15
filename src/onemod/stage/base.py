@@ -27,6 +27,7 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
+    _pipeline: str  # set by Stage.from_json
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
@@ -34,6 +35,12 @@ class Stage(BaseModel, ABC):
     _required_input: set[str] = set()  # name.extension, defined by class
     _optional_input: set[str] = set()  # name.extension, defined by class
     _output: set[str] = set()  # name.extension, defined by class
+
+    @property
+    def pipeline(self) -> str:
+        if self._pipeline is None:
+            raise AttributeError(f"{self.name} pipeline has not been set")
+        return self._pipeline
 
     @property
     def directory(self) -> Path:
@@ -126,11 +133,14 @@ class Stage(BaseModel, ABC):
         with open(filepath, "r") as f:
             config = json.load(f)
         if from_pipeline:
+            pipeline = config["name"]
             directory = Path(config["directory"]) / name
             config = config["stages"][name]
         else:
+            pipeline = None
             directory = Path(filepath).parent
         stage = cls(**config)
+        stage._pipeline = pipeline
         stage.directory = directory
         if "module" in config:
             stage._module = config["module"]
