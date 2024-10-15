@@ -48,9 +48,12 @@
                 "param2": "value2"
             },
             "input": {
+                "data": "path/to/data"
+            },
+            "input_validation": {
                 "data_path": "path/to/data"
             },
-            "output": {
+            "output_validation": {
                 "data": {
                     "path": "path/to/data",
                     "format": "parquet",
@@ -77,14 +80,14 @@
         "covariate_selection": {
             "type": "ModelStage",
             "module": "path/to/module",
-            "dependencies": [
-                "preprocessing"
-            ],
             "config": {
                 "param1": "value1",
                 "param2": "value2"
             },
             "input": {
+                "data": "path/to/data"
+            },
+            "input_validation": {
                 "data": {
                     "path": "path/to/data",
                     "format": "parquet",
@@ -107,7 +110,7 @@
                     }
                 }
             },
-            "output": {
+            "output_validation": {
                 "data": {
                     "path": "path/to/data",
                     "format": "parquet",
