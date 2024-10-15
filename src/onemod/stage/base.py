@@ -37,7 +37,7 @@ class Stage(BaseModel, ABC):
     @property
     def directory(self) -> Path:
         if self._directory is None:
-            raise ValueError(f"{self.name} directory has not been set")
+            raise AttributeError(f"{self.name} directory has not been set")
         return self._directory
 
     @directory.setter
@@ -65,6 +65,8 @@ class Stage(BaseModel, ABC):
     @computed_field
     @property
     def input(self) -> Input | None:
+        if self._input is None:
+            raise AttributeError(f"{self.name} input has not been set")
         return self._input
 
     @cached_property
@@ -199,7 +201,7 @@ class Stage(BaseModel, ABC):
     @validate_call
     def __call__(self, **input: Data | Path) -> None:
         """Define stage dependencies."""
-        if self.input is None:
+        if self._input is None:
             self._input = Input(
                 stage=self.name,
                 required=self._required_input,
