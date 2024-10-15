@@ -1,6 +1,8 @@
 """KReg kernel regression stage settings.
 
 TODO: Add descriptions and default values
+TODO: Generalize KReg config
+TODO: Add custom kernels
 
 """
 
@@ -81,6 +83,9 @@ class KregUncertaintyConfig(Config):
 
 class KregConfig(ModelConfig):
     """KReg kernel regression stage settings.
+
+    For more details, please check out the KReg package
+    `documentation <https://github.com/ihmeuw-msca/kreg>`_.
 
     Attributes
     ----------

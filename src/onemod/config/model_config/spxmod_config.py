@@ -218,15 +218,15 @@ class SpxmodModelConfig(Config):
 class SpxmodConfig(ModelConfig):
     """SpXMod regression stage settings.
 
+    For more details, please check out the SpXMod package
+    `documentation <https://github.com/ihmeuw-msca/spxmod/tree/v0.2.1>`_.
+
     Attributes
     ----------
     xmodel : SpxmodModelConfig
         SpXMod model settings.
     xmodel_fit : dict, optional
         Model fit function arguments. Default is an empty dictionary.
-
-    For more details, please check out the SpXMod package
-    `documentation <https://github.com/ihmeuw-msca/spxmod/tree/v0.2.1>`_.
 
     """
 

@@ -1,4 +1,8 @@
-"""ModRover covariate selection stage settings."""
+"""ModRover covariate selection stage settings.
+
+FIXME: improve top_pct_score and top_pct_learner descriptions
+
+"""
 
 from typing import Literal
 
@@ -33,8 +37,6 @@ class RoverConfig(ModelConfig):
     min_covs, max_covs : nonnegative int or None, optional
         Minimum/maximum number of covariates selected from
         cov_exploring, regardless of t_threshold value. Default is None.
-
-    FIXME: improve top_pct_score and top_pct_learner descriptions
 
     """
 
