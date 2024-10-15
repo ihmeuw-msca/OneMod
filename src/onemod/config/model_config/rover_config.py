@@ -50,6 +50,12 @@ class RoverConfig(ModelConfig):
     max_covs: NonNegativeInt | None = None
 
     @model_validator(mode="after")
+    def check_holdouts(self):
+        """Make sure holdouts present."""
+        if self.holdout_columns is None:
+            raise ValueError("Holdout columns required for rover stage")
+
+    @model_validator(mode="after")
     def check_min_max(self):
         """Make sure min_covs <= max_covs."""
         if self.min_covs is not None and self.max_covs is not None:
