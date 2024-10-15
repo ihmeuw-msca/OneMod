@@ -57,6 +57,9 @@ class PipelineConfig(Config):
         0 (train), 1 (holdout), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
         Default is an empty set.
+    coef_bounds : dict, optional
+        Dictionary of coefficient bounds with entries
+        cov_name: (lower, upper). Default is an empty dictionary.
 
     """
 
@@ -67,6 +70,7 @@ class PipelineConfig(Config):
     weight_column: str = "weights"
     test_column: str = "test"
     holdout_columns: set[str] = set()
+    coef_bounds: dict[str, tuple(float, float)] = {}
 
 
 class StageConfig(Config):
@@ -103,6 +107,9 @@ class StageConfig(Config):
         0 (train), 1 (holdout), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
         Default is None.
+    coef_bounds : dict or None, optional
+        Dictionary of coefficient bounds with entries
+        cov_name: (lower, upper). Default is None.
 
     """
 
@@ -115,6 +122,7 @@ class StageConfig(Config):
     weight_column: str | None = None
     test_column: str | None = None
     holdout_columns: set[str] | None = None
+    coef_bounds: dict[str, tuple[float, float]] | None = None
 
     def update(self, config: PipelineConfig) -> None:
         """Inherit settings from pipeline."""

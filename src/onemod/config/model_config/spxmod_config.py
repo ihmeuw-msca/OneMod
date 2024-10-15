@@ -1,11 +1,7 @@
 """SpXMod regression stage settings.
 
-FIXME: Removed some defaults, make sure stage code still runs
 TODO: Update spline config and stage code for spxmod package updates
-TODO: Clarify how lam as dict used
-TODO: Update docstrings to clarify what spxmod defaults are (e.g., priors)
-FIXME: Updated coef_bounds format to match rover_config, make sure code still runs
-TODO: Should coef_bounds for rover and spxmod be moved to pipeline config?
+TODO: Update docstrings to clarify what spxmod defaults are (e.g., lam, priors)
 
 """
 
@@ -200,9 +196,6 @@ class SpxmodModelConfig(Config):
         This is used for `inv_link` function, priors, or any other
         other settings that are captured by the current schema.
         Default is an empty dictionary.
-    coef_bounds : dict, optional
-        Dictionary of coefficient bounds with entries
-        cov_name: (lower, upper). Default is an empty dictionary.
     spline_config : SpXModSplineConfig or None, optional
         Spline variable settings. Currently, at most one spline variable
         is allowed. Default is None.
@@ -218,7 +211,6 @@ class SpxmodModelConfig(Config):
     spaces: set[SpxmodSpaceConfig] = set()
     variables: set[SpxmodVariableConfig]
     param_specs: dict[str, Any] = {}
-    coef_bounds: dict[str, tuple[float, float]] = {}
     spline_config: SpxmodSplineConfig | None = None
     lam: float = Field(ge=0, default=0)
 

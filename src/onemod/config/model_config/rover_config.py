@@ -27,9 +27,6 @@ class RoverConfig(ModelConfig):
         Default is 0.1.
     top_pct_learner : float in [0, 1], optional
         Percentage of learners to consider. Default is 1.
-    coef_bounds : dict, optional
-        Dictionary of coefficient bounds with entries
-        cov_name: (lower, upper). Default is an empty dictionary.
     t_threshold : positive float, optional
         T-statistic threshold to consider as a covariate selection
         criterion. Default is 1.
@@ -46,7 +43,6 @@ class RoverConfig(ModelConfig):
     strategies: set[Literal["full", "forward", "backward"]] = {"forward"}
     top_pct_score: float = Field(ge=0, le=1, default=0.1)
     top_pct_learner: float = Field(ge=0, le=1, default=1.0)
-    coef_bounds: dict[str, tuple[float, float]] = {}
     t_threshold: float = Field(ge=0, default=1.0)
     min_covs: NonNegativeInt | None = None
     max_covs: NonNegativeInt | None = None
