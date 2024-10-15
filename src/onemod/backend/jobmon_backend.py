@@ -4,12 +4,9 @@ import sys
 from pathlib import Path
 from typing import Literal
 
-try:
-    from jobmon.client.api import Tool
-    from jobmon.client.task import Task
-    from jobmon.client.task_template import TaskTemplate
-except ImportError:
-    pass
+from jobmon.client.api import Tool
+from jobmon.client.task import Task
+from jobmon.client.task_template import TaskTemplate
 
 from onemod.pipeline import Pipeline
 from onemod.stage import ModelStage, Stage
