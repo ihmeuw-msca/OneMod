@@ -9,20 +9,21 @@ from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
 from itertools import product
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Set
 
-from pydantic import BaseModel, computed_field, validate_call
+from pydantic import computed_field, field_serializer, validate_call
 
 import onemod.stage as onemod_stages
+from onemod.base_models import SerializableModel
 from onemod.config import PipelineConfig
 from onemod.serializers import deserialize, serialize
 from onemod.stage import CrossedStage, GroupedStage, Stage
-from onemod.validation import validation_context, ValidationErrorCollector
+from onemod.validation import ValidationErrorCollector, handle_error
 
 logger = logging.getLogger(__name__)
 
 
-class Pipeline(BaseModel):
+class Pipeline(SerializableModel):
     """Pipeline class.
 
     Attributes
@@ -45,7 +46,7 @@ class Pipeline(BaseModel):
     config: PipelineConfig
     directory: Path  # TODO: replace with DataInterface
     data: Path | None = None
-    groupby: set[str] | None = None
+    groupby: Set[str] | None = None
     _stages: dict[str, Stage] = {}  # set by Pipeline.add_stage
 
     @computed_field
@@ -57,6 +58,10 @@ class Pipeline(BaseModel):
     @property
     def dependencies(self) -> dict[str, set[str]]:
         return {stage.name: stage.dependencies for stage in self.stages.values()}
+    
+    @field_serializer('groupby')
+    def serialize_groupby(self, value: Set[str] | None, info) -> list[str] | None:
+        return list(value) if value is not None else None
 
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
@@ -199,11 +204,6 @@ class Pipeline(BaseModel):
             stage_class = getattr(module, stage_type)
         return stage_class.from_json(filepath, name, from_pipeline)
 
-    def build_dag(self) -> dict[str, list[str]]:
-        """Build directed acyclic graph (DAG) from the stages and their dependencies."""
-        # TODO: Placeholder until DAG class is implemented, assuming we need one
-        return self.dependencies
-
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
@@ -242,87 +242,54 @@ class Pipeline(BaseModel):
 
     def validate_dag(self, collector: ValidationErrorCollector) -> None:
         """Validate that the DAG structure is correct."""
-        for stage, dependencies in self.dependencies.items():
-            # Check for undefined dependencies
+        for stage_name, dependencies in self.dependencies.items():
             for dep in dependencies:
                 if dep not in self._stages:
-                    collector.add_error(stage, "DAG validation", f"Upstream dependency '{dep}' is not defined.")
+                    handle_error(stage_name, "DAG validation", ValueError,
+                                 f"Upstream dependency '{dep}' is not defined.", collector)
 
-            # Check for self-dependencies
-            if stage in dependencies:
-                collector.add_error(stage, "DAG validation", f"Stage cannot depend on itself.")
+                if dep == stage_name:
+                    handle_error(stage_name, "DAG validation", ValueError,
+                                "Stage cannot depend on itself.", collector)
 
-            # Check for duplicate dependencies
             if len(dependencies) != len(set(dependencies)):
-                collector.add_error(stage, "DAG validation", f"Duplicate dependencies found.")
+                handle_error(stage_name, "DAG validation", ValueError,
+                                "Duplicate dependencies found.", collector)
                 
-    def validate_stages(self, collector: ValidationErrorCollector) -> None:
-        """Validate that the specified Input, Output types between dependent stages are compatible."""
-        for stage, dependencies in self.dependencies.items():
-            # Dependency validation
-            for dep in dependencies:
-                # Check if output of upstream dependency is compatible with input of current stage
-                if not self.stages[dep].output.is_compatible(self.stages[stage].input): # TODO: implement is_compatible or similar
-                    collector.add_error(
-                        stage,
-                        "Stage validation",
-                        f"Output of upstream stage '{dep}' is not compatible with input of '{stage}'."
-                    )
+        try:
+            self.get_execution_order()
+        except ValueError as e:
+            handle_error("Pipeline", "DAG validation", ValueError, str(e), collector)
     
-    def validate(self) -> None:
-        """Validate pipeline."""
-        with validation_context() as collector:
-            # Validate DAG structure
-            self.validate_dag(collector)
-            # Validate specified Input, Output types between dependent stages
-            self.validate_stages(collector)
-            
-            if collector.has_errors():
-                self.save_validation_report(collector)
-                raise ValueError(f"Pipeline validation failed. See {self.directory / 'validation' / 'validation_report.json'} for details.")
-        
-    def save_validation_report(self, collector: ValidationErrorCollector):
-        validation_dir = self.directory / 'validation'
-        validation_dir.mkdir(exist_ok=True)
-        report_path = validation_dir / 'validation_report.json'
-        serialize(collector, report_path)
-    
-    def build(self) -> dict:
-        """
-        Assembles the Pipeline into a serializable structure.
-        
-        Notes
-        -----
-        * TODO: Include (?) OneMod, project version info
-        """
-        pipeline_dict = {
-            "name": self.name,
-            "directory": str(self.directory),
-            "ids": self.config.ids,
-            "obs": self.config.obs,
-            "pred": self.config.pred,
-            "weights": self.config.weights,
-            "test": self.config.test,
-            "holdouts": self.config.holdouts,
-            "mtype": self.config.mtype,
-            "groupby": self.groupby or [],
-            "stages": {},
-            "dependencies": {},
-        }
+    def build(self) -> None:
+        """Assemble the pipeline, perform build-time validation, and save it to JSON."""
+        collector = ValidationErrorCollector()
 
-        for stage_name, stage in self._stages.items():
-            pipeline_dict["stages"][stage_name] = stage.to_dict()
+        for stage in self.stages.values():
+            stage.validate_build(collector)
 
+        self.validate_dag(collector)
+
+        if collector.has_errors():
+            self.save_validation_report(collector)
+            collector.raise_errors()
+
+        pipeline_dict = self.model_dump()
+        pipeline_dict["stages"] = {}
+        for stage_name, stage in self.stages.items():
+            pipeline_dict["stages"][stage_name] = stage.model_dump()
         pipeline_dict["dependencies"] = {
-            stage_name: dependencies
+            stage_name: list(dependencies)
             for stage_name, dependencies in self.dependencies.items()
         }
 
-        return pipeline_dict
-    
-    def save(self, filepath: Path | str) -> None:
-        """Save pipeline to file."""
-        serialize(self.build(), filepath)
+        serialize(pipeline_dict, self.directory / f"{self.name}.json")
+        
+    def save_validation_report(self, collector: ValidationErrorCollector) -> None:
+        validation_dir = self.directory / 'validation'
+        validation_dir.mkdir(exist_ok=True)
+        report_path = validation_dir / 'validation_report.json'
+        serialize(collector.errors, report_path)
 
     @validate_call
     def evaluate(
