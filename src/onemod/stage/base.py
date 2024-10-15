@@ -3,29 +3,34 @@
 from __future__ import annotations
 
 import json
-from abc import ABC
+from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Literal
 
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, computed_field, validate_call
+from pydantic import ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
+from onemod.base_models import SerializableModel
 from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
-from onemod.io import Data, Input, Output
+from onemod.io import Input, Output
+from onemod.types import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
+from onemod.validation import ValidationErrorCollector, handle_error
 
 
-class Stage(BaseModel, ABC):
+class Stage(SerializableModel, ABC):
     """Stage base class."""
 
     model_config = ConfigDict(validate_assignment=True)
 
     name: str
     config: StageConfig
+    input_validation: Dict[str, Data] = Field(default_factory=dict)
+    output_validation: Dict[str, Data] = Field(default_factory=dict)
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
     _skip_if: set[str] = set()  # defined by class
@@ -73,16 +78,17 @@ class Stage(BaseModel, ABC):
         for item in self._output:
             item_name = item.split(".")[0]  # remove extension
             output_items[item_name] = Data(
-                stage=self.name, path=self.directory / item
+                stage=self.name,
+                path=self.directory / item,
             )
         return Output(stage=self.name, items=output_items)
-
+    
     @property
     def dependencies(self) -> set[str]:
         if self.input is None:
             return set()
         return self.input.dependencies
-
+        
     @computed_field
     @property
     def type(self) -> str:
@@ -134,7 +140,7 @@ class Stage(BaseModel, ABC):
         if "input" in config:
             stage(**config["input"])
         return stage
-
+    
     def to_json(self, filepath: Path | str | None = None) -> None:
         """Save stage as JSON file.
 
@@ -149,14 +155,14 @@ class Stage(BaseModel, ABC):
         filepath = filepath or self.directory / (self.name + ".json")
         with open(filepath, "w") as f:
             f.write(self.model_dump_json(indent=4, exclude_none=True))
-
-    @classmethod
+            
+    @validate_call
     def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str | None = None,
+        self,
+        config: Path | str | None = None,
         from_pipeline: bool = False,
-        method: str = "run",
+        method: Literal["run", "fit", "predict", "collect"] = "run",
+        backend: Literal["local", "jobmon"] = "local",
         *args,
         **kwargs,
     ) -> None:
@@ -164,38 +170,72 @@ class Stage(BaseModel, ABC):
 
         Parameters
         ----------
-        filepath : Path or str
-            Path to config file.
-        stage_name : str or None, optional
-            Stage name, required if `from_pipeline` is True.
+        config : Path, str, or None, optional
+            Path to config file. Required if `backend` is 'jobmon'.
             Default is None.
         from_pipeline : bool, optional
-            Whether `filepath` is a pipeline or stage config file.
+            Whether `config` is a pipeline or stage config file.
             Default is False.
         method : str, optional
-            Name of stage method to evaluate. Default is 'run'.
-
-        Notes
-        -----
-        This class method is designed to be called from the command
-        line. It creates a stage instance from the config file, then
-        calls the stage method.
+            Name of method to evaluate. Default is 'run'.
+        backend : str, optional
+            Whether to evaluate the method locally or with Jobmon.
+            Default is 'local'.
 
         """
-        stage = cls.from_json(filepath, stage_name, from_pipeline)
-        if method in stage.skip_if:
-            raise AttributeError(f"{stage.name} skips the '{method}' method")
+        if method in self.skip_if:
+            raise AttributeError(f"{self.name} skips the '{method}' method")
+        if backend == "jobmon":
+            raise NotImplementedError("Jobmon backend not implemented")
         try:
-            stage.__getattribute__(method)(*args, **kwargs)
+            self.__getattribute__(method)()
         except AttributeError:
             raise AttributeError(
-                f"{stage.name} does not have a '{method}' method"
+                f"{self.name} does not have a '{method}' method"
             )
-
+    
+    def validate_build(self, collector: ValidationErrorCollector) -> None:
+        """Perfom build-time validation."""
+        if self.input_validation:
+            for item_name, schema in self.input_validation.items():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="input", collector=collector)
+                    
+        if self.output_validation:
+            for item_name, schema in self.output_validation.items():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="output", collector=collector)
+                    
+    def validate_run(self, collector: ValidationErrorCollector) -> None:
+        """Perfom run-time validation."""
+        if self.input_validation:
+            for item_name, schema in self.input_validation.items():
+                data_path = self.input.get(item_name)
+                if data_path:
+                    schema.path = Path(data_path)
+                    schema.validate_data(collector)
+                else:
+                    handle_error(self.name, "Input validation", ValueError,
+                        f"Input data path for '{item_name}' not found in stage inputs.", collector)
+                    
+    def validate_outputs(self, collector: ValidationErrorCollector) -> None:
+        """Perform post-run validation of outputs."""
+        if self.output_validation:
+            for item_name, data_spec in self.output_validation.items():
+                data_output = self.output.get(item_name)
+                if data_output:
+                    data_spec.path = Path(data_output.path)
+                    data_spec.validate_data(collector)
+                else:
+                    handle_error(
+                        self.name, "Output Validation", KeyError,
+                        f"Output data '{item_name}' not found after stage execution.", collector
+                    )
+        
     def run(self) -> None:
         """Run stage."""
         raise NotImplementedError()
-
+        
     @validate_call
     def __call__(self, **input: Data | Path) -> None:
         """Define stage dependencies."""
@@ -245,23 +285,7 @@ class GroupedStage(Stage, ABC):
             self.config.data, self.directory / "subsets.csv", subset_id
         )
 
-    @classmethod
-    def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str,
-        method: str = "run",
-        subset_id: int | None = None,
-        *args,
-        **kwargs,
-    ) -> None:
-        """Evaluate stage method."""
-        stage = cls.from_json(filepath, stage_name)
-        if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(subset_id, *args, **kwargs)
-
-    def run(self, subset_id: int) -> None:
+    def run(self, subset_id = None, param_id = None):
         """Run stage submodel."""
         raise NotImplementedError()
 
@@ -303,23 +327,7 @@ class CrossedStage(Stage, ABC):
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
-    @classmethod
-    def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str,
-        method: str = "run",
-        param_id: int | None = None,
-        *args,
-        **kwargs,
-    ) -> None:
-        """Evaluate stage method."""
-        stage = cls.from_json(filepath, stage_name)
-        if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(param_id, *args, **kwargs)
-
-    def run(self, param_id: int) -> None:
+    def run(self, subset_id: int | None = None, param_id: int | None = None) -> None:
         """Run stage submodel."""
         raise NotImplementedError()
 
@@ -341,31 +349,17 @@ class ModelStage(GroupedStage, CrossedStage, ABC):
 
     config: ModelConfig
 
-    @classmethod
-    def evaluate(
-        cls,
-        filepath: Path | str,
-        stage_name: str,
-        method: str = "run",
-        subset_id: int | None = None,
-        param_id: int | None = None,
-        *args,
-        **kwargs,
-    ) -> None:
-        "Evaluate stage method."
-        stage = cls.from_json(filepath, stage_name)
-        if method in stage.skip_if:
-            raise ValueError(f"invalid method: {method}")
-        stage.__getattribute__(method)(subset_id, param_id, *args, **kwargs)
-
+    @abstractmethod
     def run(self, subset_id: int | None, param_id: int | None) -> None:
         """Run stage submodel."""
-        raise NotImplementedError()
+        raise NotImplementedError("Subclasses must implement this method.")
 
+    @abstractmethod
     def fit(self, subset_id: int | None, param_id: int | None) -> None:
         """Fit stage submodel."""
-        raise NotImplementedError()
+        raise NotImplementedError("Subclasses must implement this method.")
 
+    @abstractmethod
     def predict(self, subset_id: int | None, param_id: int | None) -> None:
         """Predict stage submodel."""
-        raise NotImplementedError()
+        raise NotImplementedError("Subclasses must implement this method.")

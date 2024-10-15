@@ -31,6 +31,12 @@ class RoverStage(ModelStage):
             f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
 
+    def predict(
+        self, subset_id: int | None = None, param_id: int | None = None
+    ) -> None:
+        "predict() is not implemented for RoverStage."
+        pass
+
     def collect(self) -> None:
         """Collect rover submodel results."""
         print(f"collecting {self.name} submodel results")
