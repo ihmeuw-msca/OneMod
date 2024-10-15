@@ -49,13 +49,11 @@ def test_expected_types():
         "priors": "pkl",
     }
 
-@pytest.mark.skip("Pending design decisions")
 @pytest.mark.unit
 def test_cycles_detected_by_init():
     with pytest.raises(ValueError):
         get_input(ITEMS_WITH_CYCLES)
 
-@pytest.mark.skip("Pending design decisions")
 @pytest.mark.unit
 def test_cycle_detected_by_setitem():
     test_input = get_input()
@@ -67,7 +65,6 @@ def test_cycle_detected_by_setitem():
     )
     assert test_input.items == {}
 
-@pytest.mark.skip("Pending design decisions")
 @pytest.mark.unit
 def test_cycles_detected_by_update():
     test_input = get_input()
@@ -275,9 +272,9 @@ def test_frozen():
         get_input().items = VALID_ITEMS
 
 @pytest.mark.unit
-def test_to_dict():
+def test_input_model():
     test_input = get_input(VALID_ITEMS)
-    assert test_input.to_dict() == {
+    assert test_input.model_dump() == {
         "data": "/path/to/predictions.parquet",
         "covariates": {
             "stage": "first_stage",

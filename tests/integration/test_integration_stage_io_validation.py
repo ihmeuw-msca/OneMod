@@ -8,7 +8,7 @@ import pytest
 from onemod.config import Config
 from onemod.constraints import Constraint
 from onemod.stage import Stage
-from onemod.types import Data
+from onemod.types import ColumnSpec, Data
 
 
 class DummyStage(Stage):
@@ -28,53 +28,53 @@ def stage_1(example_base_dir):
         name="stage_1",
         directory=example_base_dir / "stage_1",
         config={},
-        input_types=dict(
+        input_validation=dict(
             data=Data(
-                stage="stage_1",
-                path=example_base_dir / "stage_1" / "data.parquet",
+                stage="stage_0",
+                path=example_base_dir / "stage_0" / "data.parquet",
                 format="parquet",
                 columns=dict(
-                    id_col=dict(type=int),
-                    bounded_col=dict(
+                    id_col=ColumnSpec(type=int),
+                    bounded_col=ColumnSpec(
                         type=float,
                         constraints=[
-                            Constraint("bounds", ge=0, le=1)
+                            Constraint(name="bounds", args=dict(ge=0, le=1))
                         ]
                     ),
-                    str_col=dict(
+                    str_col=ColumnSpec(
                         type=str,
                         constraints=[
-                            Constraint("is_in", other={"a", "b", "c"})
+                            Constraint(name="is_in", args=dict(other=["a", "b", "c"]))
                         ]
                     )
                 )
             ),
             covariates=Data(
-                stage="stage_1",
-                path=example_base_dir / "stage_1" / "covariates.csv",
+                stage="stage_0",
+                path=example_base_dir / "stage_0" / "covariates.csv",
                 format="csv",
                 columns=dict(
-                    id_col=dict(type=int),
-                    str_col=dict(
+                    id_col=ColumnSpec(type=int),
+                    str_col=ColumnSpec(
                         type=str,
                         constraints=[
-                            Constraint("is_in", other=["cov1", "cov2", "cov3"])
+                            Constraint(name="is_in", args=dict(other=["cov1", "cov2", "cov3"]))
                         ]
                     )
                 )
             )
         ),
-        output_types=dict(
+        output_validation=dict(
             predictions=Data(
                 stage="stage_1",
                 path=example_base_dir / "stage_1" / "predictions.parquet",
                 format="parquet",
                 columns=dict(
-                    id_col=dict(type=int),
-                    prediction_col=dict(
+                    id_col=ColumnSpec(type=int),
+                    prediction_col=ColumnSpec(
                         type=float,
                         constraints=[
-                            Constraint("bounds", ge=-1, le=1)
+                            Constraint(name="bounds", args=dict(ge=-1, le=1))
                         ]
                     )
                 )
@@ -83,11 +83,107 @@ def stage_1(example_base_dir):
     )
     stage_1.directory = example_base_dir / "stage_1"
     stage_1(
-        data=example_base_dir / "stage_1" / "data.parquet",
-        covariates=example_base_dir / "stage_1" / "covariates.csv"
+        data=example_base_dir / "stage_0" / "data.parquet",
+        covariates=example_base_dir / "stage_0" / "covariates.csv"
     )
     return stage_1
 
+@pytest.fixture(scope="module")
+def stage_1_model_expected(example_base_dir):
+    return {
+        "name": "stage_1",
+        "type": "DummyStage",
+        "module": __file__,
+        "config": {},
+        "input_validation": {
+            "covariates": {
+                "stage": "stage_0",
+                "path": str(example_base_dir / "stage_0" / "covariates.csv"),
+                "format": "csv",
+                "shape": None,
+                "columns": {
+                    "id_col": {
+                        "type": "int",
+                        "constraints": None
+                    },
+                    "str_col": {
+                        "type": "str",
+                        "constraints": [
+                            {
+                                "name": "is_in",
+                                "args": {
+                                    "other": ["cov1", "cov2", "cov3"]
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            "data": {
+                "stage": "stage_0",
+                "path": str(example_base_dir / "stage_0" / "data.parquet"),
+                "format": "parquet",
+                "shape": None,
+                "columns": {
+                    "id_col": {
+                        "type": "int",
+                        "constraints": None
+                    },
+                    "bounded_col": {
+                        "type": "float",
+                        "constraints": [
+                            {
+                                "name": "bounds",
+                                "args": {
+                                    "ge": 0, "le": 1
+                                }
+                            }
+                        ]
+                    },
+                    "str_col": {
+                        "type": "str",
+                        "constraints": [
+                            {
+                                "name": "is_in",
+                                "args": {
+                                    "other": ["a", "b", "c"]
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        },
+        "output_validation": {
+            "predictions": {
+                "stage": "stage_1",
+                "path": str(example_base_dir / "stage_1" / "predictions.parquet"),
+                "format": "parquet",
+                "shape": None,
+                "columns": {
+                    "id_col": {
+                        "type": "int",
+                        "constraints": None
+                    },
+                    "prediction_col": {
+                        "type": "float",
+                        "constraints": [
+                            {
+                                "name": "bounds",
+                                "args": {
+                                    "ge": -1, "le": 1
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "input": {
+            "data": str(example_base_dir / "stage_0" / "data.parquet"),
+            "covariates": str(example_base_dir / "stage_0" / "covariates.csv")
+        }
+    }
 
 @pytest.fixture(scope="module")
 def stage_2(example_base_dir, stage_1):
@@ -95,33 +191,33 @@ def stage_2(example_base_dir, stage_1):
         name="stage_2",
         directory=example_base_dir / "stage_2",
         config={},
-        input_types=dict(
+        input_validation=dict(
             data=Data(
-                stage="stage_2",
+                stage="stage_1",
                 path=stage_1.output["predictions"].path,
                 format="parquet",
                 columns=dict(
-                    id_col=dict(type=int),
-                    prediction_col=dict(
+                    id_col=ColumnSpec(type=int),
+                    prediction_col=ColumnSpec(
                         type=float,
                         constraints=[
-                            Constraint("bounds", ge=0, le=1)
+                            Constraint(name="bounds", args=dict(ge=0, le=1))
                         ]
                     )
                 )
             )
         ),
-        output_types=dict(
+        output_validation=dict(
             data=Data(
                 stage="stage_2",
                 path=example_base_dir / "stage_2" / "predictions.parquet",
                 format="parquet",
                 columns=dict(
-                    id_col=dict(type=int),
-                    prediction_col=dict(
+                    id_col=ColumnSpec(type=int),
+                    prediction_col=ColumnSpec(
                         type=float,
                         constraints=[
-                            Constraint("bounds", ge=-1, le=1)
+                            Constraint(name="bounds", args=dict(ge=-1, le=1))
                         ]
                     )
                 )
@@ -131,85 +227,119 @@ def stage_2(example_base_dir, stage_1):
     stage_2.directory = example_base_dir / "stage_2"
     stage_2(
         data=stage_1.output["predictions"],
-        covariates="/path/to/covariates.csv"
+        covariates=example_base_dir / "stage_0" / "covariates.csv"
     )
     return stage_2
 
-@pytest.mark.integration
-def test_input_types(stage_1):
-    assert "data" in stage_1.input_types
-    assert stage_1.input_types["data"].path == stage_1.directory / "data.parquet"
-    assert stage_1.input_types["data"].format == "parquet"
-    assert stage_1.input_types["data"].shape == None
-    assert stage_1.dependencies == set()
-
-
-@pytest.mark.integration
-def test_output_types(stage_1):
-    assert "predictions" in stage_1.output_types
-    assert stage_1.output_types["predictions"].path == stage_1.directory / "predictions.parquet"
-    assert stage_1.output_types["predictions"].format == "parquet"
-    assert stage_1.output_types["predictions"].shape == None
-
-@pytest.mark.integration
-def test_to_dict(stage_1, stage_2):
-    assert stage_2.to_dict() == {
+@pytest.fixture(scope="module")
+def stage_2_model_expected(example_base_dir):
+    return {
         "name": "stage_2",
         "type": "DummyStage",
         "config": {},
-        "input": {
+        "module": __file__,
+        "input_validation": {
             "data": {
                 "stage": "stage_1",
-                "path": str(stage_1.output["predictions"].path),
+                "path": str(example_base_dir / "stage_1" / "predictions.parquet"),
                 "format": "parquet",
                 "shape": None,
                 "columns": {
-                    "id_col": {"type": "int"},
+                    "id_col": {
+                        "type": "int",
+                        "constraints": None
+                    },
                     "prediction_col": {
                         "type": "float",
                         "constraints": [
-                            {"type": "bounds", "ge": 0, "le": 1}
+                            {
+                                "name": "bounds",
+                                "args": {
+                                    "ge": 0, "le": 1
+                                }
+                            }
                         ]
-                    } 
+                    }
                 }
             },
         },
-        "output": {
+        "output_validation": {
             "data": {
                 "stage": "stage_2",
-                "path": str(stage_2.directory / "predictions.parquet"),
+                "path": str(example_base_dir / "stage_2" / "predictions.parquet"),
                 "format": "parquet",
                 "shape": None,
                 "columns": {
-                    "id_col": {"type": "int"},
+                    "id_col": {
+                        "type": "int",
+                        "constraints": None
+                    },
                     "prediction_col": {
                         "type": "float",
                         "constraints": [
-                            {"type": "bounds", "ge": -1, "le": 1}
+                            {
+                                "name": "bounds",
+                                "args": {
+                                    "ge": -1, "le": 1
+                                }
+                            }
                         ]
                     }
                 }
             }
         },
-        "dependencies": {"stage_1"}
+        "input": {
+            "data": {
+                "stage": "stage_1",
+                "path": str(example_base_dir / "stage_1" / "predictions.parquet"),
+                "format": "parquet",
+                "shape": None,
+                "columns": None
+            },
+            "covariates": str(example_base_dir / "stage_0" / "covariates.csv")
+        }
     }
 
-@pytest.mark.skip(reason="Not implemented")
 @pytest.mark.integration
-def test_from_json(stage_2):
-    stage_2.to_json()
-    stage_2_new = DummyStage.from_json(
+def test_input_types(example_base_dir, stage_1):
+    assert "data" in stage_1.input_validation
+    assert stage_1.input_validation["data"].path == example_base_dir / "stage_0" / "data.parquet"
+    assert stage_1.input_validation["data"].format == "parquet"
+    assert stage_1.input_validation["data"].shape == None
+    assert stage_1.dependencies == set()
+
+
+@pytest.mark.integration
+def test_output_types(stage_1):
+    assert "predictions" in stage_1.output_validation
+    assert stage_1.output_validation["predictions"].path == stage_1.directory / "predictions.parquet"
+    assert stage_1.output_validation["predictions"].format == "parquet"
+    assert stage_1.output_validation["predictions"].shape == None
+
+@pytest.mark.integration
+def test_stage_model(stage_1, stage_1_model_expected, stage_2, stage_2_model_expected):
+    stage_1_model_actual = stage_1.model_dump()
+    print(stage_1_model_actual)
+    assert stage_1_model_actual == stage_1_model_expected
+    
+    stage_2_model_actual = stage_2.model_dump()
+    print(stage_2_model_actual)
+    assert stage_2_model_actual == stage_2_model_expected
+
+
+@pytest.mark.integration
+def test_to_json(stage_1, stage_1_model_expected, stage_2, stage_2_model_expected):
+    stage_1.to_json(filepath=stage_1.directory / (stage_1.name + ".json"))
+    stage_1_loaded_actual = DummyStage.from_json(
+        stage_1.directory / (stage_1.name + ".json")
+    )
+    stage_1_loaded_actual = stage_1_loaded_actual.model_dump()
+    assert stage_1_loaded_actual == stage_1_model_expected
+    
+    stage_2.to_json(filepath=stage_2.directory / (stage_2.name + ".json"))
+    stage_2_loaded_actual = DummyStage.from_json(
         stage_2.directory / (stage_2.name + ".json")
     )
-    print("stage_2_new")
-    print(stage_2_new)
-    assert stage_2_new.name == stage_2.name
-    assert stage_2_new.directory == stage_2.directory
-    assert stage_2_new.input == stage_2.input
-    assert stage_2_new.output == stage_2.output
-    assert stage_2_new.dependencies == stage_2.dependencies
-    assert stage_2_new._required_input == stage_2._required_input
-    assert stage_2_new._optional_input == stage_2._optional_input
-    assert stage_2_new.input_types == stage_2.input_types
-    assert stage_2_new.output_types == stage_2.output_types
-    assert stage_2_new.config == stage_2.config
+    stage_2_loaded_actual = stage_2_loaded_actual.model_dump()
+    
+    assert stage_2_loaded_actual == stage_2_model_expected

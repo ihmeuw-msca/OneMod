@@ -141,37 +141,33 @@ def test_from_json(stage_2):
     assert stage_2_new.output == stage_2.output
 
 @pytest.mark.unit
-def test_to_dict(stage_1, stage_2):
-    assert stage_1.to_dict() == {
+def test_stage_model(stage_1, stage_2):
+    stage_1_model_actual = stage_1.model_dump()
+    
+    stage_1_model_expected = {
         "name": "stage_1",
         "type": "DummyStage",
         "config": {},
+        "input_validation": {},
+        "output_validation": {},
+        "module": __file__,
         "input": {
             "data": "/path/to/data.parquet",
             "covariates": "/path/to/covariates.csv",
-        },
-        "output": {
-            "predictions": {
-                "stage": "stage_1",
-                "path": str(stage_1.directory / "predictions.parquet"),
-                "format": "parquet",
-                "shape": None,
-                "columns": None,
-            },
-            "model": {
-                "stage": "stage_1",
-                "path": str(stage_1.directory / "model.pkl"),
-                "format": "parquet",
-                "shape": None,
-                "columns": None,
-            },
-        },
-        "dependencies": set(),
+        }
     }
-    assert stage_2.to_dict() == {
+    
+    assert stage_1_model_actual == stage_1_model_expected
+    
+    stage_2_model_actual = stage_2.model_dump()
+    
+    stage_2_model_expected = {
         "name": "stage_2",
         "type": "DummyStage",
         "config": {},
+        "input_validation": {},
+        "output_validation": {},
+        "module": __file__,
         "input": {
             "data": {
                 "stage": "stage_1",
@@ -182,21 +178,6 @@ def test_to_dict(stage_1, stage_2):
             },
             "covariates": "/path/to/covariates.csv",
         },
-        "output": {
-            "predictions": {
-                "stage": "stage_2",
-                "path": str(stage_2.directory / "predictions.parquet"),
-                "format": "parquet",
-                "shape": None,
-                "columns": None,
-            },
-            "model": {
-                "stage": "stage_2",
-                "path": str(stage_2.directory / "model.pkl"),
-                "format": "parquet",
-                "shape": None,
-                "columns": None,
-            },
-        },
-        "dependencies": {"stage_1"},
     }
+    
+    assert stage_2_model_actual == stage_2_model_expected

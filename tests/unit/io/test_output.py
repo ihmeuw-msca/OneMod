@@ -63,4 +63,4 @@ def test_no_setitem():
 
 @pytest.mark.unit
 def test_to_dict():
-    assert OUTPUT.to_dict() == ITEMS
+    assert OUTPUT.model_dump() == ITEMS

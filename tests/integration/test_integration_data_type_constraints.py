@@ -2,7 +2,7 @@ from polars import DataFrame
 import pytest
 
 from onemod.constraints import Constraint
-from onemod.types import Data
+from onemod.types import ColumnSpec, Data
 
 @pytest.mark.integration
 def test_data_with_integer_with_bounds_valid():
@@ -10,11 +10,11 @@ def test_data_with_integer_with_bounds_valid():
         stage="test",
         path="test.parquet",
         columns=dict(
-            age_group_id=dict(
+            age_group_id=ColumnSpec(
                 type=int,
-                constraints=[Constraint("bounds", ge=0, le=500)]
+                constraints=[Constraint(name="bounds", args=dict(ge=0, le=500))]
             ),
-            location_id=dict(
+            location_id=ColumnSpec(
                 type=int
             )
         )
@@ -33,11 +33,11 @@ def test_data_with_integer_with_bounds_valid_shape():
         stage="test",
         path="test.parquet",
         columns=dict(
-            age_group_id=dict(
+            age_group_id=ColumnSpec(
                 type=int,
-                constraints=[Constraint("bounds", ge=0, le=500)]
+                constraints=[Constraint(name="bounds", args=dict(ge=0, le=500))]
             ),
-            location_id=dict(
+            location_id=ColumnSpec(
                 type=int
             )
         ),
@@ -57,11 +57,11 @@ def test_data_with_integer_with_bounds_invalid_shape():
         stage="test",
         path="test.parquet",
         columns=dict(
-            age_group_id=dict(
+            age_group_id=ColumnSpec(
                 type=int,
-                constraints=[Constraint("bounds", ge=0, le=500)]
+                constraints=[Constraint(name="bounds", args=dict(ge=0, le=500))]
             ),
-            location_id=dict(
+            location_id=ColumnSpec(
                 type=int
             )
         ),
@@ -85,11 +85,11 @@ def test_data_with_constraints_invalid_and_shape_invalid(validation_collector):
         stage="test",
         path="test.parquet",
         columns=dict(
-            age_group_id=dict(
+            age_group_id=ColumnSpec(
                 type=int,
-                constraints=[Constraint("bounds", ge=0, le=500)]
+                constraints=[Constraint(name="bounds", args=dict(ge=0, le=500))]
             ),
-            location_id=dict(
+            location_id=ColumnSpec(
                 type=int
             )
         ),
@@ -109,3 +109,189 @@ def test_data_with_constraints_invalid_and_shape_invalid(validation_collector):
     assert len(errors) == 2
     assert any("Column 'location_id' must be of type int." in error.message for error in errors)
     assert any("Expected DataFrame shape (3, 2), got (2, 2)." in error.message for error in errors)
+
+@pytest.mark.integration
+def test_data_model_no_constraints():
+    schema = Data(
+        stage="test",
+        path="test.parquet",
+        columns=dict(
+            age_group_id=ColumnSpec(
+                type=int,
+            ),
+            location_id=ColumnSpec(
+                type=int
+            )
+        )
+    )
+    
+    expected = {
+        "stage": "test",
+        "path": "test.parquet",
+        "format": "parquet",
+        "shape": None,
+        "columns": {
+            "age_group_id": {
+                "type": "int",
+                "constraints": None
+            },
+            "location_id": {
+                "type": "int",
+                "constraints": None
+            }
+        }
+    }
+    
+    actual = schema.model_dump()
+    
+    assert actual == expected
+    
+@pytest.mark.integration
+def test_data_model_with_constraints():
+    schema = Data(
+        stage="test",
+        path="test.parquet",
+        columns=dict(
+            age_group_id=ColumnSpec(
+                type=int,
+                constraints=[Constraint(name="bounds", args=dict(ge=0, le=500))]
+            ),
+            selected_covs=ColumnSpec(
+                type=str,
+                constraints=[
+                    Constraint(name="is_in", args=dict(other=["cov1", "cov2", "cov3"]))
+                ]
+            )
+        )
+    )
+
+    expected = {
+        "stage": "test",
+        "path": "test.parquet",
+        "format": "parquet",
+        "shape": None,
+        "columns": {
+            "age_group_id": {
+                "type": "int",
+                "constraints": [
+                    {
+                        "name": "bounds",
+                        "args": {
+                            "ge": 0,
+                            "le": 500
+                        }
+                    }
+                ]
+            },
+            "selected_covs": {
+                "type": "str",
+                "constraints": [
+                    {
+                        "name": "is_in",
+                        "args": {
+                            "other": ["cov1", "cov2", "cov3"]
+                        }
+                    }
+                ]   
+            }
+        }
+    }
+    
+    actual = schema.model_dump()
+    
+    assert actual == expected
+
+@pytest.mark.integration
+def test_data_to_json_no_constraints(tmp_path):
+    schema = Data(
+        stage="test",
+        path="test.parquet",
+        columns=dict(
+            age_group_id=ColumnSpec(
+                type=int,
+            ),
+            location_id=ColumnSpec(
+                type=int
+            )
+        )
+    )
+
+    expected = {
+        "stage": "test",
+        "path": "test.parquet",
+        "format": "parquet",
+        "shape": None,
+        "columns": {
+            "age_group_id": {
+                "type": "int",
+                "constraints": None
+            },
+            "location_id": {
+                "type": "int",
+                "constraints": None
+            }
+        }
+    }
+
+    schema.to_json(tmp_path / "test.json")
+    data = Data.from_json(tmp_path / "test.json")
+    actual = data.model_dump()
+    
+    assert actual == expected
+    
+@pytest.mark.integration
+def test_data_to_json_with_constraints(tmp_path):
+    schema = Data(
+        stage="test",
+        path="test.parquet",
+        columns=dict(
+            age_group_id=ColumnSpec(
+                type=int,
+                constraints=[Constraint(name="bounds", args=dict(ge=0, le=500))]
+            ),
+            selected_covs=ColumnSpec(
+                type=str,
+                constraints=[
+                    Constraint(name="is_in", args=dict(other=["cov1", "cov2", "cov3"]))
+                ]
+            )
+        )
+    )
+
+    expected = {
+        "stage": "test",
+        "path": "test.parquet",
+        "format": "parquet",
+        "shape": None,
+        "columns": {
+            "age_group_id": {
+                "type": "int",
+                "constraints": [
+                    {
+                        "name": "bounds",
+                        "args": {
+                            "ge": 0,
+                            "le": 500
+                        }
+                    }
+                ]
+            },
+            "selected_covs": {
+                "type": "str",
+                "constraints": [
+                    {
+                        "name": "is_in",
+                        "args": {
+                            "other": ["cov1", "cov2", "cov3"]
+                        }
+                    }
+                ]   
+            }
+        }
+    }
+    
+    schema.to_json(tmp_path / "test.json")
+    data = Data.from_json(tmp_path / "test.json")
+    actual = data.model_dump()
+    
+    assert actual == expected
