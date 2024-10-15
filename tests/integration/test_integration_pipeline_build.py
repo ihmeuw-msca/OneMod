@@ -52,7 +52,11 @@ def test_base_dir(tmp_path_factory):
 def create_dummy_data(test_base_dir):
     """Create dummy data files needed for testing."""
     data_dir = test_base_dir / "data"
+    stage_1_dir = test_base_dir / "stage_1"
+    stage_2_dir = test_base_dir / "stage_2"
     data_dir.mkdir(parents=True, exist_ok=True)
+    stage_1_dir.mkdir(parents=True, exist_ok=True)
+    stage_2_dir.mkdir(parents=True, exist_ok=True)
 
     data_df = DataFrame({
         "id_col": [1],
@@ -68,12 +72,19 @@ def create_dummy_data(test_base_dir):
     })
     covariates_parquet_path = data_dir / "covariates.parquet"
     covariates_df.write_parquet(covariates_parquet_path)
-
-    return data_parquet_path, covariates_parquet_path
+    
+    predictions_df = DataFrame({
+        "id_col": [1],
+        "prediction_col": [0.5]
+    })
+    predictions_parquet_path = stage_1_dir / "predictions.parquet"
+    predictions_df.write_parquet(predictions_parquet_path)
+    
+    return data_parquet_path, covariates_parquet_path, predictions_parquet_path
 
 @pytest.fixture(scope="module")
 def stage_1(test_base_dir, create_dummy_data):
-    data_parquet_path, covariates_parquet_path = create_dummy_data
+    data_parquet_path, covariates_parquet_path, predictions_parquet_path = create_dummy_data
     
     stage_1 = DummyStage(
         name="stage_1",
@@ -81,7 +92,7 @@ def stage_1(test_base_dir, create_dummy_data):
         config=StageConfig(),
         input_validation=dict(
             data=Data(
-                stage="stage_1",
+                stage="data",
                 path=data_parquet_path,
                 format="parquet",
                 shape=(1, 2),
@@ -102,7 +113,7 @@ def stage_1(test_base_dir, create_dummy_data):
                 )
             ),
             covariates=Data(
-                stage="stage_1",
+                stage="data",
                 path=covariates_parquet_path,
                 format="parquet",
                 columns=dict(
@@ -119,7 +130,7 @@ def stage_1(test_base_dir, create_dummy_data):
         output_validation=dict(
             predictions=Data(
                 stage="stage_1",
-                path=test_base_dir / "stage_1" / "predictions.parquet",
+                path=predictions_parquet_path,
                 format="parquet",
                 columns=dict(
                     id_col=ColumnSpec(type=int),
@@ -142,6 +153,39 @@ def stage_1(test_base_dir, create_dummy_data):
     return stage_1
 
 @pytest.fixture(scope="module")
+def stage_2(test_base_dir, stage_1):
+    stage_2 = DummyStage(
+        name="stage_2",
+        directory=test_base_dir / "stage_2",
+        config=StageConfig(),
+        input_validation=dict(
+            data=Data(
+                stage="stage_1",
+                path=stage_1.output["predictions"].path,
+                format="parquet"
+            ),
+            covariates=Data(
+                stage="data",
+                path=test_base_dir / "data" / "covariates.parquet",
+            )
+        ),
+        output_validation=dict(
+            predictions=Data(
+                stage="stage_2",
+                path=test_base_dir / "stage_2" / "predictions.parquet",
+                format="parquet"
+            )
+        )
+    )
+    stage_2.directory = test_base_dir / "stage_2"
+    stage_2(
+        data=stage_1.output["predictions"],
+        covariates=test_base_dir / "data" / "covariates.parquet"
+    )
+    
+    return stage_2
+
+@pytest.fixture(scope="module")
 def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
@@ -152,6 +196,20 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
         groupby=["age_group_id"]
     )
     pipeline.add_stage(stage_1)
+    
+    return pipeline
+
+@pytest.fixture(scope="module")
+def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
+    """A sample pipeline with multiple stages and dependencies."""
+    pipeline = Pipeline(
+        name="test_pipeline",
+        config=PipelineConfig(ids=["age_group_id", "location_id"]),
+        directory=test_base_dir,
+        data=test_base_dir / "data" / "data.parquet",
+        groupby=["age_group_id"]
+    )
+    pipeline.add_stages([stage_1, stage_2])
     
     return pipeline
 
@@ -197,7 +255,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 },
                 "input_validation": {
                     "data": {
-                        "stage": "stage_1",
+                        "stage": "data",
                         "path": str(test_base_dir / "data" / "data.parquet"),
                         "format": "parquet",
                         "shape": [1, 2],
@@ -232,7 +290,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                         }
                     },
                     "covariates": {
-                        "stage": "stage_1",
+                        "stage": "data",
                         "path": str(test_base_dir / "data" / "covariates.parquet"),
                         "format": "parquet",
                         "shape": None,
@@ -287,3 +345,25 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
     }
     
     assert_equal_unordered(pipeline_dict_actual, pipeline_dict_expected)
+
+@pytest.mark.integration
+def test_pipeline_build_multiple_stages(test_base_dir, pipeline_with_multiple_stages):
+    """Test building a pipeline with multiple stages and dependencies."""
+    pipeline_with_multiple_stages.build()
+    
+    with open(test_base_dir / f"{pipeline_with_multiple_stages.name}.json", "r") as f:
+        pipeline_dict_actual = json.load(f)
+    
+    assert pipeline_dict_actual['dependencies'] == {"stage_1": [], "stage_2": ["stage_1"]}
+
+@pytest.mark.skip("Not yet implemented")
+@pytest.mark.integration
+def test_pipeline_deserialization(test_base_dir, pipeline_with_multiple_stages):
+    """Test deserializing a multi-stage pipeline from JSON."""
+    pipeline_json_path = test_base_dir / f"{pipeline_with_multiple_stages.name}.json"
+    
+    # Deserialize the pipeline from JSON
+    reconstructed_pipeline = Pipeline.from_json(pipeline_json_path) # TODO from_json (namely handling stages module importing)
+
+    # Assert that the reconstructed pipeline matches the original
+    assert reconstructed_pipeline == pipeline_with_multiple_stages
