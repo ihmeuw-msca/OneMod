@@ -22,9 +22,9 @@ classifiers = [
 dependencies = [
     "fire",
     "loguru",
+    "kreg @ git+https://github.com/ihmeuw-msca/kreg.git",
     "matplotlib",
     "modrover @ git+https://github.com/ihmeuw-msca/modrover.git@v0.1.3",
-    "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@v0.2.1",
     "pandas",
     "polars",
     "pyarrow",
@@ -32,8 +32,10 @@ dependencies = [
     "python-dotenv >= 1.0.0",
     "scipy",
     "seaborn",
+    "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@v0.2.1",
     "regmod == 0.1.2",
     "weighted-average >= 1.3.0",
+    "xspline" == 0.0.7,
 ]
 
 [project.optional-dependencies]

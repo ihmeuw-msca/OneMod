@@ -190,7 +190,7 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
-        config=PipelineConfig(ids=["age_group_id", "location_id"]),
+        config=PipelineConfig(id_columns=["age_group_id", "location_id"]),
         directory=test_base_dir,
         data=test_base_dir / "data" / "data.parquet",
         groupby=["age_group_id"]
@@ -204,7 +204,7 @@ def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
     """A sample pipeline with multiple stages and dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
-        config=PipelineConfig(ids=["age_group_id", "location_id"]),
+        config=PipelineConfig(id_columns=["age_group_id", "location_id"]),
         directory=test_base_dir,
         data=test_base_dir / "data" / "data.parquet",
         groupby=["age_group_id"]
@@ -227,13 +227,13 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
         "data": str(test_base_dir / "data" / "data.parquet"),
         "groupby": ["age_group_id"],
         "config": {
-            "ids": ["age_group_id", "location_id"],
-            "obs": "obs",
-            "pred": "pred",
-            "weights": "weights",
-            "test": "test",
-            "holdouts": [],
-            "mtype": "binomial"
+            "id_columns": ["age_group_id", "location_id"],
+            "observation_column": "obs",
+            "prediction_column": "pred",
+            "weight_column": "weights",
+            "test_column": "test",
+            "holdout_column": [],
+            "model_type": "binomial"
         },
         "stages": {
             "stage_1": {
@@ -241,13 +241,13 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "type": "DummyStage",
                 "module": __file__,
                 "config": {
-                    "ids": ["age_group_id", "location_id"],
-                    "obs": "obs",
-                    "pred": "pred",
-                    "weights": "weights",
-                    "test": "test",
-                    "holdouts": [],
-                    "mtype": "binomial"
+                    "id_columns": ["age_group_id", "location_id"],
+                    "observation_column": "obs",
+                    "prediction_column": "pred",
+                    "weight_column": "weights",
+                    "test_column": "test",
+                    "holdout_column": [],
+                    "model_type": "binomial"
                 },
                 "input": {
                     "data": str(test_base_dir / "data" / "data.parquet"),
