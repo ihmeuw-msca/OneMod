@@ -16,7 +16,7 @@ from typing import Any, Optional
 from pydantic import ConfigDict, model_serializer, validate_call
 
 from onemod.base_models import SerializableModel
-from onemod.types import Data
+from onemod.dtypes import Data
 from onemod.validation.error_handling import ValidationErrorCollector
 
 
@@ -40,7 +40,7 @@ class IO(SerializableModel, ABC):
                     input_dict[item_name] = item_value.model_dump()
             return input_dict
         return None
-    
+
     def get(self, item_name: str, default: Any = None) -> Any:
         return self.items.get(item_name, default)
 
@@ -64,7 +64,7 @@ class Input(IO):
         return set(
             item.stage for item in self.items.values() if isinstance(item, Data)
         )
-        
+
     def model_post_init(self, *args, **kwargs) -> None:
         self._expected_names = {
             item.split(".")[0] for item in {*self.required, *self.optional}

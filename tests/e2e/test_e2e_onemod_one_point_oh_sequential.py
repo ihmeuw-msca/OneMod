@@ -3,7 +3,8 @@ import pytest
 from onemod.constraints import bounds, no_inf
 from onemod import Pipeline
 from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
-from onemod.types import Data, FilePath
+from onemod.dtypes import Data, FilePath
+
 
 @pytest.mark.e2e
 @pytest.mark.skip(reason="Not yet implemented")

@@ -46,7 +46,7 @@ def load_stage(
         Stage name, required if `from_pipeline` is True.
         Default is None.
     from_pipeline : bool, optional
-        Whether `filepath` is a pipeline or stage config file.
+        Whether `config` is a pipeline or stage config file.
         Default is False.
 
     Returns
@@ -74,7 +74,7 @@ def get_stage(
         Stage name, required if `from_pipeline` is True.
         Default is None.
     from_pipeline : bool, optional
-        Whether `filepath` is a pipeline or stage config file.
+        Whether `config` is a pipeline or stage config file.
         Default is False.
 
     Returns

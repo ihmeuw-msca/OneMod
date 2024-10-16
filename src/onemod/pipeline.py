@@ -93,7 +93,7 @@ class Pipeline(SerializableModel):
 
             pipeline.add_stages(
                 [
-                    load_stage(config, stage, from_pipeline=True)
+                    load_stage(config_path, stage, from_pipeline=True)
                     for stage in stages
                 ]
             )
@@ -291,10 +291,12 @@ class Pipeline(SerializableModel):
 
         """
         if backend == "jobmon":
-            raise NotImplementedError("Jobmon backend not implemented yet.")
+            from onemod.backend import evaluate_with_jobmon
+
+            evaluate_with_jobmon(model=self, method=method, *args, **kwargs)
         else:
             for stage in self.stages.values():
-                if method not in stage._skip_if:
+                if method not in stage.skip:
                     subset_ids = getattr(stage, "subset_ids", None)
                     param_ids = getattr(stage, "param_ids", None)
                     if subset_ids is not None or param_ids is not None:

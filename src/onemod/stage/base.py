@@ -17,7 +17,7 @@ import onemod.stage as onemod_stages
 from onemod.base_models import SerializableModel
 from onemod.config import ModelConfig, StageConfig
 from onemod.io import Input, Output
-from onemod.types import Data
+from onemod.dtypes import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error
@@ -111,7 +111,7 @@ class Stage(SerializableModel, ABC):
             Stage name, required if `from_pipeline` is True.
             Default is None.
         from_pipeline : bool, optional
-            Whether `config` is a pipeline or stage config file.
+            Whether `config_path` is a pipeline or stage config file.
             Default is False.
 
         Returns
@@ -164,7 +164,7 @@ class Stage(SerializableModel, ABC):
     @validate_call
     def evaluate(
         self,
-        config_path: Path | str | None = None,
+        config: Path | str | None = None,
         from_pipeline: bool = False,
         method: Literal["run", "fit", "predict", "collect"] = "run",
         backend: Literal["local", "jobmon"] = "local",
@@ -175,7 +175,7 @@ class Stage(SerializableModel, ABC):
 
         Parameters
         ----------
-        config_path : Path, str, or None, optional
+        config : Path, str, or None, optional
             Path to config file. Required if `backend` is 'jobmon'.
             Default is None.
         from_pipeline : bool, optional
@@ -211,7 +211,7 @@ class Stage(SerializableModel, ABC):
 
             evaluate_with_jobmon(
                 model=self,
-                config_path=config_path,
+                config=config,
                 from_pipeline=from_pipeline,
                 method=method,
                 *args,
