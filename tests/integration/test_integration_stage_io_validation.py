@@ -320,14 +320,14 @@ def test_stage_model(
 def test_to_json(
     stage_1, stage_1_model_expected, stage_2, stage_2_model_expected
 ):
-    stage_1.to_json(filepath=stage_1.directory / (stage_1.name + ".json"))
+    stage_1.to_json(config_path=stage_1.directory / (stage_1.name + ".json"))
     stage_1_loaded_actual = DummyStage.from_json(
         stage_1.directory / (stage_1.name + ".json")
     )
     stage_1_loaded_actual = stage_1_loaded_actual.model_dump()
     assert stage_1_loaded_actual == stage_1_model_expected
 
-    stage_2.to_json(filepath=stage_2.directory / (stage_2.name + ".json"))
+    stage_2.to_json(config_path=stage_2.directory / (stage_2.name + ".json"))
     stage_2_loaded_actual = DummyStage.from_json(
         stage_2.directory / (stage_2.name + ".json")
     )
