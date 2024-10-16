@@ -1,26 +1,46 @@
 {
-  "_0": "Arguments for the generator: Workflow name, actual args for the stages, perhaps wokflow args or they might be created from the stage args. Might all just be a path to a config file",
+  "_0": "Translating Kelsey's workflow to a JSON file.",
   "tool": {
-    "name": "OneMod generator"
+    "name": "OneMod generator",
+    "cluster_name": "slurm",
+    "default_compute_resources": {
+        "queue": "all.q",
+        "cores": 1,
+        "memory": "1G",
+        "runtime": "00:01:00",
+        "project": "proj_mscm"
+    }
   },
-  "_1": "The standard task templates are 'included', probably by always emitting in the same file"
-  "_2": "because JSON does not have an include directive.",
+
   "task_templates": [
     {
+      "name": "preprocessing",
+      "description": "",
+      "formal_arguments_aka_args": [
+        { "arg_text": "required_input", "arg_type" : "op_arg"},
+        { "arg_text": "optional_input", "arg_type" : "op_arg"},
+        { "arg_text": "output", "arg_type" : "op_arg"},
+        { "arg_text": "debug_level", "arg_type": "task_arg"}
+      ],
+      "command": "python preprocess --required_input {settings} --param_id {param_id}",
+      "_5": "This version does not read a settings file, maybe not a relevant comment. Do the current rover jobs read from the settings file?",
+      "max_concurrently_running": 500,
+      "chunk_size": 50
+    },{
       "name": "rover_covsel",
       "description": "Covariate selection, ToDo: perhaps something workflow specific? path to settings file? some contents of settings file",
       "_2": "Tool version is not specified, so defaults to the latest.",
       "_3": "In general, what to do about versions of objects? This object is really a TTV?",
       "formal_args": [],
       "formal_arguments_aka_nodes": [
-        { "arg_text": "groupby", "dag_type" : "node_arg"},
-        { "arg_text": "rover.cov_exploring", "dag_type" : "node_arg"},
+        { "arg_text": "groupby", "arg_type" : "node_arg"},
+        { "arg_text": "rover.cov_exploring", "arg_type" : "node_arg"},
 
-        { "arg_text": "rover.cov_fixed", "dag_type" : "op_arg"},
-        { "arg_text": "fit.strategies", "dag_type" : "op_arg"},
-        { "arg_text": "fit.top_pct_learner", "dag_type" : "op_arg"},
-        { "arg_text": "fi.top_pct_score", "dag_type" : "op_arg"},
-        { "arg_text": "t_threshold", "dag_type" : "op_arg"},
+        { "arg_text": "rover.cov_fixed", "arg_type" : "op_arg"},
+        { "arg_text": "fit.strategies", "arg_type" : "op_arg"},
+        { "arg_text": "fit.top_pct_learner", "arg_type" : "op_arg"},
+        { "arg_text": "fi.top_pct_score", "arg_type" : "op_arg"},
+        { "arg_text": "t_threshold", "arg_type" : "op_arg"},
 
         { "arg_text": "debug_level", "dag_arg_type": "task_arg"}
       ],
@@ -60,11 +80,9 @@
         {
           "name": "rover_covsel_stage",
           "task_template": "rover_covsel",
-          "_14": "cf Jobmon array",
           "actual_arguments_aka_node_args": {
             "groupby": "age_group_id",
             "t_threshold": 0.0,
-            "location_set": "@get_location_set()",
             "rover.cov_exploring": "adult_hiv_death_rate, covid_inf_pc, diabetes_prev_agespec, education_yrs_pc, hiv_mort_rate, LDI_pc, maternal_educ_yrs_pc, mean_BMI, sdi, SEV_scalar__all, smoking_prev, TB_prev, total_covid, u5_hiv_death_rate ",
             "rover.cov_fixed": "intercept",
             "fit.strategies": "forward",
@@ -76,18 +94,12 @@
         {
           "name": "spxmod_stage",
           "task_template": "spxmod",
-          "upstream_stage": "(rover_covsel_stage,all)",
+          "upstream_stage": "(rover_covsel,all)",
           "node_args": {
             "groupby": "age_group_id",
             "xmodel.lam": 2000,
             "etc": "et cetera"
           }
-        }
-      ],
-      "edges": [
-        {
-          "source": "rover_covsel",
-          "target": "spxmod"
         }
       ]
     }
