@@ -1,21 +1,26 @@
-"""Kreg stage."""
+"""Example custom stage."""
 
-from onemod.config import KregConfig
+from onemod.config import ModelConfig
 from onemod.stage import ModelStage
 
 
-class KregStage(ModelStage):
-    """Kreg stage."""
+class CustomConfig(ModelConfig):
+    """Custom stage config."""
 
-    config: KregConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    custom_param: int | set[int] = 1
+    _crossable_params: set[str] = {"custom_param"}
+
+
+class CustomStage(ModelStage):
+    """Custom stage."""
+
+    config: CustomConfig = CustomConfig()
+    _required_input: set[str] = {"observations.parquet", "predictions.parquet"}
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
-        """Run kreg submodel."""
+        """Run custom submodel."""
         print(
             f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
@@ -25,7 +30,7 @@ class KregStage(ModelStage):
     def fit(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
-        """Fit kreg submodel."""
+        """Fit custom submodel."""
         print(
             f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
@@ -33,11 +38,11 @@ class KregStage(ModelStage):
     def predict(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
-        "Create kreg submodel predictions."
+        """Create custom submodel predictions."""
         print(
             f"predicting for {self.name} submodel: subset {subset_id}, param set {param_id}"
         )
 
     def collect(self) -> None:
-        """Collect kreg submodel results."""
+        """Collect custom submodel results."""
         print(f"collecting {self.name} submodel results")

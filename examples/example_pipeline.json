@@ -1,0 +1,311 @@
+{
+    "name": "example_pipeline",
+    "config": {
+        "id_columns": [
+            "year_id",
+            "location_id",
+            "age_group_id",
+            "sex_id"
+        ],
+        "model_type": "binomial",
+        "observation_column": "obs",
+        "prediction_column": "pred",
+        "weight_column": "weights",
+        "test_column": "test",
+        "holdout_columns": [],
+        "coef_bounds": {}
+    },
+    "directory": "/path/to/experiment/directory",
+    "data": "/path/to/data.parquet",
+    "groupby": [
+        "sex_id"
+    ],
+    "stages": {
+        "preprocessing": {
+            "name": "preprocessing",
+            "config": {
+                "id_columns": [
+                    "year_id",
+                    "sex_id",
+                    "age_group_id",
+                    "location_id"
+                ],
+                "model_type": "binomial",
+                "observation_column": "obs",
+                "prediction_column": "pred",
+                "weight_column": "weights",
+                "test_column": "test",
+                "holdout_columns": [],
+                "coef_bounds": {}
+            },
+            "input": {
+                "data": "/path/to/data.parquet"
+            },
+            "type": "PreprocessingStage"
+        },
+        "covariate_selection": {
+            "name": "covariate_selection",
+            "config": {
+                "id_columns": [
+                    "year_id",
+                    "sex_id",
+                    "age_group_id",
+                    "location_id"
+                ],
+                "model_type": "binomial",
+                "observation_column": "obs",
+                "prediction_column": "pred",
+                "weight_column": "weights",
+                "test_column": "test",
+                "holdout_columns": [],
+                "coef_bounds": {},
+                "cov_exploring": [
+                    "cov2",
+                    "cov1",
+                    "cov3"
+                ],
+                "cov_fixed": [
+                    "intercept"
+                ],
+                "strategies": [
+                    "forward"
+                ],
+                "top_pct_score": 0.1,
+                "top_pct_learner": 1.0,
+                "t_threshold": 1.0
+            },
+            "groupby": [
+                "sex_id",
+                "age_group_id"
+            ],
+            "crossby": [],
+            "input": {
+                "data": {
+                    "stage": "preprocessing",
+                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
+                }
+            },
+            "type": "RoverStage"
+        },
+        "global_model": {
+            "name": "global_model",
+            "config": {
+                "id_columns": [
+                    "year_id",
+                    "sex_id",
+                    "age_group_id",
+                    "location_id"
+                ],
+                "model_type": "binomial",
+                "observation_column": "obs",
+                "prediction_column": "pred",
+                "weight_column": "weights",
+                "test_column": "test",
+                "holdout_columns": [],
+                "coef_bounds": {},
+                "xmodel": {
+                    "spaces": [],
+                    "variables": [
+                        {
+                            "name": "var1",
+                            "lam_mean": 0.0,
+                            "scale_by_distance": false
+                        },
+                        {
+                            "name": "var2",
+                            "lam_mean": 0.0,
+                            "scale_by_distance": false
+                        }
+                    ],
+                    "param_specs": {},
+                    "lam": 0.0
+                },
+                "xmodel_fit": {}
+            },
+            "groupby": [
+                "sex_id"
+            ],
+            "crossby": [],
+            "input": {
+                "data": {
+                    "stage": "preprocessing",
+                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
+                },
+                "selected_covs": {
+                    "stage": "covariate_selection",
+                    "path": "/path/to/experiment/directory/covariate_selection/selected_covs.csv"
+                }
+            },
+            "type": "SpxmodStage"
+        },
+        "location_model": {
+            "name": "location_model",
+            "config": {
+                "id_columns": [
+                    "year_id",
+                    "sex_id",
+                    "age_group_id",
+                    "location_id"
+                ],
+                "model_type": "binomial",
+                "observation_column": "obs",
+                "prediction_column": "pred",
+                "weight_column": "weights",
+                "test_column": "test",
+                "holdout_columns": [],
+                "coef_bounds": {},
+                "xmodel": {
+                    "spaces": [],
+                    "variables": [
+                        {
+                            "name": "var1",
+                            "lam_mean": 0.0,
+                            "scale_by_distance": false
+                        },
+                        {
+                            "name": "var2",
+                            "lam_mean": 0.0,
+                            "scale_by_distance": false
+                        }
+                    ],
+                    "param_specs": {},
+                    "lam": 0.0
+                },
+                "xmodel_fit": {}
+            },
+            "groupby": [
+                "sex_id",
+                "location_id"
+            ],
+            "crossby": [],
+            "input": {
+                "data": {
+                    "stage": "preprocessing",
+                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
+                },
+                "offset": {
+                    "stage": "global_model",
+                    "path": "/path/to/experiment/directory/global_model/predictions.parquet"
+                }
+            },
+            "type": "SpxmodStage"
+        },
+        "smoothing": {
+            "name": "smoothing",
+            "config": {
+                "id_columns": [
+                    "year_id",
+                    "sex_id",
+                    "age_group_id",
+                    "location_id"
+                ],
+                "model_type": "binomial",
+                "observation_column": "obs",
+                "prediction_column": "pred",
+                "weight_column": "weights",
+                "test_column": "test",
+                "holdout_columns": [],
+                "coef_bounds": {},
+                "kreg_model": {
+                    "age_scale": 1.0,
+                    "gamma_age": 1.0,
+                    "gamma_year": 1.0,
+                    "exp_location": 1.0,
+                    "lam": 1.0,
+                    "nugget": 1.0
+                },
+                "kreg_fit": {
+                    "gtol": 1.0,
+                    "max_iter": 1,
+                    "cg_maxiter": 1,
+                    "cg_maxiter_increment": 1,
+                    "nystroem_rank": 1
+                },
+                "kreg_uncertainty": {
+                    "num_samples": 50,
+                    "save_draws": false,
+                    "lanczos_order": 150
+                }
+            },
+            "groupby": [
+                "region_id",
+                "sex_id"
+            ],
+            "crossby": [],
+            "input": {
+                "data": {
+                    "stage": "preprocessing",
+                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
+                },
+                "offset": {
+                    "stage": "location_model",
+                    "path": "/path/to/experiment/directory/location_model/predictions.parquet"
+                }
+            },
+            "type": "KregStage"
+        },
+        "custom_stage": {
+            "name": "custom_stage",
+            "config": {
+                "id_columns": [
+                    "year_id",
+                    "sex_id",
+                    "age_group_id",
+                    "location_id"
+                ],
+                "model_type": "binomial",
+                "observation_column": "obs",
+                "prediction_column": "pred",
+                "weight_column": "weights",
+                "test_column": "test",
+                "holdout_columns": [],
+                "coef_bounds": {},
+                "custom_param": [
+                    1,
+                    2
+                ]
+            },
+            "groupby": [
+                "sex_id",
+                "super_region_id"
+            ],
+            "crossby": [
+                "custom_param"
+            ],
+            "module": "/path/to/custom_stage.py",
+            "input": {
+                "observations": {
+                    "stage": "preprocessing",
+                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
+                },
+                "predictions": {
+                    "stage": "smoothing",
+                    "path": "/path/to/experiment/directory/smoothing/predictions.parquet"
+                }
+            },
+            "type": "CustomStage"
+        }
+    },
+    "dependencies": {
+        "preprocessing": [],
+        "covariate_selection": [
+            "preprocessing"
+        ],
+        "global_model": [
+            "covariate_selection",
+            "preprocessing"
+        ],
+        "location_model": [
+            "global_model",
+            "preprocessing"
+        ],
+        "smoothing": [
+            "location_model",
+            "preprocessing"
+        ],
+        "custom_stage": [
+            "smoothing",
+            "preprocessing"
+        ]
+    }
+}

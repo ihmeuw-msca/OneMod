@@ -1,7 +1,5 @@
 """Spxmod stage."""
 
-import fire
-
 from onemod.config import SpxmodConfig
 from onemod.stage import ModelStage
 
@@ -9,7 +7,7 @@ from onemod.stage import ModelStage
 class SpxmodStage(ModelStage):
     """Spxmod stage."""
 
-    config: SpxmodConfig = SpxmodConfig()
+    config: SpxmodConfig
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {
         "selected_covs.csv",
@@ -47,7 +45,3 @@ class SpxmodStage(ModelStage):
     def collect(self) -> None:
         """Collect spxmod submodel results."""
         print(f"collecting {self.name} submodel results")
-
-
-if __name__ == "__main__":
-    fire.Fire(SpxmodStage.evaluate)

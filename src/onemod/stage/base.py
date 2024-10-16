@@ -7,16 +7,17 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Any, Dict, Literal
+from typing import Dict, Literal
 
+import pandas as pd
 from pandas import DataFrame
 from pydantic import ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.base_models import SerializableModel
-from onemod.config import CrossedConfig, GroupedConfig, ModelConfig, StageConfig
+from onemod.config import ModelConfig, StageConfig
 from onemod.io import Input, Output
-from onemod.types import Data
+from onemod.dtypes import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error
@@ -33,7 +34,7 @@ class Stage(SerializableModel, ABC):
     output_validation: Dict[str, Data] = Field(default_factory=dict)
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
-    _skip_if: set[str] = set()  # defined by class
+    _skip: set[str] = set()  # defined by class
     _input: Input | None = None  # set by Stage.__call__, Stage.from_json
     _required_input: set[str] = set()  # name.extension, defined by class
     _optional_input: set[str] = set()  # name.extension, defined by class
@@ -42,7 +43,7 @@ class Stage(SerializableModel, ABC):
     @property
     def directory(self) -> Path:
         if self._directory is None:
-            raise ValueError(f"{self.name} directory has not been set")
+            raise AttributeError(f"{self.name} directory has not been set")
         return self._directory
 
     @directory.setter
@@ -64,8 +65,8 @@ class Stage(SerializableModel, ABC):
         return self._module
 
     @property
-    def skip_if(self) -> set[str]:
-        return self._skip_if
+    def skip(self) -> set[str]:
+        return self._skip
 
     @computed_field
     @property
@@ -78,17 +79,16 @@ class Stage(SerializableModel, ABC):
         for item in self._output:
             item_name = item.split(".")[0]  # remove extension
             output_items[item_name] = Data(
-                stage=self.name,
-                path=self.directory / item,
+                stage=self.name, path=self.directory / item
             )
         return Output(stage=self.name, items=output_items)
-    
+
     @property
     def dependencies(self) -> set[str]:
         if self.input is None:
             return set()
         return self.input.dependencies
-        
+
     @computed_field
     @property
     def type(self) -> str:
@@ -97,21 +97,21 @@ class Stage(SerializableModel, ABC):
     @classmethod
     def from_json(
         cls,
-        filepath: Path | str,
-        name: str | None = None,
+        config_path: Path | str,
+        stage_name: str | None = None,
         from_pipeline: bool = False,
     ) -> Stage:
         """Load stage from JSON file.
 
         Parameters
         ----------
-        filepath : Path or str
+        config_path : Path or str
             Path to config file.
-        name : str or None, optional
+        stage_name : str or None, optional
             Stage name, required if `from_pipeline` is True.
             Default is None.
         from_pipeline : bool, optional
-            Whether `filepath` is a pipeline or stage config file.
+            Whether `config_path` is a pipeline or stage config file.
             Default is False.
 
         Returns
@@ -122,17 +122,22 @@ class Stage(SerializableModel, ABC):
         Notes
         -----
         If `from_pipeline` is True, the stage directory is set to
-        pipeline.directory / `name`. Otherwise, the stage directory is
-        set to the parent directory of `filepath`.
+        pipeline.directory / `stage_name`. Otherwise, the stage
+        directory is set to the parent directory of `config`.
 
         """
-        with open(filepath, "r") as f:
+        with open(config_path, "r") as f:
             config = json.load(f)
         if from_pipeline:
-            directory = Path(config["directory"]) / name
-            config = config["stages"][name]
+            directory = Path(config["directory"]) / stage_name
+            try:
+                config = config["stages"][stage_name]
+            except KeyError:
+                raise AttributeError(
+                    f"{config.name} does not have a '{stage_name}' stage"
+                )
         else:
-            directory = Path(filepath).parent
+            directory = Path(config_path).parent
         stage = cls(**config)
         stage.directory = directory
         if "module" in config:
@@ -140,22 +145,22 @@ class Stage(SerializableModel, ABC):
         if "input" in config:
             stage(**config["input"])
         return stage
-    
-    def to_json(self, filepath: Path | str | None = None) -> None:
+
+    def to_json(self, config_path: Path | str | None = None) -> None:
         """Save stage as JSON file.
 
         Parameters
         ----------
-        filepath : Path, str or None, optional
+        config_path : Path, str or None, optional
             Where to save the config file. If None, file is saved at
             stage.directory / (stage.name + ."json").
             Default is None.
 
         """
-        filepath = filepath or self.directory / (self.name + ".json")
-        with open(filepath, "w") as f:
+        config_path = config_path or self.directory / (self.name + ".json")
+        with open(config_path, "w") as f:
             f.write(self.model_dump_json(indent=4, exclude_none=True))
-            
+
     @validate_call
     def evaluate(
         self,
@@ -177,35 +182,56 @@ class Stage(SerializableModel, ABC):
             Whether `config` is a pipeline or stage config file.
             Default is False.
         method : str, optional
-            Name of method to evaluate. Default is 'run'.
+            Name of method to evaluate. If Default is 'run'.
         backend : str, optional
             Whether to evaluate the method locally or with Jobmon.
             Default is 'local'.
 
+        Raises
+        ------
+        AttributeError
+            If `method` in `stage.skip`.
+
+        Notes
+        -----
+        If `method` is not in `skip` but the stage does not have
+        `method`, the stage's `run` method will be evaluated. For
+        example, a data preprocessing stage might implement the `run`
+        method, skip the `predict` method, and evaluate the `run` method
+        when `fit` is called. Alternatively, a plotting stage might
+        implement the `run` method, skip the `fit` method, and evaluate
+        the `run` method when `predict` is called.
+
         """
-        if method in self.skip_if:
+        if method in self.skip:
             raise AttributeError(f"{self.name} skips the '{method}' method")
+        method = method if hasattr(self, method) else "run"
         if backend == "jobmon":
-            raise NotImplementedError("Jobmon backend not implemented")
-        try:
-            self.__getattribute__(method)()
-        except AttributeError:
-            raise AttributeError(
-                f"{self.name} does not have a '{method}' method"
+            from onemod.backend import evaluate_with_jobmon
+
+            evaluate_with_jobmon(
+                model=self,
+                config=config,
+                from_pipeline=from_pipeline,
+                method=method,
+                *args,
+                **kwargs,
             )
-    
+        else:
+            self.__getattribute__(method)(*args, **kwargs)
+
     def validate_build(self, collector: ValidationErrorCollector) -> None:
         """Perfom build-time validation."""
         if self.input_validation:
             for item_name, schema in self.input_validation.items():
                 if isinstance(schema, Data):
                     schema.validate_metadata(kind="input", collector=collector)
-                    
+
         if self.output_validation:
             for item_name, schema in self.output_validation.items():
                 if isinstance(schema, Data):
                     schema.validate_metadata(kind="output", collector=collector)
-                    
+
     def validate_run(self, collector: ValidationErrorCollector) -> None:
         """Perfom run-time validation."""
         if self.input_validation:
@@ -215,9 +241,14 @@ class Stage(SerializableModel, ABC):
                     schema.path = Path(data_path)
                     schema.validate_data(collector)
                 else:
-                    handle_error(self.name, "Input validation", ValueError,
-                        f"Input data path for '{item_name}' not found in stage inputs.", collector)
-                    
+                    handle_error(
+                        self.name,
+                        "Input validation",
+                        ValueError,
+                        f"Input data path for '{item_name}' not found in stage inputs.",
+                        collector,
+                    )
+
     def validate_outputs(self, collector: ValidationErrorCollector) -> None:
         """Perform post-run validation of outputs."""
         if self.output_validation:
@@ -228,14 +259,17 @@ class Stage(SerializableModel, ABC):
                     data_spec.validate_data(collector)
                 else:
                     handle_error(
-                        self.name, "Output Validation", KeyError,
-                        f"Output data '{item_name}' not found after stage execution.", collector
+                        self.name,
+                        "Output Validation",
+                        KeyError,
+                        f"Output data '{item_name}' not found after stage execution.",
+                        collector,
                     )
-        
+
     def run(self) -> None:
         """Run stage."""
         raise NotImplementedError()
-        
+
     @validate_call
     def __call__(self, **input: Data | Path) -> None:
         """Define stage dependencies."""
@@ -252,114 +286,92 @@ class Stage(SerializableModel, ABC):
         return f"{self.type}({self.name})"
 
 
-class GroupedStage(Stage, ABC):
-    """Grouped stage base class.
+class ModelStage(Stage, ABC):
+    """Model stage base class."""
 
-    Notes
-    -----
-    * Any stage that uses the `groupby` setting
-    * If you don't want to collect submodel results after stage is run,
-      don't implement `collect` method and add 'collect' to `skip_if`
-
-    """
-
-    config: GroupedConfig
+    config: ModelConfig
     groupby: set[str] = set()
+    _crossby: set[str] = set()  # set by Stage.create_stage_params
     _subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
-    _required_input: set[str] = {"data"}
+    _param_ids: set[int] = set()  # set by Stage.create_stage_params
+    _required_input: set[str] = set()  # 'data' required for `groupby`
+
+    @computed_field
+    @property
+    def crossby(self) -> set[str]:
+        return self._crossby
 
     @property
     def subset_ids(self) -> set[int]:
+        if self.groupby and not self._subset_ids:
+            try:
+                subsets = pd.read_csv(self.directory / "subsets.csv")
+                self._subset_ids = set(subsets["subset_id"])
+            except FileNotFoundError():
+                raise AttributeError(
+                    f"{self.name} data subsets have not been created"
+                )
         return self._subset_ids
+
+    @property
+    def param_ids(self) -> set[int]:
+        if self.crossby and not self._param_ids:
+            try:
+                params = pd.read_csv(self.directory / "parameters.csv")
+                self._params_ids = set(params["param_id"])
+            except FileNotFoundError():
+                raise AttributeError(
+                    f"{self.name} parameter sets have not been created"
+                )
+        return self._param_ids
 
     def create_stage_subsets(self, data: DataFrame) -> None:
         """Create stage data subsets from groupby."""
         subsets = create_subsets(self.groupby, data)
         if subsets is not None:
-            self._subset_ids = list(subsets["subset_id"])
+            self._subset_ids = set(subsets["subset_id"])
             subsets.to_csv(self.directory / "subsets.csv", index=False)
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
         return get_subset(
-            self.config.data, self.directory / "subsets.csv", subset_id
+            self.input["data"], self.directory / "subsets.csv", subset_id
         )
 
-    def run(self, subset_id = None, param_id = None):
-        """Run stage submodel."""
-        raise NotImplementedError()
-
-    def collect(self) -> None:
-        """Collect stage submodel results."""
-        raise NotImplementedError()
-
-
-class CrossedStage(Stage, ABC):
-    """Crossed stage base class.
-
-    Notes
-    -----
-    * Any stage that uses the `crossby` setting
-    * If you don't want to collect submodel results after stage is run,
-      don't implement `collect` method and add 'collect' to `skip_if`
-
-    """
-
-    config: CrossedConfig
-    crossby: set[str] = set()  # set by Stage.create_stage_params
-    _param_ids: set[int] = set()  # set by Stage.create_stage_params
-
-    @property
-    def param_ids(self) -> set[int]:
-        return self._param_ids
-
     def create_stage_params(self) -> None:
-        """Create stage parameter sets from crossby."""
+        """Create stage parameter sets from config."""
         params = create_params(self.config)
         if params is not None:
-            self.crossby = params.drop(columns="param_id").columns
-            self._param_ids = params["param_id"]
-            params.to_csv(self.directory / "params.csv", index=False)
+            self._crossby = set(params.drop(columns="param_id").columns)
+            self._param_ids = set(params["param_id"])
+            params.to_csv(self.directory / "parameters.csv", index=False)
 
-    def set_params(self, param_id: int) -> Any:
+    def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
         params = get_params(self.directory / "parameters.csv", param_id)
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
-    def run(self, subset_id: int | None = None, param_id: int | None = None) -> None:
-        """Run stage submodel."""
-        raise NotImplementedError()
-
-    def collect(self) -> None:
-        """Collect stage submodel results."""
-        raise NotImplementedError()
-
-
-class ModelStage(GroupedStage, CrossedStage, ABC):
-    """Model stage base class.
-
-    Notes
-    -----
-    * Models that don't have any `groupby`/`crossby` settings and/or no
-      `collect` method should be handled differently (e.g., can skip
-      some steps, should save results differently)
-
-    """
-
-    config: ModelConfig
-
     @abstractmethod
-    def run(self, subset_id: int | None, param_id: int | None) -> None:
+    def run(
+        self, subset_id: int | None = None, param_id: int | None = None
+    ) -> None:
         """Run stage submodel."""
         raise NotImplementedError("Subclasses must implement this method.")
 
-    @abstractmethod
     def fit(self, subset_id: int | None, param_id: int | None) -> None:
         """Fit stage submodel."""
-        raise NotImplementedError("Subclasses must implement this method.")
+        raise NotImplementedError(
+            "Subclasses must implement this method if not skipped."
+        )
 
-    @abstractmethod
     def predict(self, subset_id: int | None, param_id: int | None) -> None:
         """Predict stage submodel."""
+        raise NotImplementedError(
+            "Subclasses must implement this method if not skipped."
+        )
+
+    @abstractmethod
+    def collect(self) -> None:
+        """Collect stage submodel results."""
         raise NotImplementedError("Subclasses must implement this method.")

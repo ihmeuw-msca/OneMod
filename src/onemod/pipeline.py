@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from collections import deque
-from importlib.util import module_from_spec, spec_from_file_location
-from inspect import getmodulename
 from itertools import product
 from pathlib import Path
-from typing import Literal, Set
+from typing import Literal
 
 from pydantic import computed_field, field_serializer, validate_call
 
-import onemod.stage as onemod_stages
 from onemod.base_models import SerializableModel
 from onemod.config import PipelineConfig
 from onemod.serializers import deserialize, serialize
-from onemod.stage import CrossedStage, GroupedStage, Stage
+from onemod.stage import Stage, ModelStage
 from onemod.validation import ValidationErrorCollector, handle_error
 
 logger = logging.getLogger(__name__)
@@ -37,7 +33,7 @@ class Pipeline(SerializableModel):
     data : Path or None, optional
         Input data used to create data subsets. Required for pipeline or
         stage `groupby` attribute. Default is None.
-    groupby : set[str] or None, optional
+    groupby : set of str or None, optional
         ID names used to create data subsets. Default is None.
 
     """
@@ -46,7 +42,7 @@ class Pipeline(SerializableModel):
     config: PipelineConfig
     directory: Path  # TODO: replace with DataInterface
     data: Path | None = None
-    groupby: Set[str] | None = None
+    groupby: set[str] | None = None
     _stages: dict[str, Stage] = {}  # set by Pipeline.add_stage
 
     @computed_field
@@ -57,10 +53,14 @@ class Pipeline(SerializableModel):
     @computed_field
     @property
     def dependencies(self) -> dict[str, set[str]]:
-        return {stage.name: stage.dependencies for stage in self.stages.values()}
-    
-    @field_serializer('groupby')
-    def serialize_groupby(self, value: Set[str] | None, info) -> list[str] | None:
+        return {
+            stage.name: stage.dependencies for stage in self.stages.values()
+        }
+
+    @field_serializer("groupby")
+    def serialize_groupby(
+        self, value: set[str] | None, info
+    ) -> list[str] | None:
         return list(value) if value is not None else None
 
     def model_post_init(self, *args, **kwargs) -> None:
@@ -68,12 +68,12 @@ class Pipeline(SerializableModel):
             self.directory.mkdir(parents=True)
 
     @classmethod
-    def from_json(cls, filepath: Path | str) -> Pipeline:
+    def from_json(cls, config_path: Path | str) -> Pipeline:
         """Load pipeline from JSON file.
 
         Parameters
         ----------
-        filepath : Path or str
+        config_path : Path or str
             Path to config file.
 
         Returns
@@ -82,44 +82,44 @@ class Pipeline(SerializableModel):
             Pipeline instance.
 
         """
-        config = deserialize(filepath)
+        config = deserialize(config_path)
 
         stages = config.pop("stages", {})
 
         pipeline = cls(**config)
 
         if stages:
+            from onemod.main import load_stage
+
             pipeline.add_stages(
                 [
-                    pipeline.stage_from_json(
-                        filepath, stage, from_pipeline=True
-                    )
+                    load_stage(config_path, stage, from_pipeline=True)
                     for stage in stages
                 ]
             )
 
         return pipeline
 
-    def to_json(self, filepath: Path | str | None = None) -> None:
+    def to_json(self, config_path: Path | str | None = None) -> None:
         """Save pipeline as JSON file.
 
         Parameters
         ----------
-        filepath : Path, str, or None, optional
+        config_path : Path, str, or None, optional
             Where to save config file. If None, file is saved at
             pipeline.directory / (pipeline.name + ".json").
             Default is None.
 
         """
-        filepath = filepath or self.directory / (self.name + ".json")
-        serialize(self, filepath)
+        config_path = config_path or self.directory / (self.name + ".json")
+        serialize(self, config_path)
 
     def add_stages(self, stages: list[Stage]) -> None:
         """Add stages to pipeline.
 
         Parameters
         ----------
-        stages : list[Stage]
+        stages : list of Stage
             Stages to add to the pipeline.
 
         """
@@ -136,7 +136,7 @@ class Pipeline(SerializableModel):
 
         Notes
         -----
-        * Maybe move most of this into pipeline.compile?
+        * Maybe move most of this into pipeline.build?
         * Some steps may be unnecessary if stage loaded from previously
           compiled config (update config, set directory, create subsets
           and params)
@@ -148,61 +148,20 @@ class Pipeline(SerializableModel):
         stage.directory = self.directory / stage.name
 
         # Create data subsets
-        if isinstance(stage, GroupedStage):
-            if self.data is None:
-                raise AttributeError("data field is required for GroupedStage")
+        if isinstance(stage, ModelStage):
             if self.groupby is not None:
                 stage.groupby.update(self.groupby)
-            stage.create_stage_subsets(self.data)
+            if stage.groupby:
+                if self.data is None:
+                    raise AttributeError("data is required for groupby")
+                stage.create_stage_subsets(self.data)
 
         # Create parameter sets
-        if isinstance(stage, CrossedStage):
+        if isinstance(stage, ModelStage):
             if stage.config.crossable_params:
                 stage.create_stage_params()
 
         self._stages[stage.name] = stage
-
-    @classmethod
-    def stage_from_json(
-        cls,
-        filepath: Path | str,
-        name: str | None = None,
-        from_pipeline: bool = False,
-    ) -> Stage:
-        """Load stage from JSON file.
-
-        Parameters
-        ----------
-        filepath : Path or str
-            Path to config file.
-        name : str or None, optional
-            Stage name, required if `from_pipeline` is True.
-            Default is None.
-        from_pipeline : bool, optional
-            Whether `filepath` is a pipeline or stage config file.
-            Default is False.
-
-        Returns
-        -------
-        Stage
-            Stage instance.
-
-        """
-        with open(filepath, "r") as f:
-            config = json.load(f)
-        if from_pipeline:
-            config = config["stages"][name]
-        if hasattr(onemod_stages, stage_type := config["type"]):
-            stage_class = getattr(onemod_stages, stage_type)
-        else:  # custom stage
-            module_path = Path(config["module"])
-            spec = spec_from_file_location(
-                getmodulename(module_path), module_path
-            )
-            module = module_from_spec(spec)
-            spec.loader.exec_module(module)
-            stage_class = getattr(module, stage_type)
-        return stage_class.from_json(filepath, name, from_pipeline)
 
     def get_execution_order(self) -> list[str]:
         """
@@ -245,22 +204,39 @@ class Pipeline(SerializableModel):
         for stage_name, dependencies in self.dependencies.items():
             for dep in dependencies:
                 if dep not in self._stages:
-                    handle_error(stage_name, "DAG validation", ValueError,
-                                 f"Upstream dependency '{dep}' is not defined.", collector)
+                    handle_error(
+                        stage_name,
+                        "DAG validation",
+                        ValueError,
+                        f"Upstream dependency '{dep}' is not defined.",
+                        collector,
+                    )
 
                 if dep == stage_name:
-                    handle_error(stage_name, "DAG validation", ValueError,
-                                "Stage cannot depend on itself.", collector)
+                    handle_error(
+                        stage_name,
+                        "DAG validation",
+                        ValueError,
+                        "Stage cannot depend on itself.",
+                        collector,
+                    )
 
             if len(dependencies) != len(set(dependencies)):
-                handle_error(stage_name, "DAG validation", ValueError,
-                                "Duplicate dependencies found.", collector)
-                
+                handle_error(
+                    stage_name,
+                    "DAG validation",
+                    ValueError,
+                    "Duplicate dependencies found.",
+                    collector,
+                )
+
         try:
             self.get_execution_order()
         except ValueError as e:
-            handle_error("Pipeline", "DAG validation", ValueError, str(e), collector)
-    
+            handle_error(
+                "Pipeline", "DAG validation", ValueError, str(e), collector
+            )
+
     def build(self) -> None:
         """Assemble the pipeline, perform build-time validation, and save it to JSON."""
         collector = ValidationErrorCollector()
@@ -284,11 +260,13 @@ class Pipeline(SerializableModel):
         }
 
         serialize(pipeline_dict, self.directory / f"{self.name}.json")
-        
-    def save_validation_report(self, collector: ValidationErrorCollector) -> None:
-        validation_dir = self.directory / 'validation'
+
+    def save_validation_report(
+        self, collector: ValidationErrorCollector
+    ) -> None:
+        validation_dir = self.directory / "validation"
         validation_dir.mkdir(exist_ok=True)
-        report_path = validation_dir / 'validation_report.json'
+        report_path = validation_dir / "validation_report.json"
         serialize(collector.errors, report_path)
 
     @validate_call
@@ -313,10 +291,13 @@ class Pipeline(SerializableModel):
 
         """
         if backend == "jobmon":
-            raise NotImplementedError("Jobmon backend not implemented yet.")
+            from onemod.backend import evaluate_with_jobmon
+
+            evaluate_with_jobmon(model=self, method=method, *args, **kwargs)
         else:
-            for stage in self.stages.values():
-                if method not in stage._skip_if:
+            for stage_name in self.get_execution_order():
+                stage = self.stages[stage_name]
+                if method not in stage.skip:
                     subset_ids = getattr(stage, "subset_ids", None)
                     param_ids = getattr(stage, "param_ids", None)
                     if subset_ids is not None or param_ids is not None:
@@ -349,4 +330,4 @@ class Pipeline(SerializableModel):
         raise NotImplementedError()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.name})"
+        return f"{type(self).__name__}({self.name}, stages={list(self.stages.values())})"

@@ -1,7 +1,5 @@
 """Rover stage."""
 
-import fire
-
 from onemod.config import RoverConfig
 from onemod.stage import ModelStage
 
@@ -10,7 +8,7 @@ class RoverStage(ModelStage):
     """Rover stage."""
 
     config: RoverConfig
-    _skip_if: set[str] = {"predict"}
+    _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _output: set[str] = {"selected_covs.csv"}
 
@@ -40,7 +38,3 @@ class RoverStage(ModelStage):
     def collect(self) -> None:
         """Collect rover submodel results."""
         print(f"collecting {self.name} submodel results")
-
-
-if __name__ == "__main__":
-    fire.Fire(RoverStage.evaluate)

@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from onemod.io import Output
-from onemod.types import Data
+from onemod.dtypes import Data
 
 ITEMS = {
     "predictions": {
@@ -19,11 +19,13 @@ ITEMS = {
 }
 OUTPUT = Output(stage="stage", items=ITEMS)
 
+
 @pytest.mark.unit
 def test_serialize():
     print(OUTPUT.model_dump())
     print(ITEMS)
     assert OUTPUT.model_dump() == ITEMS
+
 
 @pytest.mark.unit
 def test_get():
@@ -32,6 +34,7 @@ def test_get():
     )
     assert OUTPUT.get("dummy") is None
     assert OUTPUT.get("dummy", "default") == "default"
+
 
 @pytest.mark.unit
 def test_getitem():
@@ -46,20 +49,24 @@ def test_getitem():
         str(error.value).strip('"') == "stage does not contain output 'dummy'"
     )
 
+
 @pytest.mark.unit
 def test_contains():
     assert "predictions" in OUTPUT
     assert "dummy" not in OUTPUT
+
 
 @pytest.mark.unit
 def test_frozen():
     with pytest.raises(ValidationError):
         OUTPUT.items = {}
 
+
 @pytest.mark.unit
 def test_no_setitem():
     with pytest.raises(TypeError):
         OUTPUT["item_name"] = "item_value"
+
 
 @pytest.mark.unit
 def test_to_dict():

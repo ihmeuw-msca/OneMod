@@ -8,7 +8,7 @@ import pytest
 from onemod.config import Config
 from onemod.io import Input, Output
 from onemod.stage import Stage
-from onemod.types import Data
+from onemod.dtypes import Data
 
 
 class DummyStage(Stage):
@@ -34,6 +34,7 @@ def stage_2(stage_1):
         data=stage_1.output["predictions"], covariates="/path/to/covariates.csv"
     )
     return stage_2
+
 
 @pytest.mark.integration
 def test_input(stage_1):
@@ -81,6 +82,7 @@ def test_input_with_dependency(stage_1, stage_2):
     )
     assert stage_2.dependencies == {"stage_1"}
 
+
 @pytest.mark.unit
 def test_input_with_missing():
     stage_3 = DummyStage(name="stage_3", config={})
@@ -94,6 +96,7 @@ def test_input_with_missing():
     )
     assert stage_3.input.items == {}
 
+
 @pytest.mark.unit
 def test_dependencies(stage_1, stage_2):
     stage_3 = DummyStage(name="stage_3", config={})
@@ -104,6 +107,7 @@ def test_dependencies(stage_1, stage_2):
         priors=stage_2.output["model"],
     )
     assert stage_3.dependencies == {"stage_1", "stage_2"}
+
 
 @pytest.mark.unit
 def test_to_json(stage_1, stage_2):
@@ -122,6 +126,7 @@ def test_to_json(stage_1, stage_2):
         "covariates": "/path/to/covariates.csv",
     }
 
+
 @pytest.mark.unit
 def test_to_json_no_input(tmp_path):
     stage_3 = DummyStage(name="stage_3", config={})
@@ -130,6 +135,7 @@ def test_to_json_no_input(tmp_path):
     with open(stage_3.directory / (stage_3.name + ".json"), "r") as f:
         config = json.load(f)
     assert "input" not in config
+
 
 @pytest.mark.unit
 def test_from_json(stage_2):
@@ -140,10 +146,11 @@ def test_from_json(stage_2):
     assert stage_2_new.input == stage_2.input
     assert stage_2_new.output == stage_2.output
 
+
 @pytest.mark.unit
 def test_stage_model(stage_1, stage_2):
     stage_1_model_actual = stage_1.model_dump()
-    
+
     stage_1_model_expected = {
         "name": "stage_1",
         "type": "DummyStage",
@@ -154,13 +161,13 @@ def test_stage_model(stage_1, stage_2):
         "input": {
             "data": "/path/to/data.parquet",
             "covariates": "/path/to/covariates.csv",
-        }
+        },
     }
-    
+
     assert stage_1_model_actual == stage_1_model_expected
-    
+
     stage_2_model_actual = stage_2.model_dump()
-    
+
     stage_2_model_expected = {
         "name": "stage_2",
         "type": "DummyStage",
@@ -179,5 +186,5 @@ def test_stage_model(stage_1, stage_2):
             "covariates": "/path/to/covariates.csv",
         },
     }
-    
+
     assert stage_2_model_actual == stage_2_model_expected
