@@ -3,7 +3,6 @@
 Notes
 -----
 * Classes to organize stage input and output
-* Data class is just a placeholder for new onemod data types
 * Input and output treated like a dictionary
 * Provides validation
 * No need to create stage-specific subclasses
@@ -12,19 +11,16 @@ Notes
 
 from abc import ABC
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, model_serializer, validate_call
+from pydantic import ConfigDict, model_serializer, validate_call
 
-
-class Data(BaseModel):
-    """Dummy data class."""
-
-    stage: str
-    path: Path
+from onemod.base_models import SerializableModel
+from onemod.dtypes import Data
+from onemod.validation.error_handling import ValidationErrorCollector
 
 
-class IO(BaseModel, ABC):
+class IO(SerializableModel, ABC):
     """Stage input/output base class."""
 
     model_config = ConfigDict(frozen=True)
@@ -35,17 +31,13 @@ class IO(BaseModel, ABC):
     @model_serializer
     def serialize_io(self) -> dict[str, str | dict[str, str]] | None:
         # Simplify output to config files
-        # TODO: Will have to modify for new onemod data types
         if self.items:
             input_dict = {}
             for item_name, item_value in self.items.items():
                 if isinstance(item_value, Path):
                     input_dict[item_name] = str(item_value)
-                else:
-                    input_dict[item_name] = {
-                        "stage": item_value.stage,
-                        "path": str(item_value.path),
-                    }
+                elif isinstance(item_value, Data):
+                    input_dict[item_name] = item_value.model_dump()
             return input_dict
         return None
 

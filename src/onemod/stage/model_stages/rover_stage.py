@@ -14,7 +14,7 @@ class RoverStage(ModelStage):
     """ModRover covariate selection stage."""
 
     config: RoverConfig
-    _skip_if: set[str] = {"predict"}
+    _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _output: set[str] = {
         "learner_info.csv",
@@ -91,7 +91,3 @@ class RoverStage(ModelStage):
     def collect(self) -> None:
         """Collect rover submodel results."""
         print(f"collecting {self.name} submodel results")
-
-
-if __name__ == "__main__":
-    fire.Fire(RoverStage.evaluate)

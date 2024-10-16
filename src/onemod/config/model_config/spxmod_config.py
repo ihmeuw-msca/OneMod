@@ -6,9 +6,10 @@ TODO: Update docstrings to clarify what spxmod defaults are (e.g., lam, priors)
 """
 
 from typing import Any, Literal
+from typing_extensions import Annotated
 
 from onemod.config import Config, ModelConfig
-from pydantic import Annotated, Field
+from pydantic import Field
 
 
 class SpxmodDimensionConfig(Config):
@@ -174,7 +175,7 @@ class SpxmodSplineConfig(Config):
     """
 
     name: str
-    knots: list[float] = list[Annotated[float, Field(ge=0, le=1)]]
+    knots: list[Annotated[float, Field(ge=0, le=1)]]
     degree: int = Field(gt=0, default=2)
     l_linear: bool = False
     r_linear: bool = False
@@ -208,8 +209,8 @@ class SpxmodModelConfig(Config):
 
     """
 
-    spaces: set[SpxmodSpaceConfig] = set()
-    variables: set[SpxmodVariableConfig]
+    spaces: list[SpxmodSpaceConfig] = []
+    variables: list[SpxmodVariableConfig]
     param_specs: dict[str, Any] = {}
     spline_config: SpxmodSplineConfig | None = None
     lam: float = Field(ge=0, default=0)

@@ -6,10 +6,10 @@ from typing import Any
 
 import pandas as pd
 
-from onemod.config import CrossedConfig
+from onemod.config import ModelConfig
 
 
-def create_params(config: CrossedConfig) -> pd.DataFrame | None:
+def create_params(config: ModelConfig) -> pd.DataFrame | None:
     """Create parameter sets from crossby."""
     param_dict = {
         param_name: param_values

@@ -1,15 +1,16 @@
 """Configuration classes."""
 
+from abc import ABC
 from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 
-class Config(BaseModel):
+class Config(BaseModel, ABC):
     """Base configuration class."""
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(validate_assignment=True, protected_namespaces=())
 
     def get(self, key: str, default: Any = None) -> Any:
         if not self.__contains__(key):
@@ -70,7 +71,7 @@ class PipelineConfig(Config):
     weight_column: str = "weights"
     test_column: str = "test"
     holdout_columns: set[str] = set()
-    coef_bounds: dict[str, tuple(float, float)] = {}
+    coef_bounds: dict[str, tuple[float, float]] = {}
 
 
 class StageConfig(Config):
