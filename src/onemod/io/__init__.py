@@ -1,3 +1,6 @@
-from onemod.io.base import Data, Input, Output
+from onemod.io.base import Input, Output
 
-__all__ = [Data, Input, Output]
+__all__ = [
+    Input,
+    Output,
+]

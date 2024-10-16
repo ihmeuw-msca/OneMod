@@ -3,30 +3,35 @@
 from __future__ import annotations
 
 import json
-from abc import ABC
+from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Literal
+from typing import Dict, Literal
 
 import pandas as pd
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, computed_field, validate_call
+from pydantic import ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
+from onemod.base_models import SerializableModel
 from onemod.config import ModelConfig, StageConfig
-from onemod.io import Data, Input, Output
+from onemod.io import Input, Output
+from onemod.types import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
+from onemod.validation import ValidationErrorCollector, handle_error
 
 
-class Stage(BaseModel, ABC):
+class Stage(SerializableModel, ABC):
     """Stage base class."""
 
     model_config = ConfigDict(validate_assignment=True)
 
     name: str
     config: StageConfig
+    input_validation: Dict[str, Data] = Field(default_factory=dict)
+    output_validation: Dict[str, Data] = Field(default_factory=dict)
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
     _skip: set[str] = set()  # defined by class
@@ -92,7 +97,7 @@ class Stage(BaseModel, ABC):
     @classmethod
     def from_json(
         cls,
-        config: Path | str,
+        config_path: Path | str,
         stage_name: str | None = None,
         from_pipeline: bool = False,
     ) -> Stage:
@@ -100,7 +105,7 @@ class Stage(BaseModel, ABC):
 
         Parameters
         ----------
-        config : Path or str
+        config_path : Path or str
             Path to config file.
         stage_name : str or None, optional
             Stage name, required if `from_pipeline` is True.
@@ -121,45 +126,45 @@ class Stage(BaseModel, ABC):
         directory is set to the parent directory of `config`.
 
         """
-        with open(config, "r") as f:
-            config_dict = json.load(f)
+        with open(config_path, "r") as f:
+            config = json.load(f)
         if from_pipeline:
-            directory = Path(config_dict["directory"]) / stage_name
+            directory = Path(config["directory"]) / stage_name
             try:
-                config_dict = config_dict["stages"][stage_name]
+                config = config["stages"][stage_name]
             except KeyError:
                 raise AttributeError(
-                    f"{config_dict.name} does not have a '{stage_name}' stage"
+                    f"{config.name} does not have a '{stage_name}' stage"
                 )
         else:
-            directory = Path(config).parent
-        stage = cls(**config_dict)
+            directory = Path(config_path).parent
+        stage = cls(**config)
         stage.directory = directory
-        if "module" in config_dict:
-            stage._module = config_dict["module"]
-        if "input" in config_dict:
-            stage(**config_dict["input"])
+        if "module" in config:
+            stage._module = config["module"]
+        if "input" in config:
+            stage(**config["input"])
         return stage
 
-    def to_json(self, filepath: Path | str | None = None) -> None:
+    def to_json(self, config_path: Path | str | None = None) -> None:
         """Save stage as JSON file.
 
         Parameters
         ----------
-        filepath : Path, str or None, optional
+        config_path : Path, str or None, optional
             Where to save the config file. If None, file is saved at
             stage.directory / (stage.name + ."json").
             Default is None.
 
         """
-        filepath = filepath or self.directory / (self.name + ".json")
-        with open(filepath, "w") as f:
+        config_path = config_path or self.directory / (self.name + ".json")
+        with open(config_path, "w") as f:
             f.write(self.model_dump_json(indent=4, exclude_none=True))
 
     @validate_call
     def evaluate(
         self,
-        config: Path | str | None = None,
+        config_path: Path | str | None = None,
         from_pipeline: bool = False,
         method: Literal["run", "fit", "predict", "collect"] = "run",
         backend: Literal["local", "jobmon"] = "local",
@@ -170,7 +175,7 @@ class Stage(BaseModel, ABC):
 
         Parameters
         ----------
-        config : Path, str, or None, optional
+        config_path : Path, str, or None, optional
             Path to config file. Required if `backend` is 'jobmon'.
             Default is None.
         from_pipeline : bool, optional
@@ -206,7 +211,7 @@ class Stage(BaseModel, ABC):
 
             evaluate_with_jobmon(
                 model=self,
-                config=config,
+                config_path=config_path,
                 from_pipeline=from_pipeline,
                 method=method,
                 *args,
@@ -214,6 +219,52 @@ class Stage(BaseModel, ABC):
             )
         else:
             self.__getattribute__(method)(*args, **kwargs)
+
+    def validate_build(self, collector: ValidationErrorCollector) -> None:
+        """Perfom build-time validation."""
+        if self.input_validation:
+            for item_name, schema in self.input_validation.items():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="input", collector=collector)
+
+        if self.output_validation:
+            for item_name, schema in self.output_validation.items():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="output", collector=collector)
+
+    def validate_run(self, collector: ValidationErrorCollector) -> None:
+        """Perfom run-time validation."""
+        if self.input_validation:
+            for item_name, schema in self.input_validation.items():
+                data_path = self.input.get(item_name)
+                if data_path:
+                    schema.path = Path(data_path)
+                    schema.validate_data(collector)
+                else:
+                    handle_error(
+                        self.name,
+                        "Input validation",
+                        ValueError,
+                        f"Input data path for '{item_name}' not found in stage inputs.",
+                        collector,
+                    )
+
+    def validate_outputs(self, collector: ValidationErrorCollector) -> None:
+        """Perform post-run validation of outputs."""
+        if self.output_validation:
+            for item_name, data_spec in self.output_validation.items():
+                data_output = self.output.get(item_name)
+                if data_output:
+                    data_spec.path = Path(data_output.path)
+                    data_spec.validate_data(collector)
+                else:
+                    handle_error(
+                        self.name,
+                        "Output Validation",
+                        KeyError,
+                        f"Output data '{item_name}' not found after stage execution.",
+                        collector,
+                    )
 
     def run(self) -> None:
         """Run stage."""
@@ -240,10 +291,15 @@ class ModelStage(Stage, ABC):
 
     config: ModelConfig
     groupby: set[str] = set()
-    crossby: set[str] = set()  # set by Stage.create_stage_params
+    _crossby: set[str] = set()  # set by Stage.create_stage_params
     _subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
     _param_ids: set[int] = set()  # set by Stage.create_stage_params
     _required_input: set[str] = set()  # 'data' required for `groupby`
+
+    @computed_field
+    @property
+    def crossby(self) -> set[str]:
+        return self._crossby
 
     @property
     def subset_ids(self) -> set[int]:
@@ -286,7 +342,7 @@ class ModelStage(Stage, ABC):
         """Create stage parameter sets from config."""
         params = create_params(self.config)
         if params is not None:
-            self.crossby = set(params.drop(columns="param_id").columns)
+            self._crossby = set(params.drop(columns="param_id").columns)
             self._param_ids = set(params["param_id"])
             params.to_csv(self.directory / "parameters.csv", index=False)
 
@@ -296,18 +352,26 @@ class ModelStage(Stage, ABC):
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
-    def run(self, subset_id: int | None, param_id: int | None) -> None:
+    @abstractmethod
+    def run(
+        self, subset_id: int | None = None, param_id: int | None = None
+    ) -> None:
         """Run stage submodel."""
-        raise NotImplementedError()
+        raise NotImplementedError("Subclasses must implement this method.")
 
     def fit(self, subset_id: int | None, param_id: int | None) -> None:
         """Fit stage submodel."""
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "Subclasses must implement this method if not skipped."
+        )
 
     def predict(self, subset_id: int | None, param_id: int | None) -> None:
         """Predict stage submodel."""
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "Subclasses must implement this method if not skipped."
+        )
 
+    @abstractmethod
     def collect(self) -> None:
         """Collect stage submodel results."""
-        raise NotImplementedError()
+        raise NotImplementedError("Subclasses must implement this method.")
