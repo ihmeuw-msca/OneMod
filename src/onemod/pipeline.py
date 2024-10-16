@@ -13,7 +13,7 @@ from pydantic import computed_field, field_serializer, validate_call
 from onemod.base_models import SerializableModel
 from onemod.config import PipelineConfig
 from onemod.serializers import deserialize, serialize
-from onemod.stage import Stage, ModelStage
+from onemod.stage import ModelStage, Stage
 from onemod.validation import ValidationErrorCollector, handle_error
 
 logger = logging.getLogger(__name__)

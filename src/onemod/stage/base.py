@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Dict, Literal
+from typing import Literal
 
 import pandas as pd
 from pandas import DataFrame
@@ -30,8 +30,8 @@ class Stage(SerializableModel, ABC):
 
     name: str
     config: StageConfig
-    input_validation: Dict[str, Data] = Field(default_factory=dict)
-    output_validation: Dict[str, Data] = Field(default_factory=dict)
+    input_validation: dict[str, Data] = Field(default_factory=dict)
+    output_validation: dict[str, Data] = Field(default_factory=dict)
     _pipeline: str  # set by Stage.from_json
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
@@ -278,9 +278,10 @@ class Stage(SerializableModel, ABC):
                         collector,
                     )
 
+    @abstractmethod
     def run(self) -> None:
         """Run stage."""
-        raise NotImplementedError()
+        raise NotImplementedError("Subclasses must implement this method.")
 
     @validate_call
     def __call__(self, **input: Data | Path) -> None:
@@ -373,13 +374,17 @@ class ModelStage(Stage, ABC):
         """Run stage submodel."""
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def fit(self, subset_id: int | None, param_id: int | None) -> None:
+    def fit(
+        self, subset_id: int | None = None, param_id: int | None = None
+    ) -> None:
         """Fit stage submodel."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped."
         )
 
-    def predict(self, subset_id: int | None, param_id: int | None) -> None:
+    def predict(
+        self, subset_id: int | None = None, param_id: int | None = None
+    ) -> None:
         """Predict stage submodel."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped."

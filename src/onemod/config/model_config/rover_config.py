@@ -5,6 +5,7 @@ FIXME: improve top_pct_score and top_pct_learner descriptions
 """
 
 from typing import Literal
+from typing_extensions import Self
 
 from pydantic import Field, NonNegativeInt, model_validator
 
@@ -50,13 +51,14 @@ class RoverConfig(ModelConfig):
     max_covs: NonNegativeInt | None = None
 
     @model_validator(mode="after")
-    def check_holdouts(self):
+    def check_holdouts(self) -> Self:
         """Make sure holdouts present."""
         if self.holdout_columns is None:
             raise ValueError("Holdout columns required for rover stage")
+        return self
 
     @model_validator(mode="after")
-    def check_min_max(self):
+    def check_min_max(self) -> Self:
         """Make sure min_covs <= max_covs."""
         if self.min_covs is not None and self.max_covs is not None:
             if self.min_covs > self.max_covs:

@@ -23,7 +23,11 @@ def get_subset(
 ) -> pd.DataFrame:
     """Get data subset by subset_id."""
     subset = pd.read_csv(subsets).query("subset_id == @subset_id")
-    id_subsets = {key: {value.item()} for key, value in subset.items()}
+    id_subsets = {
+        key: [value.item()]
+        for key, value in subset.items()
+        if key != "subset_id"
+    }
     return filter_data(data, id_subsets)
 
 
