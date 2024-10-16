@@ -295,7 +295,8 @@ class Pipeline(SerializableModel):
 
             evaluate_with_jobmon(model=self, method=method, *args, **kwargs)
         else:
-            for stage in self.stages.values():
+            for stage_name in self.get_execution_order():
+                stage = self.stages[stage_name]
                 if method not in stage.skip:
                     subset_ids = getattr(stage, "subset_ids", None)
                     param_ids = getattr(stage, "param_ids", None)

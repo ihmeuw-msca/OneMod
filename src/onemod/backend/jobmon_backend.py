@@ -156,7 +156,8 @@ def evaluate_with_jobmon(
             "config": str(model.directory / (model.name + ".json")),
             "from_pipeline": True,
         }
-        for stage in model.stages.values():
+        for stage_name in model.get_execution_order():
+            stage = model.stages[stage_name]
             if method not in stage.skip:
                 upstream_tasks = get_tasks(
                     tool, stage, method, task_args, upstream_tasks
