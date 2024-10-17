@@ -371,18 +371,33 @@ def test_pipeline_build_multiple_stages(
     }
 
 
-@pytest.mark.skip("Not yet implemented")
 @pytest.mark.integration
 def test_pipeline_deserialization(test_base_dir, pipeline_with_multiple_stages):
     """Test deserializing a multi-stage pipeline from JSON."""
     pipeline_json_path = (
         test_base_dir / f"{pipeline_with_multiple_stages.name}.json"
     )
+    pipeline_with_multiple_stages.build(pipeline_json_path)
 
     # Deserialize the pipeline from JSON
     reconstructed_pipeline = Pipeline.from_json(
         pipeline_json_path
-    )  # TODO from_json (namely handling stages module importing)
+    )
+    
+    reconstructed_pipeline.name = "reconstructed_pipeline"
+    reconstructed_pipeline_json_path = (
+        test_base_dir / f"{reconstructed_pipeline.name}.json"
+    )
+    
+    reconstructed_pipeline.build(reconstructed_pipeline_json_path)
+    reconstructed_pipeline.build('/ihme/homes/warriwes/tmp/onemod/tests/assets/configs/pipeline_configs/test_dummy_pipeline.json')
 
-    # Assert that the reconstructed pipeline matches the original
-    assert reconstructed_pipeline == pipeline_with_multiple_stages
+    with open(pipeline_json_path, "r") as f:
+        original_pipeline_dict = json.load(f)
+    with open(reconstructed_pipeline_json_path, "r") as f:
+        reconstructed_pipeline_dict = json.load(f)
+    
+    # Reconstructed pipeline build output must match the original, apart from name
+    original_pipeline_dict.pop("name")
+    reconstructed_pipeline_dict.pop("name")
+    assert_equal_unordered(original_pipeline_dict, reconstructed_pipeline_dict)
