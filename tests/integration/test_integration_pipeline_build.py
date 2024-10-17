@@ -357,7 +357,6 @@ def test_pipeline_deserialization(test_base_dir, pipeline_with_multiple_stages):
     )
     
     reconstructed_pipeline.build(reconstructed_pipeline_json_path)
-    reconstructed_pipeline.build('/ihme/homes/warriwes/tmp/onemod/tests/assets/configs/pipeline_configs/test_dummy_pipeline.json')
 
     with open(pipeline_json_path, "r") as f:
         original_pipeline_dict = json.load(f)
