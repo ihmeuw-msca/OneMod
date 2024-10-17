@@ -30,7 +30,7 @@ def test_input_data(test_assets_dir):
 
 
 @pytest.mark.e2e
-def test_dummy_pipeline_sequential_run(test_base_dir, test_input_data):
+def test_dummy_pipeline(test_assets_dir, test_input_data, test_base_dir):
     """End-to-end test for a the OneMod example pipeline with arbitrary configs and constraints, test data."""
     preprocessing = PreprocessingStage(
         name="preprocessing",
@@ -178,13 +178,43 @@ def test_dummy_pipeline_sequential_run(test_base_dir, test_input_data):
     )
     
     # Run the pipeline (local backend)
+    # TODO: better way to test success of arbitrary pipeline execution
     buffer = io.StringIO()
     with redirect_stdout(buffer):
         dummy_pipeline.evaluate(backend="local", method="run")
         
-    actual_output = buffer.getvalue().strip()
+    local_run_stdout = buffer.getvalue().strip()
     
     sample_expected_outputs = ["running preprocessing", "running covariate_selection", "running global_model", "running location_model", "running smoothing", "running custom_stage"]
     
     for expected_output in sample_expected_outputs:
-        assert expected_output in actual_output
+        assert expected_output in local_run_stdout
+        
+    # Fit (local backend)
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        dummy_pipeline.evaluate(backend="local", method="fit")
+    local_fit_stdout = buffer.getvalue().strip()
+    
+    assert "fitting global_model" in local_fit_stdout
+    assert "running global_model" not in local_fit_stdout
+    assert "predicting global_model" not in local_fit_stdout
+    
+    # Predict (local backend)
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        dummy_pipeline.evaluate(backend="local", method="predict")
+    local_predict_stdout = buffer.getvalue().strip()
+    
+    assert "predicting for global_model" in local_predict_stdout
+    assert "fitting global_model" not in local_predict_stdout
+    assert "running global_model" not in local_predict_stdout
+    
+    # Run the pipeline (jobmon backend)
+    # TODO: test jobmon separately, but without repeating allll the above code
+    # dummy_pipeline.evaluate(
+    #     backend="jobmon",
+    #     method="run",
+    #     cluster="slurm",
+    #     resources=Path(test_assets_dir, "e2e", "example1", "config", "jobmon", "resources.yaml"),
+    # )
