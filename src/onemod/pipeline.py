@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from itertools import product
 from pathlib import Path
 from typing import Literal
 
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Pipeline(SerializableModel):
     """Pipeline class.
 
-    Attributes
+    Parameters
     ----------
     name : str
         Pipeline name.
@@ -34,7 +33,7 @@ class Pipeline(SerializableModel):
         Input data used to create data subsets. Required for pipeline or
         stage `groupby` attribute. Default is None.
     groupby : set of str or None, optional
-        ID names used to create data subsets. Default is None.
+        Column names used to create data subsets. Default is None.
 
     """
 
@@ -92,10 +91,7 @@ class Pipeline(SerializableModel):
             from onemod.main import load_stage
 
             pipeline.add_stages(
-                [
-                    load_stage(config_path, stage, from_pipeline=True)
-                    for stage in stages
-                ]
+                [load_stage(config_path, stage) for stage in stages]
             )
 
         return pipeline
@@ -274,7 +270,6 @@ class Pipeline(SerializableModel):
         self,
         method: Literal["run", "fit", "predict"] = "run",
         backend: Literal["local", "jobmon"] = "local",
-        *args,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
@@ -286,6 +281,14 @@ class Pipeline(SerializableModel):
         backend : str, optional
             How to evaluate the method. Default is 'local'.
 
+        Other Parameters
+        ----------------
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path or str, optional
+            Path to resources yaml file. Required if `backend` is
+            'jobmon'.
+
         TODO: Add options to run subset of stages
         TODO: Add options to run subset of IDs
 
@@ -293,41 +296,36 @@ class Pipeline(SerializableModel):
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 
-            evaluate_with_jobmon(model=self, method=method, *args, **kwargs)
+            evaluate_with_jobmon(model=self, method=method, **kwargs)
         else:
-            for stage_name in self.get_execution_order():
-                stage = self.stages[stage_name]
-                if method not in stage.skip:
-                    subset_ids = getattr(stage, "subset_ids", None)
-                    param_ids = getattr(stage, "param_ids", None)
-                    if subset_ids is not None or param_ids is not None:
-                        for subset_id, param_id in product(
-                            subset_ids or [None], param_ids or [None]
-                        ):
-                            stage.evaluate(
-                                method=method,
-                                subset_id=subset_id,
-                                param_id=param_id,
-                            )
-                        stage.collect()
-                    else:
-                        stage.evaluate(method=method)
+            from onemod.backend import evaluate_local
 
-    def run(self) -> None:
+            evaluate_local(model=self, method=method)
+
+    def run(
+        self, backend: Literal["local", "jobmon"] = "local", **kwargs
+    ) -> None:
         """Run pipeline."""
-        self.evaluate(method="run")
+        self.evaluate(method="run", backend=backend, **kwargs)
 
-    def fit(self) -> None:
+    def fit(
+        self, backend: Literal["local", "jobmon"] = "local", **kwargs
+    ) -> None:
         """Fit pipeline model."""
-        self.evaluate(method="fit")
+        self.evaluate(method="fit", backend=backend, **kwargs)
 
-    def predict(self) -> None:
+    def predict(
+        self, backend: Literal["local", "jobmon"] = "local", **kwargs
+    ) -> None:
         """Predict pipeline model."""
-        self.evaluate(method="predict")
+        self.evaluate(method="predict", backend=backend, **kwargs)
 
     def resume(self) -> None:
         """Resume pipeline."""
         raise NotImplementedError()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.name}, stages={list(self.stages.values())})"
+        return (
+            f"{type(self).__name__}({self.name},"
+            f" stages={list(self.stages.values())})"
+        )

@@ -1,4 +1,4 @@
-"""Jobmon functions to run pipelines and stages."""
+"""Functions to run pipelines and stages with Jobmon."""
 
 import sys
 from pathlib import Path
@@ -7,6 +7,7 @@ from typing import Literal
 from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
+from pydantic import validate_call
 
 from onemod.pipeline import Pipeline
 from onemod.stage import ModelStage, Stage
@@ -44,9 +45,8 @@ def get_tasks(
     node_args = {}
     if isinstance(stage, ModelStage) and method != "collect":
         for node_arg in ["subset_id", "param_id"]:
-            if hasattr(stage, node_arg + "s"):
-                if len(node_vals := getattr(stage, node_arg + "s")) > 0:
-                    node_args[node_arg] = node_vals
+            if len(node_vals := getattr(stage, node_arg + "s")) > 0:
+                node_args[node_arg] = node_vals
 
     task_template = get_task_template(
         tool, stage.name, method, node_args.keys()
@@ -83,7 +83,7 @@ def get_task_template(
         template_name=f"{stage_name}_{method}_template",
         command_template=get_command_template(stage_name, method, node_args),
         node_args=node_args,
-        task_args=["config", "from_pipeline"],
+        task_args=["config"],
         op_args=["python"],
     )
 
@@ -97,7 +97,6 @@ def get_command_template(
         f" {Path(__file__).parents[1] / "main.py"}"
         " --config {config}"
         f" --stage_name {stage_name}"
-        " --from_pipeline {from_pipeline}"
         f" --method {method}"
     )
 
@@ -107,40 +106,37 @@ def get_command_template(
     return command_template
 
 
+@validate_call
 def evaluate_with_jobmon(
-    model: Pipeline | ModelStage,
+    model: Pipeline | Stage,
     cluster: str,
     resources: Path | str,
     python: Path | str | None = None,
-    method: Literal["run", "fit", "predict"] = "run",
+    method: Literal["run", "fit", "predict", "collect"] = "run",
     config: Path | str | None = None,
-    from_pipeline: bool = False,
 ) -> None:
-    """Evaluate pipeline or stage with Jobmon.
+    """Evaluate pipeline or stage method with Jobmon.
 
     Parameters
-    -----------
+    ----------
     model : Pipeline or Stage
-        Pipeline or Stage instance, specifically stages with either
-        `groupby` or `crossby` attributes.
+        Pipeline or stage instance.
     cluster : str
         Cluster name.
     resources : Path or str
         Path to resources yaml file.
-    python : Path, str or None, optional
-        Path to python environment. If None, use sys.executable.
+    python : Path, str, or None, optional
+        Path to Python environment. If None, use sys.executable.
         Default is None.
     method : str, optional
-        Name of method to evaluate. Default is 'run'.
-    config : Path, str or None, optional
-        Path to config file. Only used if `model` is a Stage instance.
-        If None, model.directory / (model.name + ".json") used.
+        Name of method to evalaute. Default is 'run'.
+    config : Path, str, or None, optional
+        Path to config file. If None, use
+        pipeline.directory / (pipeline.name + ".json") or
+        stage.directory.parent / (stage.pipeline.name + ".json").
         Default is None.
-    from_pipeline : bool, optional
-        Whether `config` is a pipeline or stage config file. Only used
-        if `model` is a Stage instance. Default is False.
 
-    TODO: Optional stage-specific python environments
+    TODO: Optional stage-specific Python environments
     TODO: User-defined max_attempts
 
     """
@@ -153,8 +149,7 @@ def evaluate_with_jobmon(
         upstream_tasks = []
         task_args = {
             "python": python or sys.executable,
-            "config": str(model.directory / (model.name + ".json")),
-            "from_pipeline": True,
+            "config": config or str(model.directory / (model.name + ".json")),
         }
         for stage_name in model.get_execution_order():
             stage = model.stages[stage_name]
@@ -165,9 +160,9 @@ def evaluate_with_jobmon(
                 tasks.extend(upstream_tasks)
     else:
         task_args = {
-            "python": sys.executable,
-            "config": config or str(model.directory / (model.name + ".json")),
-            "from_pipeline": from_pipeline,
+            "python": python or sys.executable,
+            "config": config
+            or str(model.directory.parent / (model.pipeline + ".json")),
         }
         tasks = get_tasks(tool, model, method, task_args)
 

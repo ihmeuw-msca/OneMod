@@ -11,13 +11,12 @@ Notes
 
 from abc import ABC
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import ConfigDict, model_serializer, validate_call
 
 from onemod.base_models import SerializableModel
 from onemod.dtypes import Data
-from onemod.validation.error_handling import ValidationErrorCollector
 
 
 class IO(SerializableModel, ABC):

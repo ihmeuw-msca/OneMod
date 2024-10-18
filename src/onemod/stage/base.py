@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
@@ -24,7 +25,20 @@ from onemod.validation import ValidationErrorCollector, handle_error
 
 
 class Stage(SerializableModel, ABC):
-    """Stage base class."""
+    """Stage base class.
+
+    Parameters
+    ----------
+    name : str
+        Stage name.
+    config : StageConfig
+        Stage configuration.
+    input_validation : dict, optional
+        Description.
+    output_validation : dict, optional
+        Description.
+
+    """
 
     model_config = ConfigDict(validate_assignment=True)
 
@@ -104,24 +118,15 @@ class Stage(SerializableModel, ABC):
         return type(self).__name__
 
     @classmethod
-    def from_json(
-        cls,
-        config_path: Path | str,
-        stage_name: str | None = None,
-        from_pipeline: bool = False,
-    ) -> Stage:
+    def from_json(cls, config_path: Path | str, stage_name: str) -> Stage:
         """Load stage from JSON file.
 
         Parameters
         ----------
         config_path : Path or str
             Path to config file.
-        stage_name : str or None, optional
-            Stage name, required if `from_pipeline` is True.
-            Default is None.
-        from_pipeline : bool, optional
-            Whether `config_path` is a pipeline or stage config file.
-            Default is False.
+        stage_name : str
+            Stage name.
 
         Returns
         -------
@@ -130,107 +135,76 @@ class Stage(SerializableModel, ABC):
 
         Notes
         -----
-        If `from_pipeline` is True, the stage directory is set to
-        pipeline.directory / `stage_name`. Otherwise, the stage
-        directory is set to the parent directory of `config`.
+        Stage directory set to pipeline.directory / `stage_name`.
 
         """
         with open(config_path, "r") as f:
             config = json.load(f)
-        if from_pipeline:
-            pipeline = config["name"]
-            directory = Path(config["directory"]) / stage_name
-            try:
-                config = config["stages"][stage_name]
-            except KeyError:
-                raise AttributeError(
-                    f"{config.name} does not have a '{stage_name}' stage"
-                )
-        else:
-            pipeline = None
-            directory = Path(config_path).parent
+        pipeline = config["name"]
+        directory = Path(config["directory"]) / stage_name
+        if stage_name not in config["stages"]:
+            raise KeyError(
+                f"Config does not contain a stage named '{stage_name}'"
+            )
+        config = config["stages"][stage_name]
         stage = cls(**config)
         stage._pipeline = pipeline
         stage.directory = directory
         if "module" in config:
             stage._module = config["module"]
+        if "crossby" in config:
+            stage._crossby = config["crossby"]
         if "input" in config:
             stage(**config["input"])
         return stage
 
-    def to_json(self, config_path: Path | str | None = None) -> None:
-        """Save stage as JSON file.
-
-        Parameters
-        ----------
-        config_path : Path, str or None, optional
-            Where to save the config file. If None, file is saved at
-            stage.directory / (stage.name + ."json").
-            Default is None.
-
-        """
-        config_path = config_path or self.directory / (self.name + ".json")
-        with open(config_path, "w") as f:
-            f.write(self.model_dump_json(indent=4, exclude_none=True))
-
     @validate_call
     def evaluate(
         self,
-        config: Path | str | None = None,
-        from_pipeline: bool = False,
-        method: Literal["run", "fit", "predict", "collect"] = "run",
+        method: Literal["run", "fit", "predict"] = "run",
         backend: Literal["local", "jobmon"] = "local",
-        *args,
         **kwargs,
     ) -> None:
         """Evaluate stage method.
 
         Parameters
         ----------
-        config : Path, str, or None, optional
-            Path to config file. Required if `backend` is 'jobmon'.
-            Default is None.
-        from_pipeline : bool, optional
-            Whether `config` is a pipeline or stage config file.
-            Default is False.
         method : str, optional
-            Name of method to evaluate. If Default is 'run'.
+            Name of method to evaluate. Default is 'run'.
         backend : str, optional
             Whether to evaluate the method locally or with Jobmon.
             Default is 'local'.
 
-        Raises
-        ------
-        AttributeError
-            If `method` in `stage.skip`.
+        Other Parameters
+        ----------------
+        config : Path or str, optional
+            Path to config file. Required if `backend` is 'jobmon'.
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path or str, optional
+            Path to resources yaml file. Required if `backend` is
+            'jobmon'.
 
         Notes
         -----
-        If `method` is not in `skip` but the stage does not have
-        `method`, the stage's `run` method will be evaluated. For
-        example, a data preprocessing stage might implement the `run`
-        method, skip the `predict` method, and evaluate the `run` method
-        when `fit` is called. Alternatively, a plotting stage might
-        implement the `run` method, skip the `fit` method, and evaluate
-        the `run` method when `predict` is called.
+        If stage does not implement `method`, and `method` not in
+        `skip`, the `run` method will be evaluated. For example, a data
+        preprocessing stage might implement `run`, skip `predict`, and
+        evaluate `run` when `fit` is called. Alternatively, a plotting
+        stage might implement `run`, skip `fit`, and evaluate `run` when
+        `predict` is called.
 
         """
         if method in self.skip:
-            raise AttributeError(f"{self.name} skips the '{method}' method")
+            warnings.warn(f"{self.name} skips the '{method}' method")
+            return
         method = method if hasattr(self, method) else "run"
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 
-            evaluate_with_jobmon(
-                model=self,
-                config=config,
-                from_pipeline=from_pipeline,
-                method=method,
-                *args,
-                **kwargs,
-            )
+            evaluate_with_jobmon(model=self, method=method, **kwargs)
         else:
-            self.__getattribute__(method)(*args, **kwargs)
+            self.__getattribute__(method)()
 
     def validate_build(self, collector: ValidationErrorCollector) -> None:
         """Perfom build-time validation."""
@@ -300,7 +274,37 @@ class Stage(SerializableModel, ABC):
 
 
 class ModelStage(Stage, ABC):
-    """Model stage base class."""
+    """Model stage base class.
+
+    Model stages can be run separately for data subsets using the
+    `groupby` attribute. For example, a single stage could have separate
+    models by sex_id or age_group_id.
+
+    Model stages can also be run for different parameter combinations
+    using the `crossby` attribute. For example, a single stage could be
+    run for various hyperparameter values, and then the results could be
+    combined into an ensemble. Any parameter in config.crossable_params
+    can be specified as either a single value or a list of values.
+
+    When a model stage method is evaluated, all submodels (identified by
+    their `subset_id` and `param_id`) are evaluated, and then the
+    submodel results are collected using the `collect` method.
+
+    Parameters
+    ----------
+    name : str
+        Stage name.
+    config : ModelConfig
+        Stage configuration.
+    groupby : set of str, optional
+        Column names used to create data subsets.
+        Default is an empty set.
+    input_validation : dict, optional
+        Description.
+    output_validation : dict, optional
+        Description.
+
+    """
 
     config: ModelConfig
     groupby: set[str] = set()
@@ -320,7 +324,7 @@ class ModelStage(Stage, ABC):
             try:
                 subsets = pd.read_csv(self.directory / "subsets.csv")
                 self._subset_ids = set(subsets["subset_id"])
-            except FileNotFoundError():
+            except FileNotFoundError:
                 raise AttributeError(
                     f"{self.name} data subsets have not been created"
                 )
@@ -331,8 +335,8 @@ class ModelStage(Stage, ABC):
         if self.crossby and not self._param_ids:
             try:
                 params = pd.read_csv(self.directory / "parameters.csv")
-                self._params_ids = set(params["param_id"])
-            except FileNotFoundError():
+                self._param_ids = set(params["param_id"])
+            except FileNotFoundError:
                 raise AttributeError(
                     f"{self.name} parameter sets have not been created"
                 )
@@ -366,6 +370,67 @@ class ModelStage(Stage, ABC):
         params = get_params(self.directory / "parameters.csv", param_id)
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
+
+    @validate_call
+    def evaluate(
+        self,
+        method: Literal["run", "fit", "predict", "collect"] = "run",
+        backend: Literal["local", "jobmon"] = "local",
+        **kwargs,
+    ) -> None:
+        """Evaluate model stage method.
+
+        Parameters
+        ----------
+        method : str, optional
+            Name of method to evaluate. Default is 'run'.
+        backend : str, optional
+            Whether to evaluate the method locally or with Jobmon.
+            Default is 'local'.
+
+        Other Parameters
+        ----------------
+        subset_id : int, optional
+            Submodel data subset ID. Ignored if `backend` is 'jobmon'.
+        param_id : int, optional
+            Submodel parameter set ID. Ignored if `backend` is 'jobmon'.
+        config : Path or str, optional
+            Path to config file. Required if `backend` is 'jobmon'.
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path or str, optional
+            Path to resources yaml file. Required if `backend` is
+            'jobmon'.
+
+        Notes
+        -----
+        If either `subset_id` or `param_id` is passed, `method` will be
+        evaluated for the corresponding submodel (unless `backend` is
+        'jobmon' or `method` is 'collect', in which case `subset_id`
+        and `param_id` are ignored). Otherwise, `method` will be
+        evaluated for all submodels, and then `collect` will be
+        evaluated to collect the submodel results.
+
+        """
+        if method in self.skip:
+            warnings.warn(f"{self.name} skips the '{method}' method")
+            return
+        if backend == "jobmon":
+            from onemod.backend import evaluate_with_jobmon
+
+            evaluate_with_jobmon(model=self, method=method, **kwargs)
+        else:
+            if method == "collect":
+                self.collect()
+            else:
+                subset_id = kwargs.get("subset_id")
+                param_id = kwargs.get("param_id")
+                if subset_id is not None or param_id is not None:
+                    self.__getattribute__(method)(subset_id, param_id)
+                else:
+                    from onemod.backend import evaluate_local
+
+                    evaluate_local(model=self, method=method)
 
     @abstractmethod
     def run(
