@@ -8,11 +8,9 @@ import pytest
 from onemod import Pipeline
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
-from onemod.stage import PreprocessingStage, RoverStage, SpxmodStage, KregStage
+from tests.helpers.dummy_stages import DummyCustomStage, DummyKregStage, DummyPreprocessingStage, DummyRoverStage, DummySpxmodStage
 
-from examples.custom_stage import CustomStage
-
-from tests.utils import assert_equal_unordered
+from tests.helpers.utils import assert_equal_unordered
 
 
 @pytest.fixture(scope="module")
@@ -30,9 +28,9 @@ def test_input_data(test_assets_dir):
 
 
 @pytest.mark.e2e
-def test_dummy_pipeline(test_assets_dir, test_input_data, test_base_dir):
+def test_dummy_pipeline(test_input_data, test_base_dir):
     """End-to-end test for a the OneMod example pipeline with arbitrary configs and constraints, test data."""
-    preprocessing = PreprocessingStage(
+    preprocessing = DummyPreprocessingStage(
         name="preprocessing",
         config={},
         input_validation={
@@ -55,21 +53,21 @@ def test_dummy_pipeline(test_assets_dir, test_input_data, test_base_dir):
             )
         }
     )
-    covariate_selection = RoverStage(
+    covariate_selection = DummyRoverStage(
         name="covariate_selection",
         config={"cov_exploring": ["cov1", "cov2", "cov3"]},
         groupby=["age_group_id"],
     )
-    global_model = SpxmodStage(
+    global_model = DummySpxmodStage(
         name="global_model",
         config={"xmodel": {"variables": [{"name": "var1"}, {"name": "var2"}]}},
     )
-    location_model = SpxmodStage(
+    location_model = DummySpxmodStage(
         name="location_model",
         config={"xmodel": {"variables": [{"name": "var1"}, {"name": "var2"}]}},
         groupby=["location_id"],
     )
-    smoothing = KregStage(
+    smoothing = DummyKregStage(
         name="smoothing",
         config={
             "kreg_model": {
@@ -90,7 +88,7 @@ def test_dummy_pipeline(test_assets_dir, test_input_data, test_base_dir):
         },
         groupby=["region_id"],
     )
-    custom_stage = CustomStage(
+    custom_stage = DummyCustomStage(
         name="custom_stage",
         config={"custom_param": [1, 2]},
         groupby=["super_region_id"],
@@ -178,7 +176,6 @@ def test_dummy_pipeline(test_assets_dir, test_input_data, test_base_dir):
     )
     
     # Run the pipeline (local backend)
-    # TODO: better way to test success of arbitrary pipeline execution
     buffer = io.StringIO()
     with redirect_stdout(buffer):
         dummy_pipeline.evaluate(backend="local", method="run")
@@ -210,11 +207,3 @@ def test_dummy_pipeline(test_assets_dir, test_input_data, test_base_dir):
     assert "fitting global_model" not in local_predict_stdout
     assert "running global_model" not in local_predict_stdout
     
-    # Run the pipeline (jobmon backend)
-    # TODO: test jobmon separately, but without repeating allll the above code
-    # dummy_pipeline.evaluate(
-    #     backend="jobmon",
-    #     method="run",
-    #     cluster="slurm",
-    #     resources=Path(test_assets_dir, "e2e", "example1", "config", "jobmon", "resources.yaml"),
-    # )

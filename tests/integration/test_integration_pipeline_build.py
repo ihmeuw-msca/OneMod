@@ -10,7 +10,7 @@ from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 from onemod.dtypes import Data, ColumnSpec
 
-from tests.utils import assert_equal_unordered
+from tests.helpers.utils import assert_equal_unordered
 
 
 class DummyStage(Stage):
