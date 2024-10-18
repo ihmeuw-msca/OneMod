@@ -237,8 +237,9 @@ class Pipeline(SerializableModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self) -> None:
+    def build(self, config_path: Path | str | None = None) -> None:
         """Assemble the pipeline, perform build-time validation, and save it to JSON."""
+        config_path = config_path or self.directory / f"{self.name}.json"
         collector = ValidationErrorCollector()
 
         for stage in self.stages.values():
@@ -258,8 +259,8 @@ class Pipeline(SerializableModel):
             stage_name: list(dependencies)
             for stage_name, dependencies in self.dependencies.items()
         }
-
-        serialize(pipeline_dict, self.directory / f"{self.name}.json")
+        
+        serialize(pipeline_dict, config_path)
 
     def save_validation_report(
         self, collector: ValidationErrorCollector

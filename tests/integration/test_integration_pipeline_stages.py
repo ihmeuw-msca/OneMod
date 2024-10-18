@@ -12,13 +12,13 @@ class DummyStage(Stage):
     _output: set[str] = {"predictions.parquet", "model.pkl"}
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_base_dir(tmp_path_factory):
     test_base_dir = tmp_path_factory.mktemp("example")
     return test_base_dir
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_1(test_base_dir):
     stage_1 = DummyStage(
         name="stage_1", directory=test_base_dir / "stage_1", config={}
@@ -31,7 +31,7 @@ def stage_1(test_base_dir):
     return stage_1
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2", directory=test_base_dir / "stage_2", config={}
@@ -145,7 +145,6 @@ def test_pipeline_with_valid_dependencies(test_base_dir):
     assert execution_order == ["stage_1", "stage_2", "stage_3"]
 
 
-@pytest.mark.skip(reason="Test not yet implemented.")
 @pytest.mark.integration
 def test_pipeline_with_cyclic_dependencies(test_base_dir):
     pipeline = Pipeline(
@@ -160,46 +159,33 @@ def test_pipeline_with_cyclic_dependencies(test_base_dir):
     pipeline.add_stage(stage_2)
     pipeline.add_stage(stage_3)
 
+    stage_1(data=test_base_dir / "stage_1" / "data.parquet")
+    stage_2(data=stage_1.output["predictions"])
+    stage_1(data=stage_2.output["predictions"])  # Redefined with cyclic dependency
+
     with pytest.raises(ValueError, match="Cycle detected"):
         pipeline.get_execution_order()
 
 
-@pytest.mark.skip(reason="Test not yet implemented.")
 @pytest.mark.integration
 def test_pipeline_with_undefined_dependencies(test_base_dir):
     pipeline_dir = test_base_dir / "invalid_pipeline"
-    invalid_pipeline = Pipeline(
+    pipeline = Pipeline(
         name="invalid_pipeline",
         config={"id_columns": [], "model_type": "binomial"},
         directory=pipeline_dir,
     )
 
+    stage_1 = DummyStage(name="stage_1", config={})
     stage_2 = DummyStage(name="stage_2", config={})
-    invalid_pipeline.add_stage(stage_2)
-
-    with pytest.raises(ValueError, match="Undefined dependencies"):
-        invalid_pipeline.get_execution_order()
-
-
-@pytest.mark.skip(reason="Test not yet implemented.")
-@pytest.mark.integration
-def test_validate_dag_with_undefined_dependency(test_base_dir):
-    pipeline = Pipeline(
-        name="test_pipeline",
-        config={"id_columns": [], "model_type": "binomial"},
-        directory=test_base_dir,
-    )
-    stage_1 = Stage(name="stage_1", config={})
-    stage_2 = Stage(name="stage_2", config={})
-    pipeline.add_stage(stage_1)
-    pipeline.add_stage(stage_2)
-    pipeline.dependencies["stage_2"] = ["stage_3"]  # Undefined stage_3
-
-    with pytest.raises(ValueError, match="Stage 'stage_3' is not defined"):
-        pipeline.validate_dag()
+    pipeline.add_stage(stage_2)  # stage_1 never added
+    
+    stage_1(data=test_base_dir / "stage_1" / "data.parquet")
+    
+    with pytest.raises(AttributeError, match="Stage 'stage_1' directory has not been set"):
+        stage_2(data=stage_1.output["predictions"])
 
 
-@pytest.mark.skip(reason="Test not yet implemented.")
 @pytest.mark.integration
 def test_validate_dag_with_self_dependency(test_base_dir):
     pipeline = Pipeline(
@@ -207,11 +193,11 @@ def test_validate_dag_with_self_dependency(test_base_dir):
         config={"id_columns": [], "model_type": "binomial"},
         directory=test_base_dir,
     )
-    stage_1 = Stage(name="stage_1", config={})
+    stage_1 = DummyStage(name="stage_1", config={})
+    
     pipeline.add_stage(stage_1)
-    stage_1(data=stage_1.output["data"])  # Self-dependency
 
     with pytest.raises(
-        ValueError, match="Stage 'stage_1' cannot depend on itself"
+        ValueError, match="Circular dependencies for stage_1 input"
     ):
-        pipeline.validate_dag()
+        stage_1(data=stage_1.output["predictions"])  # Self-dependency

@@ -7,7 +7,7 @@ name = "onemod"
 version = "0.3.0"
 description = "A pipeline package for estimating scalar quantity by leveraging covariates and correlations across multiple dimensions."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9, <3.13"
 license = { file = "LICENSE" }
 authors = [
     { name = "IHME Math Sciences", email = "ihme.math.sciences@gmail.com" },
@@ -21,21 +21,16 @@ classifiers = [
 ]
 dependencies = [
     "fire",
-    "loguru",
     "kreg @ git+https://github.com/ihmeuw-msca/kreg.git",
-    "matplotlib",
     "modrover @ git+https://github.com/ihmeuw-msca/modrover.git@v0.1.3",
     "pandas",
     "polars",
     "pyarrow",
     "pydantic",
-    "python-dotenv >= 1.0.0",
-    "scipy",
-    "seaborn",
-    "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@v0.2.1",
     "regmod == 0.1.2",
+    "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@v0.2.1",
     "weighted-average >= 1.3.0",
-    "xspline" == 0.0.7",
+    "xspline == 0.0.7",
 ]
 
 [project.optional-dependencies]

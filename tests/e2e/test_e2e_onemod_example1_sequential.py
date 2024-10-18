@@ -8,13 +8,13 @@ from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
 from onemod.dtypes import Data
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_base_dir(tmp_path_factory):
     test_base_dir = tmp_path_factory.mktemp("example")
     return test_base_dir
 
 
-@pytest.mark.skip(reason="Not implemented")
+@pytest.mark.skip(reason="Test not implemented yet. Needs actual stages implemented and test data assets.")
 @pytest.mark.e2e
 def test_e2e_onemod_example1_sequential(test_assets_dir, test_base_dir):
     """
@@ -180,11 +180,3 @@ def test_e2e_onemod_example1_sequential(test_assets_dir, test_base_dir):
 
     # Execute stages in sequence
     dummy_pipeline.evaluate(backend="local")
-
-    # TODO: implement all of these or design different way to check statuseseses
-    assert dummy_pipeline.stages["1_preprocessing"].status == "completed"
-    assert dummy_pipeline.stages["2_covariate_selection"].status == "completed"
-    assert dummy_pipeline.stages["3_global_model"].status == "completed"
-    assert dummy_pipeline.stages["4_location_model"].status == "completed"
-    assert dummy_pipeline.stages["5_smoothing"].status == "completed"
-    assert dummy_pipeline.status == "completed"

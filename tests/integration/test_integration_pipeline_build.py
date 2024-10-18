@@ -10,6 +10,8 @@ from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 from onemod.dtypes import Data, ColumnSpec
 
+from tests.helpers.utils import assert_equal_unordered
+
 
 class DummyStage(Stage):
     config: StageConfig
@@ -18,48 +20,13 @@ class DummyStage(Stage):
     _output: set[str] = {"predictions.parquet", "model.pkl"}
 
 
-def assert_equal_unordered(actual, expected):
-    """Recursively compare two data structures, treating lists as unordered collections."""
-    if isinstance(actual, dict) and isinstance(expected, dict):
-        assert set(actual.keys()) == set(
-            expected.keys()
-        ), f"Dict keys differ: {actual.keys()} != {expected.keys()}"
-        for key in actual:
-            assert_equal_unordered(actual[key], expected[key])
-    elif isinstance(actual, list) and isinstance(expected, list):
-        assert len(actual) == len(
-            expected
-        ), f"List lengths differ: {len(actual)} != {len(expected)}"
-        unmatched_expected_items = expected.copy()
-        for actual_item in actual:
-            match_found = False
-            for expected_item in unmatched_expected_items:
-                try:
-                    assert_equal_unordered(actual_item, expected_item)
-                    unmatched_expected_items.remove(expected_item)
-                    match_found = True
-                    break
-                except AssertionError:
-                    continue
-            if not match_found:
-                raise AssertionError(
-                    f"No matching item found for {actual_item} in expected list."
-                )
-        if unmatched_expected_items:
-            raise AssertionError(
-                f"Expected items not matched: {unmatched_expected_items}"
-            )
-    else:
-        assert actual == expected, f"Values differ: {actual} != {expected}"
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_base_dir(tmp_path_factory):
     test_base_dir = tmp_path_factory.mktemp("test_base_dir")
     return test_base_dir
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def create_dummy_data(test_base_dir):
     """Create dummy data files needed for testing."""
     data_dir = test_base_dir / "data"
@@ -84,7 +51,7 @@ def create_dummy_data(test_base_dir):
     return data_parquet_path, covariates_parquet_path, predictions_parquet_path
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_1(test_base_dir, create_dummy_data):
     data_parquet_path, covariates_parquet_path, predictions_parquet_path = (
         create_dummy_data
@@ -159,7 +126,7 @@ def stage_1(test_base_dir, create_dummy_data):
     return stage_1
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
@@ -192,7 +159,7 @@ def stage_2(test_base_dir, stage_1):
     return stage_2
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
@@ -209,7 +176,7 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
     return pipeline
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
     """A sample pipeline with multiple stages and dependencies."""
     pipeline = Pipeline(
@@ -371,18 +338,32 @@ def test_pipeline_build_multiple_stages(
     }
 
 
-@pytest.mark.skip("Not yet implemented")
 @pytest.mark.integration
 def test_pipeline_deserialization(test_base_dir, pipeline_with_multiple_stages):
     """Test deserializing a multi-stage pipeline from JSON."""
     pipeline_json_path = (
         test_base_dir / f"{pipeline_with_multiple_stages.name}.json"
     )
+    pipeline_with_multiple_stages.build(pipeline_json_path)
 
     # Deserialize the pipeline from JSON
     reconstructed_pipeline = Pipeline.from_json(
         pipeline_json_path
-    )  # TODO from_json (namely handling stages module importing)
+    )
+    
+    reconstructed_pipeline.name = "reconstructed_pipeline"
+    reconstructed_pipeline_json_path = (
+        test_base_dir / f"{reconstructed_pipeline.name}.json"
+    )
+    
+    reconstructed_pipeline.build(reconstructed_pipeline_json_path)
 
-    # Assert that the reconstructed pipeline matches the original
-    assert reconstructed_pipeline == pipeline_with_multiple_stages
+    with open(pipeline_json_path, "r") as f:
+        original_pipeline_dict = json.load(f)
+    with open(reconstructed_pipeline_json_path, "r") as f:
+        reconstructed_pipeline_dict = json.load(f)
+    
+    # Reconstructed pipeline build output must match the original, apart from name
+    original_pipeline_dict.pop("name")
+    reconstructed_pipeline_dict.pop("name")
+    assert_equal_unordered(original_pipeline_dict, reconstructed_pipeline_dict)
