@@ -77,6 +77,7 @@ def test_dict() -> dict:
     }
 
 
+@pytest.mark.unit
 def test_serialize_dict_json(test_dict, tmp_json_file):
     """Test serializing a dictionary to JSON."""
     serialize(test_dict, tmp_json_file)
@@ -85,6 +86,7 @@ def test_serialize_dict_json(test_dict, tmp_json_file):
     assert_equal_unordered(data, test_dict)
     
     
+@pytest.mark.unit
 def test_serialize_dict_yaml(test_dict, tmp_yaml_file):
     """Test serializing a dictionary to YAML."""
     serialize(test_dict, tmp_yaml_file)
@@ -93,6 +95,7 @@ def test_serialize_dict_yaml(test_dict, tmp_yaml_file):
     assert_equal_unordered(data, test_dict)
     
     
+@pytest.mark.unit
 def test_serialize_model_json(test_model, test_model_dict_repr, tmp_json_file):
     """Test serializing a Pydantic model to JSON."""
     serialize(test_model, tmp_json_file)
@@ -101,6 +104,7 @@ def test_serialize_model_json(test_model, test_model_dict_repr, tmp_json_file):
     assert_equal_unordered(data, test_model_dict_repr)
 
     
+@pytest.mark.unit
 def test_serialize_model_yaml(test_model, test_model_dict_repr, tmp_yaml_file):
     """Test serializing a Pydantic model to YAML."""
     serialize(test_model, tmp_yaml_file)
@@ -109,6 +113,7 @@ def test_serialize_model_yaml(test_model, test_model_dict_repr, tmp_yaml_file):
     assert_equal_unordered(data, test_model_dict_repr)
 
 
+@pytest.mark.unit
 def test_serialize_list_of_dicts_json(test_dict, tmp_json_file):
     """Test serializing a list of dictionaries to JSON."""
     dicts = [test_dict, test_dict]
@@ -118,6 +123,7 @@ def test_serialize_list_of_dicts_json(test_dict, tmp_json_file):
     assert_equal_unordered(data, [test_dict, test_dict])
 
 
+@pytest.mark.unit
 def test_serialize_list_of_dicts_yaml(test_dict, tmp_yaml_file):
     """Test serializing a list of dictionaries to YAML."""
     dicts = [test_dict, test_dict]
@@ -127,6 +133,7 @@ def test_serialize_list_of_dicts_yaml(test_dict, tmp_yaml_file):
     assert_equal_unordered(data, [test_dict, test_dict])
 
 
+@pytest.mark.unit
 def test_serialize_list_of_models_json(test_model, test_model_dict_repr, tmp_json_file):
     """Test serializing a list of Pydantic models to JSON."""
     models = [test_model, test_model]
@@ -136,6 +143,7 @@ def test_serialize_list_of_models_json(test_model, test_model_dict_repr, tmp_jso
     assert_equal_unordered(data, [test_model_dict_repr, test_model_dict_repr])
 
 
+@pytest.mark.unit
 def test_serialize_list_of_models_yaml(test_model, test_model_dict_repr, tmp_yaml_file):
     """Test serializing a list of Pydantic models to YAML."""
     models = [test_model, test_model]
@@ -145,6 +153,7 @@ def test_serialize_list_of_models_yaml(test_model, test_model_dict_repr, tmp_yam
     assert_equal_unordered(data, [test_model_dict_repr, test_model_dict_repr])
     
 
+@pytest.mark.unit
 def test_deserialize_json(test_dict, tmp_json_file):
     """Test deserializing a JSON file into a dictionary."""
     with open(tmp_json_file, "w") as f:
@@ -153,6 +162,7 @@ def test_deserialize_json(test_dict, tmp_json_file):
     assert_equal_unordered(data, test_dict)
 
 
+@pytest.mark.unit
 def test_deserialize_yaml(test_dict, tmp_yaml_file):
     """Test deserializing a YAML file into a dictionary."""
     with open(tmp_yaml_file, "w") as f:
@@ -161,6 +171,7 @@ def test_deserialize_yaml(test_dict, tmp_yaml_file):
     assert_equal_unordered(data, test_dict)
 
 
+@pytest.mark.unit
 def test_unsupported_format(tmp_path):
     """Test that an unsupported file format raises a ValueError."""
     unsupported_file = tmp_path / "unsupported.txt"
