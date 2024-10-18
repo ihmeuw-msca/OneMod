@@ -2,12 +2,14 @@ import io
 from contextlib import redirect_stdout
 from pathlib import Path
 import json
+from typing import List
 
 import pytest
 
 from onemod import Pipeline
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
+from onemod.stage import Stage
 from tests.helpers.dummy_stages import DummyCustomStage, DummyKregStage, DummyPreprocessingStage, DummyRoverStage, DummySpxmodStage
 
 from tests.helpers.utils import assert_equal_unordered
@@ -27,9 +29,8 @@ def test_input_data(test_assets_dir):
     return test_input_data_path
 
 
-@pytest.mark.e2e
-def test_dummy_pipeline(test_input_data, test_base_dir):
-    """End-to-end test for a the OneMod example pipeline with arbitrary configs and constraints, test data."""
+def setup_dummy_pipeline(test_input_data, test_base_dir):
+    """Set up a dummy pipeline, including specific dummy stages."""
     preprocessing = DummyPreprocessingStage(
         name="preprocessing",
         config={},
@@ -117,7 +118,7 @@ def test_dummy_pipeline(test_input_data, test_base_dir):
             custom_stage,
         ]
     )
-
+    
     # Define dependencies
     preprocessing(data=dummy_pipeline.data)
     covariate_selection(data=preprocessing.output["data"])
@@ -138,6 +139,35 @@ def test_dummy_pipeline(test_input_data, test_base_dir):
         predictions=smoothing.output["predictions"],
     )
     
+    return dummy_pipeline, [preprocessing, covariate_selection, global_model, location_model, smoothing, custom_stage]
+    
+
+def assert_stage_logs(
+    stage: Stage,
+    methods: List[str] | None = None,
+    subset_ids: List[int] | None = None,
+    param_ids: List[int] | None =None
+):
+    """Assert that the expected methods were logged for a given stage."""
+    log = stage.get_log()
+    if methods:
+        for method in methods:
+            for subset_id in subset_ids:
+                if param_ids:
+                    for param_id in param_ids:
+                        assert f"{method}: name={stage.name}, subset={subset_id}, param={param_id}" in log
+                else:
+                    assert f"{method}: name={stage.name}, subset={subset_id}, param=None" in log
+        assert f"collect: name={stage.name}" in log
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_dummy_pipeline(test_input_data, test_base_dir, method):
+    """End-to-end test for a the OneMod example pipeline with arbitrary configs and constraints, test data."""
+    # Setup the pipeline
+    dummy_pipeline, stages = setup_dummy_pipeline(test_input_data, test_base_dir)
+    
     # Validate, build, and save the pipeline
     pipeline_json_path = test_base_dir / f"{dummy_pipeline.name}.json"
     dummy_pipeline.build()  # Saves to pipeline_json_path by default
@@ -147,6 +177,9 @@ def test_dummy_pipeline(test_input_data, test_base_dir):
         dummy_pipeline_dict = json.load(f)
     
     assert dummy_pipeline_dict["name"] == 'dummy_pipeline'
+    assert dummy_pipeline_dict["directory"] == str(test_base_dir)
+    assert dummy_pipeline_dict["data"] == str(test_input_data)
+    assert dummy_pipeline_dict["groupby"] == ['sex_id']
     assert_equal_unordered(
         dummy_pipeline_dict["config"],
         {
@@ -160,9 +193,6 @@ def test_dummy_pipeline(test_input_data, test_base_dir):
             'coef_bounds': {}
         }
     )
-    assert dummy_pipeline_dict["directory"] == str(test_base_dir)
-    assert dummy_pipeline_dict["data"] == str(test_input_data)
-    assert dummy_pipeline_dict["groupby"] == ['sex_id']
     assert_equal_unordered(
         dummy_pipeline_dict["dependencies"],
         {
@@ -175,35 +205,35 @@ def test_dummy_pipeline(test_input_data, test_base_dir):
         }
     )
     
-    # Run the pipeline (local backend)
-    buffer = io.StringIO()
-    with redirect_stdout(buffer):
-        dummy_pipeline.evaluate(backend="local", method="run")
+    # Run the pipeline with the given method (run, fit, predict)
+    dummy_pipeline.evaluate(backend="local", method=method)
+
+    # Set expected methods for each stage based on the evaluate() method
+    if method == "run":
+        covariate_selection_methods = ["run", "fit"]
+        global_model_methods = location_model_methods = smoothing_methods = custom_stage_methods = ["run", "fit", "predict"]
+    elif method == "fit":
+        covariate_selection_methods = global_model_methods = location_model_methods = smoothing_methods = custom_stage_methods = ["fit"]
+    elif method == "predict":
+        covariate_selection_methods = []
+        global_model_methods = location_model_methods = location_model_methods = smoothing_methods = custom_stage_methods = ["predict"]
         
-    local_run_stdout = buffer.getvalue().strip()
-    
-    sample_expected_outputs = ["running preprocessing", "running covariate_selection", "running global_model", "running location_model", "running smoothing", "running custom_stage"]
-    
-    for expected_output in sample_expected_outputs:
-        assert expected_output in local_run_stdout
-        
-    # Fit (local backend)
-    buffer = io.StringIO()
-    with redirect_stdout(buffer):
-        dummy_pipeline.evaluate(backend="local", method="fit")
-    local_fit_stdout = buffer.getvalue().strip()
-    
-    assert "fitting global_model" in local_fit_stdout
-    assert "running global_model" not in local_fit_stdout
-    assert "predicting global_model" not in local_fit_stdout
-    
-    # Predict (local backend)
-    buffer = io.StringIO()
-    with redirect_stdout(buffer):
-        dummy_pipeline.evaluate(backend="local", method="predict")
-    local_predict_stdout = buffer.getvalue().strip()
-    
-    assert "predicting for global_model" in local_predict_stdout
-    assert "fitting global_model" not in local_predict_stdout
-    assert "running global_model" not in local_predict_stdout
-    
+    # Check each stage's log output for correct method calls on correct subset/param ids
+    for stage in stages:
+        if stage.name == "preprocessing":
+            if method in ["run", "fit"]:
+                assert stage.get_log() == [f"run: name={stage.name}"]
+            else:
+                assert stage.get_log() == []
+        elif stage.name == "covariate_selection":
+            assert_stage_logs(stage, methods=covariate_selection_methods, subset_ids=range(3))
+        elif stage.name == "global_model":
+            assert_stage_logs(stage, methods=global_model_methods, subset_ids=range(2))
+        elif stage.name == "location_model":
+            assert_stage_logs(stage, methods=location_model_methods, subset_ids=range(4))
+        elif stage.name == "smoothing":
+            assert_stage_logs(stage, methods=smoothing_methods, subset_ids=range(4))
+        elif stage.name == "custom_stage":
+            assert_stage_logs(stage, methods=custom_stage_methods, subset_ids=range(4), param_ids=range(2))
+        else:
+            assert False, "Unknown stage name"

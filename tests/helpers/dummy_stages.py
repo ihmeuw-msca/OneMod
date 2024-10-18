@@ -1,3 +1,7 @@
+from typing import List
+
+from pydantic import Field
+
 from onemod.config import KregConfig, ModelConfig, PreprocessingConfig, RoverConfig, SpxmodConfig
 from onemod.stage import ModelStage, Stage
 
@@ -14,13 +18,16 @@ class DummyCustomStage(ModelStage):
 
     config: CustomConfig = CustomConfig()
     _required_input: set[str] = {"observations.parquet", "predictions.parquet"}
+    
+    # Dummy-specific attributes
+    log: List[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Run custom submodel."""
-        print(
-            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"run: name={self.name}, subset={subset_id}, param={param_id}"
         )
         self.fit(subset_id, param_id)
         self.predict(subset_id, param_id)
@@ -29,21 +36,26 @@ class DummyCustomStage(ModelStage):
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Fit custom submodel."""
-        print(
-            f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
         )
 
     def predict(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Create custom submodel predictions."""
-        print(
-            f"predicting for {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
         )
 
     def collect(self) -> None:
         """Collect custom submodel results."""
-        print(f"collecting {self.name} submodel results")
+        self.log.append(f"collect: name={self.name}")
+
+    # Dummy-specific methods
+    def get_log(self) -> List[str]:
+        """Retrieve the internal log."""
+        return self.log
 
 
 class DummyKregStage(ModelStage):
@@ -53,13 +65,16 @@ class DummyKregStage(ModelStage):
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
+    
+    # Dummy-specific attributes
+    log: List[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Run kreg submodel."""
-        print(
-            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"run: name={self.name}, subset={subset_id}, param={param_id}"
         )
         self.fit(subset_id, param_id)
         self.predict(subset_id, param_id)
@@ -68,21 +83,26 @@ class DummyKregStage(ModelStage):
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Fit kreg submodel."""
-        print(
-            f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
         )
 
     def predict(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         "Create kreg submodel predictions."
-        print(
-            f"predicting for {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
         )
 
     def collect(self) -> None:
         """Collect kreg submodel results."""
-        print(f"collecting {self.name} submodel results")
+        self.log.append(f"collect: name={self.name}")
+
+    # Dummy-specific methods
+    def get_log(self) -> List[str]:
+        """Retrieve the internal log."""
+        return self.log
 
 
 class DummyPreprocessingStage(Stage):
@@ -96,10 +116,18 @@ class DummyPreprocessingStage(Stage):
         "location_metadata.parquet",
     }
     _output: set[str] = {"data.parquet"}
+    
+    # Dummy-specific attributes
+    log: List[str] = Field(default_factory=list, exclude=True)
 
     def run(self) -> None:
         """Run preprocessing stage."""
-        print(f"running {self.name}")
+        self.log.append(f"run: name={self.name}")
+
+    # Dummy-specific methods
+    def get_log(self) -> List[str]:
+        """Retrieve the internal log."""
+        return self.log
 
 
 class DummyRoverStage(ModelStage):
@@ -109,13 +137,16 @@ class DummyRoverStage(ModelStage):
     _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _output: set[str] = {"selected_covs.csv"}
+    
+    # Dummy-specific attributes
+    log: List[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Run rover submodel."""
-        print(
-            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"run: name={self.name}, subset={subset_id}, param={param_id}"
         )
         self.fit(subset_id, param_id)
 
@@ -123,19 +154,24 @@ class DummyRoverStage(ModelStage):
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Fit rover submodel."""
-        print(
-            f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
         )
 
     def predict(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
-        "predict() is not implemented for RoverStage."
+        """predict() is not implemented for RoverStage."""
         pass
 
     def collect(self) -> None:
         """Collect rover submodel results."""
-        print(f"collecting {self.name} submodel results")
+        self.log.append(f"collect: name={self.name}")
+
+    # Dummy-specific methods
+    def get_log(self) -> List[str]:
+        """Retrieve the internal log."""
+        return self.log
 
 
 class DummySpxmodStage(ModelStage):
@@ -149,13 +185,16 @@ class DummySpxmodStage(ModelStage):
         "priors.pkl",
     }
     _output: set[str] = {"predictions.parquet", "model.pkl"}
+    
+    # Dummy-specific attributes
+    log: List[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Run spxmod submodel."""
-        print(
-            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"run: name={self.name}, subset={subset_id}, param={param_id}"
         )
         self.fit(subset_id, param_id)
         self.predict(subset_id, param_id)
@@ -164,18 +203,23 @@ class DummySpxmodStage(ModelStage):
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         """Fit spxmod submodel."""
-        print(
-            f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
         )
 
     def predict(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
         "Create spxmod submodel predictions."
-        print(
-            f"predicting for {self.name} submodel: subset {subset_id}, param set {param_id}"
+        self.log.append(
+            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
         )
 
     def collect(self) -> None:
         """Collect spxmod submodel results."""
-        print(f"collecting {self.name} submodel results")
+        self.log.append(f"collect: name={self.name}")
+
+    # Dummy-specific methods
+    def get_log(self) -> List[str]:
+        """Retrieve the internal log."""
+        return self.log
