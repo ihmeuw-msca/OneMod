@@ -176,47 +176,86 @@ def test_dummy_pipeline(test_input_data, test_base_dir, method):
     with open(pipeline_json_path, "r") as f:
         dummy_pipeline_dict = json.load(f)
     
-    assert dummy_pipeline_dict["name"] == 'dummy_pipeline'
+    assert dummy_pipeline_dict["name"] == "dummy_pipeline"
     assert dummy_pipeline_dict["directory"] == str(test_base_dir)
     assert dummy_pipeline_dict["data"] == str(test_input_data)
-    assert dummy_pipeline_dict["groupby"] == ['sex_id']
+    assert dummy_pipeline_dict["groupby"] == ["sex_id"]
     assert_equal_unordered(
         dummy_pipeline_dict["config"],
         {
-            'id_columns': ['age_group_id', 'location_id', 'year_id', 'sex_id'],
-            'model_type': 'binomial',
-            'observation_column': 'obs',
-            'prediction_column': 'pred',
-            'weight_column': 'weights',
-            'test_column': 'test',
-            'holdout_columns': [],
-            'coef_bounds': {}
+            "id_columns": ["age_group_id", "location_id", "year_id", "sex_id"],
+            "model_type": "binomial",
+            "observation_column": "obs",
+            "prediction_column": "pred",
+            "weight_column": "weights",
+            "test_column": "test",
+            "holdout_columns": [],
+            "coef_bounds": {}
         }
     )
     assert_equal_unordered(
         dummy_pipeline_dict["dependencies"],
         {
-            'preprocessing': [],
-            'covariate_selection': ['preprocessing'],
-            'global_model': ['covariate_selection', 'preprocessing'],
-            'location_model': ['preprocessing', 'global_model'],
-            'smoothing': ['preprocessing', 'location_model'],
-            'custom_stage': ['smoothing', 'preprocessing']
+            "preprocessing": [],
+            "covariate_selection": ["preprocessing"],
+            "global_model": ["covariate_selection", "preprocessing"],
+            "location_model": ["preprocessing", "global_model"],
+            "smoothing": ["preprocessing", "location_model"],
+            "custom_stage": ["smoothing", "preprocessing"]
         }
     )
     
     # Run the pipeline with the given method (run, fit, predict)
     dummy_pipeline.evaluate(backend="local", method=method)
 
-    # Set expected methods for each stage based on the evaluate() method
-    if method == "run":
-        covariate_selection_methods = ["run", "fit"]
-        global_model_methods = location_model_methods = smoothing_methods = custom_stage_methods = ["run", "fit", "predict"]
-    elif method == "fit":
-        covariate_selection_methods = global_model_methods = location_model_methods = smoothing_methods = custom_stage_methods = ["fit"]
-    elif method == "predict":
-        covariate_selection_methods = []
-        global_model_methods = location_model_methods = location_model_methods = smoothing_methods = custom_stage_methods = ["predict"]
+    # Set expected methods, subset ids, param ids for each stage
+    expected_args = {
+        "covariate_selection": {
+            "methods": {
+                "run": ["run", "fit"],
+                "fit": ["fit"],
+                "predict": None,
+            },
+            "subset_ids": range(3),
+            "param_ids": None,
+        },
+        "global_model": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subset_ids": range(2),
+            "param_ids": None,
+        },
+        "location_model": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subset_ids": range(4),
+            "param_ids": None,
+        },
+        "smoothing": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subset_ids": range(4),
+            "param_ids": None,
+        },
+        "custom_stage": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subset_ids": range(4),
+            "param_ids": range(2),
+        },
+    }
         
     # Check each stage's log output for correct method calls on correct subset/param ids
     for stage in stages:
@@ -225,15 +264,7 @@ def test_dummy_pipeline(test_input_data, test_base_dir, method):
                 assert stage.get_log() == [f"run: name={stage.name}"]
             else:
                 assert stage.get_log() == []
-        elif stage.name == "covariate_selection":
-            assert_stage_logs(stage, methods=covariate_selection_methods, subset_ids=range(3))
-        elif stage.name == "global_model":
-            assert_stage_logs(stage, methods=global_model_methods, subset_ids=range(2))
-        elif stage.name == "location_model":
-            assert_stage_logs(stage, methods=location_model_methods, subset_ids=range(4))
-        elif stage.name == "smoothing":
-            assert_stage_logs(stage, methods=smoothing_methods, subset_ids=range(4))
-        elif stage.name == "custom_stage":
-            assert_stage_logs(stage, methods=custom_stage_methods, subset_ids=range(4), param_ids=range(2))
+        elif stage.name in expected_args:
+            assert_stage_logs(stage, expected_args[stage.name]["methods"][method], expected_args[stage.name]["subset_ids"], expected_args[stage.name]["param_ids"])
         else:
             assert False, "Unknown stage name"
