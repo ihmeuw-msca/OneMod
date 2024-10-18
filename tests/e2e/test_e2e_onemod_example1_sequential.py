@@ -8,7 +8,7 @@ from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
 from onemod.dtypes import Data
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_base_dir(tmp_path_factory):
     test_base_dir = tmp_path_factory.mktemp("example")
     return test_base_dir

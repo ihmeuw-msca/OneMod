@@ -12,13 +12,13 @@ class DummyStage(Stage):
     _output: set[str] = {"predictions.parquet", "model.pkl"}
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_base_dir(tmp_path_factory):
     test_base_dir = tmp_path_factory.mktemp("example")
     return test_base_dir
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_1(test_base_dir):
     stage_1 = DummyStage(
         name="stage_1", directory=test_base_dir / "stage_1", config={}
@@ -31,7 +31,7 @@ def stage_1(test_base_dir):
     return stage_1
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2", directory=test_base_dir / "stage_2", config={}

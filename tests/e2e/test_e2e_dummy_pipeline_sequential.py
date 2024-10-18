@@ -15,13 +15,13 @@ from tests.helpers.dummy_stages import DummyCustomStage, DummyKregStage, DummyPr
 from tests.helpers.utils import assert_equal_unordered
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_base_dir(tmp_path_factory):
     test_base_dir = tmp_path_factory.mktemp("example")
     return test_base_dir
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_input_data(test_assets_dir):
     test_input_data_path = Path(
         test_assets_dir, "e2e", "example1", "data", "small_data.parquet"

@@ -20,13 +20,13 @@ class DummyStage(Stage):
     _output: set[str] = {"predictions.parquet", "model.pkl"}
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_base_dir(tmp_path_factory):
     test_base_dir = tmp_path_factory.mktemp("test_base_dir")
     return test_base_dir
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def create_dummy_data(test_base_dir):
     """Create dummy data files needed for testing."""
     data_dir = test_base_dir / "data"
@@ -51,7 +51,7 @@ def create_dummy_data(test_base_dir):
     return data_parquet_path, covariates_parquet_path, predictions_parquet_path
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_1(test_base_dir, create_dummy_data):
     data_parquet_path, covariates_parquet_path, predictions_parquet_path = (
         create_dummy_data
@@ -126,7 +126,7 @@ def stage_1(test_base_dir, create_dummy_data):
     return stage_1
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
@@ -159,7 +159,7 @@ def stage_2(test_base_dir, stage_1):
     return stage_2
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
@@ -176,7 +176,7 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
     return pipeline
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
     """A sample pipeline with multiple stages and dependencies."""
     pipeline = Pipeline(
