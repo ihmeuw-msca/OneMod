@@ -35,16 +35,20 @@ dependencies = [
     "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@v0.2.1",
     "regmod == 0.1.2",
     "weighted-average >= 1.3.0",
-    "xspline" == 0.0.7",
+    "xspline == 0.0.7",
 ]
 
 [project.optional-dependencies]
-jobmon = ["jobmon_installer_ihme"]
-test = ["pytest", "nox", "python-dotenv"]
+dev = ["pre-commit>=4.0.1,<5.0.0", "mypy>=1.12.0,<2.0.0", "ruff>=0.7.0,<1.0.0"]
 docs = ["sphinx", "sphinx-autodoc-typehints", "furo"]
+jobmon = ["jobmon_installer_ihme"]
+test = ["pytest>=7.0.0", "nox", "python-dotenv"]
 
 [project.urls]
 github = "https://github.com/ihmeuw-msca/OneMod"
 
 [project.scripts]
 onemod = "onemod.main:main"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
