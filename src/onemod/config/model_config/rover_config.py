@@ -50,12 +50,13 @@ class RoverConfig(ModelConfig):
     min_covs: NonNegativeInt | None = None
     max_covs: NonNegativeInt | None = None
 
-    @model_validator(mode="after")
-    def check_holdouts(self) -> Self:
-        """Make sure holdouts present."""
-        if self.holdout_columns is None:
-            raise ValueError("Holdout columns required for rover stage")
-        return self
+    # FIXME: Validate after pipeline settings passed to stage settings
+    # @model_validator(mode="after")
+    # def check_holdouts(self) -> Self:
+    #     """Make sure holdouts present."""
+    #     if self.holdout_columns is None:
+    #         raise ValueError("Holdout columns required for rover stage")
+    #     return self
 
     @model_validator(mode="after")
     def check_min_max(self) -> Self:
