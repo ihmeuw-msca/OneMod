@@ -146,7 +146,7 @@ def evaluate_with_jobmon(
     # Create tasks
     if isinstance(model, Pipeline):
         tasks = []
-        upstream_tasks = []
+        task_dict = {}
         task_args = {
             "python": python or sys.executable,
             "config": config or str(model.directory / (model.name + ".json")),
@@ -154,10 +154,16 @@ def evaluate_with_jobmon(
         for stage_name in model.get_execution_order():
             stage = model.stages[stage_name]
             if method not in stage.skip:
-                upstream_tasks = get_tasks(
+                upstream_tasks = []
+                for dep in stage.dependencies:
+                    if isinstance(model.stages[dep], ModelStage):
+                        upstream_tasks.append(task_dict[dep][-1])  # collect
+                    else:
+                        upstream_tasks.extend(task_dict[dep])
+                task_dict[stage_name] = get_tasks(
                     tool, stage, method, task_args, upstream_tasks
                 )
-                tasks.extend(upstream_tasks)
+                tasks.extend(task_dict[stage_name])
     else:
         task_args = {
             "python": python or sys.executable,
@@ -165,6 +171,28 @@ def evaluate_with_jobmon(
             or str(model.directory.parent / (model.pipeline + ".json")),
         }
         tasks = get_tasks(tool, model, method, task_args)
+
+    # if isinstance(model, Pipeline):
+    #     tasks = []
+    #     upstream_tasks = []
+    #     task_args = {
+    #         "python": python or sys.executable,
+    #         "config": config or str(model.directory / (model.name + ".json")),
+    #     }
+    #     for stage_name in model.get_execution_order():
+    #         stage = model.stages[stage_name]
+    #         if method not in stage.skip:
+    #             upstream_tasks = get_tasks(
+    #                 tool, stage, method, task_args, upstream_tasks
+    #             )
+    #             tasks.extend(upstream_tasks)
+    # else:
+    #     task_args = {
+    #         "python": python or sys.executable,
+    #         "config": config
+    #         or str(model.directory.parent / (model.pipeline + ".json")),
+    #     }
+    #     tasks = get_tasks(tool, model, method, task_args)
 
     # Create and run workflow
     run_workflow(model.name, tool, tasks)
