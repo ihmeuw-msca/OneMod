@@ -142,6 +142,7 @@ class Pipeline(SerializableModel):
             raise ValueError(f"stage '{stage.name}' already exists")
         stage.config.update(self.config)
         stage.directory = self.directory / stage.name
+        stage._pipeline = self.name
 
         # Create data subsets
         if isinstance(stage, ModelStage):

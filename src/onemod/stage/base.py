@@ -46,7 +46,7 @@ class Stage(SerializableModel, ABC):
     config: StageConfig
     input_validation: dict[str, Data] = Field(default_factory=dict)
     output_validation: dict[str, Data] = Field(default_factory=dict)
-    _pipeline: str  # set by Stage.from_json
+    _pipeline: str  # set by Pipeline.add_stage, set by Stage.from_json
     _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
     _module: Path | None = None  # set by Stage.from_json
     _skip: set[str] = set()  # defined by class
@@ -348,6 +348,7 @@ class ModelStage(Stage, ABC):
         if subsets is not None:
             self._subset_ids = set(subsets["subset_id"])
             subsets.to_csv(self.directory / "subsets.csv", index=False)
+            (self.directory / "submodels").mkdir(exist_ok=True)
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
@@ -364,6 +365,7 @@ class ModelStage(Stage, ABC):
             self._crossby = set(params.drop(columns="param_id").columns)
             self._param_ids = set(params["param_id"])
             params.to_csv(self.directory / "parameters.csv", index=False)
+            (self.directory / "submodels").mkdir(exist_ok=True)
 
     def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
