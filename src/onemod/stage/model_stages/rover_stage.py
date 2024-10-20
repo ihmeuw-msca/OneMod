@@ -92,7 +92,17 @@ class RoverStage(ModelStage):
             logger.info(f"No training data for rover submodel {subset_id}")
 
     def collect(self) -> None:
-        """Collect rover submodel results."""
+        """Collect rover submodel results.
+
+        Outputs
+        -------
+        selected_covs.csv
+            Covariates selected for subsets based on pipeline.groupby.
+        summaries.csv
+            Covariate coefficient summaries from the submodel ensemble
+            models.
+
+        """
         # Concatenate summaries
         logger.info("Concatenating rover coefficient summaries")
         summaries = self._get_rover_summaries()
