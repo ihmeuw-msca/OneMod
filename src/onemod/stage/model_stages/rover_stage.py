@@ -101,7 +101,7 @@ class RoverStage(ModelStage):
         # Select covariates
         logger.info("Selecting rover covariates")
         selected_covs = self._get_selected_covs(summaries)
-        selected_covs.to_csv(self.directory / "selected_covs", index=False)
+        selected_covs.to_csv(self.directory / "selected_covs.csv", index=False)
 
         # TODO: Plot rover covariates
 
@@ -132,7 +132,7 @@ class RoverStage(ModelStage):
 
     def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
         """Select rover covariates."""
-        pipeline_groupby = self._get_pipeline_groupby()
+        pipeline_groupby = self.get_pipeline_groupby()
         if pipeline_groupby:
             selected_covs = []
             for subset, subset_summaries in summaries.groupby(pipeline_groupby):
@@ -180,9 +180,3 @@ class RoverStage(ModelStage):
             t_stats.loc[self.config.max_covs :, "selected"] = False
 
         return t_stats.query("selected").drop(columns="selected")
-
-    def _get_pipeline_groupby(self) -> list[str]:
-        """Get pipeline groupby attribute."""
-        with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
-            config = json.load(f)
-        return list(config.get("groupby", []))

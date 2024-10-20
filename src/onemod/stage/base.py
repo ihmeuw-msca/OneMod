@@ -373,6 +373,12 @@ class ModelStage(Stage, ABC):
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
+    def get_pipeline_groupby(self) -> list[str]:
+        """Get pipeline groupby attribute."""
+        with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
+            config = json.load(f)
+        return list(config.get("groupby", []))
+
     @validate_call
     def evaluate(
         self,
