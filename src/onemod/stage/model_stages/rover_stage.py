@@ -1,5 +1,13 @@
 """ModRover covariate selection stage.
 
+Notes
+-----
+* RoverStage currently requires nonempty `groupby` attribute.
+* Covariates are selected for subsets based on pipeline.groupby. For
+  example, if pipeline.groupby is 'sex_id' and stage.groupby is
+  'age_group_id', submodels will be fit separately for each age/sex
+  pair, and covariates will be selected separately for each sex.
+
 TODO: Update read/write statements with DataInterface
 
 """
@@ -25,13 +33,11 @@ class RoverStage(ModelStage):
     _required_input: set[str] = {"data.parquet"}
     _output: set[str] = {"selected_covs.csv", "summaries.csv"}
 
-    def run(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run rover submodel."""
         self.fit(subset_id)
 
-    def fit(self, subset_id: int | None = None) -> None:
+    def fit(self, subset_id: int, *args, **kwargs) -> None:
         """Fit rover submodel.
 
         Outputs
@@ -75,7 +81,8 @@ class RoverStage(ModelStage):
 
             # Save results
             logger.info(f"Saving rover submodel {subset_id} results")
-            submodel_dir = self.directory / "submodels" / subset_id
+            submodel_dir = self.directory / "submodels" / str(subset_id)
+            submodel_dir.mkdir(exist_ok=True)
             submodel.learner_info.to_csv(
                 submodel_dir / "learner_info.csv", index=False
             )
@@ -97,16 +104,10 @@ class RoverStage(ModelStage):
         selected_covs = self._get_selected_covs(summaries)
         selected_covs.to_csv(self.directory / "selected_covs", index=False)
 
-        # Plot covariates
-        # TODO: Implement plotting functions
-        logger.info("Plotting rover covariates")
+        # TODO: Plot rover covariates
 
     def _get_rover_summaries(self) -> pd.DataFrame:
-        """Concatenate rover coefficient summaries.
-
-        What if rover doesn't have groupby?
-
-        """
+        """Concatenate rover coefficient summaries."""
         subsets = pd.read_csv(self.directory / "subsets.csv")
 
         # Collect coefficient summaries
@@ -114,7 +115,10 @@ class RoverStage(ModelStage):
         for subset_id in self.subset_ids:
             try:
                 summary = pd.read_csv(
-                    self.directory / "submodels" / subset_id / "summary.csv"
+                    self.directory
+                    / "submodels"
+                    / str(subset_id)
+                    / "summary.csv"
                 )
                 summary["subset_id"] = subset_id
                 summaries.append(summary)
@@ -128,59 +132,61 @@ class RoverStage(ModelStage):
         return summaries
 
     def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
-        """Select rover covariates.
-
-        TODO: Document how things work with pipeline
-
-        What if pipeline doesn't have groupby?
-
-        """
-        if self.pipeline is None:
-            raise NotImplementedError()
+        """Select rover covariates."""
         pipeline_groupby = self._get_pipeline_groupby()
-        if pipeline_groupby is None:
-            raise NotImplementedError()
-        selected_covs = []
-        for group, df in summaries.groupby(pipeline_groupby):
-            t_stats = (
-                df.groupby(pipeline_groupby + ["cov"])["abs_t_stat"]
-                .mean()
-                .sort_values(ascending=False)
-                .reset_index()
-                .eval(f"selected = abs_t_stat >= {self.config.t_threshold}")
-            )
-            if (
-                self.config.min_covs is not None
-                and t_stats["selected"].sum() < self.config.min_covs
-            ):
-                t_stats.loc[: self.config.min_covs - 1, "selected"] = True
-            if (
-                self.config.max_covs is not None
-                and t_stats["selected"].sum > self.config.max_covs
-            ):
-                t_stats.loc[self.config.max_covs :, "selected"] = True
-            selected = t_stats.query("selected").drop(columns="selected")
-            selected_covs.append(selected)
-            logger.info(
-                ", ".join(
-                    [
-                        f"{id_name}: {id_val}"
-                        for id_name, id_val in zip(pipeline_groupby, group)
-                    ]
-                    + [f"covs: {selected['cov'].values}"]
+        if pipeline_groupby:
+            selected_covs = []
+            for subset, subset_summaries in summaries.groupby(pipeline_groupby):
+                subset_selected_covs = self._get_subset_selected_covs(
+                    subset_summaries, pipeline_groupby
                 )
-            )
-        return pd.concat(selected_covs)
+                selected_covs.append(subset_selected_covs)
+                logger.info(
+                    ", ".join(
+                        [
+                            f"{id_name}: {id_val}"
+                            for id_name, id_val in zip(pipeline_groupby, subset)
+                        ]
+                        + [f"covs: {subset_selected_covs['cov'].values}"]
+                    )
+                )
+            return pd.concat(selected_covs)
+        selected_covs = self._get_subset_selected_covs(summaries, [])
+        logger.info(f"covs: {selected_covs['cov'].values}")
+        return selected_covs
 
-    def _get_pipeline_groupby(self) -> set[str] | None:
-        """Get pipeline groupby attribute.
+    def _get_subset_selected_covs(
+        self, subset_summaries: pd.DataFrame, groupby: list[str]
+    ) -> pd.DataFrame:
+        """Select rover covariates for data subset."""
+        # Select covariates greater than t_threshold
+        t_stats = (
+            subset_summaries.groupby(groupby + ["cov"])["abs_t_stat"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+            .eval(f"selected = abs_t_stat >= {self.config.t_threshold}")
+        )
 
-        TODO: Any error messages?
+        # Add/remove covariates based on min_covs/max_covs
+        if (
+            self.config.min_covs is not None
+            and t_stats["selected"].sum() < self.config.min_covs
+        ):
+            t_stats.loc[: self.config.min_covs - 1, "selected"] = True
+        if (
+            self.config.max_covs is not None
+            and t_stats["selected"].sum() > self.config.max_covs
+        ):
+            t_stats.loc[self.config.max_covs :, "selected"] = False
 
-        """
+        return t_stats.query("selected").drop(columns="selected")
+
+    def _get_pipeline_groupby(self) -> list[str]:
+        """Get pipeline groupby attribute."""
         with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
             config = json.load(f)
-        return config.get("groupby")
+        return list(config.get("groupby", []))
 
 
 if __name__ == "__main__":
