@@ -459,3 +459,11 @@ class ModelStage(Stage, ABC):
     def collect(self) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError("Subclasses must implement this method.")
+
+    def __repr__(self) -> str:
+        stage_str = f"{self.type}({self.name}"
+        if self.grouby:
+            stage_str += f", groupby={self.groupby}"
+        if self.crossby:
+            stage_str += f", crossby={self.crossby}"
+        return stage_str + ")"
