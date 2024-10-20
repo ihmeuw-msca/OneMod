@@ -17,7 +17,6 @@ import json
 from loguru import logger
 
 import dill
-import fire
 import pandas as pd
 from modrover.api import Rover
 
@@ -187,7 +186,3 @@ class RoverStage(ModelStage):
         with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
             config = json.load(f)
         return list(config.get("groupby", []))
-
-
-if __name__ == "__main__":
-    fire.Fire(RoverStage.evaluate)
