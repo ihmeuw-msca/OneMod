@@ -377,7 +377,7 @@ class ModelStage(Stage, ABC):
         """Get pipeline groupby attribute."""
         with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
             config = json.load(f)
-        return list(config.get("groupby", []))
+        return config.get("groupby", [])
 
     @validate_call
     def evaluate(
@@ -470,7 +470,7 @@ class ModelStage(Stage, ABC):
 
     def __repr__(self) -> str:
         stage_str = f"{self.type}({self.name}"
-        if self.grouby:
+        if self.groupby:
             stage_str += f", groupby={self.groupby}"
         if self.crossby:
             stage_str += f", crossby={self.crossby}"
