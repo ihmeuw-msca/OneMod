@@ -50,14 +50,14 @@ class RoverStage(ModelStage):
 
         """
         # Load data and filter by subset
-        logger.info(f"Loading rover data subset {subset_id}")
+        logger.info(f"Loading {self.name} data subset {subset_id}")
         data = self.get_stage_subset(subset_id).query(
             f"{self.config.test_column} == 0"
         )
 
         # Fit submodel
         if len(data) > 0:
-            logger.info(f"Fitting rover submodel {subset_id}")
+            logger.info(f"Fitting {self.name} submodel {subset_id}")
 
             # Create rover submodel
             submodel = Rover(
@@ -79,7 +79,7 @@ class RoverStage(ModelStage):
             )
 
             # Save results
-            logger.info(f"Saving rover submodel {subset_id} results")
+            logger.info(f"Saving {self.name} submodel {subset_id} results")
             submodel_dir = self.directory / "submodels" / str(subset_id)
             submodel_dir.mkdir(exist_ok=True)
             submodel.learner_info.to_csv(
@@ -89,7 +89,9 @@ class RoverStage(ModelStage):
                 dill.dump(submodel, f)
             submodel.summary.to_csv(submodel_dir / "summary.csv", index=False)
         else:
-            logger.info(f"No training data for rover submodel {subset_id}")
+            logger.info(
+                f"No training data for {self.name} submodel {subset_id}"
+            )
 
     def collect(self) -> None:
         """Collect rover submodel results.
@@ -104,12 +106,12 @@ class RoverStage(ModelStage):
 
         """
         # Concatenate summaries
-        logger.info("Concatenating rover coefficient summaries")
+        logger.info(f"Concatenating {self.name} coefficient summaries")
         summaries = self._get_rover_summaries()
         summaries.to_csv(self.directory / "summaries.csv", index=False)
 
         # Select covariates
-        logger.info("Selecting rover covariates")
+        logger.info(f"Selecting {self.name} covariates")
         selected_covs = self._get_selected_covs(summaries)
         selected_covs.to_csv(self.directory / "selected_covs.csv", index=False)
 
