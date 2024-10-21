@@ -55,11 +55,10 @@ class RoverStage(ModelStage):
             f"{self.config.test_column} == 0"
         )
 
-        # Fit submodel
         if len(data) > 0:
             logger.info(f"Fitting {self.name} submodel {subset_id}")
 
-            # Create rover submodel
+            # Create submodel
             submodel = Rover(
                 obs=self.config.observation_column,
                 model_type=self.config.model_type,
@@ -69,7 +68,7 @@ class RoverStage(ModelStage):
                 holdouts=list(self.config.holdout_columns),
             )
 
-            # Fit rover submodel
+            # Fit submodel
             submodel.fit(
                 data=data,
                 strategies=list(self.config.strategies),
@@ -115,7 +114,7 @@ class RoverStage(ModelStage):
         selected_covs = self._get_selected_covs(summaries)
         selected_covs.to_csv(self.directory / "selected_covs.csv", index=False)
 
-        # TODO: Plot rover covariates
+        # TODO: Plot covariates
 
     def _get_rover_summaries(self) -> pd.DataFrame:
         """Concatenate rover coefficient summaries."""

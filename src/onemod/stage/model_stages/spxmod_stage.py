@@ -11,8 +11,6 @@ Notes
 
 TODO: Update for new spxmod version with splines
 TODO: Is age_mid hardcoded like description says? -> yes, for selected_covs
-TODO: Static methods?
-TODO: Update copy/pasted methods
 TODO: Implement offset and priors input
 
 """
@@ -20,6 +18,7 @@ TODO: Implement offset and priors input
 import json
 from loguru import logger
 
+import dill
 import numpy as np
 import pandas as pd
 from spxmod.model import XModel
@@ -62,7 +61,7 @@ class SpxmodStage(ModelStage):
         logger.info(f"Loading {self.name} data subset {subset_id}")
         data = self.get_stage_subset(subset_id)
 
-        # Add spline basis
+        # Add spline basis to data
         spline_vars = []
         if self.config.xmodel.spline_config is not None:
             spline_config = self.config.xmodel.spline_config.model_dump()
@@ -83,21 +82,28 @@ class SpxmodStage(ModelStage):
             selected_covs = []
 
         # Create model parameters
+        # TODO
         xmodel_args = self._build_xmodel_args(
-            config, selected_covs, spline_vars
+            self.config, selected_covs, spline_vars
         )
-        xmodel_fit_args = stage_config.xmodel_fit
         logger.info(
             f"{len(xmodel_args['var_builders'])} var_builders created for spxmod"
         )
 
-        # Create and fit spxmod model
-        df_train = df.query(
-            f"({config.test_column} == 0) & {config.observation_column}.notnull()"
+        # Create and fit submodel
+        logger.info(f"Fitting {self.name} submodel {subset_id}")
+        train = data.query(
+            f"({self.config.test_column} == 0) & {self.config.observation_column}.notnull()"
         )
-        logger.info(f"Fitting spxmod model with data size {df_train.shape}")
         model = XModel.from_config(xmodel_args)
-        model.fit(data=df_train, data_span=df, **xmodel_fit_args)
+        model.fit(data=train, data_span=data, **self.config.xmodel_fit)
+
+        # Save submodel
+        logger.info(f"Saving {self.name} submodel {subset_id}")
+        submodel_dir = self.directory / "submodels" / str(subset_id)
+        submodel_dir.mkdir(exist_ok=True)
+        with open(submodel_dir / "model.pkl", "wb") as f:
+            dill.dump(model, f)
 
     def predict(self, subset_id: int, *args, **kwargs) -> None:
         """Create spxmod submodel predictions.
@@ -124,7 +130,6 @@ class SpxmodStage(ModelStage):
         df_coef = self.get_coef(model)
 
         # Save results
-        dataif.dump_spxmod(model, f"submodels/{subset_id}/model.pkl")
         dataif.dump_spxmod(
             pd.concat([df, residuals], axis=1)[
                 self.config.id_columns
@@ -252,8 +257,9 @@ class SpxmodStage(ModelStage):
 
         return xmodel_args
 
+    @staticmethod
     def _add_spline_variables(
-        self, xmodel_args: dict, spline_vars: list[str]
+        xmodel_args: dict, spline_vars: list[str]
     ) -> dict:
         """Add spline variables to spxmod model configuration."""
         for var in xmodel_args["var_builders"].copy():
@@ -265,8 +271,9 @@ class SpxmodStage(ModelStage):
                     xmodel_args["var_builders"].append(spline_var_builder)
         return xmodel_args
 
+    @staticmethod
     def _add_prior_settings(
-        self, xmodel_args: dict, coef_bounds: dict, lam: float
+        xmodel_args: dict, coef_bounds: dict, lam: float
     ) -> dict:
         """Add coef_bounds and lam to all var_builders."""
         for var_builder in xmodel_args["var_builders"]:
