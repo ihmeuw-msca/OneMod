@@ -9,9 +9,11 @@ Notes
 -----
 * SpXModStage currently requires nonempty `groupby` attribute.
 
-TODO: Is age_mid hardcoded like description says?
+TODO: Update for new spxmod version with splines
+TODO: Is age_mid hardcoded like description says? -> yes, for selected_covs
 TODO: Static methods?
 TODO: Update copy/pasted methods
+TODO: Implement offset and priors input
 
 """
 
@@ -25,6 +27,7 @@ from xspline import XSpline
 
 from onemod.config import SpxmodConfig
 from onemod.stage import ModelStage
+from onemod.utils.subsets import get_subset
 
 
 class SpxmodStage(ModelStage):
@@ -55,33 +58,31 @@ class SpxmodStage(ModelStage):
             Model coefficients for different age groups.
 
         """
-        # FIXME
-        dataif, config = get_handle(directory)
-        stage_config = config.spxmod
-
         # Load data and filter by subset
-        # FIXME
-        subsets = Subsets(
-            "spxmod", stage_config, subsets=dataif.load_spxmod("subsets.csv")
-        )
-        df = subsets.filter_subset(dataif.load_data(), subset_id)
+        logger.info(f"Loading {self.name} data subset {subset_id}")
+        data = self.get_stage_subset(subset_id)
 
         # Add spline basis
         spline_vars = []
-        if stage_config.xmodel.spline_config:
+        if self.config.xmodel.spline_config is not None:
             spline_config = self.config.xmodel.spline_config.model_dump()
             col_name = spline_config.pop("name")
-            spline_basis = self._get_spline_basis(df[col_name], spline_config)
+            logger.info(f"Getting spline basis for {col_name}")
+            spline_basis = self._get_spline_basis(data[col_name], spline_config)
             spline_vars = spline_basis.columns.tolist()
-            df = pd.concat([df, spline_basis], axis=1)
+            data = pd.concat([data, spline_basis], axis=1)
 
-        # Get spxmod model covariates
-        selected_covs = self._get_covs(
-            dataif, config, subsets.subsets.query(f"subset_id == {subset_id}")
-        )
-        logger.info(f"Running spxmod with covariates: {selected_covs}")
+        # Get covariates from upstream stage
+        if "selected_covs" in self.input:
+            selected_covs = self._get_covs(data)
+            logger.info(
+                f"Using covariates selected by "
+                f"{self.input['selected_covs'].stage}: {selected_covs}"
+            )
+        else:
+            selected_covs = []
 
-        # Create spxmod model parameters
+        # Create model parameters
         xmodel_args = self._build_xmodel_args(
             config, selected_covs, spline_vars
         )
@@ -144,59 +145,9 @@ class SpxmodStage(ModelStage):
         """
         pass
 
-    def _get_coef(model: XModel) -> pd.DataFrame:
-        """Get coefficient information from the trained model.
-
-        Parameters
-        ----------
-        model : XModel
-            The statistical model object containing coefficient data.
-
-        Returns
-        -------
-        pandas.DataFrame
-            A DataFrame containing coefficient, dimension, and dimension
-            value information.
-
-        """
-        df_coef = []
-        for var_builder in model.var_builders:
-            df_sub = var_builder.space.span.copy()
-            df_sub["cov"] = var_builder.name
-            df_coef.append(df_sub)
-        df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
-        df_coef["coef"] = model.core.opt_coefs
-        return df_coef
-
-    def _get_covs(self, subset: pd.DataFrame) -> list[str]:
-        """Get SpXMod model covariates."""
-        if "selected_covs" in self.input:
-            # Get covariates selected in previous stage; filter by subset
-            try:
-                selected_covs = pd.read_csv(self.input["selected_covs"].path)
-                for col_name in self.get_pipeline_groupby():
-                    col_val = subset[col_name].item()
-                    selected_covs = selected_covs.query(
-                        f"{col_name} == {repr(col_val)}"
-                    )
-                selected_covs = selected_covs["cov"].tolist()
-            except FileNotFoundError:
-                selected_covs = []
-
-            # Get fixed covariates
-            upstream_stage = self.input["selected_covs"].stage
-            with open(
-                self.directory.parent / (self.pipeline + ".json"), "r"
-            ) as f:
-                fixed_covs = json.load(f)["stages"][upstream_stage]["config"][
-                    "cov_fixed"
-                ]
-            if "intercept" in fixed_covs:
-                fixed_covs.remove("intercept")
-            return selected_covs + fixed_covs
-
+    @staticmethod
     def _get_spline_basis(
-        self, column: pd.Series, spline_config: dict
+        column: pd.Series, spline_config: dict
     ) -> pd.DataFrame:
         """Get spline basis based on data and configuration."""
         col_min, col_max = column.min(), column.max()
@@ -214,6 +165,65 @@ class SpxmodStage(ModelStage):
             ],
         )
         return spline_basis
+
+    def _get_covs(self, subset_id: int) -> list[str]:
+        """Get covariates from upstream stage."""
+        # Load covariates and filter by subset
+        covs_path = self.input["selected_covs"].path
+        if pipeline_groupby := self.get_pipeline_groupby():
+            selected_covs = get_subset(
+                covs_path, subset_id, id_names=pipeline_groupby
+            )
+        else:
+            selected_covs = pd.read_csv(covs_path)["cov"].tolist()
+
+        # Get fixed covariates
+        upstream_stage = self.input["selected_covs"].stage
+        with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
+            fixed_covs = json.load(f)["stages"][upstream_stage]["config"][
+                "cov_fixed"
+            ]
+        if "intercept" in fixed_covs:
+            fixed_covs.remove("intercept")
+        return selected_covs + fixed_covs
+
+    def _build_xmodel_args(
+        self, selected_covs: list[str], spline_vars: list[str]
+    ) -> dict:
+        """Format config data for spxmod xmodel.
+
+        Model automatically includes a coefficient for each of the
+        selected covariates and age group (based on the 'age_mid' column
+        in the input data). Users can also specify intercepts and spline
+        variables that vary by dimensions such as age and/or location.
+
+        """
+        # Add global settings
+        xmodel_args = self.config.xmodel.model_dump(exclude="spline_config")
+        xmodel_args["model_type"] = self.config.model_type
+        xmodel_args["obs"] = self.config.observation_column
+        xmodel_args["weights"] = self.config.weights_column
+
+        # Add covariate and spline variables
+        xmodel_args = self._add_selected_covs(xmodel_args, selected_covs)
+        if spline_vars:
+            xmodel_args = self._add_spline_variables(xmodel_args, spline_vars)
+
+        # Add coef_bounds and lam to all variables
+        coef_bounds = xmodel_args.pop("coef_bounds")
+        lam = xmodel_args.pop("lam")
+        xmodel_args = self._add_prior_settings(xmodel_args, coef_bounds, lam)
+
+        # Add dummy space for any regular variables
+        add_dummy = False
+        for var in xmodel_args["var_builders"]:
+            if var["space"] is None:
+                var["space"] = "dummy"
+                add_dummy = True
+        if add_dummy:
+            xmodel_args["spaces"].append({"name": "dummy", "dims": []})
+
+        return xmodel_args
 
     def _add_selected_covs(
         self, xmodel_args: dict, selected_covs: list[str]
@@ -267,40 +277,27 @@ class SpxmodStage(ModelStage):
                 var_builder["lam"] = lam
         return xmodel_args
 
-    def _build_xmodel_args(
-        self, selected_covs: list[str], spline_vars: list[str]
-    ) -> dict:
-        """Format config data for spxmod xmodel.
+    @staticmethod
+    def _get_coef(model: XModel) -> pd.DataFrame:
+        """Get coefficient information from the trained model.
 
-        Model automatically includes a coefficient for each of the selected
-        covariates and age group (based on the 'age_mid' column in the input
-        data). Users can also specify intercepts and spline variables that
-        vary by dimensions such as age and/or location.
+        Parameters
+        ----------
+        model : XModel
+            The statistical model object containing coefficient data.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A DataFrame containing coefficient, dimension, and dimension
+            value information.
 
         """
-        # Add global settings
-        xmodel_args = self.config.xmodel.model_dump(exclude="spline_config")
-        xmodel_args["model_type"] = self.config.model_type
-        xmodel_args["obs"] = self.config.observation_column
-        xmodel_args["weights"] = self.config.weights_column
-
-        # Add covariate and spline variables
-        xmodel_args = self._add_selected_covs(xmodel_args, selected_covs)
-        if spline_vars:
-            xmodel_args = self._add_spline_variables(xmodel_args, spline_vars)
-
-        # Add coef_bounds and lam to all variables
-        coef_bounds = xmodel_args.pop("coef_bounds")
-        lam = xmodel_args.pop("lam")
-        xmodel_args = self._add_prior_settings(xmodel_args, coef_bounds, lam)
-
-        # Add dummy space for any regular variables
-        add_dummy = False
-        for var in xmodel_args["var_builders"]:
-            if var["space"] is None:
-                var["space"] = "dummy"
-                add_dummy = True
-        if add_dummy:
-            xmodel_args["spaces"].append({"name": "dummy", "dims": []})
-
-        return xmodel_args
+        df_coef = []
+        for var_builder in model.var_builders:
+            df_sub = var_builder.space.span.copy()
+            df_sub["cov"] = var_builder.name
+            df_coef.append(df_sub)
+        df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
+        df_coef["coef"] = model.core.opt_coefs
+        return df_coef
