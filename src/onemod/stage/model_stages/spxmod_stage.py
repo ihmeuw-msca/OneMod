@@ -148,7 +148,18 @@ class SpxmodStage(ModelStage):
             Predictions with residual information.
 
         """
-        pass
+        # Collect submodel predictions
+        pd.concat(
+            [
+                pd.read_parquet(
+                    self.directory
+                    / f"submodels/{subset_id}/predictions.parquet"
+                )
+                for subset_id in self.subset_ids
+            ]
+        ).to_parquet(self.directory / "predictions.parquet")
+
+        # TODO: Plot coefficients
 
     @staticmethod
     def _get_spline_basis(
