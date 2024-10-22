@@ -34,10 +34,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pre-commit>=4.0.1,<5.0.0", "mypy>=1.12.0,<2.0.0", "ruff>=0.7.0,<1.0.0"]
+dev = ["pre-commit>=4.0.1,<5.0.0", "mypy>=1.12.0,<2.0.0", "ruff>=0.7.0,<1.0.0", "build", "sphinx", "sphinx-autodoc-typehints", "furo", "jobmon_installer_ihme", "pytest>=7.0.0", "pytest-cov>=5.0.0", "python-dotenv"]
 docs = ["sphinx", "sphinx-autodoc-typehints", "furo"]
 jobmon = ["jobmon_installer_ihme"]
-test = ["pytest>=7.0.0", "nox", "python-dotenv"]
+test = ["pytest>=7.0.0", "pytest-cov>=5.0.0", "python-dotenv"]
 
 [project.urls]
 github = "https://github.com/ihmeuw-msca/OneMod"
