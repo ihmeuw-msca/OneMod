@@ -2,11 +2,10 @@ from typing import List, Type
 
 from pydantic import BaseModel, field_serializer, field_validator
 
-from onemod.base_models import SerializableModel
 from onemod.constraints.base import Constraint
 
 
-class ColumnSpec(SerializableModel):
+class ColumnSpec(BaseModel):
     type: Type[int] | Type[float] | Type[str] | Type[bool] | Type[BaseModel] | None = None
     constraints: List[Constraint] | None = None
     

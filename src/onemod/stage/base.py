@@ -11,10 +11,9 @@ from typing import Dict, Literal
 
 import pandas as pd
 from pandas import DataFrame
-from pydantic import ConfigDict, Field, computed_field, validate_call
+from pydantic import BaseModel, ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
-from onemod.base_models import SerializableModel
 from onemod.config import ModelConfig, StageConfig
 from onemod.io import Input, Output
 from onemod.dtypes import Data
@@ -23,7 +22,7 @@ from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error
 
 
-class Stage(SerializableModel, ABC):
+class Stage(BaseModel, ABC):
     """Stage base class."""
 
     model_config = ConfigDict(validate_assignment=True)

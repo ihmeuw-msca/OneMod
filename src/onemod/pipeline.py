@@ -8,9 +8,8 @@ from itertools import product
 from pathlib import Path
 from typing import Literal
 
-from pydantic import computed_field, field_serializer, validate_call
+from pydantic import BaseModel, computed_field, field_serializer, validate_call
 
-from onemod.base_models import SerializableModel
 from onemod.config import PipelineConfig
 from onemod.serialization import deserialize, serialize
 from onemod.stage import Stage, ModelStage
@@ -19,7 +18,7 @@ from onemod.validation import ValidationErrorCollector, handle_error
 logger = logging.getLogger(__name__)
 
 
-class Pipeline(SerializableModel):
+class Pipeline(BaseModel):
     """Pipeline class.
 
     Attributes

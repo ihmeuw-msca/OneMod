@@ -13,14 +13,13 @@ from abc import ABC
 from pathlib import Path
 from typing import Any, Optional
 
-from pydantic import ConfigDict, model_serializer, validate_call
+from pydantic import BaseModel, ConfigDict, model_serializer, validate_call
 
-from onemod.base_models import SerializableModel
 from onemod.dtypes import Data
 from onemod.validation.error_handling import ValidationErrorCollector
 
 
-class IO(SerializableModel, ABC):
+class IO(BaseModel, ABC):
     """Stage input/output base class."""
 
     model_config = ConfigDict(frozen=True)
