@@ -16,7 +16,7 @@ def test_assets_dir():
         raise EnvironmentError("The TEST_ASSETS_DIR environment variable is not set.")
     return test_dir
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def validation_collector() -> Generator[ValidationErrorCollector, None, None]:
     """Fixture that manages the validation context for tests."""
     with validation_context() as collector:
