@@ -14,6 +14,11 @@ from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
+def init(directory: Path | str) -> None:
+    """Initialize project directory."""
+    raise NotImplementedError()
+
+
 def load_pipeline(config: str) -> Pipeline:
     """Load pipeline instance from JSON file.
 
@@ -47,11 +52,11 @@ def load_stage(config: Path | str, stage_name: str) -> Stage:
         Stage instance.
 
     """
-    stage_class = get_stage(config, stage_name)
+    stage_class = _get_stage(config, stage_name)
     return stage_class.from_json(config, stage_name)
 
 
-def get_stage(config: Path | str, stage_name: str) -> Stage:
+def _get_stage(config: Path | str, stage_name: str) -> Stage:
     """Get stage class from JSON file.
 
     Parameters
@@ -143,6 +148,15 @@ def evaluate(
     else:
         stage = load_stage(config, stage_name)
         stage.evaluate(method, backend, config=config, **kwargs)
+
+
+def call_function(method: str, **kwargs):
+    if method == "init":
+        init(**kwargs)
+    elif method in ["run", "fit", "predict", "collect"]:
+        evaluate(method=method, **kwargs)
+    else:
+        raise ValueError(f"Invalid function name: {method}")
 
 
 def main():
