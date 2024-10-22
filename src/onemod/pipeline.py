@@ -7,18 +7,18 @@ from collections import deque
 from pathlib import Path
 from typing import Literal
 
-from pydantic import computed_field, field_serializer, validate_call
+from pplkit.data.interface import DataInterface
+from pydantic import BaseModel, computed_field, validate_call
 
-from onemod.base_models import SerializableModel
 from onemod.config import PipelineConfig
-from onemod.serializers import deserialize, serialize
+from onemod.serializers.functions import dump_pipeline, load_config, serialize
 from onemod.stage import ModelStage, Stage
 from onemod.validation import ValidationErrorCollector, handle_error
 
 logger = logging.getLogger(__name__)
 
 
-class Pipeline(SerializableModel):
+class Pipeline(BaseModel):
     """Pipeline class.
 
     Parameters
@@ -39,32 +39,34 @@ class Pipeline(SerializableModel):
 
     name: str
     config: PipelineConfig
-    directory: Path  # TODO: replace with DataInterface
+    directory: Path
     data: Path | None = None
     groupby: set[str] | None = None
-    _stages: dict[str, Stage] = {}  # set by Pipeline.add_stage
+    _dataif: DataInterface  # set by model_post_init, build
+    _stages: dict[str, Stage] = {}  # set by add_stage
+
+    @property
+    def dataif(self) -> DataInterface:
+        return self._dataif
+
+    @computed_field
+    @property
+    def dependencies(self) -> dict[str, set[str]]:
+        return {
+            stage.name: stage.dependencies
+            for stage in self.stages.values()
+            if stage.dependencies
+        }
 
     @computed_field
     @property
     def stages(self) -> dict[str, Stage]:
         return self._stages
 
-    @computed_field
-    @property
-    def dependencies(self) -> dict[str, set[str]]:
-        return {
-            stage.name: stage.dependencies for stage in self.stages.values()
-        }
-
-    @field_serializer("groupby")
-    def serialize_groupby(
-        self, value: set[str] | None, info
-    ) -> list[str] | None:
-        return list(value) if value is not None else None
-
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
             self.directory.mkdir(parents=True)
+        self._dataif = DataInterface(directory=self.directory)
 
     @classmethod
     def from_json(cls, config_path: Path | str) -> Pipeline:
@@ -81,7 +83,7 @@ class Pipeline(SerializableModel):
             Pipeline instance.
 
         """
-        config = deserialize(config_path)
+        config = load_config(config_path)
 
         stages = config.pop("stages", {})
 
@@ -108,7 +110,7 @@ class Pipeline(SerializableModel):
 
         """
         config_path = config_path or self.directory / (self.name + ".json")
-        serialize(self, config_path)
+        dump_pipeline(self, config_path)
 
     def add_stages(self, stages: list[Stage]) -> None:
         """Add stages to pipeline.
@@ -130,34 +132,12 @@ class Pipeline(SerializableModel):
         stage : Stage
             Stage to add to the pipeline.
 
-        Notes
-        -----
-        * Maybe move most of this into pipeline.build?
-        * Some steps may be unnecessary if stage loaded from previously
-          compiled config (update config, set directory, create subsets
-          and params)
-
         """
         if stage.name in self.stages:
             raise ValueError(f"stage '{stage.name}' already exists")
+
+        # TODO: Stage doesn't need to save all global configs?
         stage.config.update(self.config)
-        stage.directory = self.directory / stage.name
-        stage._pipeline = self.name
-
-        # Create data subsets
-        if isinstance(stage, ModelStage):
-            if self.groupby is not None:
-                stage.groupby.update(self.groupby)
-            if stage.groupby:
-                if self.data is None:
-                    raise AttributeError("data is required for groupby")
-                stage.create_stage_subsets(self.data)
-
-        # Create parameter sets
-        if isinstance(stage, ModelStage):
-            if stage.config.crossable_params:
-                stage.create_stage_params()
-
         self._stages[stage.name] = stage
 
     def get_execution_order(self) -> list[str]:
@@ -235,7 +215,7 @@ class Pipeline(SerializableModel):
             )
 
     def build(self) -> None:
-        """Assemble the pipeline, perform build-time validation, and save it to JSON."""
+        """Assemble pipeline, perform build-time validation, and save to JSON."""
         collector = ValidationErrorCollector()
 
         for stage in self.stages.values():
@@ -247,16 +227,28 @@ class Pipeline(SerializableModel):
             self.save_validation_report(collector)
             collector.raise_errors()
 
-        pipeline_dict = self.model_dump()
-        pipeline_dict["stages"] = {}
-        for stage_name, stage in self.stages.items():
-            pipeline_dict["stages"][stage_name] = stage.model_dump()
-        pipeline_dict["dependencies"] = {
-            stage_name: list(dependencies)
-            for stage_name, dependencies in self.dependencies.items()
-        }
+        config_path = self.directory / (self.name + ".json")
+        self.dataif.add_dir("config", config_path)
 
-        serialize(pipeline_dict, self.directory / f"{self.name}.json")
+        for stage in self.stages.values():
+            self.dataif.add_dir(stage.name, self.directory / stage.name)
+            stage.set_dataif(config_path)
+
+            # Create data subsets
+            if isinstance(stage, ModelStage):
+                if self.groupby is not None:
+                    stage.groupby.update(self.groupby)
+                if stage.groupby:
+                    if self.data is None:
+                        raise AttributeError("data is required for groupby")
+                    stage.create_stage_subsets(self.data)
+
+            # Create parameter sets
+            if isinstance(stage, ModelStage):
+                if stage.config.crossable_params:
+                    stage.create_stage_params()
+
+        self.to_json(config_path)
 
     def save_validation_report(
         self, collector: ValidationErrorCollector
@@ -294,6 +286,7 @@ class Pipeline(SerializableModel):
         TODO: Add options to run subset of IDs
 
         """
+        self.build()
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 

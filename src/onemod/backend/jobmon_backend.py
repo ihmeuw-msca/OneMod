@@ -171,7 +171,6 @@ def evaluate_with_jobmon(
     resources: Path | str,
     python: Path | str | None = None,
     method: Literal["run", "fit", "predict", "collect"] = "run",
-    config: Path | str | None = None,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -188,11 +187,6 @@ def evaluate_with_jobmon(
         Default is None.
     method : str, optional
         Name of method to evalaute. Default is 'run'.
-    config : Path, str, or None, optional
-        Path to config file. If None, use
-        pipeline.directory / (pipeline.name + ".json") or
-        stage.directory.parent / (stage.pipeline.name + ".json").
-        Default is None.
 
     TODO: Optional stage-specific Python environments
     TODO: User-defined max_attempts
@@ -202,13 +196,13 @@ def evaluate_with_jobmon(
     tool = get_tool(model.name, cluster, resources)
 
     # Create tasks
+    task_args = {
+        "python": python or sys.executable,
+        "config": str(model.dataif.config),
+    }
     if isinstance(model, Pipeline):
         tasks = []
         task_dict = {}
-        task_args = {
-            "python": python or sys.executable,
-            "config": config or str(model.directory / (model.name + ".json")),
-        }
         for stage_name in model.get_execution_order():
             stage = model.stages[stage_name]
             if method not in stage.skip:
@@ -223,11 +217,6 @@ def evaluate_with_jobmon(
                 )
                 tasks.extend(task_dict[stage_name])
     else:
-        task_args = {
-            "python": python or sys.executable,
-            "config": config
-            or str(model.directory.parent / (model.pipeline + ".json")),
-        }
         tasks = get_tasks(tool, resources, model, method, task_args)
 
     # Create and run workflow

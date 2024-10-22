@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
@@ -10,21 +9,21 @@ from inspect import getfile
 from pathlib import Path
 from typing import Literal
 
-import pandas as pd
 from pandas import DataFrame
-from pydantic import ConfigDict, Field, computed_field, validate_call
+from pplkit.data.interface import DataInterface
+from pydantic import BaseModel, ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
-from onemod.base_models import SerializableModel
 from onemod.config import ModelConfig, StageConfig
 from onemod.io import Input, Output
 from onemod.dtypes import Data
+from onemod.serializers.functions import load_config
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error
 
 
-class Stage(SerializableModel, ABC):
+class Stage(BaseModel, ABC):
     """Stage base class.
 
     Parameters
@@ -46,32 +45,36 @@ class Stage(SerializableModel, ABC):
     config: StageConfig
     input_validation: dict[str, Data] = Field(default_factory=dict)
     output_validation: dict[str, Data] = Field(default_factory=dict)
-    _pipeline: str  # set by Pipeline.add_stage, set by Stage.from_json
-    _directory: Path | None = None  # set by Pipeline.add_stage, Stage.from_json
-    _module: Path | None = None  # set by Stage.from_json
+    _dataif: DataInterface | None = None  # set by Pipeline.build, from_json
+    _module: Path | None = None  # set by from_json
     _skip: set[str] = set()  # defined by class
-    _input: Input | None = None  # set by Stage.__call__, Stage.from_json
+    _input: Input | None = None  # set by __call__, from_json
     _required_input: set[str] = set()  # name.extension, defined by class
     _optional_input: set[str] = set()  # name.extension, defined by class
     _output: set[str] = set()  # name.extension, defined by class
 
     @property
-    def pipeline(self) -> str:
-        if self._pipeline is None:
-            raise AttributeError(f"{self.name} pipeline has not been set")
-        return self._pipeline
+    def dataif(self) -> DataInterface:
+        if self._dataif is None:
+            raise AttributeError(f"{self.name} dataif has not been set")
+        return self._dataif
 
-    @property
-    def directory(self) -> Path:
-        if self._directory is None:
-            raise AttributeError(f"{self.name} directory has not been set")
-        return self._directory
-
-    @directory.setter
-    def directory(self, directory: Path | str) -> None:
-        self._directory = Path(directory)
-        if not self._directory.exists():
-            self._directory.mkdir()
+    def set_dataif(self, config_path: Path | str) -> None:
+        directory = Path(config_path).parent
+        self._dataif = DataInterface(
+            directory=directory,
+            config=config_path,
+            output=directory / self.name,
+        )
+        for item_name, item_value in self.input.items.items():
+            if isinstance(item_value, Path):
+                self._dataif.add_dir(item_name, item_value)
+            elif isinstance(item_value, Data):
+                self._dataif.add_dir(
+                    item_name, directory / item_value.stage / item_value.path
+                )
+        if not (directory / self.name).exists():
+            (directory / self.name).mkdir()
 
     @computed_field
     @property
@@ -101,9 +104,7 @@ class Stage(SerializableModel, ABC):
         output_items = {}
         for item in self._output:
             item_name = item.split(".")[0]  # remove extension
-            output_items[item_name] = Data(
-                stage=self.name, path=self.directory / item
-            )
+            output_items[item_name] = Data(stage=self.name, path=item)
         return Output(stage=self.name, items=output_items)
 
     @property
@@ -133,23 +134,13 @@ class Stage(SerializableModel, ABC):
         Stage
             Stage instance.
 
-        Notes
-        -----
-        Stage directory set to pipeline.directory / `stage_name`.
-
         """
-        with open(config_path, "r") as f:
-            config = json.load(f)
-        pipeline = config["name"]
-        directory = Path(config["directory"]) / stage_name
-        if stage_name not in config["stages"]:
-            raise KeyError(
-                f"Config does not contain a stage named '{stage_name}'"
-            )
-        config = config["stages"][stage_name]
+        try:
+            config = load_config(config_path)["stages"][stage_name]
+        except KeyError:
+            f"Config does not contain a stage named '{stage_name}'"
         stage = cls(**config)
-        stage._pipeline = pipeline
-        stage.directory = directory
+        stage.set_dataif(config_path)
         if "module" in config:
             stage._module = config["module"]
         if "crossby" in config:
@@ -177,8 +168,6 @@ class Stage(SerializableModel, ABC):
 
         Other Parameters
         ----------------
-        config : Path or str, optional
-            Path to config file. Required if `backend` is 'jobmon'.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path or str, optional
@@ -296,9 +285,9 @@ class ModelStage(Stage, ABC):
         Stage name.
     config : ModelConfig
         Stage configuration.
-    groupby : set of str, optional
+    groupby : set of str or None, optional
         Column names used to create data subsets.
-        Default is an empty set.
+        Default is None.
     input_validation : dict, optional
         Description.
     output_validation : dict, optional
@@ -307,11 +296,11 @@ class ModelStage(Stage, ABC):
     """
 
     config: ModelConfig
-    groupby: set[str] = set()
-    _crossby: set[str] = set()  # set by Stage.create_stage_params
+    groupby: set[str] | None = None
+    _crossby: set[str] | None = None  # set by Stage.create_stage_params
     _subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
     _param_ids: set[int] = set()  # set by Stage.create_stage_params
-    _required_input: set[str] = set()  # 'data' required for `groupby`
+    _required_input: set[str] = set()  # data required for groupby
 
     @computed_field
     @property
@@ -320,9 +309,9 @@ class ModelStage(Stage, ABC):
 
     @property
     def subset_ids(self) -> set[int]:
-        if self.groupby and not self._subset_ids:
+        if self.groupby is not None and not self._subset_ids:
             try:
-                subsets = pd.read_csv(self.directory / "subsets.csv")
+                subsets = self.dataif.load_output("subsets.csv")
                 self._subset_ids = set(subsets["subset_id"])
             except FileNotFoundError:
                 raise AttributeError(
@@ -332,9 +321,9 @@ class ModelStage(Stage, ABC):
 
     @property
     def param_ids(self) -> set[int]:
-        if self.crossby and not self._param_ids:
+        if self.crossby is not None and not self._param_ids:
             try:
-                params = pd.read_csv(self.directory / "parameters.csv")
+                params = self.dataif.load_output("parameters.csv")
                 self._param_ids = set(params["param_id"])
             except FileNotFoundError:
                 raise AttributeError(
@@ -342,21 +331,21 @@ class ModelStage(Stage, ABC):
                 )
         return self._param_ids
 
-    def create_stage_subsets(self, data: DataFrame) -> None:
+    def create_stage_subsets(self, data: Path | str) -> None:
         """Create stage data subsets from groupby."""
-        subsets = create_subsets(self.groupby, data)
-        if subsets is not None:
-            self._subset_ids = set(subsets["subset_id"])
-            subsets.to_csv(self.directory / "subsets.csv", index=False)
-            (self.directory / "submodels").mkdir(exist_ok=True)
+        subsets = create_subsets(
+            self.groupby, self.dataif.load(data, columns=self.groupby)
+        )
+        self._subset_ids = set(subsets["subset_id"])
+        self.dataif.dump_output(subsets, "subsets.csv", index=False)
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
-        if isinstance(self.input["data"], Path):
-            data_path = self.input["data"]
-        else:
-            data_path = self.input["data"].path
-        return get_subset(data_path, self.directory / "subsets.csv", subset_id)
+        return get_subset(
+            self.dataif.load_data(),
+            self.dataif.load_output("subsets.csv"),
+            subset_id,
+        )
 
     def create_stage_params(self) -> None:
         """Create stage parameter sets from config."""
@@ -364,20 +353,22 @@ class ModelStage(Stage, ABC):
         if params is not None:
             self._crossby = set(params.drop(columns="param_id").columns)
             self._param_ids = set(params["param_id"])
-            params.to_csv(self.directory / "parameters.csv", index=False)
-            (self.directory / "submodels").mkdir(exist_ok=True)
+            self.dataif.dump_output("parameters.csv", index=False)
 
     def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
-        params = get_params(self.directory / "parameters.csv", param_id)
+        params = get_params(self.dataif.load_output("parameters.csv"), param_id)
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
-    def get_pipeline_groupby(self) -> list[str]:
-        """Get pipeline groupby attribute."""
-        with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
-            config = json.load(f)
-        return config.get("groupby", [])
+    def get_pipeline_groupby(self) -> list[str] | None:
+        """Get pipeline groupby attribute.
+
+        TODO: Make more generalized function to get fields from config
+
+        """
+        # Using cached load_config instead of self.dataif.load_config
+        return load_config(self.dataif.config).get("groupby")
 
     @validate_call
     def evaluate(
@@ -470,8 +461,8 @@ class ModelStage(Stage, ABC):
 
     def __repr__(self) -> str:
         stage_str = f"{self.type}({self.name}"
-        if self.groupby:
+        if self.groupby is not None:
             stage_str += f", groupby={self.groupby}"
-        if self.crossby:
+        if self.crossby is not None:
             stage_str += f", crossby={self.crossby}"
         return stage_str + ")"

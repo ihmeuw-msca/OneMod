@@ -13,10 +13,8 @@ TODO: Update read/write statements with DataInterface
 """
 
 import warnings
-import json
 from loguru import logger
 
-import dill
 import pandas as pd
 from modrover.api import Rover
 
@@ -43,7 +41,7 @@ class RoverStage(ModelStage):
         -------
         learner_info.csv
             Information about every learner.
-        rover.pkl
+        model.pkl
             Rover object used for plotting and diagnostics.
         summary.csv
             Summary covariate coefficients from the ensemble model.
@@ -64,7 +62,7 @@ class RoverStage(ModelStage):
                 model_type=self.config.model_type,
                 cov_fixed=list(self.config.cov_fixed),
                 cov_exploring=list(self.config.cov_exploring),
-                weights=self.config.weight_column,
+                weights=self.config.weights_column,
                 holdouts=list(self.config.holdout_columns),
             )
 
@@ -79,14 +77,19 @@ class RoverStage(ModelStage):
 
             # Save results
             logger.info(f"Saving {self.name} submodel {subset_id} results")
-            submodel_dir = self.directory / "submodels" / str(subset_id)
-            submodel_dir.mkdir(exist_ok=True)
-            submodel.learner_info.to_csv(
-                submodel_dir / "learner_info.csv", index=False
+            self.dataif.dump_output(
+                submodel.learner_info,
+                f"submodels/{subset_id}/learner_info.csv",
+                index=False,
             )
-            with open(submodel_dir / "rover.pkl", "wb") as f:
-                dill.dump(submodel, f)
-            submodel.summary.to_csv(submodel_dir / "summary.csv", index=False)
+            self.dataif.dump_output(
+                submodel, f"submodels/{subset_id}/model.pkl"
+            )
+            self.dataif.dump_output(
+                submodel.summary,
+                f"submodels/{subset_id}/summary.csv",
+                index=False,
+            )
         else:
             logger.info(
                 f"No training data for {self.name} submodel {subset_id}"
@@ -107,28 +110,25 @@ class RoverStage(ModelStage):
         # Concatenate summaries
         logger.info(f"Concatenating {self.name} coefficient summaries")
         summaries = self._get_rover_summaries()
-        summaries.to_csv(self.directory / "summaries.csv", index=False)
+        self.dataif.dump_output(summaries, "summaries.csv", index=False)
 
         # Select covariates
         logger.info(f"Selecting {self.name} covariates")
         selected_covs = self._get_selected_covs(summaries)
-        selected_covs.to_csv(self.directory / "selected_covs.csv", index=False)
+        self.dataif.dump_output(selected_covs, "selected_covs.csv", index=False)
 
         # TODO: Plot covariates
 
     def _get_rover_summaries(self) -> pd.DataFrame:
         """Concatenate rover coefficient summaries."""
-        subsets = pd.read_csv(self.directory / "subsets.csv")
+        subsets = self.dataif.load_output("subsets.csv")
 
         # Collect coefficient summaries
         summaries = []
         for subset_id in self.subset_ids:
             try:
-                summary = pd.read_csv(
-                    self.directory
-                    / "submodels"
-                    / str(subset_id)
-                    / "summary.csv"
+                summary = self.dataif.load_output(
+                    f"submodels/{subset_id}/summary.csv"
                 )
                 summary["subset_id"] = subset_id
                 summaries.append(summary)
@@ -144,7 +144,7 @@ class RoverStage(ModelStage):
     def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
         """Select rover covariates."""
         pipeline_groupby = self.get_pipeline_groupby()
-        if pipeline_groupby:
+        if pipeline_groupby is not None:
             selected_covs = []
             for subset, subset_summaries in summaries.groupby(pipeline_groupby):
                 subset_selected_covs = self._get_subset_selected_covs(

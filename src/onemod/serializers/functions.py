@@ -1,5 +1,6 @@
 import json
 import yaml
+from functools import cache
 from pathlib import Path
 from typing import List
 from yaml import Node, SafeDumper
@@ -90,3 +91,33 @@ def _json_serializer(obj):
     elif isinstance(obj, set):
         return list(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
+@cache
+def load_config(config_path: Path | str) -> dict:
+    """Load pipeline config from JSON or YAML file."""
+    return deserialize(config_path)
+
+
+def dump_pipeline(
+    pipeline: "Pipeline", config_path: Path | str, **kwargs
+) -> None:
+    """Save pipeline as JSON or YAML file."""
+    file_format = _get_file_format(config_path)
+    kwargs = {
+        "exclude_unset": True,
+        "exclude_defaults": True,
+        "exclude_none": True,
+        "serialize_as_any": True,  # save all stage config fields
+        **kwargs,
+    }
+    with open(config_path, "w") as file:
+        if file_format == "json":
+            file.write(pipeline.model_dump_json(indent=4, **kwargs))
+        elif file_format == "yaml":
+            yaml.safe_dump(
+                pipeline.model_dump(**kwargs),
+                file,
+                default_flow_style=False,
+                sort_keys=False,
+            )

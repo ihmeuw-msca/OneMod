@@ -10,7 +10,7 @@ Notes
 * SpXModStage currently requires nonempty `groupby` attribute.
 
 TODO: Update for new spxmod version with splines
-TODO: Is age_mid hardcoded like description says? -> yes, for selected_covs
+TODO: Make selected_covs more flexible, not hard-coded to age_mid
 TODO: Implement offset and priors input
 
 """
@@ -18,7 +18,6 @@ TODO: Implement offset and priors input
 import json
 from loguru import logger
 
-import dill
 import numpy as np
 import pandas as pd
 from spxmod.model import XModel
@@ -72,22 +71,18 @@ class SpxmodStage(ModelStage):
             data = pd.concat([data, spline_basis], axis=1)
 
         # Get covariates from upstream stage
+        selected_covs = []
         if "selected_covs" in self.input:
             selected_covs = self._get_covs(data)
             logger.info(
                 f"Using covariates selected by "
                 f"{self.input['selected_covs'].stage}: {selected_covs}"
             )
-        else:
-            selected_covs = []
 
         # Create model parameters
-        # TODO
-        xmodel_args = self._build_xmodel_args(
-            self.config, selected_covs, spline_vars
-        )
+        xmodel_args = self._build_xmodel_args(selected_covs, spline_vars)
         logger.info(
-            f"{len(xmodel_args['var_builders'])} var_builders created for spxmod"
+            f"{len(xmodel_args['var_builders'])} var_builders created for {self.name}"
         )
 
         # Create and fit submodel
@@ -100,10 +95,7 @@ class SpxmodStage(ModelStage):
 
         # Save submodel
         logger.info(f"Saving {self.name} submodel {subset_id}")
-        submodel_dir = self.directory / "submodels" / str(subset_id)
-        submodel_dir.mkdir(exist_ok=True)
-        with open(submodel_dir / "model.pkl", "wb") as f:
-            dill.dump(model, f)
+        self.dataif.dump_output(model, f"submodels/{subset_id}/model.pkl")
 
     def predict(self, subset_id: int, *args, **kwargs) -> None:
         """Create spxmod submodel predictions.
@@ -114,15 +106,20 @@ class SpxmodStage(ModelStage):
             Predictions with residual information.
 
         """
+        # Load data
+        data = self.get_stage_subset(subset_id)
+
         # Load submodel
+        model = self.dataif.load_output(f"submodels/{subset_id}/model.pkl")
 
         # Create prediction, residuals, and coefs
-        # FIXME
         logger.info("Calculating predictions and residuals")
-        residual_calculator = ResidualCalculator(self.config.model_type)
-        df[self.config.prediction_column] = model.predict(df)
+        residual_calculator = ResidualCalculator(
+            self.config.model_type
+        )  # FIXME
+        data[self.config.prediction_column] = model.predict(data)
         residuals = residual_calculator.get_residual(
-            df,
+            data,
             self.config.prediction_column,
             self.config.observation_column,
             self.config.weights_column,
@@ -130,14 +127,14 @@ class SpxmodStage(ModelStage):
         df_coef = self.get_coef(model)
 
         # Save results
-        dataif.dump_spxmod(
-            pd.concat([df, residuals], axis=1)[
+        self.dataif.dump_output(
+            pd.concat([data, residuals], axis=1)[
                 self.config.id_columns
                 + ["residual", "residual_se", self.config.prediction_column]
             ],
             f"submodels/{subset_id}/predictions.parquet",
         )
-        dataif.dump_spxmod(df_coef, f"submodels/{subset_id}/coef.csv")
+        self.dataif.dump_output(df_coef, f"submodels/{subset_id}/coef.csv")
 
     def collect(self) -> None:
         """Collect spxmod submodel results.
@@ -149,15 +146,17 @@ class SpxmodStage(ModelStage):
 
         """
         # Collect submodel predictions
-        pd.concat(
-            [
-                pd.read_parquet(
-                    self.directory
-                    / f"submodels/{subset_id}/predictions.parquet"
-                )
-                for subset_id in self.subset_ids
-            ]
-        ).to_parquet(self.directory / "predictions.parquet")
+        self.dataif.dump_output(
+            pd.concat(
+                [
+                    self.dataif.load_output(
+                        f"submodels/{subset_id}/predictions.parquet"
+                    )
+                    for subset_id in self.subset_ids
+                ]
+            ),
+            "predictions.parquet",
+        )
 
         # TODO: Plot coefficients
 
@@ -221,12 +220,14 @@ class SpxmodStage(ModelStage):
         xmodel_args["weights"] = self.config.weights_column
 
         # Add covariate and spline variables
-        xmodel_args = self._add_selected_covs(xmodel_args, selected_covs)
+        if selected_covs:
+            xmodel_args = self._add_selected_covs(xmodel_args, selected_covs)
         if spline_vars:
             xmodel_args = self._add_spline_variables(xmodel_args, spline_vars)
 
         # Add coef_bounds and lam to all variables
-        coef_bounds = xmodel_args.pop("coef_bounds")
+        with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
+            coef_bounds = json.load(f)["config"]["coef_bounds"]
         lam = xmodel_args.pop("lam")
         xmodel_args = self._add_prior_settings(xmodel_args, coef_bounds, lam)
 
@@ -241,9 +242,8 @@ class SpxmodStage(ModelStage):
 
         return xmodel_args
 
-    def _add_selected_covs(
-        self, xmodel_args: dict, selected_covs: list[str]
-    ) -> dict:
+    @staticmethod
+    def _add_selected_covs(xmodel_args: dict, selected_covs: list[str]) -> dict:
         """Add selected covariates to spxmod model configuration."""
         # add age_mid to spaces if not already included
         space_keys = [space["name"] for space in xmodel_args["spaces"]]

@@ -52,14 +52,14 @@ class PipelineConfig(Config):
         for the entire pipeline. If no test column is provided, all
         missing observations will be treated as the test set. Default is
         'test'.
-    holdout_columns : set[str], optional
+    holdout_columns : set[str] or None, optional
         Holdout column names. The holdout columns should contain values
         0 (train), 1 (holdout), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
-        Default is an empty set.
-    coef_bounds : dict, optional
+        Default is None.
+    coef_bounds : dict or None, optional
         Dictionary of coefficient bounds with entries
-        cov_name: (lower, upper). Default is an empty dictionary.
+        cov_name: (lower, upper). Default is None.
 
     """
 
@@ -67,10 +67,10 @@ class PipelineConfig(Config):
     model_type: Literal["binomial", "gaussian", "poisson"]
     observation_column: str = "obs"
     prediction_column: str = "pred"
-    weight_column: str = "weights"
+    weights_column: str = "weights"
     test_column: str = "test"
-    holdout_columns: set[str] = set()
-    coef_bounds: dict[str, tuple[float, float]] = {}
+    holdout_columns: set[str] | None = None
+    coef_bounds: dict[str, tuple[float, float]] | None = None
 
 
 class StageConfig(Config):
@@ -119,7 +119,7 @@ class StageConfig(Config):
     model_type: Literal["binomial", "gaussian", "poisson"] | None = None
     observation_column: str | None = None
     prediction_column: str | None = None
-    weight_column: str | None = None
+    weights_column: str | None = None
     test_column: str | None = None
     holdout_columns: set[str] | None = None
     coef_bounds: dict[str, tuple[float, float]] | None = None
