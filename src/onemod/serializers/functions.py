@@ -105,8 +105,6 @@ def dump_pipeline(
     """Save pipeline as JSON or YAML file."""
     file_format = _get_file_format(config_path)
     kwargs = {
-        "exclude_unset": True,
-        "exclude_defaults": True,
         "exclude_none": True,
         "serialize_as_any": True,  # save all stage config fields
         **kwargs,
