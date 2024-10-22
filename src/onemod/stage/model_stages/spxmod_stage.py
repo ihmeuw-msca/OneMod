@@ -25,6 +25,7 @@ from xspline import XSpline
 
 from onemod.config import SpxmodConfig
 from onemod.stage import ModelStage
+from onemod.utils.residual import ResidualCalculator
 from onemod.utils.subsets import get_subset
 
 
@@ -114,9 +115,7 @@ class SpxmodStage(ModelStage):
 
         # Create prediction, residuals, and coefs
         logger.info("Calculating predictions and residuals")
-        residual_calculator = ResidualCalculator(
-            self.config.model_type
-        )  # FIXME
+        residual_calculator = ResidualCalculator(self.config.model_type)
         data[self.config.prediction_column] = model.predict(data)
         residuals = residual_calculator.get_residual(
             data,
