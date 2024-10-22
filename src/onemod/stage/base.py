@@ -43,7 +43,7 @@ class Stage(SerializableModel, ABC):
     @property
     def directory(self) -> Path:
         if self._directory is None:
-            raise AttributeError(f"{self.name} directory has not been set")
+            raise AttributeError(f"Stage '{self.name}' directory has not been set. Has the stage been added to the pipeline?")
         return self._directory
 
     @directory.setter
