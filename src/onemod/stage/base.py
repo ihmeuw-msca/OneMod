@@ -56,7 +56,10 @@ class Stage(BaseModel, ABC):
     @property
     def dataif(self) -> DataInterface:
         if self._dataif is None:
-            raise AttributeError(f"{self.name} dataif has not been set")
+            raise AttributeError(
+                f"Stage '{self.name}' dataif has not been set."
+                "Has the stage been added to the pipeline?"
+            )
         return self._dataif
 
     def set_dataif(self, config_path: Path | str) -> None:

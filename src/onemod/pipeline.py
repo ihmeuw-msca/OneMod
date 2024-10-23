@@ -262,6 +262,7 @@ class Pipeline(BaseModel):
         self,
         method: Literal["run", "fit", "predict"] = "run",
         backend: Literal["local", "jobmon"] = "local",
+        build: bool = True,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
@@ -285,7 +286,8 @@ class Pipeline(BaseModel):
         TODO: Add options to run subset of IDs
 
         """
-        self.build()
+        if build:
+            self.build()
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 
@@ -296,22 +298,31 @@ class Pipeline(BaseModel):
             evaluate_local(model=self, method=method)
 
     def run(
-        self, backend: Literal["local", "jobmon"] = "local", **kwargs
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        build: bool = True,
+        **kwargs,
     ) -> None:
         """Run pipeline."""
-        self.evaluate(method="run", backend=backend, **kwargs)
+        self.evaluate(method="run", backend=backend, build=build, **kwargs)
 
     def fit(
-        self, backend: Literal["local", "jobmon"] = "local", **kwargs
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        build: bool = True,
+        **kwargs,
     ) -> None:
         """Fit pipeline model."""
-        self.evaluate(method="fit", backend=backend, **kwargs)
+        self.evaluate(method="fit", backend=backend, build=build, **kwargs)
 
     def predict(
-        self, backend: Literal["local", "jobmon"] = "local", **kwargs
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        build: bool = True,
+        **kwargs,
     ) -> None:
         """Predict pipeline model."""
-        self.evaluate(method="predict", backend=backend, **kwargs)
+        self.evaluate(method="predict", backend=backend, build=build, **kwargs)
 
     def resume(self) -> None:
         """Resume pipeline."""

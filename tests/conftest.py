@@ -1,12 +1,12 @@
 import os
 from typing import Generator
 
-from dotenv import load_dotenv
 import pytest
+from dotenv import load_dotenv
 
 from onemod.validation.error_handling import (
-    validation_context,
     ValidationErrorCollector,
+    validation_context,
 )
 
 load_dotenv()
@@ -23,7 +23,7 @@ def test_assets_dir():
     return test_dir
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def validation_collector() -> Generator[ValidationErrorCollector, None, None]:
     """Fixture that manages the validation context for tests."""
     with validation_context() as collector:
