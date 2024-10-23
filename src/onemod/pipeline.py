@@ -53,9 +53,7 @@ class Pipeline(BaseModel):
     @property
     def dependencies(self) -> dict[str, set[str]]:
         return {
-            stage.name: stage.dependencies
-            for stage in self.stages.values()
-            if stage.dependencies
+            stage.name: stage.dependencies for stage in self.stages.values()
         }
 
     @computed_field
