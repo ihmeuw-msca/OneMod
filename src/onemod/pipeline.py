@@ -8,7 +8,6 @@ from collections import deque
 from pathlib import Path
 from typing import Literal
 
-from pplkit.data.interface import DataInterface
 from pydantic import BaseModel, computed_field, validate_call
 
 from onemod.config import PipelineConfig
