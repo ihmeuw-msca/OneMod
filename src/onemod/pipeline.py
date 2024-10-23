@@ -43,23 +43,7 @@ class Pipeline(BaseModel):
     directory: Path
     data: Path | None = None
     groupby: set[str] | None = None
-    _dataif: DataInterface  # set by model_post_init, build
     _stages: dict[str, Stage] = {}  # set by add_stage
-
-    @property
-    def dataif(self) -> DataInterface:
-        """Pipeline data interface.
-
-        Examples
-        --------
-        * Load config: pipeline.dataif.load_config()
-        * Load stage output:
-          stage.dataif.load_{stage_name}("{item_name}.{item_extension}")
-
-        TODO: Not sure if pipeline.dataif is necessary
-
-        """
-        return self._dataif
 
     @computed_field
     @property
@@ -76,10 +60,6 @@ class Pipeline(BaseModel):
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
             self.directory.mkdir(parents=True)
-        self._dataif = DataInterface(
-            directory=self.directory,
-            config=self.directory / (self.name + ".json"),
-        )
 
     @classmethod
     def from_json(cls, config_path: Path | str) -> Pipeline:
@@ -245,9 +225,9 @@ class Pipeline(BaseModel):
             self.save_validation_report(collector)
             collector.raise_errors()
 
+        config_path = self.directory / (self.name + ".json")
         for stage in self.stages.values():
-            self.dataif.add_dir(stage.name, self.directory / stage.name)
-            stage.set_dataif(self.dataif.config)
+            stage.set_dataif(config_path)
 
             # Create data subsets
             if isinstance(stage, ModelStage):
@@ -266,7 +246,7 @@ class Pipeline(BaseModel):
                 if stage.config.crossable_params:
                     stage.create_stage_params()
 
-        self.to_json(self.dataif.config)
+        self.to_json(config_path)
 
     def save_validation_report(
         self, collector: ValidationErrorCollector
