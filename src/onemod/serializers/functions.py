@@ -111,7 +111,7 @@ def dump_pipeline(
     }
     with open(config_path, "w") as file:
         if file_format == "json":
-            file.write(pipeline.model_dump_json(indent=4, **kwargs))
+            file.write(pipeline.model_dump_json(indent=2, **kwargs))
         elif file_format == "yaml":
             yaml.safe_dump(
                 pipeline.model_dump(**kwargs),

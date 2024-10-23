@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pandas import DataFrame
 from pplkit.data.interface import DataInterface
@@ -241,6 +241,31 @@ class Stage(BaseModel, ABC):
                         collector,
                     )
 
+    def get_field(self, field: str, stage_name: str | None = None) -> Any:
+        """Get field from config file.
+
+        Parameters
+        ----------
+        field : str
+            Name of field. If field is nested, join keys with '-'.
+            For example, 'config-id_columns`.
+        stage_name : str or None, optional
+            Name of stage if field belongs to stage. Default is None.
+
+        Returns
+        -------
+        Any
+            Field item.
+
+        """
+        # Using cached load_config instead of self.dataif.load_config
+        config = load_config(self.dataif.config)
+        if stage_name is not None:
+            config = config["stages"][stage_name]
+        for key in field.split("-"):
+            config = config[key]
+        return config
+
     @abstractmethod
     def run(self) -> None:
         """Run stage."""
@@ -360,15 +385,6 @@ class ModelStage(Stage, ABC):
         params = get_params(self.dataif.load_output("parameters.csv"), param_id)
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
-
-    def get_pipeline_groupby(self) -> list[str] | None:
-        """Get pipeline groupby attribute.
-
-        TODO: Make more generalized function to get fields from config
-
-        """
-        # Using cached load_config instead of self.dataif.load_config
-        return load_config(self.dataif.config).get("groupby")
 
     @validate_call
     def evaluate(

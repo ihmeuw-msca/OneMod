@@ -18,7 +18,7 @@ class Config(BaseModel, ABC):
 
     def __getitem__(self, key: str) -> Any:
         if not self.__contains__(key):
-            raise KeyError(f"invalid config item: {key}")
+            raise KeyError(f"Invalid config item: {key}")
         return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
@@ -76,8 +76,7 @@ class PipelineConfig(Config):
 class StageConfig(Config):
     """Stage configuration class.
 
-    Settings from PipelineConfig are passed to StageConfig when calling
-    Pipeline.add_stage().
+    If None, setting inherited from Pipeline.
 
     Attributes
     ----------
@@ -123,12 +122,18 @@ class StageConfig(Config):
     test_column: str | None = None
     holdout_columns: set[str] | None = None
     coef_bounds: dict[str, tuple[float, float]] | None = None
+    _global: PipelineConfig
 
-    def update(self, config: PipelineConfig) -> None:
-        """Inherit settings from pipeline."""
-        for key, value in config.model_dump().items():
-            if self[key] is None:
-                self[key] = value
+    def inherit(self, config: PipelineConfig) -> None:
+        """Inherit global settings from pipeline."""
+        self._global = config
+
+    def __getitem__(self, key: str) -> Any:
+        if not self.__contains__(key):
+            raise KeyError(f"Invalid config item: {key}")
+        if (value := getattr(self, key)) is None:
+            return self._global[key]
+        return value
 
 
 class ModelConfig(StageConfig):

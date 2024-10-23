@@ -136,8 +136,7 @@ class Pipeline(BaseModel):
         if stage.name in self.stages:
             raise ValueError(f"stage '{stage.name}' already exists")
 
-        # TODO: Stage doesn't need to save all global configs?
-        stage.config.update(self.config)
+        stage.config.inherit(self.config)
         self._stages[stage.name] = stage
 
     def get_execution_order(self) -> list[str]:
