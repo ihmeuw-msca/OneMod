@@ -280,7 +280,7 @@ class Stage(BaseModel, ABC):
         raise NotImplementedError("Subclasses must implement this method.")
 
     @validate_call
-    def __call__(self, **input: Data | Path) -> None:
+    def __call__(self, **input: Data | Path) -> Output:
         """Define stage dependencies."""
         if self._input is None:
             self._input = Input(
@@ -290,6 +290,7 @@ class Stage(BaseModel, ABC):
             )
         self.input.check_missing({**self.input.items, **input})
         self.input.update(input)
+        return self.output
 
     def __repr__(self) -> str:
         return f"{self.type}({self.name})"
