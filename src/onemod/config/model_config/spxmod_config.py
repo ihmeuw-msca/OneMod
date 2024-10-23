@@ -6,10 +6,11 @@ TODO: Update docstrings to clarify what spxmod defaults are (e.g., lam, priors)
 """
 
 from typing import Any, Literal
+
+from pydantic import ConfigDict, Field
 from typing_extensions import Annotated
 
 from onemod.config import Config, ModelConfig
-from pydantic import Field
 
 
 class SpxmodDimensionConfig(Config):
@@ -27,6 +28,8 @@ class SpxmodDimensionConfig(Config):
     `spxmod.dimension.Dimension <https://github.com/ihmeuw-msca/spxmod/blob/v0.2.1/src/spxmod/dimension.py#L7>`_.
 
     """
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     dim_type: Literal["categorical", "numerical"]
