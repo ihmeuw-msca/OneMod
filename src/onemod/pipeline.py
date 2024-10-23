@@ -241,7 +241,10 @@ class Pipeline(BaseModel):
             # Create data subsets
             if isinstance(stage, ModelStage):
                 if self.groupby is not None:
-                    stage.groupby.update(self.groupby)
+                    if stage.groupby is None:
+                        stage.groupby = self.groupby
+                    else:
+                        stage.groupby.update(self.groupby)
                 if stage.groupby:
                     if self.data is None:
                         raise AttributeError("data is required for groupby")
