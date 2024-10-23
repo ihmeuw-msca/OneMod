@@ -27,6 +27,7 @@ class RoverStage(ModelStage):
     _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _output: set[str] = {"selected_covs.csv", "summaries.csv"}
+    _collect_after: set[str] = {"run", "fit"}
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run rover submodel."""

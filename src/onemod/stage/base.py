@@ -15,8 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
-from onemod.io import Input, Output
 from onemod.dtypes import Data
+from onemod.io import Input, Output
 from onemod.serializers.functions import load_config
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
@@ -304,8 +304,9 @@ class ModelStage(Stage, ABC):
     can be specified as either a single value or a list of values.
 
     When a model stage method is evaluated, all submodels (identified by
-    their `subset_id` and `param_id`) are evaluated, and then the
-    submodel results are collected using the `collect` method.
+    their `subset_id` and `param_id`) are evaluated, and then, if
+    `method` is in `collect_after`, the submoel results are collected
+    using the `collect` method.
 
     Parameters
     ----------
@@ -325,10 +326,11 @@ class ModelStage(Stage, ABC):
 
     config: ModelConfig
     groupby: set[str] | None = None
-    _crossby: set[str] | None = None  # set by Stage.create_stage_params
-    _subset_ids: set[int] = set()  # set by Stage.create_stage_subsets
-    _param_ids: set[int] = set()  # set by Stage.create_stage_params
+    _crossby: set[str] | None = None  # set by create_stage_params
+    _subset_ids: set[int] = set()  # set by create_stage_subsets
+    _param_ids: set[int] = set()  # set by create_stage_params
     _required_input: set[str] = set()  # data required for groupby
+    _collect_after: set[str] = set()  # defined by class
 
     @computed_field
     @property
@@ -358,6 +360,10 @@ class ModelStage(Stage, ABC):
                     f"{self.name} parameter sets have not been created"
                 )
         return self._param_ids
+
+    @property
+    def collect_after(self) -> set[str]:
+        return self._collect_after
 
     def create_stage_subsets(self, data: Path | str) -> None:
         """Create stage data subsets from groupby."""
@@ -426,8 +432,9 @@ class ModelStage(Stage, ABC):
         evaluated for the corresponding submodel (unless `backend` is
         'jobmon' or `method` is 'collect', in which case `subset_id`
         and `param_id` are ignored). Otherwise, `method` will be
-        evaluated for all submodels, and then `collect` will be
-        evaluated to collect the submodel results.
+        evaluated for all submodels, and then, if `method` is in
+        `collect_after`, the `collect` method will be evaluated to
+        collect the submodel results.
 
         """
         if method in self.skip:

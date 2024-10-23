@@ -15,10 +15,9 @@ TODO: Implement offset and priors input
 
 """
 
-from loguru import logger
-
 import numpy as np
 import pandas as pd
+from loguru import logger
 from spxmod.model import XModel
 from xspline import XSpline
 
@@ -39,6 +38,7 @@ class SpxmodStage(ModelStage):
         "priors.pkl",
     }
     _output: set[str] = {"predictions.parquet"}
+    _collect_after: set[str] = {"run", "predict"}
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run spxmod submodel."""

@@ -50,6 +50,7 @@ def _evaluate_stage(
         param_ids = stage.param_ids or [None]
         for subset_id, param_id in product(subset_ids, param_ids):
             stage.__getattribute__(method)(subset_id, param_id)
-        stage.collect()
+        if method in stage.collect_after:
+            stage.collect()
     else:
         stage.__getattribute__(method)()

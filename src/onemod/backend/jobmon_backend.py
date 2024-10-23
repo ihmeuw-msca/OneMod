@@ -100,7 +100,7 @@ def get_tasks(
             )
         ]
 
-    if isinstance(stage, ModelStage) and method != "collect":
+    if isinstance(stage, ModelStage) and method in stage.collect_after:
         tasks.extend(
             get_tasks(tool, resources, stage, "collect", task_args, tasks)
         )
@@ -164,6 +164,26 @@ def get_task_resources(
     return None
 
 
+def get_upstream_tasks(
+    stage: str,
+    method: Literal["run", "fit", "predict"],
+    stages: set[Stage],
+    task_dict: dict[str, list[Task]],
+) -> list[Task]:
+    """Get upstream stage tasks."""
+    upstream_tasks = []
+    for upstream_name in stage.dependencies:
+        if upstream_name in task_dict:
+            if (
+                isinstance(upstream := stages[upstream_name], ModelStage)
+                and method in upstream.collect_after
+            ):
+                upstream_tasks.append(task_dict[upstream_name][-1])
+            else:
+                upstream_tasks.extend(task_dict[upstream_name])
+    return upstream_tasks
+
+
 @validate_call
 def evaluate_with_jobmon(
     model: Pipeline | Stage,
@@ -206,12 +226,9 @@ def evaluate_with_jobmon(
         for stage_name in model.get_execution_order():
             stage = model.stages[stage_name]
             if method not in stage.skip:
-                upstream_tasks = []
-                for dep in stage.dependencies:
-                    if isinstance(model.stages[dep], ModelStage):
-                        upstream_tasks.append(task_dict[dep][-1])  # collect
-                    else:
-                        upstream_tasks.extend(task_dict[dep])
+                upstream_tasks = get_upstream_tasks(
+                    stage, method, model.stages, task_dict
+                )
                 task_dict[stage_name] = get_tasks(
                     tool, resources, stage, method, task_args, upstream_tasks
                 )
