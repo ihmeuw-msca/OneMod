@@ -15,7 +15,6 @@ TODO: Implement offset and priors input
 
 """
 
-import json
 from loguru import logger
 
 import numpy as np
@@ -89,7 +88,7 @@ class SpxmodStage(ModelStage):
         # Create and fit submodel
         logger.info(f"Fitting {self.name} submodel {subset_id}")
         train = data.query(
-            f"({self.config.test_column} == 0) & {self.config.observation_column}.notnull()"
+            f"({self.config["test_column"]} == 0) & {self.config["observation_column"]}.notnull()"
         )
         model = XModel.from_config(xmodel_args)
         model.fit(data=train, data_span=data, **self.config.xmodel_fit)
@@ -115,21 +114,21 @@ class SpxmodStage(ModelStage):
 
         # Create prediction, residuals, and coefs
         logger.info("Calculating predictions and residuals")
-        residual_calculator = ResidualCalculator(self.config.model_type)
-        data[self.config.prediction_column] = model.predict(data)
+        residual_calculator = ResidualCalculator(self.config["model_type"])
+        data[self.config["prediction_column"]] = model.predict(data)
         residuals = residual_calculator.get_residual(
             data,
-            self.config.prediction_column,
-            self.config.observation_column,
-            self.config.weights_column,
+            self.config["prediction_column"],
+            self.config["observation_column"],
+            self.config["weights_column"],
         )
         df_coef = self.get_coef(model)
 
         # Save results
         self.dataif.dump_output(
             pd.concat([data, residuals], axis=1)[
-                self.config.id_columns
-                + ["residual", "residual_se", self.config.prediction_column]
+                self.config["id_columns"]
+                + ["residual", "residual_se", self.config["prediction_column"]]
             ],
             f"submodels/{subset_id}/predictions.parquet",
         )
@@ -192,11 +191,10 @@ class SpxmodStage(ModelStage):
             selected_covs = pd.read_csv(covs_path)["cov"].tolist()
 
         # Get fixed covariates
-        upstream_stage = self.input["selected_covs"].stage
-        with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
-            fixed_covs = json.load(f)["stages"][upstream_stage]["config"][
-                "cov_fixed"
-            ]
+        fixed_covs = self.get_field(
+            field="config-cov_fixed",
+            stage_name=self.input["selected_covs"].stage,
+        )
         if "intercept" in fixed_covs:
             fixed_covs.remove("intercept")
         return selected_covs + fixed_covs
@@ -214,9 +212,9 @@ class SpxmodStage(ModelStage):
         """
         # Add global settings
         xmodel_args = self.config.xmodel.model_dump(exclude="spline_config")
-        xmodel_args["model_type"] = self.config.model_type
-        xmodel_args["obs"] = self.config.observation_column
-        xmodel_args["weights"] = self.config.weights_column
+        xmodel_args["model_type"] = self.config["model_type"]
+        xmodel_args["obs"] = self.config["observation_column"]
+        xmodel_args["weights"] = self.config["weights_column"]
 
         # Add covariate and spline variables
         if selected_covs:
@@ -225,8 +223,7 @@ class SpxmodStage(ModelStage):
             xmodel_args = self._add_spline_variables(xmodel_args, spline_vars)
 
         # Add coef_bounds and lam to all variables
-        with open(self.directory.parent / (self.pipeline + ".json"), "r") as f:
-            coef_bounds = json.load(f)["config"]["coef_bounds"]
+        coef_bounds = self.config["coef_bounds"]
         lam = xmodel_args.pop("lam")
         xmodel_args = self._add_prior_settings(xmodel_args, coef_bounds, lam)
 

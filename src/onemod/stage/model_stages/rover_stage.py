@@ -141,7 +141,7 @@ class RoverStage(ModelStage):
 
     def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
         """Select rover covariates."""
-        pipeline_groupby = self.get_pipeline_groupby()
+        pipeline_groupby = self.get_field("groupby")
         if pipeline_groupby is not None:
             selected_covs = []
             for subset, subset_summaries in summaries.groupby(pipeline_groupby):
