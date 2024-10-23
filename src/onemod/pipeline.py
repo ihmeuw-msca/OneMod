@@ -12,7 +12,7 @@ from pplkit.data.interface import DataInterface
 from pydantic import BaseModel, computed_field, validate_call
 
 from onemod.config import PipelineConfig
-from onemod.serializers.functions import serialize
+from onemod.serializers import serialize
 from onemod.stage import ModelStage, Stage
 from onemod.validation import ValidationErrorCollector, handle_error
 

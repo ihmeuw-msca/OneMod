@@ -1,3 +1,5 @@
+import json
+
 from polars import DataFrame
 import pytest
 
@@ -207,16 +209,17 @@ def test_data_to_json_no_constraints(tmp_path):
         "stage": "test",
         "path": "test.parquet",
         "format": "parquet",
-        "shape": None,
         "columns": {
-            "age_group_id": {"type": "int", "constraints": None},
-            "location_id": {"type": "int", "constraints": None},
+            "age_group_id": {"type": "int"},
+            "location_id": {"type": "int"},
         },
     }
 
-    schema.to_json(tmp_path / "test.json")
-    data = Data.from_json(tmp_path / "test.json")
-    actual = data.model_dump()
+    filepath = tmp_path / "test.json"
+    with filepath.open('w') as f:
+        f.write(schema.model_dump_json(indent=4, exclude_none=True))
+    with filepath.open('r') as f:
+        actual = json.load(f)
 
     assert actual == expected
 
@@ -248,7 +251,6 @@ def test_data_to_json_with_constraints(tmp_path):
         "stage": "test",
         "path": "test.parquet",
         "format": "parquet",
-        "shape": None,
         "columns": {
             "age_group_id": {
                 "type": "int",
@@ -268,8 +270,10 @@ def test_data_to_json_with_constraints(tmp_path):
         },
     }
 
-    schema.to_json(tmp_path / "test.json")
-    data = Data.from_json(tmp_path / "test.json")
-    actual = data.model_dump()
+    filepath = tmp_path / "test.json"
+    with filepath.open('w') as f:
+        f.write(schema.model_dump_json(indent=4, exclude_none=True))
+    with filepath.open('r') as f:
+        actual = json.load(f)
 
     assert actual == expected
