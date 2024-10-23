@@ -82,7 +82,7 @@ class SpxmodStage(ModelStage):
         # Create model parameters
         xmodel_args = self._build_xmodel_args(selected_covs, spline_vars)
         logger.info(
-            f"{len(xmodel_args['var_builders'])} var_builders created for {self.name}"
+            f"{len(xmodel_args['var_builders'])} variables created for {self.name}"
         )
 
         # Create and fit submodel
@@ -240,12 +240,14 @@ class SpxmodStage(ModelStage):
 
         # Add dummy space for any regular variables
         add_dummy = False
-        for var in xmodel_args["var_builders"]:
+        for var in xmodel_args["variables"]:
             if var["space"] is None:
                 var["space"] = "dummy"
                 add_dummy = True
         if add_dummy:
             xmodel_args["spaces"].append({"name": "dummy", "dims": []})
+
+        xmodel_args["var_builders"] = xmodel_args.pop("variables")
 
         return xmodel_args
 
@@ -263,15 +265,13 @@ class SpxmodStage(ModelStage):
             )
 
         # add variables for selected covs if not already included
-        var_builder_keys = [
-            (var_builder["name"], var_builder["space"])
-            for var_builder in xmodel_args["var_builders"]
+        variable_keys = [
+            (variable["name"], variable["space"])
+            for variable in xmodel_args["variables"]
         ]
         for cov in selected_covs:
-            if (cov, "age_mid") not in var_builder_keys:
-                xmodel_args["var_builders"].append(
-                    dict(name=cov, space="age_mid")
-                )
+            if (cov, "age_mid") not in variable_keys:
+                xmodel_args["variables"].append(dict(name=cov, space="age_mid"))
 
         return xmodel_args
 
@@ -280,26 +280,26 @@ class SpxmodStage(ModelStage):
         xmodel_args: dict, spline_vars: list[str]
     ) -> dict:
         """Add spline variables to spxmod model configuration."""
-        for var in xmodel_args["var_builders"].copy():
+        for var in xmodel_args["variables"].copy():
             if var["name"] == "spline":
-                xmodel_args["var_builders"].remove(var)
+                xmodel_args["variables"].remove(var)
                 for spline_var in spline_vars:
-                    spline_var_builder = var.copy()
-                    spline_var_builder["name"] = spline_var
-                    xmodel_args["var_builders"].append(spline_var_builder)
+                    spline_variable = var.copy()
+                    spline_variable["name"] = spline_var
+                    xmodel_args["variables"].append(spline_variable)
         return xmodel_args
 
     @staticmethod
     def _add_prior_settings(
         xmodel_args: dict, coef_bounds: dict, lam: float
     ) -> dict:
-        """Add coef_bounds and lam to all var_builders."""
-        for var_builder in xmodel_args["var_builders"]:
-            cov = var_builder["name"]
-            if "uprior" not in var_builder or var_builder["uprior"] is None:
-                var_builder["uprior"] = coef_bounds.get(cov)
-            if "lam" not in var_builder or var_builder["lam"] is None:
-                var_builder["lam"] = lam
+        """Add coef_bounds and lam to all variables."""
+        for variable in xmodel_args["variables"]:
+            cov = variable["name"]
+            if "uprior" not in variable or variable["uprior"] is None:
+                variable["uprior"] = coef_bounds.get(cov)
+            if "lam" not in variable or variable["lam"] is None:
+                variable["lam"] = lam
         return xmodel_args
 
     @staticmethod
@@ -319,9 +319,9 @@ class SpxmodStage(ModelStage):
 
         """
         df_coef = []
-        for var_builder in model.var_builders:
-            df_sub = var_builder.space.span.copy()
-            df_sub["cov"] = var_builder.name
+        for variable in model.var_builders:
+            df_sub = variable.space.span.copy()
+            df_sub["cov"] = variable.name
             df_coef.append(df_sub)
         df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
         df_coef["coef"] = model.core.opt_coefs

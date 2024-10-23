@@ -59,7 +59,7 @@ class SpxmodSpaceConfig(Config):
             self.name = "*".join(dim.name for dim in self.dims)
 
 
-class SpxmodVariableBuilderConfig(Config):
+class SpxmodVariableConfig(Config):
     """SpXMod variable settings.
 
     Attributes
@@ -211,7 +211,7 @@ class SpxmodModelConfig(Config):
     """
 
     spaces: list[SpxmodSpaceConfig] = []
-    var_builders: list[SpxmodVariableBuilderConfig]
+    variables: list[SpxmodVariableConfig]
     param_specs: dict[str, Any] = {}
     spline_config: SpxmodSplineConfig | None = None
     lam: float = Field(ge=0, default=0)
