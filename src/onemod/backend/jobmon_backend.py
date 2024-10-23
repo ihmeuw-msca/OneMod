@@ -173,9 +173,10 @@ def get_upstream_tasks(
     """Get upstream stage tasks."""
     upstream_tasks = []
     for upstream_name in stage.dependencies:
-        if upstream_name in task_dict:
+        upstream = stages[upstream_name]
+        if method not in upstream.skip:
             if (
-                isinstance(upstream := stages[upstream_name], ModelStage)
+                isinstance(upstream, ModelStage)
                 and method in upstream.collect_after
             ):
                 upstream_tasks.append(task_dict[upstream_name][-1])
@@ -210,6 +211,7 @@ def evaluate_with_jobmon(
 
     TODO: Optional stage-specific Python environments
     TODO: User-defined max_attempts
+    TODO: Could dependencies be method specific?
 
     """
     # Get tool
