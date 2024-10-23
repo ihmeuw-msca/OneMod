@@ -7,7 +7,7 @@ TODO: Update docstrings to clarify what spxmod defaults are (e.g., lam, priors)
 
 from typing import Any, Literal
 
-from pydantic import ConfigDict, Field
+from pydantic import Field
 from typing_extensions import Annotated
 
 from onemod.config import Config, ModelConfig
@@ -29,8 +29,6 @@ class SpxmodDimensionConfig(Config):
 
     """
 
-    model_config = ConfigDict(frozen=True)
-
     name: str
     dim_type: Literal["categorical", "numerical"]
 
@@ -43,8 +41,8 @@ class SpxmodSpaceConfig(Config):
     name : str or None, optional
         Space name. If None, the name is set to the product of the
         dimension names. Default is None.
-    dims : set of SpXModDimensionConfig
-        Set of dimension settings.
+    dims : list of SpXModDimensionConfig
+        List of dimension settings.
 
     See Also
     --------
@@ -53,7 +51,7 @@ class SpxmodSpaceConfig(Config):
     """
 
     name: str | None = None
-    dims: set[SpxmodDimensionConfig]
+    dims: list[SpxmodDimensionConfig]
 
     def model_post_init(self, *args, **kwargs) -> None:
         """Set space name."""
@@ -61,7 +59,7 @@ class SpxmodSpaceConfig(Config):
             self.name = "*".join(dim.name for dim in self.dims)
 
 
-class SpxmodVariableConfig(Config):
+class SpxmodVariableBuilderConfig(Config):
     """SpXMod variable settings.
 
     Attributes
@@ -190,10 +188,10 @@ class SpxmodModelConfig(Config):
 
     Attributes
     ----------
-    spaces : set[SpxmodSpaceConfig], optional
-        Set of SpXMod space settings. Default is an empty set.
-    variables : set[SpxmodVariableConfig]
-        Set of SpXMod variable settings.
+    spaces : list[SpxmodSpaceConfig], optional
+        List of SpXMod space settings. Default is an empty list.
+    var_builders : list[SpxmodVariableBuilderConfig]
+        List of SpXMod variable settings.
     param_specs : dict, optional
         Additional parameter specifications for the model.
         This argument is used `here https://github.com/ihmeuw-msca/regmod/blob/release/0.1.2/src/regmod/models/model.py#L133>`_.
@@ -213,7 +211,7 @@ class SpxmodModelConfig(Config):
     """
 
     spaces: list[SpxmodSpaceConfig] = []
-    variables: list[SpxmodVariableConfig]
+    var_builders: list[SpxmodVariableBuilderConfig]
     param_specs: dict[str, Any] = {}
     spline_config: SpxmodSplineConfig | None = None
     lam: float = Field(ge=0, default=0)

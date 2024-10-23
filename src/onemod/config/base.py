@@ -3,7 +3,7 @@
 from abc import ABC
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, validate_call
 
 
 class Config(BaseModel, ABC):
@@ -124,11 +124,21 @@ class StageConfig(Config):
     coef_bounds: dict[str, tuple[float, float]] | None = None
     _global: PipelineConfig
 
+    @validate_call
     def inherit(self, config: PipelineConfig) -> None:
         """Inherit global settings from pipeline."""
         self._global = config
 
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get setting or global setting if not None, else default."""
+        if not self.__contains__(key):
+            return default
+        if (value := getattr(self, key)) is None:
+            return self._global.get(key, default)
+        return value
+
     def __getitem__(self, key: str) -> Any:
+        """Get setting if not None, else global setting."""
         if not self.__contains__(key):
             raise KeyError(f"Invalid config item: {key}")
         if (value := getattr(self, key)) is None:

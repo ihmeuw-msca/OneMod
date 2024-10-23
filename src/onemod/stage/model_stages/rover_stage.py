@@ -11,9 +11,9 @@ Notes
 """
 
 import warnings
-from loguru import logger
 
 import pandas as pd
+from loguru import logger
 from modrover.api import Rover
 
 from onemod.config import RoverConfig
@@ -49,7 +49,7 @@ class RoverStage(ModelStage):
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
         data = self.get_stage_subset(subset_id).query(
-            f"{self.config.test_column} == 0"
+            f"{self.config['test_column']} == 0"
         )
 
         if len(data) > 0:
@@ -57,12 +57,12 @@ class RoverStage(ModelStage):
 
             # Create submodel
             submodel = Rover(
-                obs=self.config.observation_column,
-                model_type=self.config.model_type,
-                cov_fixed=list(self.config.cov_fixed),
-                cov_exploring=list(self.config.cov_exploring),
-                weights=self.config.weights_column,
-                holdouts=list(self.config.holdout_columns),
+                obs=self.config["observation_column"],
+                model_type=self.config["model_type"],
+                cov_fixed=list(self.config["cov_fixed"]),
+                cov_exploring=list(self.config["cov_exploring"]),
+                weights=self.config["weights_column"],
+                holdouts=list(self.config["holdout_columns"]),
             )
 
             # Fit submodel
@@ -71,7 +71,7 @@ class RoverStage(ModelStage):
                 strategies=list(self.config.strategies),
                 top_pct_score=self.config.top_pct_score,
                 top_pct_learner=self.config.top_pct_learner,
-                coef_bounds=self.config.coef_bounds or {},
+                coef_bounds=self.config["coef_bounds"] or {},
             )
 
             # Save results

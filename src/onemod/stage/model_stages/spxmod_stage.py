@@ -73,7 +73,7 @@ class SpxmodStage(ModelStage):
         # Get covariates from upstream stage
         selected_covs = []
         if "selected_covs" in self.input:
-            selected_covs = self._get_covs(data)
+            selected_covs = self._get_covs(subset_id)
             logger.info(
                 f"Using covariates selected by "
                 f"{self.input['selected_covs'].stage}: {selected_covs}"
@@ -106,8 +106,17 @@ class SpxmodStage(ModelStage):
             Predictions with residual information.
 
         """
-        # Load data
+        # TODO: Make function to do this since in both places
+        # Load data and filter by subset
         data = self.get_stage_subset(subset_id)
+
+        # Add spline basis to data
+        if self.config.xmodel.spline_config is not None:
+            spline_config = self.config.xmodel.spline_config.model_dump()
+            col_name = spline_config.pop("name")
+            logger.info(f"Getting spline basis for {col_name}")
+            spline_basis = self._get_spline_basis(data[col_name], spline_config)
+            data = pd.concat([data, spline_basis], axis=1)
 
         # Load submodel
         model = self.dataif.load_output(f"submodels/{subset_id}/model.pkl")
@@ -122,17 +131,17 @@ class SpxmodStage(ModelStage):
             self.config["observation_column"],
             self.config["weights_column"],
         )
-        df_coef = self.get_coef(model)
+        coefs = self._get_coef(model)
 
         # Save results
         self.dataif.dump_output(
             pd.concat([data, residuals], axis=1)[
-                self.config["id_columns"]
+                list(self.config["id_columns"])
                 + ["residual", "residual_se", self.config["prediction_column"]]
             ],
             f"submodels/{subset_id}/predictions.parquet",
         )
-        self.dataif.dump_output(df_coef, f"submodels/{subset_id}/coef.csv")
+        self.dataif.dump_output(coefs, f"submodels/{subset_id}/coef.csv")
 
     def collect(self) -> None:
         """Collect spxmod submodel results.
@@ -182,13 +191,15 @@ class SpxmodStage(ModelStage):
     def _get_covs(self, subset_id: int) -> list[str]:
         """Get covariates from upstream stage."""
         # Load covariates and filter by subset
-        covs_path = self.input["selected_covs"].path
-        if pipeline_groupby := self.get_pipeline_groupby():
+        selected_covs = self.dataif.load_selected_covs()
+        if pipeline_groupby := self.get_field("groupby"):
             selected_covs = get_subset(
-                covs_path, subset_id, id_names=pipeline_groupby
+                selected_covs,
+                self.dataif.load_output("subsets.csv"),
+                subset_id,
+                id_names=pipeline_groupby,
             )
-        else:
-            selected_covs = pd.read_csv(covs_path)["cov"].tolist()
+        selected_covs = selected_covs["cov"].tolist()
 
         # Get fixed covariates
         fixed_covs = self.get_field(
@@ -223,7 +234,7 @@ class SpxmodStage(ModelStage):
             xmodel_args = self._add_spline_variables(xmodel_args, spline_vars)
 
         # Add coef_bounds and lam to all variables
-        coef_bounds = self.config["coef_bounds"]
+        coef_bounds = self.config["coef_bounds"] or {}
         lam = xmodel_args.pop("lam")
         xmodel_args = self._add_prior_settings(xmodel_args, coef_bounds, lam)
 

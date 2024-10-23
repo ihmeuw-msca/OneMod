@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
@@ -17,7 +18,6 @@ import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
 from onemod.dtypes import Data
 from onemod.io import Input, Output
-from onemod.serializers.functions import load_config
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error
@@ -138,18 +138,23 @@ class Stage(BaseModel, ABC):
             Stage instance.
 
         """
+        with open(config_path, "r") as file:
+            pipeline_config = json.load(file)
         try:
-            config = load_config(config_path)["stages"][stage_name]
+            stage_config = pipeline_config["stages"][stage_name]
         except KeyError:
-            f"Config does not contain a stage named '{stage_name}'"
-        stage = cls(**config)
+            raise AttributeError(
+                f"{pipeline_config["name"]} does not contain a stage named '{stage_name}'"
+            )
+        stage = cls(**stage_config)
+        stage.config.inherit(pipeline_config["config"])
+        if "module" in stage_config:
+            stage._module = stage_config["module"]
+        if "crossby" in stage_config:
+            stage._crossby = stage_config["crossby"]
+        if "input" in stage_config:
+            stage(**stage_config["input"])
         stage.set_dataif(config_path)
-        if "module" in config:
-            stage._module = config["module"]
-        if "crossby" in config:
-            stage._crossby = config["crossby"]
-        if "input" in config:
-            stage(**config["input"])
         return stage
 
     @validate_call
@@ -261,8 +266,8 @@ class Stage(BaseModel, ABC):
             Field item.
 
         """
-        # Using cached load_config instead of self.dataif.load_config
-        config = load_config(self.dataif.config)
+        with open(self.dataif.config, "r") as file:
+            config = json.load(file)
         if stage_name is not None:
             config = config["stages"][stage_name]
         for key in field.split("-"):

@@ -143,11 +143,10 @@ def evaluate(
 
     """
     if stage_name is None:
-        pipeline = load_pipeline(config)
-        pipeline.evaluate(method, backend, **kwargs)
+        model = load_pipeline(config)
     else:
-        stage = load_stage(config, stage_name)
-        stage.evaluate(method, backend, config=config, **kwargs)
+        model = load_stage(config, stage_name)
+    model.evaluate(method, backend, **kwargs)
 
 
 def call_function(method: str, **kwargs):
@@ -160,7 +159,7 @@ def call_function(method: str, **kwargs):
 
 
 def main():
-    fire.Fire(evaluate)
+    fire.Fire(call_function)
 
 
 if __name__ == "__main__":

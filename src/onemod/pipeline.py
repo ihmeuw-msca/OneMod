@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import deque
 from pathlib import Path
@@ -11,7 +12,7 @@ from pplkit.data.interface import DataInterface
 from pydantic import BaseModel, computed_field, validate_call
 
 from onemod.config import PipelineConfig
-from onemod.serializers.functions import dump_pipeline, load_config, serialize
+from onemod.serializers.functions import serialize
 from onemod.stage import ModelStage, Stage
 from onemod.validation import ValidationErrorCollector, handle_error
 
@@ -81,7 +82,8 @@ class Pipeline(BaseModel):
             Pipeline instance.
 
         """
-        config = load_config(config_path)
+        with open(config_path, "r") as file:
+            config = json.load(file)
 
         stages = config.pop("stages", {})
 
@@ -108,7 +110,12 @@ class Pipeline(BaseModel):
 
         """
         config_path = config_path or self.directory / (self.name + ".json")
-        dump_pipeline(self, config_path)
+        with open(config_path, "w") as file:
+            file.write(
+                self.model_dump_json(
+                    indent=2, exclude_none=True, serialize_as_any=True
+                )
+            )
 
     def add_stages(self, stages: list[Stage]) -> None:
         """Add stages to pipeline.
