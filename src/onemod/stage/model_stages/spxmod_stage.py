@@ -11,7 +11,7 @@ Notes
 
 TODO: Update for new spxmod version with splines
 TODO: Make selected_covs more flexible, not hard-coded to age_mid
-TODO: Implement offset and priors input
+TODO: Implement priors input
 
 """
 
@@ -41,9 +41,26 @@ class SpxmodStage(ModelStage):
     _collect_after: set[str] = {"run", "predict"}
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
-        """Run spxmod submodel."""
-        self.fit(subset_id)
-        self.predict(subset_id)
+        """Run spxmod submodel.
+
+        Output
+        ------
+        model.pkl
+            SpXMod model instance for diagnostics.
+        coef.csv
+            Model coefficients for different age groups.
+        predictions.parquet
+            Predictions with residual information.
+
+        """
+        # Load data and filter by subset
+        data, spline_vars, offset = self._get_submodel_data(subset_id)
+
+        # Create and fit submodel
+        model = self._fit(subset_id, data, spline_vars, offset)
+
+        # Create submodel predictions
+        self._predict(subset_id, data, model)
 
     def fit(self, subset_id: int, *args, **kwargs) -> None:
         """Fit spxmod submodel.
@@ -58,29 +75,32 @@ class SpxmodStage(ModelStage):
         """
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id)
+        data, spline_vars, offset = self._get_submodel_data(subset_id)
 
-        # Add spline basis to data
-        spline_vars = []
-        if self.config.xmodel.spline_config is not None:
-            spline_config = self.config.xmodel.spline_config.model_dump()
-            col_name = spline_config.pop("name")
-            logger.info(f"Getting spline basis for {col_name}")
-            spline_basis = self._get_spline_basis(data[col_name], spline_config)
-            spline_vars = spline_basis.columns.tolist()
-            data = pd.concat([data, spline_basis], axis=1)
+        # Create and fit submodel
+        _ = self._fit(subset_id, data, spline_vars, offset)
 
+    def _fit(
+        self,
+        subset_id: int,
+        data: pd.DataFrame,
+        spline_vars: list[str],
+        offset: bool,
+    ) -> XModel:
+        """Fit spxmod submodel."""
         # Get covariates from upstream stage
         selected_covs = []
         if "selected_covs" in self.input:
             selected_covs = self._get_covs(subset_id)
             logger.info(
-                f"Using covariates selected by "
+                f"Using covariates from "
                 f"{self.input['selected_covs'].stage}: {selected_covs}"
             )
 
         # Create model parameters
-        xmodel_args = self._build_xmodel_args(selected_covs, spline_vars)
+        xmodel_args = self._build_xmodel_args(
+            spline_vars, selected_covs, offset
+        )
         logger.info(
             f"{len(xmodel_args['var_builders'])} variables created for {self.name}"
         )
@@ -93,9 +113,14 @@ class SpxmodStage(ModelStage):
         model = XModel.from_config(xmodel_args)
         model.fit(data=train, data_span=data, **self.config.xmodel_fit)
 
-        # Save submodel
+        # Save submodel and coefficients
         logger.info(f"Saving {self.name} submodel {subset_id}")
         self.dataif.dump_output(model, f"submodels/{subset_id}/model.pkl")
+        self.dataif.dump_output(
+            self._get_coef(model), f"submodels/{subset_id}/coef.csv"
+        )
+
+        return model
 
     def predict(self, subset_id: int, *args, **kwargs) -> None:
         """Create spxmod submodel predictions.
@@ -106,23 +131,24 @@ class SpxmodStage(ModelStage):
             Predictions with residual information.
 
         """
-        # TODO: Make function to do this since in both places
         # Load data and filter by subset
-        data = self.get_stage_subset(subset_id)
-
-        # Add spline basis to data
-        if self.config.xmodel.spline_config is not None:
-            spline_config = self.config.xmodel.spline_config.model_dump()
-            col_name = spline_config.pop("name")
-            logger.info(f"Getting spline basis for {col_name}")
-            spline_basis = self._get_spline_basis(data[col_name], spline_config)
-            data = pd.concat([data, spline_basis], axis=1)
+        data, _, _ = self._get_submodel_data(subset_id)
 
         # Load submodel
+        logger.info(f"Loading {self.name} submodel {subset_id}")
         model = self.dataif.load_output(f"submodels/{subset_id}/model.pkl")
 
+        # Create submodel predictions
+        self._predict(subset_id, data, model)
+
+    def _predict(
+        self, subset_id: int, data: pd.DataFrame, model: XModel
+    ) -> None:
+        """Create spxmod submodel predictions."""
         # Create prediction, residuals, and coefs
-        logger.info("Calculating predictions and residuals")
+        logger.info(
+            f"Creating predictions for {self.name} submodel {subset_id}"
+        )
         residual_calculator = ResidualCalculator(self.config["model_type"])
         data[self.config["prediction_column"]] = model.predict(data)
         residuals = residual_calculator.get_residual(
@@ -131,9 +157,9 @@ class SpxmodStage(ModelStage):
             self.config["observation_column"],
             self.config["weights_column"],
         )
-        coefs = self._get_coef(model)
 
         # Save results
+        logger.info(f"Saving predictions for {self.name} submodel {subset_id}")
         self.dataif.dump_output(
             pd.concat([data, residuals], axis=1)[
                 list(self.config["id_columns"])
@@ -141,7 +167,6 @@ class SpxmodStage(ModelStage):
             ],
             f"submodels/{subset_id}/predictions.parquet",
         )
-        self.dataif.dump_output(coefs, f"submodels/{subset_id}/coef.csv")
 
     def collect(self) -> None:
         """Collect spxmod submodel results.
@@ -153,6 +178,7 @@ class SpxmodStage(ModelStage):
 
         """
         # Collect submodel predictions
+        logger.info(f"Collecting {self.name} submodel results")
         self.dataif.dump_output(
             pd.concat(
                 [
@@ -166,6 +192,40 @@ class SpxmodStage(ModelStage):
         )
 
         # TODO: Plot coefficients
+
+    def _get_submodel_data(
+        self, subset_id: int
+    ) -> tuple[pd.DataFrame, list[str], bool]:
+        """Load submodel data."""
+        # Load data and filter by subset
+        logger.info(f"Loading {self.name} data subset {subset_id}")
+        data = self.get_stage_subset(subset_id)
+
+        # Add spline basis to data
+        spline_vars = []
+        if self.config.xmodel.spline_config is not None:
+            spline_config = self.config.xmodel.spline_config.model_dump()
+            col_name = spline_config.pop("name")
+            logger.info(f"Getting spline basis for {col_name}")
+            spline_basis = self._get_spline_basis(data[col_name], spline_config)
+            spline_vars = spline_basis.columns.tolist()
+            data = pd.concat([data, spline_basis], axis=1)
+
+        # Add offset to data
+        offset = False
+        if "offset" in self.input:
+            logger.info(f"Adding offset from {self.input["offset"].stage}")
+            data = data.merge(
+                right=self.dataif.load_offset(
+                    columns=list(self.config["id_columns"])
+                    + [self.config["prediction_column"]]
+                ).rename(columns={self.config["prediction_column"]: "offset"}),
+                on=list(self.config["id_columns"]),
+                how="left",
+            )
+            offset = True
+
+        return data, spline_vars, offset
 
     @staticmethod
     def _get_spline_basis(
@@ -211,7 +271,7 @@ class SpxmodStage(ModelStage):
         return selected_covs + fixed_covs
 
     def _build_xmodel_args(
-        self, selected_covs: list[str], spline_vars: list[str]
+        self, spline_vars: list[str], selected_covs: list[str], offset: bool
     ) -> dict:
         """Format config data for spxmod xmodel.
 
@@ -227,11 +287,13 @@ class SpxmodStage(ModelStage):
         xmodel_args["obs"] = self.config["observation_column"]
         xmodel_args["weights"] = self.config["weights_column"]
 
-        # Add covariate and spline variables
-        if selected_covs:
-            xmodel_args = self._add_selected_covs(xmodel_args, selected_covs)
+        # Add spline variables, selected_covs, and offset
         if spline_vars:
             xmodel_args = self._add_spline_variables(xmodel_args, spline_vars)
+        if selected_covs:
+            xmodel_args = self._add_selected_covs(xmodel_args, selected_covs)
+        if offset:
+            xmodel_args["param_specs"] = {"offset": "offset"}
 
         # Add coef_bounds and lam to all variables
         coef_bounds = self.config["coef_bounds"] or {}
