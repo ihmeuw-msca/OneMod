@@ -53,4 +53,4 @@ def _evaluate_stage(
         if method in stage.collect_after:
             stage.collect()
     else:
-        stage.__getattribute__(method)()
+        stage.evaluate(method=method)
