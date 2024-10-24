@@ -108,7 +108,11 @@ class Stage(BaseModel, ABC):
     @property
     def input(self) -> Input | None:
         if self._input is None:
-            raise AttributeError(f"{self.name} input has not been set")
+            self._input = Input(
+                stage=self.name,
+                required=self._required_input,
+                optional=self._optional_input,
+            )
         return self._input
 
     @cached_property
@@ -291,12 +295,6 @@ class Stage(BaseModel, ABC):
     @validate_call
     def __call__(self, **input: Data | Path) -> Output:
         """Define stage dependencies."""
-        if self._input is None:
-            self._input = Input(
-                stage=self.name,
-                required=self._required_input,
-                optional=self._optional_input,
-            )
         self.input.check_missing({**self.input.items, **input})
         self.input.update(input)
         return self.output
@@ -402,7 +400,7 @@ class ModelStage(Stage, ABC):
         if params is not None:
             self._crossby = set(params.drop(columns="param_id").columns)
             self._param_ids = set(params["param_id"])
-            self.dataif.dump_output("parameters.csv")
+            self.dataif.dump_output(params, "parameters.csv")
 
     def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
