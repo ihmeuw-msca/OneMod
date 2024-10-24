@@ -2,7 +2,13 @@ from typing import List
 
 from pydantic import Field
 
-from onemod.config import KregConfig, ModelConfig, PreprocessingConfig, RoverConfig, SpxmodConfig
+from onemod.config import (
+    KregConfig,
+    ModelConfig,
+    PreprocessingConfig,
+    RoverConfig,
+    SpxmodConfig,
+)
 from onemod.stage import ModelStage, Stage
 
 
@@ -18,7 +24,7 @@ class DummyCustomStage(ModelStage):
 
     config: CustomConfig = CustomConfig()
     _required_input: set[str] = {"observations.parquet", "predictions.parquet"}
-    
+
     # Dummy-specific attributes
     log: List[str] = Field(default_factory=list, exclude=True)
 
@@ -65,7 +71,7 @@ class DummyKregStage(ModelStage):
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
-    
+
     # Dummy-specific attributes
     log: List[str] = Field(default_factory=list, exclude=True)
 
@@ -116,7 +122,7 @@ class DummyPreprocessingStage(Stage):
         "location_metadata.parquet",
     }
     _output: set[str] = {"data.parquet"}
-    
+
     # Dummy-specific attributes
     log: List[str] = Field(default_factory=list, exclude=True)
 
@@ -137,7 +143,7 @@ class DummyRoverStage(ModelStage):
     _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _output: set[str] = {"selected_covs.csv"}
-    
+
     # Dummy-specific attributes
     log: List[str] = Field(default_factory=list, exclude=True)
 
@@ -185,7 +191,7 @@ class DummySpxmodStage(ModelStage):
         "priors.pkl",
     }
     _output: set[str] = {"predictions.parquet", "model.pkl"}
-    
+
     # Dummy-specific attributes
     log: List[str] = Field(default_factory=list, exclude=True)
 

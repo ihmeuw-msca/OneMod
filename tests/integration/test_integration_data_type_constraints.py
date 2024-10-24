@@ -1,7 +1,7 @@
 import json
 
-from polars import DataFrame
 import pytest
+from polars import DataFrame
 
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
@@ -216,9 +216,9 @@ def test_data_to_json_no_constraints(tmp_path):
     }
 
     filepath = tmp_path / "test.json"
-    with filepath.open('w') as f:
+    with filepath.open("w") as f:
         f.write(schema.model_dump_json(indent=4, exclude_none=True))
-    with filepath.open('r') as f:
+    with filepath.open("r") as f:
         actual = json.load(f)
 
     assert actual == expected
@@ -271,9 +271,9 @@ def test_data_to_json_with_constraints(tmp_path):
     }
 
     filepath = tmp_path / "test.json"
-    with filepath.open('w') as f:
+    with filepath.open("w") as f:
         f.write(schema.model_dump_json(indent=4, exclude_none=True))
-    with filepath.open('r') as f:
+    with filepath.open("r") as f:
         actual = json.load(f)
 
     assert actual == expected
