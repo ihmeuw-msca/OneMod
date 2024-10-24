@@ -386,7 +386,7 @@ class ModelStage(Stage, ABC):
             self.groupby, self.dataif.load(data, columns=self.groupby)
         )
         self._subset_ids = set(subsets["subset_id"])
-        self.dataif.dump_output(subsets, "subsets.csv", index=False)
+        self.dataif.dump_output(subsets, "subsets.csv")
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
@@ -402,7 +402,7 @@ class ModelStage(Stage, ABC):
         if params is not None:
             self._crossby = set(params.drop(columns="param_id").columns)
             self._param_ids = set(params["param_id"])
-            self.dataif.dump_output("parameters.csv", index=False)
+            self.dataif.dump_output("parameters.csv")
 
     def set_params(self, param_id: int) -> None:
         """Set stage parameters."""

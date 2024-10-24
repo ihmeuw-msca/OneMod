@@ -77,17 +77,13 @@ class RoverStage(ModelStage):
             # Save results
             logger.info(f"Saving {self.name} submodel {subset_id} results")
             self.dataif.dump_output(
-                submodel.learner_info,
-                f"submodels/{subset_id}/learner_info.csv",
-                index=False,
+                submodel.learner_info, f"submodels/{subset_id}/learner_info.csv"
             )
             self.dataif.dump_output(
                 submodel, f"submodels/{subset_id}/model.pkl"
             )
             self.dataif.dump_output(
-                submodel.summary,
-                f"submodels/{subset_id}/summary.csv",
-                index=False,
+                submodel.summary, f"submodels/{subset_id}/summary.csv"
             )
         else:
             logger.info(
@@ -109,12 +105,12 @@ class RoverStage(ModelStage):
         # Concatenate summaries
         logger.info(f"Concatenating {self.name} coefficient summaries")
         summaries = self._get_rover_summaries()
-        self.dataif.dump_output(summaries, "summaries.csv", index=False)
+        self.dataif.dump_output(summaries, "summaries.csv")
 
         # Select covariates
         logger.info(f"Selecting {self.name} covariates")
         selected_covs = self._get_selected_covs(summaries)
-        self.dataif.dump_output(selected_covs, "selected_covs.csv", index=False)
+        self.dataif.dump_output(selected_covs, "selected_covs.csv")
 
         # TODO: Plot covariates
 
