@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import deque
-from itertools import product
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, computed_field, field_serializer, validate_call
+from pydantic import BaseModel, computed_field, validate_call
 
 from onemod.config import PipelineConfig
-from onemod.serialization import deserialize, serialize
-from onemod.stage import Stage, ModelStage
+from onemod.serialization import serialize
+from onemod.stage import ModelStage, Stage
 from onemod.validation import ValidationErrorCollector, handle_error
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Pipeline(BaseModel):
     """Pipeline class.
 
-    Attributes
+    Parameters
     ----------
     name : str
         Pipeline name.
@@ -33,21 +33,16 @@ class Pipeline(BaseModel):
         Input data used to create data subsets. Required for pipeline or
         stage `groupby` attribute. Default is None.
     groupby : set of str or None, optional
-        ID names used to create data subsets. Default is None.
+        Column names used to create data subsets. Default is None.
 
     """
 
     name: str
     config: PipelineConfig
-    directory: Path  # TODO: replace with DataInterface
+    directory: Path
     data: Path | None = None
     groupby: set[str] | None = None
-    _stages: dict[str, Stage] = {}  # set by Pipeline.add_stage
-
-    @computed_field
-    @property
-    def stages(self) -> dict[str, Stage]:
-        return self._stages
+    _stages: dict[str, Stage] = {}  # set by add_stage
 
     @computed_field
     @property
@@ -56,11 +51,10 @@ class Pipeline(BaseModel):
             stage.name: stage.dependencies for stage in self.stages.values()
         }
 
-    @field_serializer("groupby")
-    def serialize_groupby(
-        self, value: set[str] | None, info
-    ) -> list[str] | None:
-        return list(value) if value is not None else None
+    @computed_field
+    @property
+    def stages(self) -> dict[str, Stage]:
+        return self._stages
 
     def model_post_init(self, *args, **kwargs) -> None:
         if not self.directory.exists():
@@ -81,7 +75,8 @@ class Pipeline(BaseModel):
             Pipeline instance.
 
         """
-        config = deserialize(config_path)
+        with open(config_path, "r") as file:
+            config = json.load(file)
 
         stages = config.pop("stages", {})
 
@@ -91,10 +86,7 @@ class Pipeline(BaseModel):
             from onemod.main import load_stage
 
             pipeline.add_stages(
-                [
-                    load_stage(config_path, stage, from_pipeline=True)
-                    for stage in stages
-                ]
+                [load_stage(config_path, stage) for stage in stages]
             )
 
         return pipeline
@@ -111,7 +103,12 @@ class Pipeline(BaseModel):
 
         """
         config_path = config_path or self.directory / (self.name + ".json")
-        serialize(self, config_path)
+        with open(config_path, "w") as file:
+            file.write(
+                self.model_dump_json(
+                    indent=2, exclude_none=True, serialize_as_any=True
+                )
+            )
 
     def add_stages(self, stages: list[Stage]) -> None:
         """Add stages to pipeline.
@@ -133,33 +130,11 @@ class Pipeline(BaseModel):
         stage : Stage
             Stage to add to the pipeline.
 
-        Notes
-        -----
-        * Maybe move most of this into pipeline.build?
-        * Some steps may be unnecessary if stage loaded from previously
-          compiled config (update config, set directory, create subsets
-          and params)
-
         """
         if stage.name in self.stages:
-            raise ValueError(f"stage '{stage.name}' already exists")
-        stage.config.update(self.config)
-        stage.directory = self.directory / stage.name
+            raise ValueError(f"Stage '{stage.name}' already exists")
 
-        # Create data subsets
-        if isinstance(stage, ModelStage):
-            if self.groupby is not None:
-                stage.groupby.update(self.groupby)
-            if stage.groupby:
-                if self.data is None:
-                    raise AttributeError("data is required for groupby")
-                stage.create_stage_subsets(self.data)
-
-        # Create parameter sets
-        if isinstance(stage, ModelStage):
-            if stage.config.crossable_params:
-                stage.create_stage_params()
-
+        stage.config.inherit(self.config)
         self._stages[stage.name] = stage
 
     def get_execution_order(self) -> list[str]:
@@ -236,9 +211,8 @@ class Pipeline(BaseModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self, config_path: Path | str | None = None) -> None:
-        """Assemble the pipeline, perform build-time validation, and save it to JSON."""
-        config_path = config_path or self.directory / f"{self.name}.json"
+    def build(self) -> None:
+        """Assemble pipeline, perform build-time validation, and save to JSON."""
         collector = ValidationErrorCollector()
 
         for stage in self.stages.values():
@@ -250,16 +224,28 @@ class Pipeline(BaseModel):
             self.save_validation_report(collector)
             collector.raise_errors()
 
-        pipeline_dict = self.model_dump()
-        pipeline_dict["stages"] = {}
-        for stage_name, stage in self.stages.items():
-            pipeline_dict["stages"][stage_name] = stage.model_dump()
-        pipeline_dict["dependencies"] = {
-            stage_name: list(dependencies)
-            for stage_name, dependencies in self.dependencies.items()
-        }
-        
-        serialize(pipeline_dict, config_path)
+        config_path = self.directory / (self.name + ".json")
+        for stage in self.stages.values():
+            stage.set_dataif(config_path)
+
+            # Create data subsets
+            if isinstance(stage, ModelStage):
+                if self.groupby is not None:
+                    if stage.groupby is None:
+                        stage.groupby = self.groupby
+                    else:
+                        stage.groupby.update(self.groupby)
+                if stage.groupby:
+                    if self.data is None:
+                        raise AttributeError("Data is required for groupby")
+                    stage.create_stage_subsets(self.data)
+
+            # Create parameter sets
+            if isinstance(stage, ModelStage):
+                if stage.config.crossable_params:
+                    stage.create_stage_params()
+
+        self.to_json(config_path)
 
     def save_validation_report(
         self, collector: ValidationErrorCollector
@@ -274,7 +260,7 @@ class Pipeline(BaseModel):
         self,
         method: Literal["run", "fit", "predict"] = "run",
         backend: Literal["local", "jobmon"] = "local",
-        *args,
+        build: bool = True,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
@@ -286,48 +272,62 @@ class Pipeline(BaseModel):
         backend : str, optional
             How to evaluate the method. Default is 'local'.
 
+        Other Parameters
+        ----------------
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path or str, optional
+            Path to resources yaml file. Required if `backend` is
+            'jobmon'.
+
         TODO: Add options to run subset of stages
         TODO: Add options to run subset of IDs
 
         """
+        if build:
+            self.build()
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 
-            evaluate_with_jobmon(model=self, method=method, *args, **kwargs)
+            evaluate_with_jobmon(model=self, method=method, **kwargs)
         else:
-            for stage_name in self.get_execution_order():
-                stage = self.stages[stage_name]
-                if method not in stage.skip:
-                    subset_ids = getattr(stage, "subset_ids", None)
-                    param_ids = getattr(stage, "param_ids", None)
-                    if subset_ids is not None or param_ids is not None:
-                        for subset_id, param_id in product(
-                            subset_ids or [None], param_ids or [None]
-                        ):
-                            stage.evaluate(
-                                method=method,
-                                subset_id=subset_id,
-                                param_id=param_id,
-                            )
-                        stage.collect()
-                    else:
-                        stage.evaluate(method=method)
+            from onemod.backend import evaluate_local
 
-    def run(self) -> None:
+            evaluate_local(model=self, method=method)
+
+    def run(
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        build: bool = True,
+        **kwargs,
+    ) -> None:
         """Run pipeline."""
-        self.evaluate(method="run")
+        self.evaluate(method="run", backend=backend, build=build, **kwargs)
 
-    def fit(self) -> None:
+    def fit(
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        build: bool = True,
+        **kwargs,
+    ) -> None:
         """Fit pipeline model."""
-        self.evaluate(method="fit")
+        self.evaluate(method="fit", backend=backend, build=build, **kwargs)
 
-    def predict(self) -> None:
+    def predict(
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        build: bool = True,
+        **kwargs,
+    ) -> None:
         """Predict pipeline model."""
-        self.evaluate(method="predict")
+        self.evaluate(method="predict", backend=backend, build=build, **kwargs)
 
     def resume(self) -> None:
         """Resume pipeline."""
         raise NotImplementedError()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.name}, stages={list(self.stages.values())})"
+        return (
+            f"{type(self).__name__}({self.name},"
+            f" stages={list(self.stages.values())})"
+        )

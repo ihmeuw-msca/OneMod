@@ -44,14 +44,15 @@ class Data(BaseModel):
                 collector,
             )
         else:
-            if kind == "input" and not self.path.exists():
-                handle_error(
-                    self.stage,
-                    "Data validation",
-                    FileNotFoundError,
-                    f"File {self.path} does not exist.",
-                    collector,
-                )
+            # FIXME: Path won't exist until stage has been run
+            # if kind == "input" and not self.path.exists():
+            #     handle_error(
+            #         self.stage,
+            #         "Data validation",
+            #         FileNotFoundError,
+            #         f"File {self.path} does not exist.",
+            #         collector,
+            #     )
             if self.format not in DataIOHandler.supported_formats:
                 handle_error(
                     self.stage,

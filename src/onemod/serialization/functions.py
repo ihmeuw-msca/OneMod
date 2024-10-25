@@ -1,10 +1,10 @@
 import json
-import yaml
 from pathlib import Path
 from typing import Any, List
-from yaml import Node, SafeDumper
 
+import yaml
 from pydantic import BaseModel
+from yaml import Node, SafeDumper
 
 
 def _yaml_path_representer(dumper: SafeDumper, data: Path) -> Node:
@@ -37,7 +37,7 @@ def serialize(
     """Save a Pydantic model, dict, or list of these to a YAML or JSON file."""
     file_format = _get_file_format(filepath)
     data = _normalize(obj)
-    
+
     with open(filepath, "w") as file:
         if file_format == "json":
             json.dump(data, file, indent=4, cls=_CustomJSONEncoder)
@@ -47,6 +47,7 @@ def serialize(
 
 class _CustomJSONEncoder(json.JSONEncoder):
     """Custom JSON Encoder to handle Path, set, and other unsupported types."""
+
     def default(self, obj: Any) -> Any:
         if isinstance(obj, Path):
             return str(obj)

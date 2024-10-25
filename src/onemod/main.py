@@ -14,6 +14,11 @@ from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
+def init(directory: Path | str) -> None:
+    """Initialize project directory."""
+    raise NotImplementedError()
+
+
 def load_pipeline(config: str) -> Pipeline:
     """Load pipeline instance from JSON file.
 
@@ -31,23 +36,15 @@ def load_pipeline(config: str) -> Pipeline:
     return Pipeline.from_json(config)
 
 
-def load_stage(
-    config: Path | str,
-    stage_name: str | None = None,
-    from_pipeline: bool = False,
-) -> Stage:
+def load_stage(config: Path | str, stage_name: str) -> Stage:
     """Load stage instance from JSON file.
 
     Parameters
     ----------
     config : Path or str
         Path to config file.
-    stage_name : str or None, optional
-        Stage name, required if `from_pipeline` is True.
-        Default is None.
-    from_pipeline : bool, optional
-        Whether `config` is a pipeline or stage config file.
-        Default is False.
+    stage_name : str
+        Stage name.
 
     Returns
     -------
@@ -55,27 +52,19 @@ def load_stage(
         Stage instance.
 
     """
-    stage_class = get_stage(config, stage_name, from_pipeline)
-    return stage_class.from_json(config, stage_name, from_pipeline)
+    stage_class = _get_stage(config, stage_name)
+    return stage_class.from_json(config, stage_name)
 
 
-def get_stage(
-    config: Path | str,
-    stage_name: str | None = None,
-    from_pipeline: bool = False,
-) -> Stage:
+def _get_stage(config: Path | str, stage_name: str) -> Stage:
     """Get stage class from JSON file.
 
     Parameters
     ----------
     config : Path or str
         Path to config file.
-    stage_name : str or None, optional
-        Stage name, required if `from_pipeline` is True.
-        Default is None.
-    from_pipeline : bool, optional
-        Whether `config` is a pipeline or stage config file.
-        Default is False.
+    stage_name : str
+        Stage name.
 
     Returns
     -------
@@ -85,28 +74,18 @@ def get_stage(
     """
     with open(config, "r") as f:
         config_dict = json.load(f)
-    if from_pipeline:
-        try:
-            config_dict = config_dict["stages"][stage_name]
-        except KeyError:
-            raise AttributeError(
-                f"{config_dict['name']} does not have a '{stage_name}' stage"
-            )
-    try:
-        if hasattr(onemod_stages, stage_type := config_dict["type"]):
-            return getattr(onemod_stages, stage_type)
-        else:
-            if "module" not in config_dict:
-                raise KeyError(f"Missing module for {stage_type}")
-            return _get_custom_stage(stage_type, config_dict["module"])
-    except KeyError:
-        raise KeyError(
-            "Stage config missing field 'type'; is this a pipeline config file?"
-        )
+    if stage_name not in config_dict["stages"]:
+        raise KeyError(f"Config does not contain a stage named '{stage_name}'")
+    config_dict = config_dict["stages"][stage_name]
+    if hasattr(onemod_stages, stage_type := config_dict["type"]):
+        return getattr(onemod_stages, stage_type)
+    if "module" not in config_dict:
+        raise KeyError(f"Config does not contain a module for {stage_name}")
+    return _get_custom_stage(stage_type, config_dict["module"])
 
 
 def _get_custom_stage(stage_type: str, module: str) -> Stage:
-    """Get custom stage class from JSON file.
+    """Get custom stage class from file.
 
     Parameters
     ----------
@@ -132,10 +111,8 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
 def evaluate(
     config: Path | str,
     stage_name: str | None = None,
-    from_pipeline: bool = False,
     method: Literal["run", "fit", "predict", "collect"] = "run",
     backend: Literal["local", "jobmon"] = "local",
-    *args,
     **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method.
@@ -147,26 +124,42 @@ def evaluate(
     stage_name : str or None, optional
         Name of stage to evaluate. If None, evaluate pipeline.
         Default is None.
-    from_pipeline : bool, optional
-        Whether `config` is a pipeline or stage config file. Only used
-        if `stage_name` is not None. Default is False.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     backend : str, optional
         Whether to evaluate the method locally or with Jobmon.
         Default is 'local'.
 
+    Other Parameters
+    ----------------
+    subset_id : int, optional
+        Submodel data subset ID. Only used for model stages.
+    param_id : int, optional
+        Submodel parameter set ID. Only used for model stages.
+    cluster : str, optional
+        Cluster name. Required if `backend` is 'jobmon'.
+    resources : Path or str, optional
+        Path to resources yaml file. Required if `backend` is 'jobmon'.
+
     """
     if stage_name is None:
-        pipeline = load_pipeline(config)
-        pipeline.evaluate(method, backend, *args, **kwargs)
+        model = load_pipeline(config)
     else:
-        stage = load_stage(config, stage_name, from_pipeline)
-        stage.evaluate(config, from_pipeline, method, backend, *args, **kwargs)
+        model = load_stage(config, stage_name)
+    model.evaluate(method, backend, **kwargs)
+
+
+def call_function(method: str, **kwargs):
+    if method == "init":
+        init(**kwargs)
+    elif method in ["run", "fit", "predict", "collect"]:
+        evaluate(method=method, **kwargs)
+    else:
+        raise ValueError(f"Invalid function name: {method}")
 
 
 def main():
-    fire.Fire(evaluate)
+    fire.Fire(call_function)
 
 
 if __name__ == "__main__":

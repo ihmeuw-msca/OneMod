@@ -1,40 +1,188 @@
-"""Rover stage."""
+"""ModRover covariate selection stage.
+
+Notes
+-----
+* RoverStage currently requires nonempty `groupby` attribute.
+* Covariates are selected for subsets based on pipeline.groupby. For
+  example, if pipeline.groupby is 'sex_id' and stage.groupby is
+  'age_group_id', submodels will be fit separately for each age/sex
+  pair, and covariates will be selected separately for each sex.
+
+"""
+
+import warnings
+
+import pandas as pd
+from loguru import logger
+from modrover.api import Rover
 
 from onemod.config import RoverConfig
 from onemod.stage import ModelStage
 
 
 class RoverStage(ModelStage):
-    """Rover stage."""
+    """ModRover covariate selection stage."""
 
     config: RoverConfig
     _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
-    _output: set[str] = {"selected_covs.csv"}
+    _output: set[str] = {"selected_covs.csv", "summaries.csv"}
+    _collect_after: set[str] = {"run", "fit"}
 
-    def run(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run rover submodel."""
-        print(
-            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
-        )
-        self.fit(subset_id, param_id)
+        self.fit(subset_id)
 
-    def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
-        """Fit rover submodel."""
-        print(
-            f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
+    def fit(self, subset_id: int, *args, **kwargs) -> None:
+        """Fit rover submodel.
+
+        Outputs
+        -------
+        learner_info.csv
+            Information about every learner.
+        model.pkl
+            Rover object used for plotting and diagnostics.
+        summary.csv
+            Summary covariate coefficients from the ensemble model.
+
+        """
+        # Load data and filter by subset
+        logger.info(f"Loading {self.name} data subset {subset_id}")
+        data = self.get_stage_subset(subset_id).query(
+            f"{self.config['test_column']} == 0"
         )
 
-    def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
-        "predict() is not implemented for RoverStage."
-        pass
+        if len(data) > 0:
+            logger.info(f"Fitting {self.name} submodel {subset_id}")
+
+            # Create submodel
+            submodel = Rover(
+                obs=self.config["observation_column"],
+                model_type=self.config["model_type"],
+                cov_fixed=list(self.config["cov_fixed"]),
+                cov_exploring=list(self.config["cov_exploring"]),
+                weights=self.config["weights_column"],
+                holdouts=list(self.config["holdout_columns"]),
+            )
+
+            # Fit submodel
+            submodel.fit(
+                data=data,
+                strategies=list(self.config.strategies),
+                top_pct_score=self.config.top_pct_score,
+                top_pct_learner=self.config.top_pct_learner,
+                coef_bounds=self.config["coef_bounds"] or {},
+            )
+
+            # Save results
+            logger.info(f"Saving {self.name} submodel {subset_id} results")
+            self.dataif.dump_output(
+                submodel.learner_info, f"submodels/{subset_id}/learner_info.csv"
+            )
+            self.dataif.dump_output(
+                submodel, f"submodels/{subset_id}/model.pkl"
+            )
+            self.dataif.dump_output(
+                submodel.summary, f"submodels/{subset_id}/summary.csv"
+            )
+        else:
+            logger.info(
+                f"No training data for {self.name} submodel {subset_id}"
+            )
 
     def collect(self) -> None:
-        """Collect rover submodel results."""
-        print(f"collecting {self.name} submodel results")
+        """Collect rover submodel results.
+
+        Outputs
+        -------
+        selected_covs.csv
+            Covariates selected for subsets based on pipeline.groupby.
+        summaries.csv
+            Covariate coefficient summaries from the submodel ensemble
+            models.
+
+        """
+        # Concatenate summaries
+        logger.info(f"Concatenating {self.name} coefficient summaries")
+        summaries = self._get_rover_summaries()
+        self.dataif.dump_output(summaries, "summaries.csv")
+
+        # Select covariates
+        logger.info(f"Selecting {self.name} covariates")
+        selected_covs = self._get_selected_covs(summaries)
+        self.dataif.dump_output(selected_covs, "selected_covs.csv")
+
+        # TODO: Plot covariates
+
+    def _get_rover_summaries(self) -> pd.DataFrame:
+        """Concatenate rover coefficient summaries."""
+        subsets = self.dataif.load_output("subsets.csv")
+
+        # Collect coefficient summaries
+        summaries = []
+        for subset_id in self.subset_ids:
+            try:
+                summary = self.dataif.load_output(
+                    f"submodels/{subset_id}/summary.csv"
+                )
+                summary["subset_id"] = subset_id
+                summaries.append(summary)
+            except FileNotFoundError:
+                warnings.warn(f"Rover submodel {subset_id} missing summary.csv")
+        summaries = pd.concat(summaries)
+
+        # Merge with subsets and add t-statistic
+        summaries = summaries.merge(subsets, on="subset_id", how="left")
+        summaries["abs_t_stat"] = summaries.eval("abs(coef / coef_sd)")
+        return summaries
+
+    def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
+        """Select rover covariates."""
+        pipeline_groupby = self.get_field("groupby")
+        if pipeline_groupby is not None:
+            selected_covs = []
+            for subset, subset_summaries in summaries.groupby(pipeline_groupby):
+                subset_selected_covs = self._get_subset_selected_covs(
+                    subset_summaries, pipeline_groupby
+                )
+                selected_covs.append(subset_selected_covs)
+                logger.info(
+                    ", ".join(
+                        [
+                            f"{id_name}: {id_val}"
+                            for id_name, id_val in zip(pipeline_groupby, subset)
+                        ]
+                        + [f"covs: {subset_selected_covs['cov'].values}"]
+                    )
+                )
+            return pd.concat(selected_covs)
+        selected_covs = self._get_subset_selected_covs(summaries, [])
+        logger.info(f"covs: {selected_covs['cov'].values}")
+        return selected_covs
+
+    def _get_subset_selected_covs(
+        self, subset_summaries: pd.DataFrame, groupby: list[str]
+    ) -> pd.DataFrame:
+        """Select rover covariates for data subset."""
+        # Select covariates greater than t_threshold
+        t_stats = (
+            subset_summaries.groupby(groupby + ["cov"])["abs_t_stat"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+            .eval(f"selected = abs_t_stat >= {self.config.t_threshold}")
+        )
+
+        # Add/remove covariates based on min_covs/max_covs
+        if (
+            self.config.min_covs is not None
+            and t_stats["selected"].sum() < self.config.min_covs
+        ):
+            t_stats.loc[: self.config.min_covs - 1, "selected"] = True
+        if (
+            self.config.max_covs is not None
+            and t_stats["selected"].sum() > self.config.max_covs
+        ):
+            t_stats.loc[self.config.max_covs :, "selected"] = False
+
+        return t_stats.query("selected").drop(columns="selected")
