@@ -2,9 +2,8 @@ from pathlib import Path
 from typing import Any, ClassVar, Dict
 
 from polars import Boolean, DataFrame, Int64, Float64, String
-from pydantic import field_serializer
+from pydantic import BaseModel, field_serializer
 
-from onemod.base_models import SerializableModel
 from onemod.constraints import Constraint
 from onemod.dtypes.column_spec import ColumnSpec
 from onemod.dtypes.filepath import FilePath
@@ -15,7 +14,7 @@ from onemod.validation.error_handling import (
 )
 
 
-class Data(SerializableModel):
+class Data(BaseModel):
     stage: str
     path: Path | FilePath
     format: str = "parquet"
@@ -45,14 +44,15 @@ class Data(SerializableModel):
                 collector,
             )
         else:
-            if kind == "input" and not self.path.exists():
-                handle_error(
-                    self.stage,
-                    "Data validation",
-                    FileNotFoundError,
-                    f"File {self.path} does not exist.",
-                    collector,
-                )
+            # FIXME: Path won't exist until stage has been run
+            # if kind == "input" and not self.path.exists():
+            #     handle_error(
+            #         self.stage,
+            #         "Data validation",
+            #         FileNotFoundError,
+            #         f"File {self.path} does not exist.",
+            #         collector,
+            #     )
             if self.format not in DataIOHandler.supported_formats:
                 handle_error(
                     self.stage,

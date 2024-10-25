@@ -1,15 +1,14 @@
 """Functions for working with crossby and params."""
 
 from itertools import product
-from pathlib import Path
 from typing import Any
 
-import pandas as pd
+from pandas import DataFrame
 
 from onemod.config import ModelConfig
 
 
-def create_params(config: ModelConfig) -> pd.DataFrame | None:
+def create_params(config: ModelConfig) -> DataFrame | None:
     """Create parameter sets from crossby."""
     param_dict = {
         param_name: param_values
@@ -18,7 +17,7 @@ def create_params(config: ModelConfig) -> pd.DataFrame | None:
     }
     if len(param_dict) == 0:
         return None
-    params = pd.DataFrame(
+    params = DataFrame(
         [param_set for param_set in product(*param_dict.values())],
         columns=(crossby := param_dict.keys()),
     )
@@ -26,12 +25,8 @@ def create_params(config: ModelConfig) -> pd.DataFrame | None:
     return params[["param_id", *crossby]]
 
 
-def get_params(params: Path | str, param_id: int) -> dict[str, Any]:
-    params = (
-        pd.read_csv(params)
-        .query("param_id == @param_id")
-        .drop(columns=["param_id"])
-    )
+def get_params(params: DataFrame, param_id: int) -> dict[str, Any]:
+    params = params.query("param_id == @param_id").drop(columns=["param_id"])
     return {
         param_name: param_value.item()
         for param_name, param_value in params.items()

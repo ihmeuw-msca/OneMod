@@ -1,16 +1,15 @@
 from typing import Any, Callable, Dict
 from polars import Series
 
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
-from onemod.base_models import SerializableModel
 from onemod.constraints.functions import bounds, is_in
 
 # Global registry for constraints
 CONSTRAINT_REGISTRY: Dict[str, Callable] = {}
 
 
-class Constraint(SerializableModel):
+class Constraint(BaseModel):
     name: str
     args: Dict[str, Any]
     

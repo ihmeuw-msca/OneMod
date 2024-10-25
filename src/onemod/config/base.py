@@ -1,10 +1,9 @@
 """Configuration classes."""
 
 from abc import ABC
-from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, validate_call
 
 
 class Config(BaseModel, ABC):
@@ -19,7 +18,7 @@ class Config(BaseModel, ABC):
 
     def __getitem__(self, key: str) -> Any:
         if not self.__contains__(key):
-            raise KeyError(f"invalid config item: {key}")
+            raise KeyError(f"Invalid config item: {key}")
         return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
@@ -53,14 +52,14 @@ class PipelineConfig(Config):
         for the entire pipeline. If no test column is provided, all
         missing observations will be treated as the test set. Default is
         'test'.
-    holdout_columns : set[str], optional
+    holdout_columns : set[str] or None, optional
         Holdout column names. The holdout columns should contain values
         0 (train), 1 (holdout), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
-        Default is an empty set.
-    coef_bounds : dict, optional
+        Default is None.
+    coef_bounds : dict or None, optional
         Dictionary of coefficient bounds with entries
-        cov_name: (lower, upper). Default is an empty dictionary.
+        cov_name: (lower, upper). Default is None.
 
     """
 
@@ -68,17 +67,16 @@ class PipelineConfig(Config):
     model_type: Literal["binomial", "gaussian", "poisson"]
     observation_column: str = "obs"
     prediction_column: str = "pred"
-    weight_column: str = "weights"
+    weights_column: str = "weights"
     test_column: str = "test"
-    holdout_columns: set[str] = set()
-    coef_bounds: dict[str, tuple[float, float]] = {}
+    holdout_columns: set[str] | None = None
+    coef_bounds: dict[str, tuple[float, float]] | None = None
 
 
 class StageConfig(Config):
     """Stage configuration class.
 
-    Settings from PipelineConfig are passed to StageConfig when calling
-    Pipeline.add_stage().
+    If None, setting inherited from Pipeline.
 
     Attributes
     ----------
@@ -120,29 +118,37 @@ class StageConfig(Config):
     model_type: Literal["binomial", "gaussian", "poisson"] | None = None
     observation_column: str | None = None
     prediction_column: str | None = None
-    weight_column: str | None = None
+    weights_column: str | None = None
     test_column: str | None = None
     holdout_columns: set[str] | None = None
     coef_bounds: dict[str, tuple[float, float]] | None = None
+    _global: PipelineConfig
 
-    def update(self, config: PipelineConfig) -> None:
-        """Inherit settings from pipeline."""
-        for key, value in config.model_dump().items():
-            if self[key] is None:
-                self[key] = value
+    @validate_call
+    def inherit(self, config: PipelineConfig) -> None:
+        """Inherit global settings from pipeline."""
+        self._global = config
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get setting or global setting if not None, else default."""
+        if not self.__contains__(key):
+            return default
+        if (value := getattr(self, key)) is None:
+            return self._global.get(key, default)
+        return value
+
+    def __getitem__(self, key: str) -> Any:
+        """Get setting if not None, else global setting."""
+        if not self.__contains__(key):
+            raise KeyError(f"Invalid config item: {key}")
+        if (value := getattr(self, key)) is None:
+            return self._global[key]
+        return value
 
 
 class ModelConfig(StageConfig):
-    """Model stage configuration class.
+    """Model stage configuration class."""
 
-    Attributes
-    ----------
-    data : Path or None, optional
-        Path to input data. Required for `groupby`. Default is None.
-
-    """
-
-    data: Path | None = None
     _crossable_params: set[str] = set()  # defined by class
 
     @property

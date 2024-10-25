@@ -1,14 +1,13 @@
 import json
-from pathlib import Path
 
-from polars import DataFrame
 import pytest
+from polars import DataFrame
 
 from onemod.config import PipelineConfig, StageConfig
 from onemod.constraints import Constraint
+from onemod.dtypes import ColumnSpec, Data
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
-from onemod.dtypes import Data, ColumnSpec
 
 from tests.helpers.utils import assert_equal_unordered
 
@@ -18,6 +17,9 @@ class DummyStage(Stage):
     _required_input: set[str] = {"data.parquet", "covariates.parquet"}
     _optional_input: set[str] = {"priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
+
+    def run(self):
+        pass
 
 
 @pytest.fixture
@@ -59,7 +61,6 @@ def stage_1(test_base_dir, create_dummy_data):
 
     stage_1 = DummyStage(
         name="stage_1",
-        directory=test_base_dir / "stage_1",
         config=StageConfig(),
         input_validation=dict(
             data=Data(
@@ -120,7 +121,6 @@ def stage_1(test_base_dir, create_dummy_data):
             )
         ),
     )
-    stage_1.directory = test_base_dir / "stage_1"
     stage_1(data=data_parquet_path, covariates=covariates_parquet_path)
 
     return stage_1
@@ -130,7 +130,6 @@ def stage_1(test_base_dir, create_dummy_data):
 def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
-        directory=test_base_dir / "stage_2",
         config=StageConfig(),
         input_validation=dict(
             data=Data(
@@ -150,7 +149,6 @@ def stage_2(test_base_dir, stage_1):
             )
         ),
     )
-    stage_2.directory = test_base_dir / "stage_2"
     stage_2(
         data=stage_1.output["predictions"],
         covariates=test_base_dir / "data" / "covariates.parquet",
@@ -212,27 +210,16 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
             "id_columns": ["age_group_id", "location_id"],
             "observation_column": "obs",
             "prediction_column": "pred",
-            "weight_column": "weights",
+            "weights_column": "weights",
             "test_column": "test",
-            "holdout_columns": [],
             "model_type": "binomial",
-            "coef_bounds": {},
         },
         "stages": {
             "stage_1": {
                 "name": "stage_1",
                 "type": "DummyStage",
                 "module": __file__,
-                "config": {
-                    "id_columns": ["age_group_id", "location_id"],
-                    "observation_column": "obs",
-                    "prediction_column": "pred",
-                    "weight_column": "weights",
-                    "test_column": "test",
-                    "holdout_columns": [],
-                    "model_type": "binomial",
-                    "coef_bounds": {},
-                },
+                "config": {},
                 "input": {
                     "data": str(test_base_dir / "data" / "data.parquet"),
                     "covariates": str(
@@ -246,7 +233,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                         "format": "parquet",
                         "shape": [1, 2],
                         "columns": {
-                            "id_col": {"type": "int", "constraints": None},
+                            "id_col": {"type": "int"},
                             "bounded_col": {
                                 "type": "float",
                                 "constraints": [
@@ -273,9 +260,8 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                             test_base_dir / "data" / "covariates.parquet"
                         ),
                         "format": "parquet",
-                        "shape": None,
                         "columns": {
-                            "id_col": {"type": "int", "constraints": None},
+                            "id_col": {"type": "int"},
                             "str_col": {
                                 "type": "str",
                                 "constraints": [
@@ -297,9 +283,8 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                             test_base_dir / "stage_1" / "predictions.parquet"
                         ),
                         "format": "parquet",
-                        "shape": None,
                         "columns": {
-                            "id_col": {"type": "int", "constraints": None},
+                            "id_col": {"type": "int"},
                             "prediction_col": {
                                 "type": "float",
                                 "constraints": [
@@ -344,25 +329,23 @@ def test_pipeline_deserialization(test_base_dir, pipeline_with_multiple_stages):
     pipeline_json_path = (
         test_base_dir / f"{pipeline_with_multiple_stages.name}.json"
     )
-    pipeline_with_multiple_stages.build(pipeline_json_path)
+    pipeline_with_multiple_stages.build()
 
     # Deserialize the pipeline from JSON
-    reconstructed_pipeline = Pipeline.from_json(
-        pipeline_json_path
-    )
-    
+    reconstructed_pipeline = Pipeline.from_json(pipeline_json_path)
+
     reconstructed_pipeline.name = "reconstructed_pipeline"
     reconstructed_pipeline_json_path = (
         test_base_dir / f"{reconstructed_pipeline.name}.json"
     )
-    
-    reconstructed_pipeline.build(reconstructed_pipeline_json_path)
+
+    reconstructed_pipeline.build()
 
     with open(pipeline_json_path, "r") as f:
         original_pipeline_dict = json.load(f)
     with open(reconstructed_pipeline_json_path, "r") as f:
         reconstructed_pipeline_dict = json.load(f)
-    
+
     # Reconstructed pipeline build output must match the original, apart from name
     original_pipeline_dict.pop("name")
     reconstructed_pipeline_dict.pop("name")
