@@ -99,7 +99,7 @@ jobs:
               run: pip install .[dev]
 
             - name: Run Tests
-              run: pytest --cov=src --cov-report=xml tests/
+              run: pytest --cov=src --cov-report=xml tests/ -m "not requires_data"
 
             - name: Upload Coverage Report
               uses: actions/upload-artifact@v4

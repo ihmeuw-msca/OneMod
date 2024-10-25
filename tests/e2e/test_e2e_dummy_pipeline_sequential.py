@@ -176,6 +176,7 @@ def assert_stage_logs(
 
 
 @pytest.mark.e2e
+@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_dummy_pipeline(test_input_data, test_base_dir, method):
     """End-to-end test for a the OneMod example pipeline with arbitrary configs and constraints, test data."""
