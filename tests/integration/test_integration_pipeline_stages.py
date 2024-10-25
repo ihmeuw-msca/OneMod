@@ -170,25 +170,26 @@ def test_pipeline_with_cyclic_dependencies(test_base_dir):
 # However, there should be an error thrown if the stage hasn't been added to
 # the pipeline. We need to add a check in __call__ to make sure the stage has
 # been added to the pipeline.
-# @pytest.mark.integration
-# def test_pipeline_with_undefined_dependencies(test_base_dir):
-#     pipeline_dir = test_base_dir / "invalid_pipeline"
-#     pipeline = Pipeline(
-#         name="invalid_pipeline",
-#         config={"id_columns": [], "model_type": "binomial"},
-#         directory=pipeline_dir,
-#     )
+@pytest.mark.skip(reason="Pending implementation")
+@pytest.mark.integration
+def test_pipeline_with_undefined_dependencies(test_base_dir):
+    pipeline_dir = test_base_dir / "invalid_pipeline"
+    pipeline = Pipeline(
+        name="invalid_pipeline",
+        config={"id_columns": [], "model_type": "binomial"},
+        directory=pipeline_dir,
+    )
 
-#     stage_1 = DummyStage(name="stage_1", config={})
-#     stage_2 = DummyStage(name="stage_2", config={})
-#     pipeline.add_stage(stage_2)  # stage_1 never added
+    stage_1 = DummyStage(name="stage_1", config={})
+    stage_2 = DummyStage(name="stage_2", config={})
+    pipeline.add_stage(stage_2)  # stage_1 never added
 
-#     stage_1(data=test_base_dir / "stage_1" / "data.parquet")
+    stage_1(data=test_base_dir / "stage_1" / "data.parquet")
 
-#     with pytest.raises(
-#         AttributeError, match="Stage 'stage_1' directory has not been set"
-#     ):
-#         stage_2(data=stage_1.output["predictions"])
+    with pytest.raises(
+        AttributeError, match="Stage 'stage_1' directory has not been set"
+    ):
+        stage_2(data=stage_1.output["predictions"])
 
 
 @pytest.mark.integration

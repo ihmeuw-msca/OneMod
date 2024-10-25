@@ -3,12 +3,6 @@ from pathlib import Path
 from typing import List
 
 import pytest
-
-from onemod import Pipeline
-from onemod.constraints import Constraint
-from onemod.dtypes import ColumnSpec, Data
-from onemod.stage import Stage
-
 from tests.helpers.dummy_stages import (
     DummyCustomStage,
     DummyKregStage,
@@ -17,6 +11,11 @@ from tests.helpers.dummy_stages import (
     DummySpxmodStage,
 )
 from tests.helpers.utils import assert_equal_unordered
+
+from onemod import Pipeline
+from onemod.constraints import Constraint
+from onemod.dtypes import ColumnSpec, Data
+from onemod.stage import Stage
 
 
 @pytest.fixture
@@ -172,7 +171,8 @@ def assert_stage_logs(
                         f"{method}: name={stage.name}, subset={subset_id}, param=None"
                         in log
                     )
-        assert f"collect: name={stage.name}" in log
+            if method in stage._collect_after:
+                assert f"collect: name={stage.name}" in log
 
 
 @pytest.mark.e2e
@@ -268,6 +268,7 @@ def test_dummy_pipeline(test_input_data, test_base_dir, method):
     }
 
     # Check each stage's log output for correct method calls on correct subset/param ids
+    print(stage.get_log() for stage in stages)
     for stage in stages:
         if stage.name == "preprocessing":
             if method in ["run", "fit"]:

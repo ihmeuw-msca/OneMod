@@ -1,6 +1,5 @@
 """Test stage input/output."""
 
-import json
 from pathlib import Path
 
 import pytest
@@ -22,7 +21,7 @@ class DummyStage(Stage):
 
 
 @pytest.fixture
-def stage_1(tmp_path_factory):
+def stage_1():
     stage_1 = DummyStage(name="stage_1", config={})
     stage_1(data="/path/to/data.parquet", covariates="/path/to/covariates.csv")
     return stage_1
@@ -100,17 +99,6 @@ def test_dependencies(stage_1, stage_2):
         priors=stage_2.output["model"],
     )
     assert stage_3.dependencies == {"stage_1", "stage_2"}
-
-
-# FIXME: Removed Stage.to_json method; use Pipeline.to_json
-# @pytest.mark.unit
-# def test_from_json(stage_2):
-#     stage_2.to_json()
-#     stage_2_new = DummyStage.from_json(
-#         stage_2.directory / (stage_2.name + ".json")
-#     )
-#     assert stage_2_new.input == stage_2.input
-#     assert stage_2_new.output == stage_2.output
 
 
 @pytest.mark.unit
