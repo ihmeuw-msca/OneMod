@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "fire",
+    "loguru",
     "modrover @ git+https://github.com/ihmeuw-msca/modrover.git@v0.1.3",
     "pandas",
     "polars",
