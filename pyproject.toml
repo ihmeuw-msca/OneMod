@@ -27,7 +27,6 @@ dependencies = [
     "polars",
     "pyarrow",
     "pydantic",
-    "regmod == 0.1.2",
     "spxmod @ git+https://github.com/ihmeuw-msca/spxmod.git@df78b0978c1e4259977f05c357de3173b7c1b354",
     "weighted-average >= 1.3.0",
     "xspline == 0.0.7",
