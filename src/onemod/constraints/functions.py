@@ -4,7 +4,9 @@ from typing import Any, Callable
 from polars import Series
 
 
-def bounds(ge: float = None, le: float = None) -> Callable[[Series], None]:
+def bounds(
+    ge: float | None = None, le: float | None = None
+) -> Callable[[Series], None]:
     """
     Returns a function that checks if all values in the column are within the specified bounds.
 
@@ -70,7 +72,7 @@ def is_in(other: Collection[Any]) -> Callable[[Series], None]:
     return validate
 
 
-def no_inf() -> callable:
+def no_inf() -> Callable[[Series], None]:
     """
     Returns a function that checks that there are no infinite(inf, -inf) values in the column.
 

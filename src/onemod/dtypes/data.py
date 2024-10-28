@@ -6,7 +6,6 @@ from pydantic import BaseModel, field_serializer
 
 from onemod.constraints import Constraint
 from onemod.dtypes.column_spec import ColumnSpec
-from onemod.dtypes.filepath import FilePath
 from onemod.utils import DataIOHandler
 from onemod.validation.error_handling import (
     ValidationErrorCollector,
@@ -16,7 +15,7 @@ from onemod.validation.error_handling import (
 
 class Data(BaseModel):
     stage: str
-    path: Path | FilePath
+    path: Path
     format: str = "parquet"
     shape: tuple[int, int] | None = None
     columns: Dict[str, ColumnSpec] | None = None
@@ -137,6 +136,9 @@ class Data(BaseModel):
         self, data: DataFrame, collector: ValidationErrorCollector | None = None
     ) -> None:
         """Validate columns based on specified types and constraints."""
+        if self.columns is None:
+            return
+
         for col_name, col_spec in self.columns.items():
             if col_name not in data.columns:
                 handle_error(
