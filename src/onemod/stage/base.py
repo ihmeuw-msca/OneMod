@@ -12,12 +12,13 @@ from typing import Any, Literal
 
 from pandas import DataFrame
 from pplkit.data.interface import DataInterface
-from pydantic import BaseModel, ConfigDict, Field, computed_field, validate_call
+from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
 from onemod.dtypes import Data
 from onemod.io import Input, Output
+from onemod.utils.decorators import computed_property
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error
@@ -91,8 +92,7 @@ class Stage(BaseModel, ABC):
         if not (directory / self.name).exists():
             (directory / self.name).mkdir()
 
-    @property
-    @computed_field
+    @computed_property
     def module(self) -> Path | None:
         if self._module is None and not hasattr(
             onemod_stages, self.type
@@ -107,8 +107,7 @@ class Stage(BaseModel, ABC):
     def skip(self) -> set[str]:
         return self._skip
 
-    @property
-    @computed_field
+    @computed_property
     def input(self) -> Input | None:
         if self._input is None:
             self._input = Input(
@@ -132,8 +131,7 @@ class Stage(BaseModel, ABC):
             return set()
         return self.input.dependencies
 
-    @property
-    @computed_field
+    @computed_property
     def type(self) -> str:
         return type(self).__name__
 
@@ -348,8 +346,7 @@ class ModelStage(Stage, ABC):
     _required_input: set[str] = set()  # data required for groupby
     _collect_after: set[str] = set()  # defined by class
 
-    @property
-    @computed_field
+    @computed_property
     def crossby(self) -> set[str] | None:
         return self._crossby
 

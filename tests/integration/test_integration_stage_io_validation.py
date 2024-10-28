@@ -101,7 +101,7 @@ def stage_1_model_expected(example_base_dir):
     return {
         "name": "stage_1",
         "type": "DummyStage",
-        "module": __file__,
+        "module": Path(__file__),
         "config": {},
         "input_validation": {
             "covariates": {
@@ -222,7 +222,7 @@ def stage_2_model_expected(example_base_dir):
         "name": "stage_2",
         "type": "DummyStage",
         "config": {},
-        "module": __file__,
+        "module": Path(__file__),
         "input_validation": {
             "data": {
                 "stage": "stage_1",

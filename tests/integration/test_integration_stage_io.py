@@ -111,7 +111,7 @@ def test_stage_model(stage_1, stage_2):
         "config": {},
         "input_validation": {},
         "output_validation": {},
-        "module": __file__,
+        "module": Path(__file__),
         "input": {
             "data": "/path/to/data.parquet",
             "covariates": "/path/to/covariates.csv",
@@ -128,7 +128,7 @@ def test_stage_model(stage_1, stage_2):
         "config": {},
         "input_validation": {},
         "output_validation": {},
-        "module": __file__,
+        "module": Path(__file__),
         "input": {
             "data": {
                 "stage": "stage_1",
