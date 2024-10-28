@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from onemod.io import Output
 from onemod.dtypes import Data
+from onemod.io import Output
 
 ITEMS = {
     "predictions": {

@@ -1,5 +1,5 @@
-from polars import DataFrame
 import pytest
+from polars import DataFrame
 
 from onemod.dtypes import Data
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, ClassVar, Dict
 
-from polars import Boolean, DataFrame, Int64, Float64, String
+from polars import Boolean, DataFrame, Float64, Int64, String
 from pydantic import BaseModel, field_serializer
 
 from onemod.constraints import Constraint

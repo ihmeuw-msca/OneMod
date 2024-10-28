@@ -275,7 +275,7 @@ def test_input_types(example_base_dir, stage_1):
     assert "data" in stage_1.input_validation
     assert stage_1.input_validation["data"].path == Path("data.parquet")
     assert stage_1.input_validation["data"].format == "parquet"
-    assert stage_1.input_validation["data"].shape == None
+    assert stage_1.input_validation["data"].shape is None
     assert stage_1.dependencies == set()
 
 
@@ -286,7 +286,7 @@ def test_output_types(stage_1):
         "predictions.parquet"
     )
     assert stage_1.output_validation["predictions"].format == "parquet"
-    assert stage_1.output_validation["predictions"].shape == None
+    assert stage_1.output_validation["predictions"].shape is None
 
 
 @pytest.mark.integration
