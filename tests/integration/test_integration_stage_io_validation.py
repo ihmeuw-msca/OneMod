@@ -6,8 +6,8 @@ import pytest
 
 from onemod.config import Config
 from onemod.constraints import Constraint
-from onemod.dtypes import ColumnSpec, Data
 from onemod.stage import Stage
+from onemod.types import ColumnSpec, Data
 
 
 class DummyStage(Stage):

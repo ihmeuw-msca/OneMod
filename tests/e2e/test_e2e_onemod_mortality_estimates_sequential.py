@@ -1,10 +1,7 @@
 import pytest
 
-from onemod.constraints import bounds, no_inf
-from onemod import Pipeline
-
 # from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage, WeaveStage, UncertaintyStage, EnsembleStage
-from onemod.dtypes import Data, FilePath
+from onemod.types import Data, FilePath
 
 
 @pytest.mark.e2e

@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from onemod.io import Input
-from onemod.dtypes import Data
+from onemod.types import Data
 
 REQUIRED_INPUT = {"data.parquet", "covariates.csv"}
 OPTIONAL_INPUT = {"priors.pkl"}

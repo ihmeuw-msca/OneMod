@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 
 from onemod.config import Config
-from onemod.dtypes import Data
 from onemod.io import Input, Output
 from onemod.stage import Stage
+from onemod.types import Data
 
 
 class DummyStage(Stage):

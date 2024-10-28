@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import Any, ClassVar, Dict
 
-from polars import Boolean, DataFrame, Int64, Float64, String
+from polars import Boolean, DataFrame, Float64, Int64, String
 from pydantic import BaseModel, field_serializer
 
 from onemod.constraints import Constraint
-from onemod.dtypes.column_spec import ColumnSpec
-from onemod.dtypes.filepath import FilePath
+from onemod.types.column_spec import ColumnSpec
+from onemod.types.filepath import FilePath
 from onemod.utils import DataIOHandler
 from onemod.validation.error_handling import (
     ValidationErrorCollector,

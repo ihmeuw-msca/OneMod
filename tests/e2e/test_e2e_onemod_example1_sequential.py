@@ -4,8 +4,8 @@ import pytest
 
 from onemod import Pipeline
 from onemod.config import PreprocessingConfig
-from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage
-from onemod.dtypes import Data
+from onemod.stage import KregStage, PreprocessingStage, RoverStage, SpxmodStage
+from onemod.types import Data
 
 
 @pytest.fixture
@@ -14,7 +14,9 @@ def test_base_dir(tmp_path_factory):
     return test_base_dir
 
 
-@pytest.mark.skip(reason="Test not implemented yet. Needs actual stages implemented and test data assets.")
+@pytest.mark.skip(
+    reason="Test not implemented yet. Needs actual stages implemented and test data assets."
+)
 @pytest.mark.e2e
 def test_e2e_onemod_example1_sequential(test_assets_dir, test_base_dir):
     """

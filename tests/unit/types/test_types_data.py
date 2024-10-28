@@ -1,7 +1,7 @@
-from polars import DataFrame
 import pytest
+from polars import DataFrame
 
-from onemod.dtypes import Data
+from onemod.types import Data
 
 
 @pytest.mark.unit

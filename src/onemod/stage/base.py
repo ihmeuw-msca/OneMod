@@ -16,8 +16,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
-from onemod.dtypes import Data
 from onemod.io import Input, Output
+from onemod.types import Data
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error

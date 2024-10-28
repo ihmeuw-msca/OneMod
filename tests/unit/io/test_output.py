@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from onemod.io import Output
-from onemod.dtypes import Data
+from onemod.types import Data
 
 ITEMS = {
     "predictions": {

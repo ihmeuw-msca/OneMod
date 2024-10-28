@@ -15,7 +15,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, model_serializer, validate_call
 
-from onemod.dtypes import Data
+from onemod.types import Data
 
 
 class IO(BaseModel, ABC):

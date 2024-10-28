@@ -4,7 +4,7 @@ import pytest
 from polars import DataFrame
 
 from onemod.constraints import Constraint
-from onemod.dtypes import ColumnSpec, Data
+from onemod.types import ColumnSpec, Data
 
 
 @pytest.mark.integration

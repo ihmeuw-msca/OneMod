@@ -14,8 +14,8 @@ from tests.helpers.utils import assert_equal_unordered
 
 from onemod import Pipeline
 from onemod.constraints import Constraint
-from onemod.dtypes import ColumnSpec, Data
 from onemod.stage import Stage
+from onemod.types import ColumnSpec, Data
 
 
 @pytest.fixture

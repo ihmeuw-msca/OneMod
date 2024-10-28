@@ -1,5 +1,6 @@
 import pytest
-from onemod.dtypes.filepath import FilePath
+
+from onemod.types.filepath import FilePath
 
 
 @pytest.mark.unit
