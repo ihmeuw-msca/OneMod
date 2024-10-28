@@ -108,7 +108,7 @@ class SpxmodStage(ModelStage):
         # Create and fit submodel
         logger.info(f"Fitting {self.name} submodel {subset_id}")
         train = data.query(
-            f"({self.config["test_column"]} == 0) & {self.config["observation_column"]}.notnull()"
+            f"({self.config['test_column']} == 0) & {self.config['observation_column']}.notnull()"
         )
         model = XModel.from_config(xmodel_args)
         model.fit(data=train, data_span=data, **self.config.xmodel_fit)
@@ -214,7 +214,7 @@ class SpxmodStage(ModelStage):
         # Add offset to data
         offset = False
         if "offset" in self.input:
-            logger.info(f"Adding offset from {self.input["offset"].stage}")
+            logger.info(f"Adding offset from {self.input['offset'].stage}")
             data = data.merge(
                 right=self.dataif.load_offset(
                     columns=list(self.config["id_columns"])

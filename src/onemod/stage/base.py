@@ -72,6 +72,9 @@ class Stage(BaseModel, ABC):
         return self._dataif
 
     def set_dataif(self, config_path: Path | str) -> None:
+        if self.input is None:
+            return
+
         directory = Path(config_path).parent
         self._dataif = DataInterface(
             directory=directory,
@@ -88,14 +91,14 @@ class Stage(BaseModel, ABC):
         if not (directory / self.name).exists():
             (directory / self.name).mkdir()
 
-    @computed_field
     @property
-    def module(self) -> str | None:
+    @computed_field
+    def module(self) -> Path | None:
         if self._module is None and not hasattr(
             onemod_stages, self.type
         ):  # custom stage
             try:
-                return getfile(self.__class__)
+                return Path(getfile(self.__class__))
             except TypeError:
                 raise TypeError(f"Could not find module for {self.name} stage")
         return self._module
@@ -104,8 +107,8 @@ class Stage(BaseModel, ABC):
     def skip(self) -> set[str]:
         return self._skip
 
-    @computed_field
     @property
+    @computed_field
     def input(self) -> Input | None:
         if self._input is None:
             self._input = Input(
@@ -129,8 +132,8 @@ class Stage(BaseModel, ABC):
             return set()
         return self.input.dependencies
 
-    @computed_field
     @property
+    @computed_field
     def type(self) -> str:
         return type(self).__name__
 
@@ -157,7 +160,7 @@ class Stage(BaseModel, ABC):
             stage_config = pipeline_config["stages"][stage_name]
         except KeyError:
             raise AttributeError(
-                f"{pipeline_config["name"]} does not contain a stage named '{stage_name}'"
+                f"{pipeline_config['name']} does not contain a stage named '{stage_name}'"
             )
         stage = cls(**stage_config)
         stage.config.inherit(pipeline_config["config"])
@@ -345,9 +348,9 @@ class ModelStage(Stage, ABC):
     _required_input: set[str] = set()  # data required for groupby
     _collect_after: set[str] = set()  # defined by class
 
-    @computed_field
     @property
-    def crossby(self) -> set[str]:
+    @computed_field
+    def crossby(self) -> set[str] | None:
         return self._crossby
 
     @property
@@ -380,6 +383,11 @@ class ModelStage(Stage, ABC):
 
     def create_stage_subsets(self, data: Path | str) -> None:
         """Create stage data subsets from groupby."""
+        if self.groupby is None:
+            raise AttributeError(
+                f"{self.name} does not have a groupby attribute"
+            )
+
         subsets = create_subsets(
             self.groupby, self.dataif.load(data, columns=self.groupby)
         )
