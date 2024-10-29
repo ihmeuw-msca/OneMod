@@ -19,7 +19,7 @@ def init(directory: Path | str) -> None:
     raise NotImplementedError()
 
 
-def load_pipeline(config: str) -> Pipeline:
+def load_pipeline(config: Path | str) -> Pipeline:
     """Load pipeline instance from JSON file.
 
     Parameters
@@ -101,10 +101,22 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
 
     """
     module_path = Path(module)
-    spec = spec_from_file_location(getmodulename(module_path), module_path)
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return getattr(module, stage_type)
+
+    module_name = getmodulename(module_path)
+    if module_name is None:
+        raise ValueError(f"Could not determine module name from {module_path}")
+
+    spec = spec_from_file_location(module_name, module_path)
+    if spec is None:
+        raise ImportError(f"Could not load spec for module {module_path}")
+
+    if spec.loader is None:
+        raise ImportError(f"Module spec for {module_path} has no loader")
+
+    loaded_module = module_from_spec(spec)
+    spec.loader.exec_module(loaded_module)
+
+    return getattr(loaded_module, stage_type)
 
 
 @validate_call
@@ -142,14 +154,21 @@ def evaluate(
         Path to resources yaml file. Required if `backend` is 'jobmon'.
 
     """
+    model: Pipeline | Stage
+
     if stage_name is None:
         model = load_pipeline(config)
+        if method == "collect":
+            raise ValueError(f"{method} is not a valid method for a pipeline")
+        model.evaluate(method, backend, **kwargs)
     else:
         model = load_stage(config, stage_name)
-    model.evaluate(method, backend, **kwargs)
+        model.evaluate(method, backend, **kwargs)
 
 
-def call_function(method: str, **kwargs):
+def call_function(
+    method: Literal["init", "run", "fit", "predict", "collect"], **kwargs
+):
     if method == "init":
         init(**kwargs)
     elif method in ["run", "fit", "predict", "collect"]:

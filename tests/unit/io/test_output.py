@@ -17,7 +17,18 @@ ITEMS = {
         "columns": None,
     }
 }
-OUTPUT = Output(stage="stage", items=ITEMS)
+OUTPUT = Output(
+    stage="stage",
+    items={
+        "predictions": Data(
+            stage="stage",
+            path=Path("/path/to/predictions.parquet"),
+            format="parquet",
+            shape=None,
+            columns=None,
+        )
+    },
+)
 
 
 @pytest.mark.unit

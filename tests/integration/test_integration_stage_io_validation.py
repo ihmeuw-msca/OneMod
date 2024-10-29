@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from onemod.config import Config
+from onemod.config import StageConfig
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
-    config: Config
+    config: StageConfig
     _required_input: set[str] = {"data.parquet", "covariates.csv"}
     _optional_input: set[str] = {"priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
@@ -102,7 +102,16 @@ def stage_1_model_expected(example_base_dir):
         "name": "stage_1",
         "type": "DummyStage",
         "module": Path(__file__),
-        "config": {},
+        "config": {
+            "coef_bounds": None,
+            "holdout_columns": None,
+            "id_columns": None,
+            "model_type": None,
+            "observation_column": None,
+            "prediction_column": None,
+            "test_column": None,
+            "weights_column": None,
+        },
         "input_validation": {
             "covariates": {
                 "stage": "stage_0",
@@ -221,7 +230,16 @@ def stage_2_model_expected(example_base_dir):
     return {
         "name": "stage_2",
         "type": "DummyStage",
-        "config": {},
+        "config": {
+            "coef_bounds": None,
+            "holdout_columns": None,
+            "id_columns": None,
+            "model_type": None,
+            "observation_column": None,
+            "prediction_column": None,
+            "test_column": None,
+            "weights_column": None,
+        },
         "module": Path(__file__),
         "input_validation": {
             "data": {

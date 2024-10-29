@@ -84,7 +84,7 @@ class Data(BaseModel):
                         f"Unsupported type {col_spec['type']} for column {col_name}.",
                         collector,
                     )
-                if "constraints" in col_spec:
+                if "constraints" in col_spec and col_spec["constraints"]:
                     for constraint in col_spec["constraints"]:
                         if not isinstance(constraint, Constraint):
                             handle_error(
@@ -125,6 +125,7 @@ class Data(BaseModel):
                     str(e),
                     collector,
                 )
+                return
 
         if self.shape:
             self.validate_shape(data, collector)
@@ -174,4 +175,4 @@ class Data(BaseModel):
                     )
 
             for constraint in constraints:
-                constraint.validate(data[col_name])
+                constraint.use_validation(data[col_name])

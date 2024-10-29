@@ -8,11 +8,12 @@ from collections import deque
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, computed_field, validate_call
+from pydantic import BaseModel, validate_call
 
 from onemod.config import PipelineConfig
 from onemod.serialization import serialize
 from onemod.stage import ModelStage, Stage
+from onemod.utils.decorators import computed_property
 from onemod.validation import ValidationErrorCollector, handle_error
 
 logger = logging.getLogger(__name__)
@@ -44,15 +45,13 @@ class Pipeline(BaseModel):
     groupby: set[str] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
 
-    @computed_field
-    @property
+    @computed_property
     def dependencies(self) -> dict[str, set[str]]:
         return {
             stage.name: stage.dependencies for stage in self.stages.values()
         }
 
-    @computed_field
-    @property
+    @computed_property
     def stages(self) -> dict[str, Stage]:
         return self._stages
 
@@ -142,7 +141,9 @@ class Pipeline(BaseModel):
         Return topologically sorted order of stages, ensuring no cycles.
         Uses Kahn's algorithm to find the topological order of the stages.
         """
-        reverse_graph = {stage: [] for stage in self.dependencies}
+        reverse_graph: dict[str, list[str]] = {
+            stage: [] for stage in self.dependencies
+        }
         in_degree = {stage: 0 for stage in self.dependencies}
         for stage, deps in self.dependencies.items():
             for dep in deps:
@@ -253,7 +254,7 @@ class Pipeline(BaseModel):
         validation_dir = self.directory / "validation"
         validation_dir.mkdir(exist_ok=True)
         report_path = validation_dir / "validation_report.json"
-        serialize(collector.errors, report_path)
+        serialize(collector.errors, report_path)  # type: ignore[arg-type]
 
     @validate_call
     def evaluate(

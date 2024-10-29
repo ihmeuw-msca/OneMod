@@ -122,7 +122,7 @@ class Stage(BaseModel, ABC):
         output_items = {}
         for item in self._output:
             item_name = item.split(".")[0]  # remove extension
-            output_items[item_name] = Data(stage=self.name, path=item)
+            output_items[item_name] = Data(stage=self.name, path=Path(item))
         return Output(stage=self.name, items=output_items)
 
     @property
@@ -164,8 +164,8 @@ class Stage(BaseModel, ABC):
         stage.config.inherit(pipeline_config["config"])
         if "module" in stage_config:
             stage._module = stage_config["module"]
-        if "crossby" in stage_config:
-            stage._crossby = stage_config["crossby"]
+        if hasattr(stage, "apply_stage_specific_config"):
+            stage.apply_stage_specific_config(stage_config)
         if "input" in stage_config:
             stage(**stage_config["input"])
         stage.set_dataif(config_path)
@@ -174,7 +174,7 @@ class Stage(BaseModel, ABC):
     @validate_call
     def evaluate(
         self,
-        method: Literal["run", "fit", "predict"] = "run",
+        method: Literal["run", "fit", "predict", "collect"] = "run",
         backend: Literal["local", "jobmon"] = "local",
         **kwargs,
     ) -> None:
@@ -236,7 +236,7 @@ class Stage(BaseModel, ABC):
                 data_path = self.input.get(item_name)
                 if data_path:
                     schema.path = Path(data_path)
-                    schema.validate_data(collector)
+                    schema.validate_data(None, collector)
                 else:
                     handle_error(
                         self.name,
@@ -253,7 +253,7 @@ class Stage(BaseModel, ABC):
                 data_output = self.output.get(item_name)
                 if data_output:
                     data_spec.path = Path(data_output.path)
-                    data_spec.validate_data(collector)
+                    data_spec.validate_data(None, collector)
                 else:
                     handle_error(
                         self.name,
@@ -289,7 +289,7 @@ class Stage(BaseModel, ABC):
         return config
 
     @abstractmethod
-    def run(self) -> None:
+    def run(self, *args, **kwargs) -> None:
         """Run stage."""
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -377,6 +377,11 @@ class ModelStage(Stage, ABC):
     @property
     def collect_after(self) -> set[str]:
         return self._collect_after
+
+    def apply_stage_specific_config(self, stage_config: dict) -> None:
+        """Apply ModelStage-specific configuration."""
+        if "crossby" in stage_config:
+            self._crossby = stage_config["crossby"]
 
     def create_stage_subsets(self, data: Path | str) -> None:
         """Create stage data subsets from groupby."""
@@ -476,23 +481,17 @@ class ModelStage(Stage, ABC):
                     evaluate_local(model=self, method=method)
 
     @abstractmethod
-    def run(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def run(self, *args, **kwargs) -> None:
         """Run stage submodel."""
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def fit(self, *args, **kwargs) -> None:
         """Fit stage submodel."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped."
         )
 
-    def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def predict(self, *args, **kwargs) -> None:
         """Predict stage submodel."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped."

@@ -22,7 +22,7 @@ class CustomConfig(ModelConfig):
 class DummyCustomStage(ModelStage):
     """Custom stage."""
 
-    config: CustomConfig = CustomConfig()
+    config: CustomConfig = CustomConfig()  # type: ignore
     _required_input: set[str] = {"observations.parquet", "predictions.parquet"}
     _collect_after: set[str] = {"run", "predict"}
 

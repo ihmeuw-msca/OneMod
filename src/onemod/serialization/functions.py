@@ -1,10 +1,12 @@
 import json
 from pathlib import Path
-from typing import Any, List
+from typing import Any, TypeVar
 
 import yaml
 from pydantic import BaseModel
 from yaml import Node, SafeDumper
+
+T = TypeVar("T", bound=BaseModel)
 
 
 def _yaml_path_representer(dumper: SafeDumper, data: Path) -> Node:
@@ -31,9 +33,7 @@ def deserialize(filepath: Path | str) -> dict:
             raise ValueError(f"Unsupported file format: {file_format}")
 
 
-def serialize(
-    obj: BaseModel | dict | List[BaseModel | dict], filepath: Path | str
-) -> None:
+def serialize(obj: T | dict | list[T | dict], filepath: Path | str) -> None:
     """Save a Pydantic model, dict, or list of these to a YAML or JSON file."""
     file_format = _get_file_format(filepath)
     data = _normalize(obj)

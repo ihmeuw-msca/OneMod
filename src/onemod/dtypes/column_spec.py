@@ -1,4 +1,4 @@
-from typing import List, Type
+from typing import Any, List, Type
 
 from pydantic import BaseModel, field_serializer, field_validator
 
@@ -6,13 +6,34 @@ from onemod.constraints.base import Constraint
 
 
 class ColumnSpec(BaseModel):
-    type: Type[int] | Type[float] | Type[str] | Type[bool] | Type[BaseModel] | None = None
+    type: (
+        Type[int]
+        | Type[float]
+        | Type[str]
+        | Type[bool]
+        | Type[BaseModel]
+        | None
+    ) = None
     constraints: List[Constraint] | None = None
-    
+
+    def __getitem__(self, key: str) -> Any:
+        if key == "type":
+            return self.type
+        elif key == "constraints":
+            return self.constraints
+        else:
+            raise KeyError(f"Invalid key: {key}")
+
+    def __contains__(self, key: str) -> bool:
+        return key in {"type", "constraints"}
+
+    def keys(self):
+        return ["type", "constraints"]
+
     @field_serializer("type")
     def serialize_type(self, t, info):
         return t.__name__ if t else None
-    
+
     @field_validator("type", mode="before")
     def deserialize_type(cls, v):
         if isinstance(v, str):

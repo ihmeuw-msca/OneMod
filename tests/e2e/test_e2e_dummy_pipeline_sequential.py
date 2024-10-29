@@ -15,7 +15,6 @@ from tests.helpers.utils import assert_equal_unordered
 from onemod import Pipeline
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
-from onemod.stage import Stage
 
 
 @pytest.fixture
@@ -150,7 +149,10 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
 
 
 def assert_stage_logs(
-    stage: Stage,
+    stage: DummyCustomStage
+    | DummyKregStage
+    | DummyRoverStage
+    | DummySpxmodStage,
     methods: List[str] | None = None,
     subset_ids: List[int] | None = None,
     param_ids: List[int] | None = None,
@@ -159,18 +161,19 @@ def assert_stage_logs(
     log = stage.get_log()
     if methods:
         for method in methods:
-            for subset_id in subset_ids:
-                if param_ids:
-                    for param_id in param_ids:
+            if subset_ids:
+                for subset_id in subset_ids:
+                    if param_ids:
+                        for param_id in param_ids:
+                            assert (
+                                f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
+                                in log
+                            )
+                    else:
                         assert (
-                            f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
+                            f"{method}: name={stage.name}, subset={subset_id}, param=None"
                             in log
                         )
-                else:
-                    assert (
-                        f"{method}: name={stage.name}, subset={subset_id}, param=None"
-                        in log
-                    )
             if method in stage._collect_after:
                 assert f"collect: name={stage.name}" in log
 
