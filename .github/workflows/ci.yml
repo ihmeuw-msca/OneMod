@@ -3,7 +3,6 @@ name: CI
 on:
     push:
         branches:
-            - "feat/github_ci_workflow"  # FOR TESTING. TODO: remove line.
             - "main"
             - "release/*"
     pull_request:
