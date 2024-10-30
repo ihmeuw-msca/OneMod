@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Any, Generator, List
+from typing import Any, Generator
 
 from pydantic import BaseModel
 
@@ -12,7 +12,7 @@ class ValidationErrorReport(BaseModel):
 
 
 class ValidationErrorCollector(BaseModel):
-    errors: List[ValidationErrorReport] = []
+    errors: list[ValidationErrorReport] = []
 
     def add_error(
         self,
@@ -41,7 +41,7 @@ class ValidationErrorCollector(BaseModel):
 
 
 class ValidationException(Exception):
-    def __init__(self, errors: List[ValidationErrorReport]):
+    def __init__(self, errors: list[ValidationErrorReport]):
         self.errors = errors
         super().__init__(self._format_errors())
 

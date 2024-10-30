@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Dict
 
 import pytest
 import yaml
@@ -26,7 +25,7 @@ class ExampleModel(BaseModel):
     shape: tuple
     config: dict
     groupby: set[str]
-    items: Dict[str, Path]
+    items: dict[str, Path]
 
 
 @pytest.fixture

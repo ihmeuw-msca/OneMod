@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, ClassVar, Dict
+from typing import Any, ClassVar
 
 from polars import Boolean, DataFrame, Float64, Int64, String
 from pydantic import BaseModel, field_serializer
@@ -18,8 +18,8 @@ class Data(BaseModel):
     path: Path
     format: str = "parquet"
     shape: tuple[int, int] | None = None
-    columns: Dict[str, ColumnSpec] | None = None
-    type_mapping: ClassVar[Dict[type, Any]] = {
+    columns: dict[str, ColumnSpec] | None = None
+    type_mapping: ClassVar[dict[type, Any]] = {
         bool: Boolean,
         int: Int64,
         float: Float64,

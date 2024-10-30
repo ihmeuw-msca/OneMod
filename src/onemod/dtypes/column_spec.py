@@ -1,4 +1,4 @@
-from typing import Any, List, Type
+from typing import Any, Type
 
 from pydantic import BaseModel, field_serializer, field_validator
 
@@ -14,7 +14,7 @@ class ColumnSpec(BaseModel):
         | Type[BaseModel]
         | None
     ) = None
-    constraints: List[Constraint] | None = None
+    constraints: list[Constraint] | None = None
 
     def __getitem__(self, key: str) -> Any:
         if key == "type":

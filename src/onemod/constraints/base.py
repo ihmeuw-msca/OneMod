@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 from polars import Series
 from pydantic import BaseModel, Field, field_validator
@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field, field_validator
 from onemod.constraints.functions import bounds, is_in
 
 # Global registry for constraints
-CONSTRAINT_REGISTRY: Dict[str, Callable] = {}
+CONSTRAINT_REGISTRY: dict[str, Callable] = {}
 
 
 class Constraint(BaseModel):
     name: str
-    args: Dict[str, Any]
+    args: dict[str, Any]
 
     func: Callable[[Series], None] = Field(default=None, exclude=True)
 
