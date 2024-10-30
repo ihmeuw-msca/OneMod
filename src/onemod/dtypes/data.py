@@ -74,18 +74,18 @@ class Data(BaseModel):
         if self.columns:
             for col_name, col_spec in self.columns.items():
                 if (
-                    "type" in col_spec
-                    and col_spec["type"] not in self.type_mapping
+                    hasattr(col_spec, "type")
+                    and col_spec.type not in self.type_mapping
                 ):
                     handle_error(
                         self.stage,
                         "Data validation",
                         ValueError,
-                        f"Unsupported type {col_spec['type']} for column {col_name}.",
+                        f"Unsupported type {col_spec.type} for column {col_name}.",
                         collector,
                     )
-                if "constraints" in col_spec and col_spec["constraints"]:
-                    for constraint in col_spec["constraints"]:
+                if hasattr(col_spec, "constraints") and col_spec.constraints:
+                    for constraint in col_spec.constraints:
                         if not isinstance(constraint, Constraint):
                             handle_error(
                                 self.stage,

@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Type
 
 from pydantic import BaseModel, field_serializer, field_validator
 
@@ -15,20 +15,6 @@ class ColumnSpec(BaseModel):
         | None
     ) = None
     constraints: list[Constraint] | None = None
-
-    def __getitem__(self, key: str) -> Any:
-        if key == "type":
-            return self.type
-        elif key == "constraints":
-            return self.constraints
-        else:
-            raise KeyError(f"Invalid key: {key}")
-
-    def __contains__(self, key: str) -> bool:
-        return key in {"type", "constraints"}
-
-    def keys(self):
-        return ["type", "constraints"]
 
     @field_serializer("type")
     def serialize_type(self, t, info):
