@@ -31,7 +31,7 @@ minutes, while all other methods request ten minutes.
 
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, cast
 
 import yaml
 from jobmon.client.api import Tool
@@ -47,7 +47,7 @@ def get_tool(name: str, cluster: str, resources: Path | str) -> Tool:
     """Get tool."""
     tool = Tool(name=f"{name}")
     tool.set_default_cluster_name(cluster)
-    tool.set_default_compute_resources_from_yaml(cluster, resources)
+    tool.set_default_compute_resources_from_yaml(cluster, str(resources))
     return tool
 
 
@@ -80,7 +80,7 @@ def get_tasks(
                 node_args[node_arg] = node_vals
 
     task_template = get_task_template(
-        tool, resources, stage.name, method, node_args.keys()
+        tool, resources, stage.name, method, list(node_args.keys())
     )
 
     if node_args:
@@ -96,7 +96,7 @@ def get_tasks(
                 name=f"{stage.name}_{method}",
                 upstream_tasks=upstream_tasks,
                 max_attempts=1,
-                **task_args,
+                **cast(dict[str, Any], task_args),
             )
         ]
 
@@ -139,7 +139,7 @@ def get_command_template(
     """Get stage command template."""
     command_template = (
         "{python}"
-        f" {Path(__file__).parents[1] / "main.py"}"
+        f" {Path(__file__).parents[1] / 'main.py'}"
         " --config {config}"
         f" --stage_name {stage_name}"
         f" --method {method}"
@@ -165,9 +165,9 @@ def get_task_resources(
 
 
 def get_upstream_tasks(
-    stage: str,
+    stage: Stage,
     method: Literal["run", "fit", "predict"],
-    stages: set[Stage],
+    stages: dict[str, Stage],
     task_dict: dict[str, list[Task]],
 ) -> list[Task]:
     """Get upstream stage tasks."""
@@ -218,16 +218,22 @@ def evaluate_with_jobmon(
     tool = get_tool(model.name, cluster, resources)
 
     # Create tasks
-    task_args = {
-        "python": python or sys.executable,
-        "config": str(model.dataif.config),
+    if isinstance(model, Stage):
+        model_config = model.dataif.config
+    elif isinstance(model, Pipeline):
+        model_config = model.config
+    task_args: dict[str, str] = {
+        "python": str(python or sys.executable),
+        "config": str(model_config),
     }
     if isinstance(model, Pipeline):
         tasks = []
-        task_dict = {}
+        task_dict: dict[str, list[Task]] = {}
         for stage_name in model.get_execution_order():
             stage = model.stages[stage_name]
-            if method not in stage.skip:
+            if (
+                method not in stage.skip and method != "collect"
+            ):  # TODO: handle collect
                 upstream_tasks = get_upstream_tasks(
                     stage, method, model.stages, task_dict
                 )

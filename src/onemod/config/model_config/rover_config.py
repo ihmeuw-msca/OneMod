@@ -5,9 +5,9 @@ FIXME: improve top_pct_score and top_pct_learner descriptions
 """
 
 from typing import Literal
-from typing_extensions import Self
 
 from pydantic import Field, NonNegativeInt, model_validator
+from typing_extensions import Self
 
 from onemod.config import ModelConfig
 

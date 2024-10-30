@@ -5,27 +5,31 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from onemod.io import Input
 from onemod.dtypes import Data
+from onemod.io import Input
 
 REQUIRED_INPUT = {"data.parquet", "covariates.csv"}
 OPTIONAL_INPUT = {"priors.pkl"}
 VALID_ITEMS = {
     "data": "/path/to/predictions.parquet",
-    "covariates": Data(stage="first_stage", path="/path/to/selected_covs.csv"),
-    "priors": Data(stage="second_stage", path="/path/to/model.pkl"),
+    "covariates": Data(
+        stage="first_stage", path=Path("/path/to/selected_covs.csv")
+    ),
+    "priors": Data(stage="second_stage", path=Path("/path/to/model.pkl")),
 }
 ITEMS_WITH_CYCLES = {
     "data": "/path/to/predictions.parquet",
-    "covariates": Data(stage="test_stage", path="/path/to/selected_covs.csv"),
-    "priors": Data(stage="test_stage", path="/path/to/model.pkl"),
+    "covariates": Data(
+        stage="test_stage", path=Path("/path/to/selected_covs.csv")
+    ),
+    "priors": Data(stage="test_stage", path=Path("/path/to/model.pkl")),
 }
 ITEMS_WITH_INVALID_TYPES = {
     "data": "/path/to/predictions.csv",
     "covariates": Data(
-        stage="first_stage", path="/path/to/selected_covs.parquet"
+        stage="first_stage", path=Path("/path/to/selected_covs.parquet")
     ),
-    "priors": Data(stage="second_stage", path="/path/to/model.zip"),
+    "priors": Data(stage="second_stage", path=Path("/path/to/model.zip")),
 }
 ITEMS_WITH_EXTRAS = {"dummy": "/path/to/dummy.parquet", **VALID_ITEMS}
 
@@ -246,7 +250,11 @@ def test_missing_items():
     test_input = get_input()
     with pytest.raises(KeyError) as error:
         test_input.check_missing(
-            {"priors": Data(stage="second_stage", path="/path/to/model.pkl")}
+            {
+                "priors": Data(
+                    stage="second_stage", path=Path("/path/to/model.pkl")
+                )
+            }
         )
     observed = str(error.value).strip('"')
     expected = f"{test_input.stage} missing required input: "

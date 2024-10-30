@@ -129,23 +129,26 @@ class RoverStage(ModelStage):
                 summaries.append(summary)
             except FileNotFoundError:
                 warnings.warn(f"Rover submodel {subset_id} missing summary.csv")
-        summaries = pd.concat(summaries)
+        summaries_df = pd.concat(summaries)
 
         # Merge with subsets and add t-statistic
-        summaries = summaries.merge(subsets, on="subset_id", how="left")
-        summaries["abs_t_stat"] = summaries.eval("abs(coef / coef_sd)")
-        return summaries
+        summaries_df = summaries_df.merge(subsets, on="subset_id", how="left")
+        summaries_df["abs_t_stat"] = summaries_df.eval("abs(coef / coef_sd)")
+        return summaries_df
 
     def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
         """Select rover covariates."""
         pipeline_groupby = self.get_field("groupby")
+
+        selected_covs = []
+
         if pipeline_groupby is not None:
-            selected_covs = []
             for subset, subset_summaries in summaries.groupby(pipeline_groupby):
                 subset_selected_covs = self._get_subset_selected_covs(
                     subset_summaries, pipeline_groupby
                 )
                 selected_covs.append(subset_selected_covs)
+
                 logger.info(
                     ", ".join(
                         [
@@ -155,10 +158,11 @@ class RoverStage(ModelStage):
                         + [f"covs: {subset_selected_covs['cov'].values}"]
                     )
                 )
-            return pd.concat(selected_covs)
-        selected_covs = self._get_subset_selected_covs(summaries, [])
-        logger.info(f"covs: {selected_covs['cov'].values}")
-        return selected_covs
+        else:
+            selected_covs.append(self._get_subset_selected_covs(summaries, []))
+            logger.info(f"covs: {selected_covs[0]['cov'].values}")
+
+        return pd.concat(selected_covs, ignore_index=True)
 
     def _get_subset_selected_covs(
         self, subset_summaries: pd.DataFrame, groupby: list[str]

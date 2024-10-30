@@ -7,7 +7,8 @@ def create_subsets(groupby: set[str], data: DataFrame) -> DataFrame:
     """Create subsets from groupby."""
     groups = data.groupby(list(groupby))
     subsets = DataFrame(
-        [subset for subset in groups.groups.keys()], columns=groups.keys
+        [subset for subset in groups.groups.keys()],
+        columns=groups.keys,  # type: ignore
     )
     subsets["subset_id"] = subsets.index
     return subsets[["subset_id", *groupby]]

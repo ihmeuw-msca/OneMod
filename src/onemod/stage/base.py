@@ -12,12 +12,13 @@ from typing import Any, Literal
 
 from pandas import DataFrame
 from pplkit.data.interface import DataInterface
-from pydantic import BaseModel, ConfigDict, Field, computed_field, validate_call
+from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
 from onemod.dtypes import Data
 from onemod.io import Input, Output
+from onemod.utils.decorators import computed_property
 from onemod.utils.parameters import create_params, get_params
 from onemod.utils.subsets import create_subsets, get_subset
 from onemod.validation import ValidationErrorCollector, handle_error
@@ -72,6 +73,9 @@ class Stage(BaseModel, ABC):
         return self._dataif
 
     def set_dataif(self, config_path: Path | str) -> None:
+        if self.input is None:
+            return
+
         directory = Path(config_path).parent
         self._dataif = DataInterface(
             directory=directory,
@@ -88,14 +92,13 @@ class Stage(BaseModel, ABC):
         if not (directory / self.name).exists():
             (directory / self.name).mkdir()
 
-    @computed_field
-    @property
-    def module(self) -> str | None:
+    @computed_property
+    def module(self) -> Path | None:
         if self._module is None and not hasattr(
             onemod_stages, self.type
         ):  # custom stage
             try:
-                return getfile(self.__class__)
+                return Path(getfile(self.__class__))
             except TypeError:
                 raise TypeError(f"Could not find module for {self.name} stage")
         return self._module
@@ -104,8 +107,7 @@ class Stage(BaseModel, ABC):
     def skip(self) -> set[str]:
         return self._skip
 
-    @computed_field
-    @property
+    @computed_property
     def input(self) -> Input | None:
         if self._input is None:
             self._input = Input(
@@ -120,7 +122,7 @@ class Stage(BaseModel, ABC):
         output_items = {}
         for item in self._output:
             item_name = item.split(".")[0]  # remove extension
-            output_items[item_name] = Data(stage=self.name, path=item)
+            output_items[item_name] = Data(stage=self.name, path=Path(item))
         return Output(stage=self.name, items=output_items)
 
     @property
@@ -129,8 +131,7 @@ class Stage(BaseModel, ABC):
             return set()
         return self.input.dependencies
 
-    @computed_field
-    @property
+    @computed_property
     def type(self) -> str:
         return type(self).__name__
 
@@ -157,14 +158,14 @@ class Stage(BaseModel, ABC):
             stage_config = pipeline_config["stages"][stage_name]
         except KeyError:
             raise AttributeError(
-                f"{pipeline_config["name"]} does not contain a stage named '{stage_name}'"
+                f"{pipeline_config['name']} does not contain a stage named '{stage_name}'"
             )
         stage = cls(**stage_config)
         stage.config.inherit(pipeline_config["config"])
         if "module" in stage_config:
             stage._module = stage_config["module"]
-        if "crossby" in stage_config:
-            stage._crossby = stage_config["crossby"]
+        if hasattr(stage, "apply_stage_specific_config"):
+            stage.apply_stage_specific_config(stage_config)
         if "input" in stage_config:
             stage(**stage_config["input"])
         stage.set_dataif(config_path)
@@ -173,7 +174,7 @@ class Stage(BaseModel, ABC):
     @validate_call
     def evaluate(
         self,
-        method: Literal["run", "fit", "predict"] = "run",
+        method: Literal["run", "fit", "predict", "collect"] = "run",
         backend: Literal["local", "jobmon"] = "local",
         **kwargs,
     ) -> None:
@@ -235,7 +236,7 @@ class Stage(BaseModel, ABC):
                 data_path = self.input.get(item_name)
                 if data_path:
                     schema.path = Path(data_path)
-                    schema.validate_data(collector)
+                    schema.validate_data(None, collector)
                 else:
                     handle_error(
                         self.name,
@@ -252,7 +253,7 @@ class Stage(BaseModel, ABC):
                 data_output = self.output.get(item_name)
                 if data_output:
                     data_spec.path = Path(data_output.path)
-                    data_spec.validate_data(collector)
+                    data_spec.validate_data(None, collector)
                 else:
                     handle_error(
                         self.name,
@@ -288,7 +289,7 @@ class Stage(BaseModel, ABC):
         return config
 
     @abstractmethod
-    def run(self) -> None:
+    def run(self, *args, **kwargs) -> None:
         """Run stage."""
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -345,9 +346,8 @@ class ModelStage(Stage, ABC):
     _required_input: set[str] = set()  # data required for groupby
     _collect_after: set[str] = set()  # defined by class
 
-    @computed_field
-    @property
-    def crossby(self) -> set[str]:
+    @computed_property
+    def crossby(self) -> set[str] | None:
         return self._crossby
 
     @property
@@ -378,8 +378,18 @@ class ModelStage(Stage, ABC):
     def collect_after(self) -> set[str]:
         return self._collect_after
 
+    def apply_stage_specific_config(self, stage_config: dict) -> None:
+        """Apply ModelStage-specific configuration."""
+        if "crossby" in stage_config:
+            self._crossby = stage_config["crossby"]
+
     def create_stage_subsets(self, data: Path | str) -> None:
         """Create stage data subsets from groupby."""
+        if self.groupby is None:
+            raise AttributeError(
+                f"{self.name} does not have a groupby attribute"
+            )
+
         subsets = create_subsets(
             self.groupby, self.dataif.load(data, columns=self.groupby)
         )
@@ -471,23 +481,17 @@ class ModelStage(Stage, ABC):
                     evaluate_local(model=self, method=method)
 
     @abstractmethod
-    def run(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def run(self, *args, **kwargs) -> None:
         """Run stage submodel."""
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def fit(self, *args, **kwargs) -> None:
         """Fit stage submodel."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped."
         )
 
-    def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
-    ) -> None:
+    def predict(self, *args, **kwargs) -> None:
         """Predict stage submodel."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped."

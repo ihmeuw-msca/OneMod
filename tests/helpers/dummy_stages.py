@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import Field
 
 from onemod.config import (
@@ -22,12 +20,12 @@ class CustomConfig(ModelConfig):
 class DummyCustomStage(ModelStage):
     """Custom stage."""
 
-    config: CustomConfig = CustomConfig()
+    config: CustomConfig = CustomConfig()  # type: ignore
     _required_input: set[str] = {"observations.parquet", "predictions.parquet"}
     _collect_after: set[str] = {"run", "predict"}
 
     # Dummy-specific attributes
-    log: List[str] = Field(default_factory=list, exclude=True)
+    log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
@@ -60,7 +58,7 @@ class DummyCustomStage(ModelStage):
         self.log.append(f"collect: name={self.name}")
 
     # Dummy-specific methods
-    def get_log(self) -> List[str]:
+    def get_log(self) -> list[str]:
         """Retrieve the internal log."""
         return self.log
 
@@ -75,7 +73,7 @@ class DummyKregStage(ModelStage):
     _collect_after: set[str] = {"run", "predict"}
 
     # Dummy-specific attributes
-    log: List[str] = Field(default_factory=list, exclude=True)
+    log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
@@ -108,7 +106,7 @@ class DummyKregStage(ModelStage):
         self.log.append(f"collect: name={self.name}")
 
     # Dummy-specific methods
-    def get_log(self) -> List[str]:
+    def get_log(self) -> list[str]:
         """Retrieve the internal log."""
         return self.log
 
@@ -126,14 +124,14 @@ class DummyPreprocessingStage(Stage):
     _output: set[str] = {"data.parquet"}
 
     # Dummy-specific attributes
-    log: List[str] = Field(default_factory=list, exclude=True)
+    log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(self) -> None:
         """Run preprocessing stage."""
         self.log.append(f"run: name={self.name}")
 
     # Dummy-specific methods
-    def get_log(self) -> List[str]:
+    def get_log(self) -> list[str]:
         """Retrieve the internal log."""
         return self.log
 
@@ -148,7 +146,7 @@ class DummyRoverStage(ModelStage):
     _collect_after: set[str] = {"run", "fit"}
 
     # Dummy-specific attributes
-    log: List[str] = Field(default_factory=list, exclude=True)
+    log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
@@ -178,7 +176,7 @@ class DummyRoverStage(ModelStage):
         self.log.append(f"collect: name={self.name}")
 
     # Dummy-specific methods
-    def get_log(self) -> List[str]:
+    def get_log(self) -> list[str]:
         """Retrieve the internal log."""
         return self.log
 
@@ -197,7 +195,7 @@ class DummySpxmodStage(ModelStage):
     _collect_after: set[str] = {"run", "predict"}
 
     # Dummy-specific attributes
-    log: List[str] = Field(default_factory=list, exclude=True)
+    log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
@@ -230,6 +228,6 @@ class DummySpxmodStage(ModelStage):
         self.log.append(f"collect: name={self.name}")
 
     # Dummy-specific methods
-    def get_log(self) -> List[str]:
+    def get_log(self) -> list[str]:
         """Retrieve the internal log."""
         return self.log

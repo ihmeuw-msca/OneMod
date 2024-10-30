@@ -108,7 +108,7 @@ class SpxmodStage(ModelStage):
         # Create and fit submodel
         logger.info(f"Fitting {self.name} submodel {subset_id}")
         train = data.query(
-            f"({self.config["test_column"]} == 0) & {self.config["observation_column"]}.notnull()"
+            f"({self.config['test_column']} == 0) & {self.config['observation_column']}.notnull()"
         )
         model = XModel.from_config(xmodel_args)
         model.fit(data=train, data_span=data, **self.config.xmodel_fit)
@@ -214,7 +214,7 @@ class SpxmodStage(ModelStage):
         # Add offset to data
         offset = False
         if "offset" in self.input:
-            logger.info(f"Adding offset from {self.input["offset"].stage}")
+            logger.info(f"Adding offset from {self.input['offset'].stage}")
             data = data.merge(
                 right=self.dataif.load_offset(
                     columns=list(self.config["id_columns"])
@@ -282,7 +282,7 @@ class SpxmodStage(ModelStage):
 
         """
         # Add global settings
-        xmodel_args = self.config.xmodel.model_dump(exclude="spline_config")
+        xmodel_args = self.config.xmodel.model_dump(exclude={"spline_config"})
         xmodel_args["model_type"] = self.config["model_type"]
         xmodel_args["obs"] = self.config["observation_column"]
         xmodel_args["weights"] = self.config["weights_column"]
@@ -380,11 +380,11 @@ class SpxmodStage(ModelStage):
             value information.
 
         """
-        df_coef = []
+        coefs = []
         for variable in model.var_builders:
             df_sub = variable.space.span.copy()
             df_sub["cov"] = variable.name
-            df_coef.append(df_sub)
-        df_coef = pd.concat(df_coef, axis=0, ignore_index=True)
-        df_coef["coef"] = model.core.opt_coefs
-        return df_coef
+            coefs.append(df_sub)
+        coef_df = pd.concat(coefs, axis=0, ignore_index=True)
+        coef_df["coef"] = model.core.opt_coefs
+        return coef_df

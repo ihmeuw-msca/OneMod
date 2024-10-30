@@ -1,0 +1,30 @@
+name: Build
+
+on:
+    release:
+        types: [created]
+
+jobs:
+    build:
+        name: Build Python
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: "3.12"
+
+            - name: Install dependencies
+              run: pip install .[dev]
+
+            - name: Build
+              run: python -m build
+
+            - name: Upload Build Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: dist
+                path: dist/

@@ -13,7 +13,13 @@ from abc import ABC
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, model_serializer, validate_call
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    PrivateAttr,
+    model_serializer,
+    validate_call,
+)
 
 from onemod.dtypes import Data
 
@@ -30,12 +36,17 @@ class IO(BaseModel, ABC):
     def serialize_io(self) -> dict[str, str | dict[str, str]] | None:
         # Simplify output to config files
         if self.items:
-            input_dict = {}
+            input_dict: dict[str, str | dict[str, str]] = {}
             for item_name, item_value in self.items.items():
                 if isinstance(item_value, Path):
                     input_dict[item_name] = str(item_value)
                 elif isinstance(item_value, Data):
-                    input_dict[item_name] = item_value.model_dump()
+                    dumped_value = item_value.model_dump()
+                    if not isinstance(dumped_value, dict):
+                        raise ValueError(
+                            f"Expected dict from {item_name} Data model_dump, got {type(dumped_value)}"
+                        )
+                    input_dict[item_name] = dumped_value
             return input_dict
         return None
 
@@ -54,8 +65,8 @@ class Input(IO):
 
     required: set[str] = set()  # name.extension, defined by stage class
     optional: set[str] = set()  # name.extension, defined by stage class
-    _expected_names: set[str]
-    _expected_types: dict[str, str]
+    _expected_names: set[str] = PrivateAttr(default_factory=set)
+    _expected_types: dict[str, str] = PrivateAttr(default_factory=dict)
 
     @property
     def dependencies(self) -> set[str]:
@@ -171,7 +182,7 @@ class Input(IO):
 class Output(IO):
     """Stage output class."""
 
-    items: dict[str, Data] = {}  # defined by stage class
+    items: dict[str, Data] = {}  # type: ignore[assignment]
 
     def __getitem__(self, item_name: str) -> Data:
         if item_name not in self.items:

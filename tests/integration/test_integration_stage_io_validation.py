@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from onemod.config import Config
+from onemod.config import StageConfig
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
-    config: Config
+    config: StageConfig
     _required_input: set[str] = {"data.parquet", "covariates.csv"}
     _optional_input: set[str] = {"priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
@@ -101,8 +101,17 @@ def stage_1_model_expected(example_base_dir):
     return {
         "name": "stage_1",
         "type": "DummyStage",
-        "module": __file__,
-        "config": {},
+        "module": Path(__file__),
+        "config": {
+            "coef_bounds": None,
+            "holdout_columns": None,
+            "id_columns": None,
+            "model_type": None,
+            "observation_column": None,
+            "prediction_column": None,
+            "test_column": None,
+            "weights_column": None,
+        },
         "input_validation": {
             "covariates": {
                 "stage": "stage_0",
@@ -221,8 +230,17 @@ def stage_2_model_expected(example_base_dir):
     return {
         "name": "stage_2",
         "type": "DummyStage",
-        "config": {},
-        "module": __file__,
+        "config": {
+            "coef_bounds": None,
+            "holdout_columns": None,
+            "id_columns": None,
+            "model_type": None,
+            "observation_column": None,
+            "prediction_column": None,
+            "test_column": None,
+            "weights_column": None,
+        },
+        "module": Path(__file__),
         "input_validation": {
             "data": {
                 "stage": "stage_1",
@@ -275,7 +293,7 @@ def test_input_types(example_base_dir, stage_1):
     assert "data" in stage_1.input_validation
     assert stage_1.input_validation["data"].path == Path("data.parquet")
     assert stage_1.input_validation["data"].format == "parquet"
-    assert stage_1.input_validation["data"].shape == None
+    assert stage_1.input_validation["data"].shape is None
     assert stage_1.dependencies == set()
 
 
@@ -286,7 +304,7 @@ def test_output_types(stage_1):
         "predictions.parquet"
     )
     assert stage_1.output_validation["predictions"].format == "parquet"
-    assert stage_1.output_validation["predictions"].shape == None
+    assert stage_1.output_validation["predictions"].shape is None
 
 
 @pytest.mark.integration

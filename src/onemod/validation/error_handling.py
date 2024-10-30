@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Any, Generator, List
+from typing import Any, Generator
 
 from pydantic import BaseModel
 
@@ -12,24 +12,36 @@ class ValidationErrorReport(BaseModel):
 
 
 class ValidationErrorCollector(BaseModel):
-    errors: List[ValidationErrorReport] = []
+    errors: list[ValidationErrorReport] = []
 
-    def add_error(self, stage: str, error_category: str, message: str, details: dict = None) -> None:
-        error_report = ValidationErrorReport(stage=stage, error_category=error_category, message=message, details=details)
+    def add_error(
+        self,
+        stage: str,
+        error_category: str,
+        message: str,
+        details: dict | None = None,
+    ) -> None:
+        error_report = ValidationErrorReport(
+            stage=stage,
+            error_category=error_category,
+            message=message,
+            details=details,
+        )
         self.errors.append(error_report)
 
     def has_errors(self) -> bool:
         return len(self.errors) > 0
-    
+
     def get_errors(self) -> list[ValidationErrorReport]:
         return self.errors
-    
+
     def raise_errors(self) -> None:
         if self.has_errors():
             raise ValidationException(self.errors)
 
+
 class ValidationException(Exception):
-    def __init__(self, errors: List[ValidationErrorReport]):
+    def __init__(self, errors: list[ValidationErrorReport]):
         self.errors = errors
         super().__init__(self._format_errors())
 
@@ -40,6 +52,7 @@ class ValidationException(Exception):
         ]
         return "\n".join(messages)
 
+
 @contextmanager
 def validation_context() -> Generator[ValidationErrorCollector, None, None]:
     """Context manager for managing validation error collection."""
@@ -49,13 +62,14 @@ def validation_context() -> Generator[ValidationErrorCollector, None, None]:
     finally:
         pass
 
+
 def handle_error(
     stage: str,
     error_category: str,
     error_type: type[Exception],
     message: str,
     collector: ValidationErrorCollector | None = None,
-    details: dict | None = None
+    details: dict | None = None,
 ) -> None:
     """Handle an error by either raising it or adding it to the validation collector."""
     if collector:

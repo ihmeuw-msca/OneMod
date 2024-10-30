@@ -17,10 +17,13 @@ def create_params(config: ModelConfig) -> DataFrame | None:
     }
     if len(param_dict) == 0:
         return None
+
+    crossby = list(param_dict.keys())
     params = DataFrame(
         [param_set for param_set in product(*param_dict.values())],
-        columns=(crossby := param_dict.keys()),
+        columns=crossby,
     )
+
     params["param_id"] = params.index
     return params[["param_id", *crossby]]
 
@@ -28,6 +31,6 @@ def create_params(config: ModelConfig) -> DataFrame | None:
 def get_params(params: DataFrame, param_id: int) -> dict[str, Any]:
     params = params.query("param_id == @param_id").drop(columns=["param_id"])
     return {
-        param_name: param_value.item()
+        str(param_name): param_value.item()
         for param_name, param_value in params.items()
     }

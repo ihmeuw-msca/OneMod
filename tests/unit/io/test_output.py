@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from onemod.io import Output
 from onemod.dtypes import Data
+from onemod.io import Output
 
 ITEMS = {
     "predictions": {
@@ -17,7 +17,18 @@ ITEMS = {
         "columns": None,
     }
 }
-OUTPUT = Output(stage="stage", items=ITEMS)
+OUTPUT = Output(
+    stage="stage",
+    items={
+        "predictions": Data(
+            stage="stage",
+            path=Path("/path/to/predictions.parquet"),
+            format="parquet",
+            shape=None,
+            columns=None,
+        )
+    },
+)
 
 
 @pytest.mark.unit

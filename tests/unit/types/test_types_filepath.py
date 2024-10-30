@@ -1,4 +1,5 @@
 import pytest
+
 from onemod.dtypes.filepath import FilePath
 
 

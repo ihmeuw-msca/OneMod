@@ -1,12 +1,11 @@
 from pathlib import Path
-from typing import Any, ClassVar, Dict
+from typing import Any, ClassVar
 
-from polars import Boolean, DataFrame, Int64, Float64, String
+from polars import Boolean, DataFrame, Float64, Int64, String
 from pydantic import BaseModel, field_serializer
 
 from onemod.constraints import Constraint
 from onemod.dtypes.column_spec import ColumnSpec
-from onemod.dtypes.filepath import FilePath
 from onemod.utils import DataIOHandler
 from onemod.validation.error_handling import (
     ValidationErrorCollector,
@@ -16,11 +15,11 @@ from onemod.validation.error_handling import (
 
 class Data(BaseModel):
     stage: str
-    path: Path | FilePath
+    path: Path
     format: str = "parquet"
     shape: tuple[int, int] | None = None
-    columns: Dict[str, ColumnSpec] | None = None
-    type_mapping: ClassVar[Dict[type, Any]] = {
+    columns: dict[str, ColumnSpec] | None = None
+    type_mapping: ClassVar[dict[type, Any]] = {
         bool: Boolean,
         int: Int64,
         float: Float64,
@@ -75,18 +74,18 @@ class Data(BaseModel):
         if self.columns:
             for col_name, col_spec in self.columns.items():
                 if (
-                    "type" in col_spec
-                    and col_spec["type"] not in self.type_mapping
+                    hasattr(col_spec, "type")
+                    and col_spec.type not in self.type_mapping
                 ):
                     handle_error(
                         self.stage,
                         "Data validation",
                         ValueError,
-                        f"Unsupported type {col_spec['type']} for column {col_name}.",
+                        f"Unsupported type {col_spec.type} for column {col_name}.",
                         collector,
                     )
-                if "constraints" in col_spec:
-                    for constraint in col_spec["constraints"]:
+                if hasattr(col_spec, "constraints") and col_spec.constraints:
+                    for constraint in col_spec.constraints:
                         if not isinstance(constraint, Constraint):
                             handle_error(
                                 self.stage,
@@ -126,6 +125,7 @@ class Data(BaseModel):
                     str(e),
                     collector,
                 )
+                return
 
         if self.shape:
             self.validate_shape(data, collector)
@@ -137,6 +137,9 @@ class Data(BaseModel):
         self, data: DataFrame, collector: ValidationErrorCollector | None = None
     ) -> None:
         """Validate columns based on specified types and constraints."""
+        if self.columns is None:
+            return
+
         for col_name, col_spec in self.columns.items():
             if col_name not in data.columns:
                 handle_error(
@@ -172,4 +175,4 @@ class Data(BaseModel):
                     )
 
             for constraint in constraints:
-                constraint.validate(data[col_name])
+                constraint.use_validation(data[col_name])

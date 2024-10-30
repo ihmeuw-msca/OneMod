@@ -1,13 +1,8 @@
 import pytest
 
-from onemod.constraints import bounds, no_inf
-from onemod import Pipeline
-
-# from onemod.stage import PreprocessingStage, KregStage, RoverStage, SpxmodStage, WeaveStage, UncertaintyStage, EnsembleStage
-from onemod.dtypes import Data, FilePath
-
 
 @pytest.mark.e2e
+@pytest.mark.requires_data
 @pytest.mark.skip(reason="Not yet implemented")
 def test_e2e_onemod_mortality_estimates_sequential(tmp_path):
     """
@@ -23,11 +18,4 @@ def test_e2e_onemod_mortality_estimates_sequential(tmp_path):
         "ensemble",
     ]
     """
-    # Define Stages
-    preprocessing = PreprocessingStage(
-        name="1_preprocessing",
-        inputs=[FilePath],
-        outputs=[
-            Data.use_config(config_file="tests/e2e/config/1_preprocessing.json")
-        ],
-    )
+    pass
