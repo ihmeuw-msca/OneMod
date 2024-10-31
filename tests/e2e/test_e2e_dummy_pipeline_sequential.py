@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import List
 
 import pytest
 from tests.helpers.dummy_stages import (
@@ -153,9 +152,9 @@ def assert_stage_logs(
     | DummyKregStage
     | DummyRoverStage
     | DummySpxmodStage,
-    methods: List[str] | None = None,
-    subset_ids: List[int] | None = None,
-    param_ids: List[int] | None = None,
+    methods: list[str] | None = None,
+    subset_ids: list[int] | None = None,
+    param_ids: list[int] | None = None,
 ):
     """Assert that the expected methods were logged for a given stage."""
     log = stage.get_log()
@@ -288,3 +287,21 @@ def test_dummy_pipeline(test_input_data, test_base_dir, method):
             )
         else:
             assert False, "Unknown stage name"
+
+    # ## TODO: Test subset of stages (possibly in separate test script)
+    # # 1. Preprocessing only (valid)
+    # dummy_pipeline.evaluate(backend="local", method=method, stages=["preprocessing"])
+    # # assert via logs that only preprocessing was run
+
+    # # 2. Covariate selection only, only valid if preprocessing output exists
+    # # Ensure preprocessing.output["data"] path does not exist, delete if it does
+    # if Path(preprocessing.output["data"]).exists():  # noqa
+    #     Path(preprocessing.output["data"]).unlink()  # noqa
+    # # with pytest.raises... tbd error
+
+    # # 3. Preprocessing, then covariate selection (valid)
+    # dummy_pipeline.evaluate(backend="local", method=method, stages=["preprocessing"])
+    # dummy_pipeline.evaluate(backend="local", method=method, stages=["covariate_selection"])
+
+    # # 4. Preprocessing and covariate selection (valid)
+    # dummy_pipeline.evaluate(backend="local", method=method, stages=["preprocessing", "covariate_selection"])

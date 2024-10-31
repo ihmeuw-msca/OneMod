@@ -262,6 +262,7 @@ class Pipeline(BaseModel):
         method: Literal["run", "fit", "predict"] = "run",
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
+        stages: set[str] | None = None,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
@@ -272,6 +273,10 @@ class Pipeline(BaseModel):
             Name of method to evaluate. Default is 'run'.
         backend : str, optional
             How to evaluate the method. Default is 'local'.
+        build : bool, optional
+            Whether to build the pipeline before evaluation. Default is True.
+        stages : set of str, optional
+            Stages to evaluate. Default is None.
 
         Other Parameters
         ----------------
@@ -281,20 +286,40 @@ class Pipeline(BaseModel):
             Path to resources yaml file. Required if `backend` is
             'jobmon'.
 
-        TODO: Add options to run subset of stages
         TODO: Add options to run subset of IDs
 
         """
         if build:
             self.build()
+
+        if stages is not None:
+            for stage_name in stages:
+                if stage_name not in self.stages:
+                    raise ValueError(f"Stage '{stage_name}' not found")
+
+            for stage_name in stages:
+                stage: Stage = self.stages.get(stage_name)
+                if not stage.check_required_inputs_exist():
+                    raise ValueError(
+                        f"Required inputs for stage '{stage_name}' are missing. Ensure data dependencies are available before execution."
+                    )
+
+        ordered_stages = (
+            [stage for stage in self.get_execution_order() if stage in stages]
+            if stages is not None
+            else self.get_execution_order()
+        )
+
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 
-            evaluate_with_jobmon(model=self, method=method, **kwargs)
+            evaluate_with_jobmon(
+                model=self, method=method, stages=ordered_stages, **kwargs
+            )
         else:
             from onemod.backend import evaluate_local
 
-            evaluate_local(model=self, method=method)
+            evaluate_local(model=self, method=method, stages=ordered_stages)
 
     def run(
         self,
