@@ -295,7 +295,9 @@ class Pipeline(BaseModel):
         if stages is not None:
             for stage_name in stages:
                 if stage_name not in self.stages:
-                    raise ValueError(f"Stage '{stage_name}' not found")
+                    raise ValueError(
+                        f"Stage '{stage_name}' not found in pipeline."
+                    )
 
             for stage_name in stages:
                 stage: Stage = self.stages.get(stage_name)

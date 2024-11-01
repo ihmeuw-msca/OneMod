@@ -1,6 +1,47 @@
+from unittest.mock import patch
+
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
+
+
+def create_dummy_preprocessing_output_file(test_base_dir, stages):
+    """Create a dummy preprocessing output file."""
+    preprocessing = [
+        stage for stage in stages if stage.name == "preprocessing"
+    ][0]
+    preprocessing_output = (
+        test_base_dir / preprocessing.name / preprocessing.output["data"].path
+    )
+    preprocessing_output.parent.mkdir(parents=True, exist_ok=True)
+    preprocessing_output.touch()
+
+
+@pytest.mark.integration
+@pytest.mark.requires_data
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_invalid_stage_name(small_input_data, test_base_dir, method):
+    """Test that Pipeline.evaluate() raises an error when an invalid stage name is provided."""
+    dummy_pipeline, stages = setup_dummy_pipeline(
+        small_input_data, test_base_dir
+    )
+
+    with pytest.raises(
+        ValueError, match="Stage 'invalid_stage_name' not found"
+    ):
+        dummy_pipeline.evaluate(method=method, stages=["invalid_stage_name"])
+
+    with pytest.raises(
+        ValueError, match="Stage 'invalid_stage_name' not found"
+    ):
+        dummy_pipeline.evaluate(
+            method=method,
+            stages=[
+                "preprocessing",
+                "invalid_stage_name",
+                "covariate_selection",
+            ],
+        )
 
 
 @pytest.mark.integration
@@ -16,6 +57,9 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
     subset_stages = [
         stage for stage in stages if stage.name in subset_stage_names
     ]
+
+    # Manually write dummy preprocessing output data file
+    create_dummy_preprocessing_output_file(test_base_dir, stages)
 
     try:
         dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
@@ -46,17 +90,62 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
         if stage.name not in subset_stage_names:
             assert stage.get_log() == []
 
-    # ## TODO: Tests for evaluating subsets of stages
-    # 1. Done
-    # # 2. Covariate selection only, only valid if preprocessing output exists
-    # # Ensure preprocessing.output["data"] path does not exist, delete if it does
-    # if Path(preprocessing.output["data"]).exists():  # noqa
-    #     Path(preprocessing.output["data"]).unlink()  # noqa
-    # # with pytest.raises... tbd error
 
-    # # 3. Preprocessing, then covariate selection (valid)
-    # dummy_pipeline.evaluate(backend="local", method=method, stages=["preprocessing"])
-    # dummy_pipeline.evaluate(backend="local", method=method, stages=["covariate_selection"])
+@pytest.mark.integration
+@pytest.mark.requires_data
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_missing_dependency_error(small_input_data, test_base_dir, method):
+    """Test that Pipeline.evaluate() on a subset of stages raises an error when required inputs for a specified stage are missing."""
+    dummy_pipeline, stages = setup_dummy_pipeline(
+        small_input_data, test_base_dir
+    )
 
-    # # 4. Preprocessing and covariate selection (valid)
-    # dummy_pipeline.evaluate(backend="local", method=method, stages=["preprocessing", "covariate_selection"])
+    subset_stage_names = {"covariate_selection"}
+
+    with pytest.raises(
+        ValueError,
+        match="Required inputs for stage 'covariate_selection' are missing",
+    ):
+        dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+
+
+@pytest.mark.integration
+@pytest.mark.requires_data
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_evaluate_with_jobmon_subset_call(
+    dummy_resources, small_input_data, test_base_dir, method
+):
+    """Test that evaluate_with_jobmon is called with the correct subset."""
+    assert dummy_resources.exists()
+
+    dummy_pipeline, stages = setup_dummy_pipeline(
+        small_input_data, test_base_dir
+    )
+
+    subset_stage_names = {"preprocessing", "covariate_selection"}
+
+    create_dummy_preprocessing_output_file(test_base_dir, stages)
+
+    with patch(
+        "onemod.backend.evaluate_with_jobmon"
+    ) as mock_evaluate_with_jobmon:
+        dummy_pipeline.evaluate(
+            backend="jobmon",
+            cluster="local",
+            resources=dummy_resources,
+            method=method,
+            stages=subset_stage_names,
+        )
+
+        mock_evaluate_with_jobmon.assert_called_once()
+
+        args, kwargs = mock_evaluate_with_jobmon.call_args
+
+        print(args)
+        print(kwargs)
+
+        assert kwargs["model"] == dummy_pipeline
+        assert kwargs["cluster"] == "local"
+        assert kwargs["resources"] == dummy_resources
+        assert kwargs["method"] == method
+        assert kwargs["stages"] == list(subset_stage_names)

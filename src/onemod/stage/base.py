@@ -295,11 +295,13 @@ class Stage(BaseModel, ABC):
 
         # TODO: move checking path existence functionality to dataif module itself when moving dataif into OneMod
         for item_name, item_value in self.input.items.items():
-            if (
-                item_name in self.input.required
-                and item_name in self.dataif.dirs
-            ):
-                if not Path(self.dataif.dirs[item_name]).exists():
+            if isinstance(item_value, Path):
+                if not item_value.exists():
+                    return False
+            elif isinstance(item_value, Data):
+                if not (
+                    self.dataif.directory / item_value.stage / item_value.path
+                ).exists():
                     return False
 
         return True
