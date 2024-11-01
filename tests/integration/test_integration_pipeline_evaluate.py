@@ -141,9 +141,6 @@ def test_evaluate_with_jobmon_subset_call(
 
         args, kwargs = mock_evaluate_with_jobmon.call_args
 
-        print(args)
-        print(kwargs)
-
         assert kwargs["model"] == dummy_pipeline
         assert kwargs["cluster"] == "local"
         assert kwargs["resources"] == dummy_resources

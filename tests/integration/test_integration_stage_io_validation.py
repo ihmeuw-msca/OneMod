@@ -306,9 +306,7 @@ def test_stage_model(
     stage_1, stage_1_model_expected, stage_2, stage_2_model_expected
 ):
     stage_1_model_actual = stage_1.model_dump()
-    print(stage_1_model_actual)
     assert stage_1_model_actual == stage_1_model_expected
 
     stage_2_model_actual = stage_2.model_dump()
-    print(stage_2_model_actual)
     assert stage_2_model_actual == stage_2_model_expected
