@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Generator
 
 import pytest
@@ -21,6 +22,24 @@ def test_assets_dir():
             "The TEST_ASSETS_DIR environment variable is not set."
         )
     return test_dir
+
+
+@pytest.fixture
+def small_input_data(request, test_assets_dir):
+    """Fixture providing path to test input data for tests marked with requires_data."""
+    if request.node.get_closest_marker("requires_data") is None:
+        pytest.skip("Skipping test because it requires data assets.")
+
+    small_input_data_path = Path(
+        test_assets_dir, "e2e", "example1", "data", "small_data.parquet"
+    )
+    return small_input_data_path
+
+
+@pytest.fixture
+def test_base_dir(tmp_path_factory):
+    test_base_dir = tmp_path_factory.mktemp("test_base_dir")
+    return test_base_dir
 
 
 @pytest.fixture(scope="session")
