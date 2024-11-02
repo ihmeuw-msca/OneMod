@@ -3,6 +3,7 @@ from unittest.mock import patch
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
+from tests.helpers.utils import assert_equal_unordered
 
 
 def create_dummy_preprocessing_output_file(test_base_dir, stages):
@@ -104,7 +105,7 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 
     with pytest.raises(
         ValueError,
-        match="Required inputs for stage 'covariate_selection' are missing",
+        match="Required input to stage 'covariate_selection' is missing. Missing output from upstream dependency 'preprocessing'.",
     ):
         dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
 
@@ -123,8 +124,6 @@ def test_evaluate_with_jobmon_subset_call(
     )
 
     subset_stage_names = {"preprocessing", "covariate_selection"}
-
-    create_dummy_preprocessing_output_file(test_base_dir, stages)
 
     with patch(
         "onemod.backend.evaluate_with_jobmon"
@@ -145,4 +144,4 @@ def test_evaluate_with_jobmon_subset_call(
         assert kwargs["cluster"] == "local"
         assert kwargs["resources"] == dummy_resources
         assert kwargs["method"] == method
-        assert kwargs["stages"] == list(subset_stage_names)
+        assert_equal_unordered(kwargs["stages"], list(subset_stage_names))

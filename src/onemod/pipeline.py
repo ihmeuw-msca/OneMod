@@ -136,6 +136,19 @@ class Pipeline(BaseModel):
         stage.config.inherit(self.config)
         self._stages[stage.name] = stage
 
+    def check_upstream_outputs_exist(
+        self, stage_name: str, upstream_name: str
+    ) -> bool:
+        """Check if outputs from the specified upstream dependency exist for the inputs of a given stage."""
+        stage = self.stages[stage_name]
+
+        for input_name, input_data in stage.input.items.items():
+            if input_data.stage == upstream_name:
+                upstream_output_path = input_data.path
+                if not upstream_output_path.exists():
+                    return False
+        return True
+
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
@@ -301,10 +314,14 @@ class Pipeline(BaseModel):
 
             for stage_name in stages:
                 stage: Stage = self.stages.get(stage_name)
-                if not stage.check_required_inputs_exist():
-                    raise ValueError(
-                        f"Required inputs for stage '{stage_name}' are missing. Ensure data dependencies are available before execution."
-                    )
+                for dep in stage.dependencies:
+                    if dep not in stages:
+                        if not self.check_upstream_outputs_exist(
+                            stage_name, dep
+                        ):
+                            raise ValueError(
+                                f"Required input to stage '{stage_name}' is missing. Missing output from upstream dependency '{dep}'."
+                            )
 
         ordered_stages = (
             [stage for stage in self.get_execution_order() if stage in stages]

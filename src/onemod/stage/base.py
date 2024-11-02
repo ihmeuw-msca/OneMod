@@ -288,24 +288,6 @@ class Stage(BaseModel, ABC):
             config = config[key]
         return config
 
-    def check_required_inputs_exist(self) -> bool:
-        """Check if all required input files exist."""
-        if self.dataif is None:
-            raise AttributeError(f"Stage '{self.name}' dataif has not been set")
-
-        # TODO: move checking path existence functionality to dataif module itself when moving dataif into OneMod
-        for item_name, item_value in self.input.items.items():
-            if isinstance(item_value, Path):
-                if not item_value.exists():
-                    return False
-            elif isinstance(item_value, Data):
-                if not (
-                    self.dataif.directory / item_value.stage / item_value.path
-                ).exists():
-                    return False
-
-        return True
-
     @abstractmethod
     def run(self, *args, **kwargs) -> None:
         """Run stage."""
