@@ -228,7 +228,7 @@ class Pipeline(BaseModel):
 
     def build(self, id_subsets: dict[str, list[Any]] | None = None) -> None:
         """Assemble pipeline, perform build-time validation, and save to JSON."""
-        self.id_subset = id_subsets
+        self.id_subsets = id_subsets
         collector = ValidationErrorCollector()
 
         if self.id_subsets is not None:
@@ -249,7 +249,6 @@ class Pipeline(BaseModel):
 
         config_path = self.directory / (self.name + ".json")
         for stage in self.stages.values():
-            # TODO: rm this comment but noting that here is where data actually does get read in for first time
             stage.set_dataif(config_path)
 
             # Create data subsets
@@ -265,9 +264,7 @@ class Pipeline(BaseModel):
                     stage.create_stage_subsets(
                         self.data, id_subsets=self.id_subsets
                     )
-
-            # Create parameter sets
-            if isinstance(stage, ModelStage):
+                # Create parameter sets
                 if stage.config.crossable_params:
                     stage.create_stage_params()
 

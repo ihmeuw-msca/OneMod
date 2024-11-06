@@ -60,12 +60,12 @@ class Stage(BaseModel, ABC):
 
         Examples
         --------
-        * Load config: stage.dataif.load_config()
-        * Load input: stage.dataif.load_{input_name}()
+        * Load config: stage.dataif.load(key="config")
+        * Load input: stage.dataif.load(key=f"{input_name}")
         * Load output:
-          stage.dataif.load_output("{output_name}.{output_extension}")
+          stage.dataif.load(f"{output_name}.{output_extension}", key="output")
         * Dump output:
-          stage.dataif.load_output(output, "{output_name}.{output_extension}")
+          stage.dataif.dump(output, f"{output_name}.{output_extension}", key="output")
 
         """
         if self._dataif is None:
@@ -354,7 +354,7 @@ class ModelStage(Stage, ABC):
     def subset_ids(self) -> set[int]:
         if self.groupby is not None and not self._subset_ids:
             try:
-                subsets = self.dataif.load_output("subsets.csv")
+                subsets = self.dataif.load("subsets.csv", key="output")
                 self._subset_ids = set(subsets["subset_id"])
             except FileNotFoundError:
                 raise AttributeError(
@@ -366,7 +366,7 @@ class ModelStage(Stage, ABC):
     def param_ids(self) -> set[int]:
         if self.crossby is not None and not self._param_ids:
             try:
-                params = self.dataif.load_output("parameters.csv")
+                params = self.dataif.load("parameters.csv", key="output")
                 self._param_ids = set(params["param_id"])
             except FileNotFoundError:
                 raise AttributeError(
@@ -384,42 +384,28 @@ class ModelStage(Stage, ABC):
             self._crossby = stage_config["crossby"]
 
     def create_stage_subsets(
-        self, data: Path | str, id_subsets: dict[str, list[Any]]
+        self, data: Path | str, id_subsets: dict[str, list[Any]] | None = None
     ) -> None:
-        """Create stage data subsets from groupby."""
-        # TODO: Add support for id_subsets via dataif, lazy  (to be added to dataif, presumably before implementing this here)
+        """Create stage data subsets from groupby and id_subsets."""
         if self.groupby is None:
             raise AttributeError(
                 f"{self.name} does not have a groupby attribute"
             )
 
-        # e.g.:
-        # data_lf = self.dataif.lazy_load(data, columns=self.groupby, id_subsets=id_subsets)
-
-        # tmp:
-        data_df = self.dataif.load(data, columns=self.groupby)
-        if id_subsets:
-            for column, values in id_subsets.items():
-                if column in data_df.columns:
-                    data_df = data_df[data_df[column].isin(values)]
-                else:
-                    raise ValueError(
-                        f"Column '{column}' specified in id_subsets not found in data."
-                    )
-
-        subsets = create_subsets(
-            self.groupby,
-            data_df,
-            # self.groupby, data_lf
+        lf = self.dataif.load(
+            data, columns=self.groupby, id_subsets=id_subsets, lazy=True
         )
+
+        subsets = create_subsets(self.groupby, lf)
         self._subset_ids = set(subsets["subset_id"])
-        self.dataif.dump_output(subsets, "subsets.csv")
+
+        self.dataif.dump(subsets, "subsets.csv", key="output")
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
         return get_subset(
-            self.dataif.load_data(),
-            self.dataif.load_output("subsets.csv"),
+            self.dataif.load("data.parquet", key="data"),
+            self.dataif.load("subsets.csv", key="output"),
             subset_id,
         )
 
@@ -429,11 +415,13 @@ class ModelStage(Stage, ABC):
         if params is not None:
             self._crossby = set(params.drop(columns="param_id").columns)
             self._param_ids = set(params["param_id"])
-            self.dataif.dump_output(params, "parameters.csv")
+            self.dataif.dump(params, "parameters.csv", key="output")
 
     def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
-        params = get_params(self.dataif.load_output("parameters.csv"), param_id)
+        params = get_params(
+            self.dataif.load("parameters.csv", key="output"), param_id
+        )
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 

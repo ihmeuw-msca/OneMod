@@ -1,11 +1,12 @@
-from functools import partial
 from pathlib import Path
-from typing import Any
 
+import polars as pl
+
+from onemod.datatools.directory_manager import DirectoryManager
 from onemod.datatools.io import DataIO, dataio_dict
 
 
-class DataInterface:
+class DataInterface(DirectoryManager):
     """Data interface that store important directories and automatically read
     and write data to the stored directories based on their data types.
 
@@ -27,124 +28,55 @@ class DataInterface:
 
     """
 
-    def __init__(self, **dirs: dict[str, str | Path]) -> None:
+    def __init__(self, **dirs: dict[str, Path | str]) -> None:
+        self.dirs = {key: Path(path) for key, path in dirs.items()}
         self.keys = []
         for key, value in dirs.items():
             self.add_dir(key, value)
 
-    def add_dir(
-        self, key: str, value: str | Path, exist_ok: bool = False
-    ) -> None:
-        """Add a directory to instance. If the directory already exist
-
-        Parameters
-        ----------
-        key
-            Directory name.
-        value
-            Directory path.
-        exist_ok
-            If ``exist_ok=True`` and ``key`` already exists in the current
-            instance it will raise an error. Otherwise it will overwrite the
-            path corresponding to the ``key``.
-
-        Raises
-        ------
-        ValueError
-            Raised when ``exist_ok=False`` and ``key`` already exists.
-
-        """
-        if (not exist_ok) and (key in self.keys):
-            raise ValueError(f"{key} already exists")
-        setattr(self, key, Path(value))
-        setattr(self, f"load_{key}", partial(self.load, key=key))
-        setattr(self, f"dump_{key}", partial(self.dump, key=key))
-        if key not in self.keys:
-            self.keys.append(key)
-
-    def remove_dir(self, key: str) -> None:
-        """Remove a directory from the current set of directories.
-
-        Parameters
-        ----------
-        key
-            Directory name
-
-        """
-        if key in self.keys:
-            delattr(self, key)
-            delattr(self, f"load_{key}")
-            delattr(self, f"dump_{key}")
-            self.keys.remove(key)
-
-    def get_fpath(self, *fparts: tuple[str, ...], key: str = "") -> Path:
-        """Get the file path from the name of the directory and the sub-parts
-        under the directory.
-
-        Parameters
-        ----------
-        fparts
-            Subdirectories or the file name.
-        key
-            The name of the directory stored in the class.
-
-        """
-        return getattr(self, key, Path(".")) / "/".join(map(str, fparts))
-
     def load(
-        self, *fparts: tuple[str, ...], key: str = "", **options: dict[str, Any]
-    ) -> Any:
-        """Load data from given directory.
-
-        Parameters
-        ----------
-        fparts
-            Subdirectories or the file name.
-        key
-            The name of the directory stored in the class.
-        options
-            Extra arguments for the load function.
-
-        Returns
-        -------
-        Any
-            Data loaded from the given path.
-
-        """
-        fpath = self.get_fpath(*fparts, key=key)
-        return self.dataio_dict[fpath.suffix].load(fpath, **options)
-
-    def dump(
         self,
-        obj: Any,
         *fparts: str,
         key: str = "",
-        mkdir: bool = True,
-        **options: dict[str, Any],
-    ):
-        """Dump data to the given directory.
+        lazy: bool = False,
+        columns: list[str] | None = None,
+        id_subsets: dict[str, list] | None = None,
+        **options,
+    ) -> pl.DataFrame | pl.LazyFrame:
+        """Load data with optional lazy loading and subset filtering."""
+        path = self.get_fpath(*fparts, key=key)
 
-        Parameters
-        ----------
-        obj
-            Provided data object.
-        fparts
-            Subdirectories or the file name.
-        key
-            The name of the directory stored in the class.
-        mkdir
-            If true, it will automatically create the parent directory. The
-            default is true.
-        options
-            Extra arguments for the dump function.
+        if lazy:
+            return self._lazy_load(path, columns, id_subsets)
+        return self.dataio_dict[path.suffix].load(path, **options)
 
-        """
-        fpath = self.get_fpath(*fparts, key=key)
-        self.dataio_dict[fpath.suffix].dump(obj, fpath, mkdir=mkdir, **options)
+    def _lazy_load(
+        self,
+        path: Path,
+        columns: list[str] | None = None,
+        id_subsets: dict[str, list] | None = None,
+    ) -> pl.LazyFrame:
+        """Internal lazy load for data files with subset filtering."""
+        lf = (
+            pl.scan_parquet(path)
+            if path.suffix == ".parquet"
+            else pl.scan_csv(path)
+        )
+        lf = lf.select(columns) if columns else lf
+
+        if id_subsets:
+            for col, values in id_subsets.items():
+                lf = lf.filter(pl.col(col).is_in(values))
+
+        return lf
+
+    def dump(
+        self, obj: pl.DataFrame, *fparts: str, key: str = "", **options
+    ) -> None:
+        """Save data based on directory key and filepath parts."""
+        path = self.get_fpath(*fparts, key=key)
+        self.dataio_dict[path.suffix].dump(obj, path, **options)
 
     def __repr__(self) -> str:
-        expr = f"{type(self).__name__}(\n"
-        for key in self.keys:
-            expr += f"    {key}={getattr(self, key)},\n"
-        expr += ")"
-        return expr
+        base_repr = super().__repr__()
+        return f"{base_repr[:-1]}, supports_lazy_loading=True\n)"
