@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Any, Literal
 
 from pandas import DataFrame
-from pplkit.data.interface import DataInterface
 from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
+from onemod.datatools.interface import DataInterface
 from onemod.dtypes import Data
 from onemod.io import Input, Output
 from onemod.utils.decorators import computed_property
@@ -383,15 +383,34 @@ class ModelStage(Stage, ABC):
         if "crossby" in stage_config:
             self._crossby = stage_config["crossby"]
 
-    def create_stage_subsets(self, data: Path | str) -> None:
+    def create_stage_subsets(
+        self, data: Path | str, id_subsets: dict[str, list[Any]]
+    ) -> None:
         """Create stage data subsets from groupby."""
+        # TODO: Add support for id_subsets via dataif, lazy  (to be added to dataif, presumably before implementing this here)
         if self.groupby is None:
             raise AttributeError(
                 f"{self.name} does not have a groupby attribute"
             )
 
+        # e.g.:
+        # data_lf = self.dataif.lazy_load(data, columns=self.groupby, id_subsets=id_subsets)
+
+        # tmp:
+        data_df = self.dataif.load(data, columns=self.groupby)
+        if id_subsets:
+            for column, values in id_subsets.items():
+                if column in data_df.columns:
+                    data_df = data_df[data_df[column].isin(values)]
+                else:
+                    raise ValueError(
+                        f"Column '{column}' specified in id_subsets not found in data."
+                    )
+
         subsets = create_subsets(
-            self.groupby, self.dataif.load(data, columns=self.groupby)
+            self.groupby,
+            data_df,
+            # self.groupby, data_lf
         )
         self._subset_ids = set(subsets["subset_id"])
         self.dataif.dump_output(subsets, "subsets.csv")
