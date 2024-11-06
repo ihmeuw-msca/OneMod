@@ -28,12 +28,6 @@ class DataInterface(DirectoryManager):
 
     """
 
-    def __init__(self, **dirs: dict[str, Path | str]) -> None:
-        self.dirs = {key: Path(path) for key, path in dirs.items()}
-        self.keys = []
-        for key, value in dirs.items():
-            self.add_dir(key, value)
-
     def load(
         self,
         *fparts: str,

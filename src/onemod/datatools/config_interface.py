@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 from onemod.datatools.directory_manager import DirectoryManager
@@ -7,12 +6,6 @@ from onemod.datatools.io import dataio_dict
 
 class ConfigInterface(DirectoryManager):
     """Interface for handling configuration files and serialized model files."""
-
-    def __init__(self, **dirs: dict[str, Path | str]) -> None:
-        """Initialize directories to manage config files."""
-        self.keys = []
-        for key, path in dirs.items():
-            self.add_dir(key, path)
 
     def load(self, *fparts: str, key: str = "", **options) -> Any:
         """Load a config file or serialized model, depending on file extension."""

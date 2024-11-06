@@ -6,8 +6,7 @@ class DirectoryManager:
 
     def __init__(self, **dirs: dict[str, Path | str]) -> None:
         """Initialize directories and set up attributes for each directory."""
-        self.dirs = {key: Path(path) for key, path in dirs.items()}
-        self.keys = []
+        self.dirs = {}
         for key, path in dirs.items():
             self.add_dir(key, path)
 
