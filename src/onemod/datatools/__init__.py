@@ -1,4 +1,4 @@
-from onemod.datatools.interface import DataInterface
-from onemod.datatools.io import DataIO, dataio_dict
+from onemod.datatools.config_interface import ConfigInterface
+from onemod.datatools.data_interface import DataInterface
 
-__all__ = ["DataInterface", "DataIO", "dataio_dict"]
+__all__ = ["ConfigInterface", "DataInterface"]

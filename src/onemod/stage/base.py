@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
-from onemod.datatools.interface import DataInterface
+from onemod.datatools import DataInterface
 from onemod.dtypes import Data
 from onemod.io import Input, Output
 from onemod.utils.decorators import computed_property
