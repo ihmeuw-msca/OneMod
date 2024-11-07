@@ -1,25 +1,34 @@
 from typing import Any
 
 from onemod.datatools.directory_manager import DirectoryManager
-from onemod.datatools.io import dataio_dict
+from onemod.datatools.io import FileIO, configio_dict
 
 
 class ConfigInterface(DirectoryManager):
-    """Interface for handling configuration files and serialized model files."""
+    """Interface for handling configuration files and serialized model files.
+
+    Attributes
+    ----------
+    io_dict : dict[str, FileIO]
+        A dictionary that maps the file extensions to the corresponding config io
+        class. This is a module-level variable from onemod.datatools.io.configio_dict.
+    """
+
+    io_dict: dict[str, FileIO] = configio_dict
 
     def load(self, *fparts: str, key: str = "", **options) -> Any:
         """Load a config file or serialized model, depending on file extension."""
         path = self.get_fpath(*fparts, key=key)
-        if path.suffix not in dataio_dict:
+        if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported config format for '{path.suffix}'")
-        return dataio_dict[path.suffix].load(path, **options)
+        return self.io_dict[path.suffix].load(path, **options)
 
     def dump(self, obj: Any, *fparts: str, key: str = "", **options) -> None:
         """Save a config or model object to a specified path, ensuring the format matches."""
         path = self.get_fpath(*fparts, key=key)
-        if path.suffix not in dataio_dict:
+        if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported config format for '{path.suffix}'")
-        dataio_dict[path.suffix].dump(obj, path, **options)
+        self.io_dict[path.suffix].dump(obj, path, **options)
 
     def __repr__(self) -> str:
         base_repr = super().__repr__()

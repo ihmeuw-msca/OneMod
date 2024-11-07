@@ -3,30 +3,22 @@ from pathlib import Path
 import polars as pl
 
 from onemod.datatools.directory_manager import DirectoryManager
-from onemod.datatools.io import DataIO, dataio_dict
+from onemod.datatools.io import FileIO, dataio_dict
 
 
 class DataInterface(DirectoryManager):
     """Data interface that store important directories and automatically read
     and write data to the stored directories based on their data types.
 
-    Parameters
+    Attributes
     ----------
-    dirs
-        Directories to manage with directory's name as the name of the keyword
-        argument's name and directory's path as the value of the keyword
-        argument's value.
+    io_dict : dict[str, FileIO]
+        A dictionary that maps the file extensions to the corresponding data io
+        class. This is a module-level variable from onemo.datatools.io.dataio_dict.
 
     """
 
-    dataio_dict: dict[str, DataIO] = dataio_dict
-    """A dictionary that maps the file extensions to the corresponding data io
-    class. This is a module-level variable from
-    :py:data:`pplkit.data.io.dataio_dict`.
-
-    :meta hide-value:
-
-    """
+    io_dict: dict[str, FileIO] = dataio_dict
 
     def load(
         self,
@@ -42,7 +34,7 @@ class DataInterface(DirectoryManager):
 
         if lazy:
             return self._lazy_load(path, columns, id_subsets)
-        return self.dataio_dict[path.suffix].load(path, **options)
+        return self.io_dict[path.suffix].load(path, **options)
 
     def _lazy_load(
         self,
@@ -69,7 +61,7 @@ class DataInterface(DirectoryManager):
     ) -> None:
         """Save data based on directory key and filepath parts."""
         path = self.get_fpath(*fparts, key=key)
-        self.dataio_dict[path.suffix].dump(obj, path, **options)
+        self.io_dict[path.suffix].dump(obj, path, **options)
 
     def __repr__(self) -> str:
         base_repr = super().__repr__()
