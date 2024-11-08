@@ -103,14 +103,6 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 
     subset_stage_names = {"covariate_selection"}
 
-    # Check
-    print(dummy_pipeline.stages)
-    print(subset_stage_names)
-    print(dummy_pipeline.stages["covariate_selection"])
-    print(dummy_pipeline.stages["covariate_selection"].dependencies)
-    print(dummy_pipeline.stages["covariate_selection"].input)
-    print(dummy_pipeline.stages["preprocessing"])
-
     with pytest.raises(
         ValueError,
         match="Required input to stage 'covariate_selection' is missing. Missing output from upstream dependency 'preprocessing'.",

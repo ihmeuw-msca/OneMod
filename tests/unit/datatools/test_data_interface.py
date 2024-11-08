@@ -24,7 +24,7 @@ def test_data_interface(data, extension, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
-def test_add_dir(tmp_path):
+def test_add_path(tmp_path):
     dataif = DataInterface()
 
     assert len(dataif.paths) == 0
@@ -36,7 +36,7 @@ def test_add_dir(tmp_path):
     assert dataif.paths["tmp"] == tmp_path
 
 
-def test_add_dir_exist_ok(tmp_path):
+def test_add_path_exist_ok(tmp_path):
     dataif = DataInterface(tmp=tmp_path)
 
     with pytest.raises(ValueError):
@@ -45,7 +45,7 @@ def test_add_dir_exist_ok(tmp_path):
     dataif.add_path("tmp", tmp_path, exist_ok=True)
 
 
-def test_remove_dir(tmp_path):
+def test_remove_path(tmp_path):
     dataif = DataInterface(tmp=tmp_path)
 
     assert len(dataif.paths) == 1

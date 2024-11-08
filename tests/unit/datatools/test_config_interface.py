@@ -20,7 +20,7 @@ def test_config_interface(sample_config, fextn, tmp_path):
     assert loaded_config == sample_config
 
 
-def test_add_dir(tmp_path):
+def test_add_path(tmp_path):
     configif = ConfigInterface()
 
     assert len(configif.paths) == 0
@@ -32,7 +32,7 @@ def test_add_dir(tmp_path):
     assert configif.paths["config"] == tmp_path
 
 
-def test_add_dir_exist_ok(tmp_path):
+def test_add_path_exist_ok(tmp_path):
     configif = ConfigInterface(config=tmp_path)
 
     with pytest.raises(ValueError):
@@ -41,7 +41,7 @@ def test_add_dir_exist_ok(tmp_path):
     configif.add_path("config", tmp_path, exist_ok=True)
 
 
-def test_remove_dir(tmp_path):
+def test_remove_path(tmp_path):
     configif = ConfigInterface(config=tmp_path)
 
     assert len(configif.paths) == 1
