@@ -1,6 +1,6 @@
 import pytest
 
-from onemod.datatools.config_interface import ConfigInterface
+from onemod.fsutils.config_interface import ConfigInterface
 
 
 @pytest.fixture

@@ -2,14 +2,7 @@ import numpy as np
 import pytest
 from polars import DataFrame
 
-from onemod.datatools.io import (
-    CSVIO,
-    JSONIO,
-    TOMLIO,
-    YAMLIO,
-    ParquetIO,
-    PickleIO,
-)
+from onemod.fsutils.io import CSVIO, JSONIO, TOMLIO, YAMLIO, ParquetIO, PickleIO
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 from typing import Any
 
-from onemod.datatools.directory_manager import PathManager
-from onemod.datatools.io import FileIO, configio_dict
+from onemod.fsutils.directory_manager import PathManager
+from onemod.fsutils.io import FileIO, configio_dict
 
 
 class ConfigInterface(PathManager):
@@ -11,7 +11,7 @@ class ConfigInterface(PathManager):
     ----------
     io_dict : dict[str, FileIO]
         A dictionary that maps the file extensions to the corresponding config io
-        class. This is a module-level variable from onemod.datatools.io.configio_dict.
+        class. This is a module-level variable from onemod.fsutils.io.configio_dict.
     """
 
     io_dict: dict[str, FileIO] = configio_dict

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from polars import DataFrame
 
-from onemod.datatools.data_interface import DataInterface
+from onemod.fsutils.data_interface import DataInterface
 
 
 @pytest.fixture

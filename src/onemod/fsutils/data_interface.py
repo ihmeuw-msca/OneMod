@@ -2,8 +2,8 @@ from pathlib import Path
 
 import polars as pl
 
-from onemod.datatools.directory_manager import PathManager
-from onemod.datatools.io import FileIO, dataio_dict
+from onemod.fsutils.directory_manager import PathManager
+from onemod.fsutils.io import FileIO, dataio_dict
 
 
 class DataInterface(PathManager):
