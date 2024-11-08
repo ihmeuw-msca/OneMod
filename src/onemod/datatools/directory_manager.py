@@ -1,40 +1,40 @@
 from pathlib import Path
 
 
-class DirectoryManager:
-    """Utility for managing directories in DataInterface and ConfigInterface."""
+class PathManager:
+    """Utility for managing filesystem paths via DataInterface and ConfigInterface."""
 
-    def __init__(self, **dirs: dict[str, Path | str]) -> None:
-        """Initialize directories and set up attributes for each directory."""
-        self.dirs = {}
-        for key, path in dirs.items():
-            self.add_dir(key, path)
+    def __init__(self, **paths: dict[str, Path | str]) -> None:
+        """Initialize key-value pairs for paths."""
+        self.paths = {}
+        for key, path in paths.items():
+            self.add_path(key, path)
 
-    def add_dir(
+    def add_path(
         self, key: str, path: Path | str, exist_ok: bool = False
     ) -> None:
-        if not exist_ok and key in self.dirs:
+        if not exist_ok and key in self.paths:
             raise ValueError(f"{key} already exists")
-        self.dirs[key] = Path(path)
+        self.paths[key] = Path(path)
 
-    def get_dir(self, key: str) -> Path:
-        if key not in self.dirs:
-            raise ValueError(f"Directory '{key}' not found.")
-        return self.dirs[key]
+    def get_path(self, key: str) -> Path:
+        if key not in self.paths:
+            raise ValueError(f"Path for '{key}' not found.")
+        return self.paths[key]
 
-    def remove_dir(self, key: str) -> None:
-        if key not in self.dirs:
-            raise ValueError(f"Directory '{key}' not found.")
-        del self.dirs[key]
+    def remove_path(self, key: str) -> None:
+        if key not in self.paths:
+            raise ValueError(f"Path for '{key}' not found.")
+        del self.paths[key]
 
-    def get_fpath(self, *fparts: tuple[str, ...], key: str = "") -> Path:
+    def get_full_path(self, *fparts: tuple[str, ...], key: str = "") -> Path:
         """Retrieve the full path based on key and sub-paths."""
-        base_dir = self.get_dir(key)
+        base_dir = self.get_path(key)
         return base_dir / "/".join(map(str, fparts))
 
     def __repr__(self) -> str:
         expr = f"{type(self).__name__}(\n"
-        for key, path in self.dirs.items():
+        for key, path in self.paths.items():
             expr += f"    {key}={path},\n"
         expr += ")"
         return expr

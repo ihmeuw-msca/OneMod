@@ -1,11 +1,10 @@
-from pathlib import Path
 from typing import Any
 
-from onemod.datatools.directory_manager import DirectoryManager
+from onemod.datatools.directory_manager import PathManager
 from onemod.datatools.io import FileIO, configio_dict
 
 
-class ConfigInterface(DirectoryManager):
+class ConfigInterface(PathManager):
     """Interface for handling configuration files and serialized model files.
 
     Attributes
@@ -17,20 +16,9 @@ class ConfigInterface(DirectoryManager):
 
     io_dict: dict[str, FileIO] = configio_dict
 
-    def load(
-        self,
-        path: Path | str | None = None,
-        *fparts: str,
-        key: str | None = None,
-        **options,
-    ) -> Any:
+    def load(self, *fparts: str, key: str | None = None, **options) -> Any:
         """Load a config file or serialized model, depending on file extension."""
-        if path:
-            path = Path(path)
-        else:
-            if not key:
-                raise ValueError("Either 'path' or 'key' must be specified.")
-            path = self.get_fpath(*fparts, key=key)
+        path = self.get_full_path(*fparts, key=key)
 
         if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported config format for '{path.suffix}'")
@@ -38,20 +26,10 @@ class ConfigInterface(DirectoryManager):
         return self.io_dict[path.suffix].load(path, **options)
 
     def dump(
-        self,
-        obj: Any,
-        path: Path | str | None = None,
-        *fparts: str,
-        key: str | None = None,
-        **options,
+        self, obj: Any, *fparts: str, key: str | None = None, **options
     ) -> None:
         """Save a config or model object to a specified path, ensuring the format matches."""
-        if path:
-            path = Path(path)
-        else:
-            if not key:
-                raise ValueError("Either 'path' or 'key' must be specified.")
-            path = self.get_fpath(*fparts, key=key)
+        path = self.get_full_path(*fparts, key=key)
 
         if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported config format for '{path.suffix}'")

@@ -250,6 +250,7 @@ class Pipeline(BaseModel):
         config_path = self.directory / (self.name + ".json")
         for stage in self.stages.values():
             stage.set_dataif(config_path)
+            stage.dataif.add_path("pipeline_data", self.data)
 
             # Create data subsets
             if isinstance(stage, ModelStage):
@@ -262,7 +263,7 @@ class Pipeline(BaseModel):
                     if self.data is None:
                         raise AttributeError("Data is required for groupby")
                     stage.create_stage_subsets(
-                        self.data, id_subsets=self.id_subsets
+                        data_key="pipeline_data", id_subsets=self.id_subsets
                     )
                 # Create parameter sets
                 if stage.config.crossable_params:

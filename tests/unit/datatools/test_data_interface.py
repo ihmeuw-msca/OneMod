@@ -27,29 +27,29 @@ def test_data_interface(data, extension, tmp_path):
 def test_add_dir(tmp_path):
     dataif = DataInterface()
 
-    assert len(dataif.dirs) == 0
+    assert len(dataif.paths) == 0
 
-    dataif.add_dir("tmp", tmp_path)
+    dataif.add_path("tmp", tmp_path)
 
-    assert len(dataif.dirs) == 1
-    assert "tmp" in dataif.dirs
-    assert dataif.dirs["tmp"] == tmp_path
+    assert len(dataif.paths) == 1
+    assert "tmp" in dataif.paths
+    assert dataif.paths["tmp"] == tmp_path
 
 
 def test_add_dir_exist_ok(tmp_path):
     dataif = DataInterface(tmp=tmp_path)
 
     with pytest.raises(ValueError):
-        dataif.add_dir("tmp", tmp_path)
+        dataif.add_path("tmp", tmp_path)
 
-    dataif.add_dir("tmp", tmp_path, exist_ok=True)
+    dataif.add_path("tmp", tmp_path, exist_ok=True)
 
 
 def test_remove_dir(tmp_path):
     dataif = DataInterface(tmp=tmp_path)
 
-    assert len(dataif.dirs) == 1
+    assert len(dataif.paths) == 1
 
-    dataif.remove_dir("tmp")
+    dataif.remove_path("tmp")
 
-    assert len(dataif.dirs) == 0
+    assert len(dataif.paths) == 0

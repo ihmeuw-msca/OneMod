@@ -84,9 +84,9 @@ class Stage(BaseModel, ABC):
         )
         for item_name, item_value in self.input.items.items():
             if isinstance(item_value, Path):
-                self._dataif.add_dir(item_name, item_value)
+                self._dataif.add_path(item_name, item_value)
             elif isinstance(item_value, Data):
-                self._dataif.add_dir(
+                self._dataif.add_path(
                     item_name, directory / item_value.stage / item_value.path
                 )
         if not (directory / self.name).exists():
@@ -280,8 +280,7 @@ class Stage(BaseModel, ABC):
             Field item.
 
         """
-        with open(self.dataif.config, "r") as file:
-            config = json.load(file)
+        config = self.dataif.load(key="config")
         if stage_name is not None:
             config = config["stages"][stage_name]
         for key in field.split("-"):
@@ -384,7 +383,7 @@ class ModelStage(Stage, ABC):
             self._crossby = stage_config["crossby"]
 
     def create_stage_subsets(
-        self, data: Path | str, id_subsets: dict[str, list[Any]] | None = None
+        self, data_key: str, id_subsets: dict[str, list[Any]] | None = None
     ) -> None:
         """Create stage data subsets from groupby and id_subsets."""
         if self.groupby is None:
@@ -393,7 +392,7 @@ class ModelStage(Stage, ABC):
             )
 
         lf = self.dataif.load(
-            data, columns=self.groupby, id_subsets=id_subsets, lazy=True
+            key=data_key, columns=self.groupby, id_subsets=id_subsets, lazy=True
         )
 
         subsets_df = create_subsets(self.groupby, lf)

@@ -2,19 +2,19 @@ from pathlib import Path
 
 import polars as pl
 
-from onemod.datatools.directory_manager import DirectoryManager
+from onemod.datatools.directory_manager import PathManager
 from onemod.datatools.io import FileIO, dataio_dict
 
 
-class DataInterface(DirectoryManager):
-    """Data interface that store important directories and automatically read
-    and write data to the stored directories based on their data types.
+class DataInterface(PathManager):
+    """Data interface that stores important paths and handles read
+    and writing of data objects to paths based on a key-value system.
 
     Attributes
     ----------
     io_dict : dict[str, FileIO]
         A dictionary that maps the file extensions to the corresponding data io
-        class. This is a module-level variable from onemo.datatools.io.dataio_dict.
+        class. This is a module-level variable from onemod.fsutils.io.dataio_dict.
 
     """
 
@@ -22,21 +22,18 @@ class DataInterface(DirectoryManager):
 
     def load(
         self,
-        path: Path | str | None = None,
         *fparts: str,
-        key: str | None = None,
+        key: str,
         lazy: bool = False,
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
         **options,
     ) -> pl.DataFrame | pl.LazyFrame:
         """Load data with optional lazy loading and subset filtering."""
-        if path:
-            path = Path(path)
-        else:
-            if not key:
-                raise ValueError("Either 'path' or 'key' must be specified.")
-            path = self.get_fpath(*fparts, key=key)
+        path = self.get_full_path(*fparts, key=key)
+
+        if path.suffix not in self.io_dict:
+            raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
         if lazy:
             return self._lazy_load(path, columns, id_subsets)
@@ -63,20 +60,13 @@ class DataInterface(DirectoryManager):
         return lf
 
     def dump(
-        self,
-        obj: pl.DataFrame,
-        path: Path | str | None = None,
-        *fparts: str,
-        key: str | None = None,
-        **options,
+        self, obj: pl.DataFrame, *fparts: str, key: str | None = None, **options
     ) -> None:
         """Save data based on directory key and filepath parts."""
-        if path:
-            path = Path(path)
-        else:
-            if not key:
-                raise ValueError("Either 'path' or 'key' must be specified.")
-            path = self.get_fpath(*fparts, key=key)
+        path = self.get_full_path(*fparts, key=key)
+
+        if path.suffix not in self.io_dict:
+            raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
         self.io_dict[path.suffix].dump(obj, path, **options)
 
