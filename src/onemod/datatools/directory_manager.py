@@ -34,7 +34,7 @@ class DirectoryManager:
 
     def __repr__(self) -> str:
         expr = f"{type(self).__name__}(\n"
-        for key in self.keys:
-            expr += f"    {key}={getattr(self, key)},\n"
+        for key, path in self.dirs.items():
+            expr += f"    {key}={path},\n"
         expr += ")"
         return expr

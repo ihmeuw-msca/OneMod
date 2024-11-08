@@ -3,12 +3,12 @@
 from itertools import product
 from typing import Any
 
-from pandas import DataFrame
+import polars as pl
 
 from onemod.config import ModelConfig
 
 
-def create_params(config: ModelConfig) -> DataFrame | None:
+def create_params(config: ModelConfig) -> pl.DataFrame | None:
     """Create parameter sets from crossby."""
     param_dict = {
         param_name: param_values
@@ -19,18 +19,15 @@ def create_params(config: ModelConfig) -> DataFrame | None:
         return None
 
     crossby = list(param_dict.keys())
-    params = DataFrame(
-        [param_set for param_set in product(*param_dict.values())],
-        columns=crossby,
+    params = pl.DataFrame(
+        [list(param_set) for param_set in product(*param_dict.values())],
+        schema=crossby,  # TODO: I think schema is incorrectly provided
     )
 
-    params["param_id"] = params.index
-    return params[["param_id", *crossby]]
+    params = params.with_row_index(name="param_id")
+    return params.select(["param_id", *crossby])
 
 
-def get_params(params: DataFrame, param_id: int) -> dict[str, Any]:
-    params = params.query("param_id == @param_id").drop(columns=["param_id"])
-    return {
-        str(param_name): param_value.item()
-        for param_name, param_value in params.items()
-    }
+def get_params(params: pl.DataFrame, param_id: int) -> dict[str, Any]:
+    params = params.filter(pl.col("param_id") == param_id).drop("param_id")
+    return {str(col): params[col][0] for col in params.columns}

@@ -100,8 +100,7 @@ class CSVIO(FileIO):
         return pl.read_csv(fpath, **options)
 
     def _dump(self, obj: pl.DataFrame, fpath: Path, **options):
-        options = dict(index=False) | options
-        obj.to_csv(fpath, **options)
+        obj.write_csv(fpath, **options)
 
 
 class ParquetIO(FileIO):
@@ -109,12 +108,10 @@ class ParquetIO(FileIO):
     dtypes: tuple[Type, ...] = (pl.DataFrame,)
 
     def _load(self, fpath: Path, **options) -> pl.DataFrame:
-        options = dict(engine="pyarrow") | options
         return pl.read_parquet(fpath, **options)
 
     def _dump(self, obj: pl.DataFrame, fpath: Path, **options):
-        options = dict(engine="pyarrow") | options
-        obj.to_parquet(fpath, **options)
+        obj.write_parquet(fpath, **options)
 
 
 class JSONIO(FileIO):

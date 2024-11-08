@@ -10,7 +10,7 @@ from inspect import getfile
 from pathlib import Path
 from typing import Any, Literal
 
-from pandas import DataFrame
+from polars import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
@@ -34,9 +34,9 @@ class Stage(BaseModel, ABC):
     config : StageConfig
         Stage configuration.
     input_validation : dict, optional
-        Description.
+        Optional specification of input data validation.
     output_validation : dict, optional
-        Description.
+        Optional specification of output data validation.
 
     """
 
@@ -396,10 +396,10 @@ class ModelStage(Stage, ABC):
             data, columns=self.groupby, id_subsets=id_subsets, lazy=True
         )
 
-        subsets = create_subsets(self.groupby, lf)
-        self._subset_ids = set(subsets["subset_id"])
+        subsets_df = create_subsets(self.groupby, lf)
+        self._subset_ids = set(subsets_df["subset_id"].to_list())
 
-        self.dataif.dump(subsets, "subsets.csv", key="output")
+        self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
@@ -413,7 +413,7 @@ class ModelStage(Stage, ABC):
         """Create stage parameter sets from config."""
         params = create_params(self.config)
         if params is not None:
-            self._crossby = set(params.drop(columns="param_id").columns)
+            self._crossby = set(params.drop("param_id").columns)
             self._param_ids = set(params["param_id"])
             self.dataif.dump(params, "parameters.csv", key="output")
 

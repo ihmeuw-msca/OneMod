@@ -22,15 +22,21 @@ class DataInterface(DirectoryManager):
 
     def load(
         self,
+        path: Path | str | None = None,
         *fparts: str,
-        key: str = "",
+        key: str | None = None,
         lazy: bool = False,
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
         **options,
     ) -> pl.DataFrame | pl.LazyFrame:
         """Load data with optional lazy loading and subset filtering."""
-        path = self.get_fpath(*fparts, key=key)
+        if path:
+            path = Path(path)
+        else:
+            if not key:
+                raise ValueError("Either 'path' or 'key' must be specified.")
+            path = self.get_fpath(*fparts, key=key)
 
         if lazy:
             return self._lazy_load(path, columns, id_subsets)
@@ -57,10 +63,21 @@ class DataInterface(DirectoryManager):
         return lf
 
     def dump(
-        self, obj: pl.DataFrame, *fparts: str, key: str = "", **options
+        self,
+        obj: pl.DataFrame,
+        path: Path | str | None = None,
+        *fparts: str,
+        key: str | None = None,
+        **options,
     ) -> None:
         """Save data based on directory key and filepath parts."""
-        path = self.get_fpath(*fparts, key=key)
+        if path:
+            path = Path(path)
+        else:
+            if not key:
+                raise ValueError("Either 'path' or 'key' must be specified.")
+            path = self.get_fpath(*fparts, key=key)
+
         self.io_dict[path.suffix].dump(obj, path, **options)
 
     def __repr__(self) -> str:
