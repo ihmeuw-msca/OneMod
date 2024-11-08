@@ -1,7 +1,7 @@
 from typing import Any
 
-from onemod.fsutils.directory_manager import PathManager
 from onemod.fsutils.io import FileIO, configio_dict
+from onemod.fsutils.path_manager import PathManager
 
 
 class ConfigInterface(PathManager):
