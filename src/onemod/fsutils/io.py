@@ -94,10 +94,20 @@ class FileIO(ABC):
 
 class CSVIO(FileIO):
     fextns: tuple[str, ...] = (".csv",)
-    dtypes: tuple[Type, ...] = (pl.DataFrame,)
+    dtypes: tuple[Type, ...] = (pl.DataFrame, pl.LazyFrame)
 
-    def _load(self, fpath: Path, **options) -> pl.DataFrame:
-        return pl.read_csv(fpath, **options)
+    def _load(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        id_subsets: dict[str, list] | None = None,
+        **options,
+    ) -> pl.DataFrame:
+        df = pl.read_csv(fpath, columns=columns, **options)
+
+        if id_subsets:
+            for col, values in id_subsets.items():
+                df = df.filter(pl.col(col).is_in(values))
 
     def _dump(self, obj: pl.DataFrame, fpath: Path, **options):
         obj.write_csv(fpath, **options)
@@ -105,10 +115,22 @@ class CSVIO(FileIO):
 
 class ParquetIO(FileIO):
     fextns: tuple[str, ...] = (".parquet",)
-    dtypes: tuple[Type, ...] = (pl.DataFrame,)
+    dtypes: tuple[Type, ...] = (pl.DataFrame, pl.LazyFrame)
 
-    def _load(self, fpath: Path, **options) -> pl.DataFrame:
-        return pl.read_parquet(fpath, **options)
+    def _load(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        id_subsets: dict[str, list] | None = None,
+        **options,
+    ) -> pl.DataFrame:
+        df = pl.read_parquet(fpath, columns=columns, **options)
+
+        if id_subsets:
+            for col, values in id_subsets.items():
+                df = df.filter(pl.col(col).is_in(values))
+
+        return df
 
     def _dump(self, obj: pl.DataFrame, fpath: Path, **options):
         obj.write_parquet(fpath, **options)

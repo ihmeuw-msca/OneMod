@@ -1,9 +1,43 @@
 from unittest.mock import patch
 
+import polars as pl
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
+
+from onemod.config import PipelineConfig, StageConfig
+from onemod.pipeline import Pipeline
+from onemod.stage import Stage
+
+
+class MultiplyByTwoStage(Stage):
+    """Stage that multiplies the value column by 2."""
+
+    config: StageConfig = {}
+    _skip: set[str] = {"predict"}
+    _required_input: set[str] = {"data.parquet"}
+    _optional_input: set[str] = {
+        "age_metadata.parquet",
+        "location_metadata.parquet",
+    }
+    _output: set[str] = {"data.parquet"}
+
+    def run(self) -> None:
+        """Run MultiplyByTwoStage."""
+        lf = self.dataif.load(key="data", lazy=True)
+        df = lf.with_columns((pl.col("value") * 2).alias("value")).collect()
+        self.dataif.dump(df, "data.parquet", key="output")
+
+
+@pytest.fixture
+def sample_data():
+    return {
+        "age_group_id": [1, 2, 2, 3],
+        "location_id": [10, 20, 20, 30],
+        "sex_id": [1, 2, 1, 2],
+        "value": [100, 200, 300, 400],
+    }
 
 
 def create_dummy_preprocessing_output_file(test_base_dir, stages):
@@ -108,6 +142,71 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
         match="Required input to stage 'covariate_selection' is missing. Missing output from upstream dependency 'preprocessing'.",
     ):
         dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+
+
+@pytest.mark.integration
+@pytest.mark.requires_data
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
+    """Test that Pipeline.evaluate() raises an error when an invalid id_subsets key is provided."""
+    dummy_pipeline, stages = setup_dummy_pipeline(
+        small_input_data, test_base_dir
+    )
+
+    subset_stage_names = {"preprocessing"}
+
+    with pytest.raises(
+        ValueError,
+        match="id_subsets keys {'invalid_id_col_name'} do not match groupby columns {'sex_id'}",
+    ):
+        dummy_pipeline.evaluate(
+            method=method,
+            stages=subset_stage_names,
+            id_subsets={"invalid_id_col_name": [1, 2, 3]},
+        )
+
+
+@pytest.mark.integration
+# @pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_evaluate_with_id_subsets(test_base_dir, sample_data):
+    """Test that Pipeline.evaluate() correctly evaluates single stage with id_subsets."""
+    sample_input_data = test_base_dir / "test_input_data.parquet"
+    df = pl.DataFrame(sample_data)
+    df.write_parquet(sample_input_data)
+
+    test_pipeline = Pipeline(
+        name="dummy_pipeline",
+        config=PipelineConfig(
+            id_columns=["age_group_id", "location_id", "sex_id"],
+            model_type="binomial",
+        ),
+        directory=test_base_dir,
+        data=sample_input_data,
+        groupby={"age_group_id"},
+    )
+    test_stage = MultiplyByTwoStage(
+        name="multiply_by_two", config=StageConfig()
+    )
+    test_pipeline.add_stages([test_stage])
+    test_stage(data=test_pipeline.data)
+
+    # Ensure input data is as expected for the test
+    assert sample_input_data.exists()
+    input_df = pl.read_parquet(sample_input_data)
+    print(input_df.columns)
+
+    test_pipeline.evaluate(method="run", id_subsets={"age_group_id": [1]})
+
+    # Verify that output only contains rows with age_group_id == 1
+    print(test_stage.dataif.get_path(key="data"))
+    print(test_stage.dataif.get_path(key="output"))
+    print(test_stage.dataif.get_path(key="output").exists())
+    output_df = pl.read_parquet(test_stage.dataif.get_path(key="output"))
+    # output_df = test_stage.dataif.load(key="output")  # Is this how we want to access, or do we want to require specification of fparts, i.e. there can be more than one path per key? But seems like 1:1 makes sense if we are doing paths instead of directories. Friday night work comment. May become suddenly clearer in the morning.
+    print(output_df.shape)
+    print(output_df.columns)
+    print(output_df.select(pl.col("age_group_id")).n_unique())
+    assert output_df.select(pl.col("age_group_id")).n_unique() == 1
 
 
 @pytest.mark.integration

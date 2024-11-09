@@ -37,7 +37,9 @@ class DataInterface(PathManager):
 
         if lazy:
             return self._lazy_load(path, columns, id_subsets)
-        return self.io_dict[path.suffix].load(path, **options)
+        return self.io_dict[path.suffix].load(
+            path, columns, id_subsets, **options
+        )
 
     def _lazy_load(
         self,
@@ -60,7 +62,11 @@ class DataInterface(PathManager):
         return lf
 
     def dump(
-        self, obj: pl.DataFrame, *fparts: str, key: str | None = None, **options
+        self,
+        obj: pl.DataFrame | pl.LazyFrame,
+        *fparts: str,
+        key: str | None = None,
+        **options,
     ) -> None:
         """Save data based on directory key and filepath parts."""
         path = self.get_full_path(*fparts, key=key)
