@@ -139,7 +139,7 @@ def test_load_with_columns_and_id_subsets(data_files, tmp_path, extension):
     dataif = DataInterface(tmp=tmp_path)
     data_path = data_files[extension]
 
-    columns = ["age_group_id", "value"]
+    columns = ["age_group_id", "location_id", "value"]
     id_subsets = {"location_id": [20]}
 
     # Load with both columns and id_subsets filters
@@ -148,10 +148,11 @@ def test_load_with_columns_and_id_subsets(data_files, tmp_path, extension):
     )
 
     # Verify that data is filtered by both columns and id_subsets
-    assert loaded_data.shape == (2, 2)
+    assert loaded_data.shape == (2, 3)
     assert "age_group_id" in loaded_data.columns
     assert "value" in loaded_data.columns
-    assert "location_id" not in loaded_data.columns
+    assert "location_id" in loaded_data.columns
     assert "sex_id" not in loaded_data.columns
     assert np.array_equal(loaded_data["age_group_id"], [2, 2])
+    assert np.array_equal(loaded_data["location_id"], [20, 20])
     assert np.array_equal(loaded_data["value"], [200, 300])

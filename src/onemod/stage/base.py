@@ -403,7 +403,7 @@ class ModelStage(Stage, ABC):
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
         return get_subset(
-            self.dataif.load("data.parquet", key="data"),
+            self.dataif.load(key="data"),
             self.dataif.load("subsets.csv", key="output"),
             subset_id,
         )

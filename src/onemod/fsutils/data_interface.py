@@ -2,7 +2,7 @@ from pathlib import Path
 
 import polars as pl
 
-from onemod.fsutils.io import FileIO, dataio_dict
+from onemod.fsutils.io import DataIO, dataio_dict
 from onemod.fsutils.path_manager import PathManager
 
 
@@ -12,13 +12,12 @@ class DataInterface(PathManager):
 
     Attributes
     ----------
-    io_dict : dict[str, FileIO]
-        A dictionary that maps the file extensions to the corresponding data io
+    io_dict : dict[str, DataIO]
+        A dictionary that maps the file extensions to the corresponding DataIO
         class. This is a module-level variable from onemod.fsutils.io.dataio_dict.
-
     """
 
-    io_dict: dict[str, FileIO] = dataio_dict
+    io_dict: dict[str, DataIO] = dataio_dict
 
     def load(
         self,
@@ -35,31 +34,28 @@ class DataInterface(PathManager):
         if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
-        if lazy:
-            return self._lazy_load(path, columns, id_subsets)
-        return self.io_dict[path.suffix].load(
-            path, columns, id_subsets, **options
+        return self._load_data(
+            path, lazy=lazy, columns=columns, id_subsets=id_subsets, **options
         )
 
-    def _lazy_load(
+    def _load_data(
         self,
         path: Path,
+        lazy: bool = False,
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
-    ) -> pl.LazyFrame:
-        """Internal lazy load for data files with subset filtering."""
-        lf = (
-            pl.scan_parquet(path)
-            if path.suffix == ".parquet"
-            else pl.scan_csv(path)
-        )
+        **options,
+    ) -> pl.DataFrame | pl.LazyFrame:
+        """Internal data loading method with optional column selection and subset filtering."""
+        lf = self.io_dict[path.suffix].load_lazy(path, **options)
+
         lf = lf.select(columns) if columns else lf
 
         if id_subsets:
             for col, values in id_subsets.items():
                 lf = lf.filter(pl.col(col).is_in(values))
 
-        return lf
+        return lf if lazy else lf.collect()
 
     def dump(
         self,

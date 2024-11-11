@@ -1,6 +1,6 @@
 from typing import Any
 
-from onemod.fsutils.io import FileIO, configio_dict
+from onemod.fsutils.io import ConfigIO, configio_dict
 from onemod.fsutils.path_manager import PathManager
 
 
@@ -9,12 +9,12 @@ class ConfigInterface(PathManager):
 
     Attributes
     ----------
-    io_dict : dict[str, FileIO]
-        A dictionary that maps the file extensions to the corresponding config io
+    io_dict : dict[str, ConfigIO]
+        A dictionary that maps the file extensions to the corresponding ConfigIO
         class. This is a module-level variable from onemod.fsutils.io.configio_dict.
     """
 
-    io_dict: dict[str, FileIO] = configio_dict
+    io_dict: dict[str, ConfigIO] = configio_dict
 
     def load(self, *fparts: str, key: str | None = None, **options) -> Any:
         """Load a config file or serialized model, depending on file extension."""

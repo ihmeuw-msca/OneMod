@@ -1,3 +1,4 @@
+import polars as pl
 from pydantic import Field
 
 from onemod.config import (
@@ -231,6 +232,37 @@ class DummySpxmodStage(ModelStage):
     def get_log(self) -> list[str]:
         """Retrieve the internal log."""
         return self.log
+
+
+class MultiplyByTwoStage(ModelStage):
+    """Stage that multiplies the value column by 2."""
+
+    config: ModelConfig
+    _skip: set[str] = {"predict"}
+    _required_input: set[str] = {"data.parquet"}
+    _optional_input: set[str] = {
+        "age_metadata.parquet",
+        "location_metadata.parquet",
+    }
+    _output: set[str] = {"data.parquet"}
+
+    def run(self, subset_id: int, *args, **kwargs) -> None:
+        """Run MultiplyByTwoStage."""
+        df = self.get_stage_subset(subset_id)
+        df = df.with_columns((pl.col("value") * 2).alias("value"))
+        self.dataif.dump(df, "data.parquet", key="output")
+
+    def fit(self) -> None:
+        """Fit MultiplyByTwoStage."""
+        pass
+
+    def predict(self) -> None:
+        """Predict MultiplyByTwoStage."""
+        pass
+
+    def collect(self) -> None:
+        """Collect MultiplyByTwoStage."""
+        pass
 
 
 def assert_stage_logs(

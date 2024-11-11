@@ -3,31 +3,11 @@ from unittest.mock import patch
 import polars as pl
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
-from tests.helpers.dummy_stages import assert_stage_logs
+from tests.helpers.dummy_stages import MultiplyByTwoStage, assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
 
-from onemod.config import PipelineConfig, StageConfig
+from onemod.config import ModelConfig, PipelineConfig
 from onemod.pipeline import Pipeline
-from onemod.stage import Stage
-
-
-class MultiplyByTwoStage(Stage):
-    """Stage that multiplies the value column by 2."""
-
-    config: StageConfig = {}
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
-        "age_metadata.parquet",
-        "location_metadata.parquet",
-    }
-    _output: set[str] = {"data.parquet"}
-
-    def run(self) -> None:
-        """Run MultiplyByTwoStage."""
-        lf = self.dataif.load(key="data", lazy=True)
-        df = lf.with_columns((pl.col("value") * 2).alias("value")).collect()
-        self.dataif.dump(df, "data.parquet", key="output")
 
 
 @pytest.fixture
@@ -185,7 +165,7 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
         groupby={"age_group_id"},
     )
     test_stage = MultiplyByTwoStage(
-        name="multiply_by_two", config=StageConfig()
+        name="multiply_by_two", config=ModelConfig()
     )
     test_pipeline.add_stages([test_stage])
     test_stage(data=test_pipeline.data)
@@ -193,20 +173,14 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
     # Ensure input data is as expected for the test
     assert sample_input_data.exists()
     input_df = pl.read_parquet(sample_input_data)
-    print(input_df.columns)
+    assert input_df.shape == (4, 4)
 
     test_pipeline.evaluate(method="run", id_subsets={"age_group_id": [1]})
 
-    # Verify that output only contains rows with age_group_id == 1
-    print(test_stage.dataif.get_path(key="data"))
-    print(test_stage.dataif.get_path(key="output"))
-    print(test_stage.dataif.get_path(key="output").exists())
-    output_df = pl.read_parquet(test_stage.dataif.get_path(key="output"))
-    # output_df = test_stage.dataif.load(key="output")  # Is this how we want to access, or do we want to require specification of fparts, i.e. there can be more than one path per key? But seems like 1:1 makes sense if we are doing paths instead of directories. Friday night work comment. May become suddenly clearer in the morning.
-    print(output_df.shape)
-    print(output_df.columns)
-    print(output_df.select(pl.col("age_group_id")).n_unique())
+    # Verify that output only contains rows with specified subset(s) for age_group_id
+    output_df = test_stage.dataif.load("data.parquet", key="output")
     assert output_df.select(pl.col("age_group_id")).n_unique() == 1
+    assert output_df.shape == (1, 4)
 
 
 @pytest.mark.integration

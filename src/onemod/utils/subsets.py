@@ -43,5 +43,8 @@ def filter_data(
     data: pl.DataFrame, id_subsets: dict[str, set[int]]
 ) -> pl.DataFrame:
     """Filter data by ID subsets."""
-    conditions = [pl.col(key).is_in(value) for key, value in id_subsets.items()]
-    return data.filter(pl.all(conditions))
+    filter_expr = pl.lit(True)
+    for key, value in id_subsets.items():
+        filter_expr &= pl.col(key).is_in(value)
+
+    return data.filter(filter_expr)
