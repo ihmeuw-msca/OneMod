@@ -61,7 +61,7 @@ class DataInterface(PathManager):
         self,
         obj: pl.DataFrame | pl.LazyFrame,
         *fparts: str,
-        key: str | None = None,
+        key: str,
         **options,
     ) -> None:
         """Save data based on directory key and filepath parts."""

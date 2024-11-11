@@ -16,7 +16,7 @@ class ConfigInterface(PathManager):
 
     io_dict: dict[str, ConfigIO] = configio_dict
 
-    def load(self, *fparts: str, key: str | None = None, **options) -> Any:
+    def load(self, *fparts: str, key: str, **options) -> Any:
         """Load a config file or serialized model, depending on file extension."""
         path = self.get_full_path(*fparts, key=key)
 
@@ -25,9 +25,7 @@ class ConfigInterface(PathManager):
 
         return self.io_dict[path.suffix].load(path, **options)
 
-    def dump(
-        self, obj: Any, *fparts: str, key: str | None = None, **options
-    ) -> None:
+    def dump(self, obj: Any, *fparts: str, key: str, **options) -> None:
         """Save a config or model object to a specified path, ensuring the format matches."""
         path = self.get_full_path(*fparts, key=key)
 

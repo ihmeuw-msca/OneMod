@@ -13,6 +13,7 @@ Notes
 import warnings
 
 import pandas as pd
+import polars as pl
 from loguru import logger
 from modrover.api import Rover
 
@@ -48,8 +49,8 @@ class RoverStage(ModelStage):
         """
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id).query(
-            f"{self.config['test_column']} == 0"
+        data = self.get_stage_subset(subset_id).filter(
+            pl.col(self.config["test_column"]) == 0
         )
 
         if len(data) > 0:
@@ -76,14 +77,18 @@ class RoverStage(ModelStage):
 
             # Save results
             logger.info(f"Saving {self.name} submodel {subset_id} results")
-            self.dataif.dump_output(
-                submodel.learner_info, f"submodels/{subset_id}/learner_info.csv"
+            self.dataif.dump(
+                submodel.learner_info,
+                f"submodels/{subset_id}/learner_info.csv",
+                key="output",
             )
-            self.dataif.dump_output(
-                submodel, f"submodels/{subset_id}/model.pkl"
+            self.dataif.dump(
+                submodel, f"submodels/{subset_id}/model.pkl", key="output"
             )
-            self.dataif.dump_output(
-                submodel.summary, f"submodels/{subset_id}/summary.csv"
+            self.dataif.dump(
+                submodel.summary,
+                f"submodels/{subset_id}/summary.csv",
+                key="output",
             )
         else:
             logger.info(
@@ -105,25 +110,25 @@ class RoverStage(ModelStage):
         # Concatenate summaries
         logger.info(f"Concatenating {self.name} coefficient summaries")
         summaries = self._get_rover_summaries()
-        self.dataif.dump_output(summaries, "summaries.csv")
+        self.dataif.dump(summaries, "summaries.csv", key="output")
 
         # Select covariates
         logger.info(f"Selecting {self.name} covariates")
         selected_covs = self._get_selected_covs(summaries)
-        self.dataif.dump_output(selected_covs, "selected_covs.csv")
+        self.dataif.dump(selected_covs, "selected_covs.csv", key="output")
 
         # TODO: Plot covariates
 
     def _get_rover_summaries(self) -> pd.DataFrame:
         """Concatenate rover coefficient summaries."""
-        subsets = self.dataif.load_output("subsets.csv")
+        subsets = self.dataif.load("subsets.csv", key="output")
 
         # Collect coefficient summaries
         summaries = []
         for subset_id in self.subset_ids:
             try:
-                summary = self.dataif.load_output(
-                    f"submodels/{subset_id}/summary.csv"
+                summary = self.dataif.load(
+                    f"submodels/{subset_id}/summary.csv", key="output"
                 )
                 summary["subset_id"] = subset_id
                 summaries.append(summary)
