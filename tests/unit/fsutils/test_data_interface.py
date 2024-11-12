@@ -25,6 +25,7 @@ def sample_config():
     return {"param1": "value1", "param2": [1, 2, 3]}
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("extension", [".csv", ".parquet"])
 def test_data_interface(sample_data1, extension, tmp_path):
     dataif = DataInterface(tmp=tmp_path)
@@ -39,6 +40,7 @@ def test_data_interface(sample_data1, extension, tmp_path):
         assert np.allclose(sample_data1[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_add_path(tmp_path):
     dataif = DataInterface()
 
@@ -51,6 +53,7 @@ def test_add_path(tmp_path):
     assert dataif.paths["tmp"] == tmp_path
 
 
+@pytest.mark.unit
 def test_add_path_exist_ok(tmp_path):
     dataif = DataInterface(tmp=tmp_path)
 
@@ -60,6 +63,7 @@ def test_add_path_exist_ok(tmp_path):
     dataif.add_path("tmp", tmp_path, exist_ok=True)
 
 
+@pytest.mark.unit
 def test_remove_path(tmp_path):
     dataif = DataInterface(tmp=tmp_path)
 
@@ -83,6 +87,7 @@ def data_files(sample_data2, tmp_path):
     return {"csv": csv_path, "parquet": parquet_path}
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("extension", ["csv", "parquet"])
 def test_load_dump_basic(data_files, tmp_path, extension):
     """Test basic load and dump functionality without filtering."""
@@ -100,6 +105,7 @@ def test_load_dump_basic(data_files, tmp_path, extension):
     assert np.array_equal(loaded_data["value"], [100, 200, 300, 400])
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("extension", ["csv", "parquet"])
 def test_load_with_columns(data_files, tmp_path, extension):
     """Test loading with specified columns."""
@@ -119,6 +125,7 @@ def test_load_with_columns(data_files, tmp_path, extension):
     assert "sex_id" not in loaded_data.columns
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("extension", ["csv", "parquet"])
 def test_load_with_id_subsets(data_files, tmp_path, extension):
     """Test loading with id_subsets for row filtering."""
@@ -138,6 +145,7 @@ def test_load_with_id_subsets(data_files, tmp_path, extension):
     assert loaded_data["value"][0] == 300
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("extension", ["csv", "parquet"])
 def test_load_with_columns_and_id_subsets(data_files, tmp_path, extension):
     """Test loading with both columns selection and id_subsets filtering."""
@@ -163,6 +171,7 @@ def test_load_with_columns_and_id_subsets(data_files, tmp_path, extension):
     assert np.array_equal(loaded_data["value"], [200, 300])
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("fextn", [".json", ".yaml", ".pkl"])
 def test_data_interface_with_config_dict(sample_config, fextn, tmp_path):
     configif = DataInterface(config=tmp_path)

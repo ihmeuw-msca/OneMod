@@ -10,6 +10,7 @@ def data():
     return {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
+@pytest.mark.unit
 def test_csvio_eager(data, tmp_path):
     data = DataFrame(data)
     port = CSVIO()
@@ -22,6 +23,7 @@ def test_csvio_eager(data, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_csvio_lazy(data, tmp_path):
     data = DataFrame(data)
     port = CSVIO()
@@ -36,6 +38,7 @@ def test_csvio_lazy(data, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_jsonio(data, tmp_path):
     port = JSONIO()
     port.dump(data, tmp_path / "file.json")
@@ -45,6 +48,7 @@ def test_jsonio(data, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_yamlio(data, tmp_path):
     port = YAMLIO()
     port.dump(data, tmp_path / "file.yaml")
@@ -54,6 +58,7 @@ def test_yamlio(data, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_parquetio_eager(data, tmp_path):
     data = DataFrame(data)
     port = ParquetIO()
@@ -66,6 +71,7 @@ def test_parquetio_eager(data, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_parquetio_lazy(data, tmp_path):
     data = DataFrame(data)
     port = ParquetIO()
@@ -80,6 +86,7 @@ def test_parquetio_lazy(data, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_pickleio(data, tmp_path):
     port = PickleIO()
     port.dump(data, tmp_path / "file.pkl")
@@ -89,6 +96,7 @@ def test_pickleio(data, tmp_path):
         assert np.allclose(data[key], loaded_data[key])
 
 
+@pytest.mark.unit
 def test_tomlio(data, tmp_path):
     port = TOMLIO()
     port.dump(data, tmp_path / "file.toml")

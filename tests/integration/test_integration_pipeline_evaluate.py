@@ -147,7 +147,6 @@ def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
 
 
 @pytest.mark.integration
-# @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_evaluate_with_id_subsets(test_base_dir, sample_data):
     """Test that Pipeline.evaluate() correctly evaluates single stage with id_subsets."""
     sample_input_data = test_base_dir / "test_input_data.parquet"
@@ -185,6 +184,7 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
 
 @pytest.mark.integration
 @pytest.mark.requires_data
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_evaluate_with_jobmon_subset_call(
     dummy_resources, small_input_data, test_base_dir, method
