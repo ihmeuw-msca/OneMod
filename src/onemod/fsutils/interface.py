@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 
@@ -21,6 +21,7 @@ class DataInterface(PathManager):
         *fparts: str,
         key: str,
         lazy: bool = False,
+        backend: Literal["polars", "pandas"] = "polars",
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
         **options,
@@ -31,6 +32,8 @@ class DataInterface(PathManager):
         ----------
         lazy : bool, optional
             Whether to load the data file lazily, applicable only for data files.
+        backend : {'polars', 'pandas'}, optional
+            Backend for loading data files, applicable only for data files.
         columns : list of str, optional
             Specific columns to load, applicable only for data files.
         id_subsets : dict, optional
@@ -50,6 +53,7 @@ class DataInterface(PathManager):
             return self.data_loader.load(
                 path,
                 lazy=lazy,
+                backend=backend,
                 columns=columns,
                 id_subsets=id_subsets,
                 **options,
