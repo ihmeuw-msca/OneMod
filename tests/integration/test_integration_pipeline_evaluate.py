@@ -182,6 +182,9 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
     assert output_df.shape == (1, 4)
 
 
+@pytest.mark.skip(
+    "Jobmon test - Run manually until better jobmon testing solution in place"
+)
 @pytest.mark.integration
 @pytest.mark.requires_data
 @pytest.mark.requires_jobmon

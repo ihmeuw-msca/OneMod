@@ -339,13 +339,13 @@ class Pipeline(BaseModel):
         )
 
         if backend == "jobmon":
-            from onemod.backend import evaluate_with_jobmon
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(
                 model=self, method=method, stages=ordered_stages, **kwargs
             )
         else:
-            from onemod.backend import evaluate_local
+            from onemod.backend.local_backend import evaluate_local
 
             evaluate_local(model=self, method=method, stages=ordered_stages)
 
