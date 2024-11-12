@@ -15,7 +15,7 @@ class DataIO(ABC):
     """Bridge class that unifies the I/O for different data file types."""
 
     fextns: tuple[str, ...] = ("",)
-    dtypes: tuple[Type, ...] = (pl.DataFrame, pd.DataFrame)
+    dtypes: tuple[Type, ...] = (pl.DataFrame, pl.LazyFrame, pd.DataFrame)
 
     def load_eager(
         self,
