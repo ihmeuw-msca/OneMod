@@ -16,12 +16,6 @@ class DummyStage(Stage):
 
 
 @pytest.fixture
-def test_base_dir(tmp_path_factory):
-    test_base_dir = tmp_path_factory.mktemp("example")
-    return test_base_dir
-
-
-@pytest.fixture
 def stage_1(test_base_dir):
     stage_1 = DummyStage(name="stage_1", config={})
     stage_1(
@@ -32,7 +26,7 @@ def stage_1(test_base_dir):
 
 
 @pytest.fixture
-def stage_2(test_base_dir, stage_1):
+def stage_2(stage_1):
     stage_2 = DummyStage(name="stage_2", config={})
     stage_2(
         data=stage_1.output["predictions"], covariates="/path/to/covariates.csv"

@@ -8,30 +8,21 @@ from onemod.dtypes import Data
 from onemod.stage import KregStage, PreprocessingStage, RoverStage, SpxmodStage
 
 
-@pytest.fixture
-def test_base_dir(tmp_path_factory):
-    test_base_dir = tmp_path_factory.mktemp("example")
-    return test_base_dir
-
-
 @pytest.mark.skip(
     reason="Test not implemented yet. Needs actual stages implemented and test data assets."
 )
 @pytest.mark.e2e
 @pytest.mark.requires_data
-def test_e2e_onemod_example1_sequential(test_assets_dir, test_base_dir):
+def test_e2e_onemod_example1_sequential(small_input_data, test_base_dir):
     """
     End-to-end test for a the OneMod example1 pipeline.
     """
-    test_input_data_path = Path(
-        test_assets_dir, "e2e", "example1", "data", "input_data.parquet"
-    )
 
     # Define Stages
     preprocessing = PreprocessingStage(
         name="1_preprocessing",
-        config=PreprocessingConfig(data=test_input_data_path),
-        input_validation=dict(data=test_input_data_path),
+        config=PreprocessingConfig(data=small_input_data),
+        input_validation=dict(data=small_input_data),
         output_validation=dict(
             data=Data(
                 stage="1_preprocessing",

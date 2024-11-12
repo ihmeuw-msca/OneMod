@@ -21,13 +21,7 @@ class DummyStage(Stage):
 
 
 @pytest.fixture
-def example_base_dir(tmp_path_factory):
-    example_base_dir = tmp_path_factory.mktemp("example")
-    return example_base_dir
-
-
-@pytest.fixture
-def stage_1(example_base_dir):
+def stage_1(test_base_dir):
     stage_1 = DummyStage(
         name="stage_1",
         config={},
@@ -90,14 +84,14 @@ def stage_1(example_base_dir):
         ),
     )
     stage_1(
-        data=example_base_dir / "stage_0" / "data.parquet",
-        covariates=example_base_dir / "stage_0" / "covariates.csv",
+        data=test_base_dir / "stage_0" / "data.parquet",
+        covariates=test_base_dir / "stage_0" / "covariates.csv",
     )
     return stage_1
 
 
 @pytest.fixture
-def stage_1_model_expected(example_base_dir):
+def stage_1_model_expected(test_base_dir):
     return {
         "name": "stage_1",
         "type": "DummyStage",
@@ -174,14 +168,14 @@ def stage_1_model_expected(example_base_dir):
             }
         },
         "input": {
-            "data": str(example_base_dir / "stage_0" / "data.parquet"),
-            "covariates": str(example_base_dir / "stage_0" / "covariates.csv"),
+            "data": str(test_base_dir / "stage_0" / "data.parquet"),
+            "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
     }
 
 
 @pytest.fixture
-def stage_2(example_base_dir, stage_1):
+def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
         config={},
@@ -220,13 +214,13 @@ def stage_2(example_base_dir, stage_1):
     )
     stage_2(
         data=stage_1.output["predictions"],
-        covariates=example_base_dir / "stage_0" / "covariates.csv",
+        covariates=test_base_dir / "stage_0" / "covariates.csv",
     )
     return stage_2
 
 
 @pytest.fixture
-def stage_2_model_expected(example_base_dir):
+def stage_2_model_expected(test_base_dir):
     return {
         "name": "stage_2",
         "type": "DummyStage",
@@ -283,13 +277,13 @@ def stage_2_model_expected(example_base_dir):
                 "shape": None,
                 "columns": None,
             },
-            "covariates": str(example_base_dir / "stage_0" / "covariates.csv"),
+            "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
     }
 
 
 @pytest.mark.integration
-def test_input_types(example_base_dir, stage_1):
+def test_input_types(test_base_dir, stage_1):
     assert "data" in stage_1.input_validation
     assert stage_1.input_validation["data"].path == Path("data.parquet")
     assert stage_1.input_validation["data"].format == "parquet"
@@ -312,9 +306,7 @@ def test_stage_model(
     stage_1, stage_1_model_expected, stage_2, stage_2_model_expected
 ):
     stage_1_model_actual = stage_1.model_dump()
-    print(stage_1_model_actual)
     assert stage_1_model_actual == stage_1_model_expected
 
     stage_2_model_actual = stage_2.model_dump()
-    print(stage_2_model_actual)
     assert stage_2_model_actual == stage_2_model_expected

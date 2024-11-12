@@ -136,6 +136,19 @@ class Pipeline(BaseModel):
         stage.config.inherit(self.config)
         self._stages[stage.name] = stage
 
+    def check_upstream_outputs_exist(
+        self, stage_name: str, upstream_name: str
+    ) -> bool:
+        """Check if outputs from the specified upstream dependency exist for the inputs of a given stage."""
+        stage = self.stages[stage_name]
+
+        for input_name, input_data in stage.input.items.items():
+            if input_data.stage == upstream_name:
+                upstream_output_path = input_data.path
+                if not upstream_output_path.exists():
+                    return False
+        return True
+
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
@@ -262,6 +275,7 @@ class Pipeline(BaseModel):
         method: Literal["run", "fit", "predict"] = "run",
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
+        stages: set[str] | None = None,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
@@ -272,6 +286,10 @@ class Pipeline(BaseModel):
             Name of method to evaluate. Default is 'run'.
         backend : str, optional
             How to evaluate the method. Default is 'local'.
+        build : bool, optional
+            Whether to build the pipeline before evaluation. Default is True.
+        stages : set of str, optional
+            Stages to evaluate. Default is None.
 
         Other Parameters
         ----------------
@@ -281,20 +299,46 @@ class Pipeline(BaseModel):
             Path to resources yaml file. Required if `backend` is
             'jobmon'.
 
-        TODO: Add options to run subset of stages
         TODO: Add options to run subset of IDs
 
         """
         if build:
             self.build()
+
+        if stages is not None:
+            for stage_name in stages:
+                if stage_name not in self.stages:
+                    raise ValueError(
+                        f"Stage '{stage_name}' not found in pipeline."
+                    )
+
+            for stage_name in stages:
+                stage: Stage = self.stages.get(stage_name)
+                for dep in stage.dependencies:
+                    if dep not in stages:
+                        if not self.check_upstream_outputs_exist(
+                            stage_name, dep
+                        ):
+                            raise ValueError(
+                                f"Required input to stage '{stage_name}' is missing. Missing output from upstream dependency '{dep}'."
+                            )
+
+        ordered_stages = (
+            [stage for stage in self.get_execution_order() if stage in stages]
+            if stages is not None
+            else self.get_execution_order()
+        )
+
         if backend == "jobmon":
             from onemod.backend import evaluate_with_jobmon
 
-            evaluate_with_jobmon(model=self, method=method, **kwargs)
+            evaluate_with_jobmon(
+                model=self, method=method, stages=ordered_stages, **kwargs
+            )
         else:
             from onemod.backend import evaluate_local
 
-            evaluate_local(model=self, method=method)
+            evaluate_local(model=self, method=method, stages=ordered_stages)
 
     def run(
         self,

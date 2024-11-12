@@ -1,16 +1,16 @@
 """Example OneMod pipeline."""
 
 import fire
+from custom_stage import CustomStage
 
 from onemod import Pipeline
-from onemod.stage import PreprocessingStage, RoverStage, SpxmodStage, KregStage
-
-from custom_stage import CustomStage
+from onemod.stage import KregStage, PreprocessingStage, RoverStage, SpxmodStage
 
 
 def create_pipeline(directory: str, data: str):
     # Create stages
-    # TODO: Does stage-specific validation info go here or in class definitions?
+    # Stage-specific validation specifications go here.
+    # Stage classes may also implement default validation specifications.
     preprocessing = PreprocessingStage(name="preprocessing", config={})
     covariate_selection = RoverStage(
         name="covariate_selection",
@@ -100,18 +100,17 @@ def create_pipeline(directory: str, data: str):
     # Serialize pipeline
     example_pipeline.to_json()
 
-    # TODO: Validate and serialize
-    # User could call this method themself, but run/fit/predict should
-    # probably also call it in case updates have been made to the
+    # User could call this method themself, but evaluate() also
+    # calls it in case updates have been made to the
     # pipeline (e.g., someone is experimenting with a pipeline in a
     # a notebook)
-    # example_pipeline.build()
+    example_pipeline.build()
 
     # Run (fit and predict) entire pipeline
-    # example_pipeline.run()
+    example_pipeline.evaluate(method="run")
 
-    # TODO: Fit specific stages
-    # example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
+    # Fit specific stages
+    example_pipeline.fit(stages=["preprocessing", "covariate_selection"])
 
     # TODO: Predict for specific locations
     # example_pipeline.predict(id_subsets={"location_id": [1, 2, 3]})

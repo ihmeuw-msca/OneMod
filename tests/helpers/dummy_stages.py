@@ -231,3 +231,33 @@ class DummySpxmodStage(ModelStage):
     def get_log(self) -> list[str]:
         """Retrieve the internal log."""
         return self.log
+
+
+def assert_stage_logs(
+    stage: DummyCustomStage
+    | DummyKregStage
+    | DummyRoverStage
+    | DummySpxmodStage,
+    methods: list[str] | None = None,
+    subset_ids: list[int] | None = None,
+    param_ids: list[int] | None = None,
+):
+    """Assert that the expected methods were logged for a given stage."""
+    log = stage.get_log()
+    if methods:
+        for method in methods:
+            if subset_ids:
+                for subset_id in subset_ids:
+                    if param_ids:
+                        for param_id in param_ids:
+                            assert (
+                                f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
+                                in log
+                            )
+                    else:
+                        assert (
+                            f"{method}: name={stage.name}, subset={subset_id}, param=None"
+                            in log
+                        )
+            if method in stage._collect_after:
+                assert f"collect: name={stage.name}" in log

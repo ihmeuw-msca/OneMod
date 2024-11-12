@@ -13,6 +13,7 @@ from onemod.stage import ModelStage, Stage
 def evaluate_local(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict"] = "run",
+    stages: list[str] | None = None,
     **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method locally.
@@ -30,10 +31,15 @@ def evaluate_local(
         Submodel data subset ID. Only used for model stages.
     param_id : int, optional
         Submodel parameter set ID. Only used for model stages.
+    stages : list of str or None, optional
+        List of stage names to evaluate. Default is None.
 
     """
     if isinstance(model, Pipeline):
-        for stage_name in model.get_execution_order():
+        if stages is None:
+            stages = model.get_execution_order()
+
+        for stage_name in stages:
             stage = model.stages[stage_name]
             if method not in stage.skip:
                 _evaluate_stage(stage, method)

@@ -169,10 +169,18 @@ def get_upstream_tasks(
     method: Literal["run", "fit", "predict"],
     stages: dict[str, Stage],
     task_dict: dict[str, list[Task]],
+    specified_stages: set[str] | None = None,
 ) -> list[Task]:
     """Get upstream stage tasks."""
     upstream_tasks = []
+
     for upstream_name in stage.dependencies:
+        if (
+            specified_stages is not None
+            and upstream_name not in specified_stages
+        ):
+            continue
+
         upstream = stages[upstream_name]
         if method not in upstream.skip:
             if (
@@ -182,6 +190,7 @@ def get_upstream_tasks(
                 upstream_tasks.append(task_dict[upstream_name][-1])
             else:
                 upstream_tasks.extend(task_dict[upstream_name])
+
     return upstream_tasks
 
 
@@ -192,6 +201,7 @@ def evaluate_with_jobmon(
     resources: Path | str,
     python: Path | str | None = None,
     method: Literal["run", "fit", "predict", "collect"] = "run",
+    stages: list[str] | None = None,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -208,6 +218,8 @@ def evaluate_with_jobmon(
         Default is None.
     method : str, optional
         Name of method to evalaute. Default is 'run'.
+    stages : set of str or None, optional
+        Set of stage names to evaluate. Default is None.
 
     TODO: Optional stage-specific Python environments
     TODO: User-defined max_attempts
@@ -217,25 +229,36 @@ def evaluate_with_jobmon(
     # Get tool
     tool = get_tool(model.name, cluster, resources)
 
-    # Create tasks
+    # Set config
     if isinstance(model, Stage):
         model_config = model.dataif.config
     elif isinstance(model, Pipeline):
         model_config = model.config
+
     task_args: dict[str, str] = {
         "python": str(python or sys.executable),
         "config": str(model_config),
     }
+
+    # Create tasks
     if isinstance(model, Pipeline):
         tasks = []
         task_dict: dict[str, list[Task]] = {}
-        for stage_name in model.get_execution_order():
+
+        if stages is None:
+            stages = model.get_execution_order()
+
+        for stage_name in stages:
             stage = model.stages[stage_name]
             if (
                 method not in stage.skip and method != "collect"
             ):  # TODO: handle collect
                 upstream_tasks = get_upstream_tasks(
-                    stage, method, model.stages, task_dict
+                    stage,
+                    method,
+                    model.stages,
+                    task_dict,
+                    specified_stages=set(stages),
                 )
                 task_dict[stage_name] = get_tasks(
                     tool, resources, stage, method, task_args, upstream_tasks

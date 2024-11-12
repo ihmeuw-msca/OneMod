@@ -22,12 +22,6 @@ class DummyStage(Stage):
 
 
 @pytest.fixture
-def test_base_dir(tmp_path_factory):
-    test_base_dir = tmp_path_factory.mktemp("test_base_dir")
-    return test_base_dir
-
-
-@pytest.fixture
 def create_dummy_data(test_base_dir):
     """Create dummy data files needed for testing."""
     data_dir = test_base_dir / "data"

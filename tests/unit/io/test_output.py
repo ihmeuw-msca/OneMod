@@ -33,8 +33,6 @@ OUTPUT = Output(
 
 @pytest.mark.unit
 def test_serialize():
-    print(OUTPUT.model_dump())
-    print(ITEMS)
     assert OUTPUT.model_dump() == ITEMS
 
 
@@ -54,8 +52,6 @@ def test_getitem():
     )
     with pytest.raises(KeyError) as error:
         OUTPUT["dummy"]
-    print(error.value)
-    print(str(error.value))
     assert (
         str(error.value).strip('"') == "stage does not contain output 'dummy'"
     )
