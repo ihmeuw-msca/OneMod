@@ -114,8 +114,10 @@ def create_pipeline(directory: str, data: str):
         method="fit", stages=["preprocessing", "covariate_selection"]
     )
 
-    # TODO: Predict for specific locations
-    # example_pipeline.evaluate(method="predict", id_subsets={"location_id": [1, 2, 3]})
+    # Predict for specific locations
+    example_pipeline.evaluate(
+        method="predict", id_subsets={"location_id": [1, 2, 3]}
+    )
 
 
 if __name__ == "__main__":
