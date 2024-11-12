@@ -211,7 +211,7 @@ class Stage(BaseModel, ABC):
             return
         method = method if hasattr(self, method) else "run"
         if backend == "jobmon":
-            from onemod.backend import evaluate_with_jobmon
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(model=self, method=method, **kwargs)
         else:
@@ -473,7 +473,7 @@ class ModelStage(Stage, ABC):
             warnings.warn(f"{self.name} skips the '{method}' method")
             return
         if backend == "jobmon":
-            from onemod.backend import evaluate_with_jobmon
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(model=self, method=method, **kwargs)
         else:
@@ -485,7 +485,7 @@ class ModelStage(Stage, ABC):
                 if subset_id is not None or param_id is not None:
                     self.__getattribute__(method)(subset_id, param_id)
                 else:
-                    from onemod.backend import evaluate_local
+                    from onemod.backend.local_backend import evaluate_local
 
                     evaluate_local(model=self, method=method)
 
