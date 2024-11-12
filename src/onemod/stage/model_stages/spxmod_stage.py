@@ -17,6 +17,7 @@ TODO: Implement priors input
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from loguru import logger
 from spxmod.model import XModel
 from xspline import XSpline
@@ -208,7 +209,11 @@ class SpxmodStage(ModelStage):
         """Load submodel data."""
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id)
+        data_subset = self.get_stage_subset(
+            subset_id
+        )  # TODO: Potentially add pandas as backend to internal methods if users will be using them in their custom stages
+        if isinstance(data_subset, pl.DataFrame):
+            data = data_subset.to_pandas()
 
         # Add spline basis to data
         spline_vars = []
@@ -261,7 +266,7 @@ class SpxmodStage(ModelStage):
     def _get_covs(self, subset_id: int) -> list[str]:
         """Get covariates from upstream stage."""
         # Load covariates and filter by subset
-        selected_covs = self.dataif.load_selected_covs()
+        selected_covs = self.dataif.load(key="selected_covs")
         if pipeline_groupby := self.get_field("groupby"):
             selected_covs = get_subset(
                 selected_covs,

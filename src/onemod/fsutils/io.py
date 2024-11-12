@@ -1,9 +1,10 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Type
+from typing import Any, Literal, Type
 
 import dill
+import pandas as pd
 import polars as pl
 import tomli
 import tomli_w
@@ -14,41 +15,74 @@ class DataIO(ABC):
     """Bridge class that unifies the I/O for different data file types."""
 
     fextns: tuple[str, ...] = ("",)
-    dtypes: tuple[Type, ...] = (pl.DataFrame,)
+    dtypes: tuple[Type, ...] = (pl.DataFrame, pd.DataFrame)
 
-    def load_eager(self, fpath: Path | str, **options) -> pl.DataFrame:
+    def load_eager(
+        self,
+        fpath: Path | str,
+        backend: Literal["polars", "pandas"] = "polars",
+        **options,
+    ) -> pl.DataFrame | pd.DataFrame:
         """Load data from given path."""
         fpath = Path(fpath)
         if fpath.suffix not in self.fextns:
             raise ValueError(f"File extension must be in {self.fextns}.")
-        return self._load_eager_impl(fpath, **options)
+        if backend == "polars":
+            return self._load_eager_polars_impl(fpath, **options)
+        elif backend == "pandas":
+            return self._load_eager_pandas_impl(fpath, **options)
+        else:
+            raise ValueError("Backend must be either 'polars' or 'pandas'.")
 
     def load_lazy(self, fpath: Path | str, **options) -> pl.LazyFrame:
+        """Load data lazily (Polars only) from given path."""
         fpath = Path(fpath)
         if fpath.suffix not in self.fextns:
             raise ValueError(f"File extension must be in {self.fextns}.")
         return self._load_lazy_impl(fpath, **options)
 
-    def dump(self, obj: Any, fpath: Path | str, **options):
+    def dump(
+        self,
+        obj: pl.DataFrame | pl.LazyFrame | pd.DataFrame,
+        fpath: Path | str,
+        **options,
+    ):
         """Dump data to given path."""
         fpath = Path(fpath)
-        if not isinstance(obj, self.dtypes):
+
+        if isinstance(obj, pl.LazyFrame):
+            obj = obj.collect()
+
+        if isinstance(obj, pl.DataFrame):
+            self._dump_polars_impl(obj, fpath, **options)
+        elif isinstance(obj, pd.DataFrame):
+            self._dump_pandas_impl(obj, fpath, **options)
+        else:
             raise TypeError(f"Data must be an instance of {self.dtypes}.")
-        self._dump_impl(obj, fpath, **options)
 
     @abstractmethod
-    def _load_eager_impl(self, fpath: Path, **options) -> pl.DataFrame:
-        """Implementation of eager loading to be provided by subclasses."""
+    def _load_eager_polars_impl(self, fpath: Path, **options) -> pl.DataFrame:
+        """Polars implementation of eager loading."""
+        pass
+
+    @abstractmethod
+    def _load_eager_pandas_impl(self, fpath: Path, **options) -> pd.DataFrame:
+        """Pandas implementation of eager loading."""
         pass
 
     @abstractmethod
     def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
-        """Implementation of lazy loading to be provided by subclasses."""
+        """Polars implementation of lazy loading."""
         pass
 
     @abstractmethod
-    def _dump_impl(self, obj: Any, fpath: Path, **options):
-        """Implementation of dumping to be provided by subclasses."""
+    def _dump_polars_impl(self, obj: pl.DataFrame, fpath: Path, **options):
+        """Polars implementation of dumping."""
+        pass
+
+    @abstractmethod
+    def _dump_pandas_impl(self, obj: pd.DataFrame, fpath: Path, **options):
+        """Pandas implementation of dumping."""
         pass
 
     def __repr__(self) -> str:
@@ -93,34 +127,40 @@ class ConfigIO(ABC):
 
 class CSVIO(DataIO):
     fextns: tuple[str, ...] = (".csv",)
-    dtypes: tuple[Type, ...] = (pl.DataFrame, pl.LazyFrame)
 
-    def _load_eager_impl(self, fpath: Path, **options) -> pl.DataFrame:
-        df = pl.read_csv(fpath, **options)
-        return df
+    def _load_eager_polars_impl(self, fpath: Path, **options) -> pl.DataFrame:
+        return pl.read_csv(fpath, **options)
+
+    def _load_eager_pandas_impl(self, fpath: Path, **options) -> pd.DataFrame:
+        return pd.read_csv(fpath, **options)
 
     def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
-        lf = pl.scan_csv(fpath, **options)
-        return lf
+        return pl.scan_csv(fpath, **options)
 
-    def _dump_impl(self, obj: pl.DataFrame, fpath: Path, **options):
+    def _dump_polars_impl(self, obj: pl.DataFrame, fpath: Path, **options):
         obj.write_csv(fpath, **options)
+
+    def _dump_pandas_impl(self, obj: pd.DataFrame, fpath: Path, **options):
+        obj.to_csv(fpath, index=False, **options)
 
 
 class ParquetIO(DataIO):
     fextns: tuple[str, ...] = (".parquet",)
-    dtypes: tuple[Type, ...] = (pl.DataFrame, pl.LazyFrame)
 
-    def _load_eager_impl(self, fpath: Path, **options) -> pl.DataFrame:
-        df = pl.read_parquet(fpath, **options)
-        return df
+    def _load_eager_polars_impl(self, fpath: Path, **options) -> pl.DataFrame:
+        return pl.read_parquet(fpath, **options)
+
+    def _load_eager_pandas_impl(self, fpath: Path, **options) -> pd.DataFrame:
+        return pd.read_parquet(fpath, **options)
 
     def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
-        lf = pl.scan_parquet(fpath, **options)
-        return lf
+        return pl.scan_parquet(fpath, **options)
 
-    def _dump_impl(self, obj: pl.DataFrame, fpath: Path, **options):
+    def _dump_polars_impl(self, obj: pl.DataFrame, fpath: Path, **options):
         obj.write_parquet(fpath, **options)
+
+    def _dump_pandas_impl(self, obj: pd.DataFrame, fpath: Path, **options):
+        obj.to_parquet(fpath, index=False, **options)
 
 
 class JSONIO(ConfigIO):

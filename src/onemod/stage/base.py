@@ -392,7 +392,10 @@ class ModelStage(Stage, ABC):
             )
 
         lf = self.dataif.load(
-            key=data_key, columns=self.groupby, id_subsets=id_subsets, lazy=True
+            key=data_key,
+            columns=list(self.groupby),
+            id_subsets=id_subsets,
+            lazy=True,
         )
 
         subsets_df = create_subsets(self.groupby, lf)
