@@ -1,4 +1,3 @@
-from onemod.fsutils.config_interface import ConfigInterface
-from onemod.fsutils.data_interface import DataInterface
+from onemod.fsutils.interface import DataInterface
 
-__all__ = ["ConfigInterface", "DataInterface"]
+__all__ = ["DataInterface"]

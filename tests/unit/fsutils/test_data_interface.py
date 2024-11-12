@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from polars import DataFrame
 
-from onemod.fsutils.data_interface import DataInterface
+from onemod.fsutils.interface import DataInterface
 
 
 @pytest.fixture
@@ -18,6 +18,11 @@ def sample_data2():
         "sex_id": [1, 2, 1, 2],
         "value": [100, 200, 300, 400],
     }
+
+
+@pytest.fixture
+def sample_config():
+    return {"param1": "value1", "param2": [1, 2, 3]}
 
 
 @pytest.mark.parametrize("extension", [".csv", ".parquet"])
@@ -156,3 +161,15 @@ def test_load_with_columns_and_id_subsets(data_files, tmp_path, extension):
     assert np.array_equal(loaded_data["age_group_id"], [2, 2])
     assert np.array_equal(loaded_data["location_id"], [20, 20])
     assert np.array_equal(loaded_data["value"], [200, 300])
+
+
+@pytest.mark.parametrize("fextn", [".json", ".yaml", ".pkl"])
+def test_data_interface_with_config_dict(sample_config, fextn, tmp_path):
+    configif = DataInterface(config=tmp_path)
+
+    file_name = f"config{fextn}"
+    configif.dump(sample_config, file_name, key="config")
+
+    loaded_config = configif.load(file_name, key="config")
+
+    assert loaded_config == sample_config
