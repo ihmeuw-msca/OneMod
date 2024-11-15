@@ -20,8 +20,9 @@ class DataInterface(PathManager):
         self,
         *fparts: str,
         key: str,
-        lazy: bool = False,
-        backend: Literal["polars", "pandas"] = "polars",
+        backend: Literal[
+            "polars", "polars_lazy", "polars_eager", "pandas"
+        ] = "polars",
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
         **options,
@@ -30,10 +31,9 @@ class DataInterface(PathManager):
 
         Parameters
         ----------
-        lazy : bool, optional
-            Whether to load the data file lazily, applicable only for data files.
-        backend : {'polars', 'pandas'}, optional
-            Backend for loading data files, applicable only for data files.
+        backend : {'polars', 'polars_eager', 'polars_lazy', 'pandas'}, optional
+            Backend for loading data files. 'polars' is an alias for 'polars_eager'.
+            'polars' is the default.
         columns : list of str, optional
             Specific columns to load, applicable only for data files.
         id_subsets : dict, optional
@@ -52,7 +52,6 @@ class DataInterface(PathManager):
         elif path.suffix in self.data_loader.io_dict.keys():
             return self.data_loader.load(
                 path,
-                lazy=lazy,
                 backend=backend,
                 columns=columns,
                 id_subsets=id_subsets,

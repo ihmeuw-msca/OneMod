@@ -395,7 +395,7 @@ class ModelStage(Stage, ABC):
             key=data_key,
             columns=list(self.groupby),
             id_subsets=id_subsets,
-            lazy=True,
+            backend="polars_lazy",
         )
 
         subsets_df = create_subsets(self.groupby, lf)

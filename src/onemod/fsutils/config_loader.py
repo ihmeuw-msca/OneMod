@@ -24,5 +24,4 @@ class ConfigLoader:
         self.io_dict[path.suffix].dump(obj, path, **options)
 
     def __repr__(self) -> str:
-        base_repr = super().__repr__()
-        return f"{base_repr[:-1]}, handles_configs=True\n)"
+        return f"{type(self).__name__}()"
