@@ -20,9 +20,9 @@ class DataInterface(PathManager):
         self,
         *fparts: str,
         key: str,
-        backend: Literal[
-            "polars", "polars_lazy", "polars_eager", "pandas"
-        ] = "polars",
+        return_type: Literal[
+            "polars_dataframe", "polars_lazyframe", "pandas_dataframe"
+        ] = "polars_dataframe",
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
         **options,
@@ -31,9 +31,8 @@ class DataInterface(PathManager):
 
         Parameters
         ----------
-        backend : {'polars', 'polars_eager', 'polars_lazy', 'pandas'}, optional
-            Backend for loading data files. 'polars' is an alias for 'polars_eager'.
-            'polars' is the default.
+        return_type : {'polars_dataframe', 'polars_lazyframe', 'pandas_dataframe'}, optional
+            Return type of loaded data object, applicable only for data files.
         columns : list of str, optional
             Specific columns to load, applicable only for data files.
         id_subsets : dict, optional
@@ -52,7 +51,7 @@ class DataInterface(PathManager):
         elif path.suffix in self.data_loader.io_dict.keys():
             return self.data_loader.load(
                 path,
-                backend=backend,
+                return_type=return_type,
                 columns=columns,
                 id_subsets=id_subsets,
                 **options,
