@@ -17,6 +17,7 @@ TODO: Implement priors input
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from loguru import logger
 from spxmod.model import XModel
 from xspline import XSpline
@@ -115,9 +116,13 @@ class SpxmodStage(ModelStage):
 
         # Save submodel and coefficients
         logger.info(f"Saving {self.name} submodel {subset_id}")
-        self.dataif.dump_output(model, f"submodels/{subset_id}/model.pkl")
-        self.dataif.dump_output(
-            self._get_coef(model), f"submodels/{subset_id}/coef.csv"
+        self.dataif.dump(
+            model, f"submodels/{subset_id}/model.pkl", key="output"
+        )
+        self.dataif.dump(
+            self._get_coef(model),
+            f"submodels/{subset_id}/coef.csv",
+            key="output",
         )
 
         return model
@@ -136,7 +141,9 @@ class SpxmodStage(ModelStage):
 
         # Load submodel
         logger.info(f"Loading {self.name} submodel {subset_id}")
-        model = self.dataif.load_output(f"submodels/{subset_id}/model.pkl")
+        model = self.dataif.load(
+            f"submodels/{subset_id}/model.pkl", key="output"
+        )
 
         # Create submodel predictions
         self._predict(subset_id, data, model)
@@ -160,12 +167,13 @@ class SpxmodStage(ModelStage):
 
         # Save results
         logger.info(f"Saving predictions for {self.name} submodel {subset_id}")
-        self.dataif.dump_output(
+        self.dataif.dump(
             pd.concat([data, residuals], axis=1)[
                 list(self.config["id_columns"])
                 + ["residual", "residual_se", self.config["prediction_column"]]
             ],
             f"submodels/{subset_id}/predictions.parquet",
+            key="output",
         )
 
     def collect(self) -> None:
@@ -179,16 +187,18 @@ class SpxmodStage(ModelStage):
         """
         # Collect submodel predictions
         logger.info(f"Collecting {self.name} submodel results")
-        self.dataif.dump_output(
+        self.dataif.dump(
             pd.concat(
                 [
-                    self.dataif.load_output(
-                        f"submodels/{subset_id}/predictions.parquet"
+                    self.dataif.load(
+                        f"submodels/{subset_id}/predictions.parquet",
+                        key="output",
                     )
                     for subset_id in self.subset_ids
                 ]
             ),
             "predictions.parquet",
+            key="output",
         )
 
         # TODO: Plot coefficients
@@ -199,7 +209,11 @@ class SpxmodStage(ModelStage):
         """Load submodel data."""
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id)
+        data_subset = self.get_stage_subset(
+            subset_id
+        )  # TODO: Potentially add pandas as backend to internal methods if users will be using them in their custom stages
+        if isinstance(data_subset, pl.DataFrame):
+            data = data_subset.to_pandas()
 
         # Add spline basis to data
         spline_vars = []
@@ -216,9 +230,10 @@ class SpxmodStage(ModelStage):
         if "offset" in self.input:
             logger.info(f"Adding offset from {self.input['offset'].stage}")
             data = data.merge(
-                right=self.dataif.load_offset(
+                right=self.dataif.load(
                     columns=list(self.config["id_columns"])
-                    + [self.config["prediction_column"]]
+                    + [self.config["prediction_column"]],
+                    key="offset",
                 ).rename(columns={self.config["prediction_column"]: "offset"}),
                 on=list(self.config["id_columns"]),
                 how="left",
@@ -251,11 +266,11 @@ class SpxmodStage(ModelStage):
     def _get_covs(self, subset_id: int) -> list[str]:
         """Get covariates from upstream stage."""
         # Load covariates and filter by subset
-        selected_covs = self.dataif.load_selected_covs()
+        selected_covs = self.dataif.load(key="selected_covs")
         if pipeline_groupby := self.get_field("groupby"):
             selected_covs = get_subset(
                 selected_covs,
-                self.dataif.load_output("subsets.csv"),
+                self.dataif.load("subsets.csv", key="output"),
                 subset_id,
                 id_names=pipeline_groupby,
             )

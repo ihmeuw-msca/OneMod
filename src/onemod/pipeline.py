@@ -6,7 +6,7 @@ import json
 import logging
 from collections import deque
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, validate_call
 
@@ -43,6 +43,7 @@ class Pipeline(BaseModel):
     directory: Path
     data: Path | None = None
     groupby: set[str] | None = None
+    id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
 
     @computed_property
@@ -225,9 +226,17 @@ class Pipeline(BaseModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self) -> None:
+    def build(self, id_subsets: dict[str, list[Any]] | None = None) -> None:
         """Assemble pipeline, perform build-time validation, and save to JSON."""
+        self.id_subsets = id_subsets
         collector = ValidationErrorCollector()
+
+        if self.id_subsets is not None:
+            invalid_keys = set(self.id_subsets) - set(self.groupby or [])
+            if invalid_keys:
+                raise ValueError(
+                    f"id_subsets keys {invalid_keys} do not match groupby columns {self.groupby}"
+                )
 
         for stage in self.stages.values():
             stage.validate_build(collector)
@@ -241,6 +250,7 @@ class Pipeline(BaseModel):
         config_path = self.directory / (self.name + ".json")
         for stage in self.stages.values():
             stage.set_dataif(config_path)
+            stage.dataif.add_path("pipeline_data", self.data)
 
             # Create data subsets
             if isinstance(stage, ModelStage):
@@ -252,10 +262,10 @@ class Pipeline(BaseModel):
                 if stage.groupby:
                     if self.data is None:
                         raise AttributeError("Data is required for groupby")
-                    stage.create_stage_subsets(self.data)
-
-            # Create parameter sets
-            if isinstance(stage, ModelStage):
+                    stage.create_stage_subsets(
+                        data_key="pipeline_data", id_subsets=self.id_subsets
+                    )
+                # Create parameter sets
                 if stage.config.crossable_params:
                     stage.create_stage_params()
 
@@ -276,6 +286,7 @@ class Pipeline(BaseModel):
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
         stages: set[str] | None = None,
+        id_subsets: dict[str, list[Any]] | None = None,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
@@ -290,6 +301,7 @@ class Pipeline(BaseModel):
             Whether to build the pipeline before evaluation. Default is True.
         stages : set of str, optional
             Stages to evaluate. Default is None.
+        id_subsets : dict of str: list of Any, optional
 
         Other Parameters
         ----------------
@@ -298,12 +310,9 @@ class Pipeline(BaseModel):
         resources : Path or str, optional
             Path to resources yaml file. Required if `backend` is
             'jobmon'.
-
-        TODO: Add options to run subset of IDs
-
         """
         if build:
-            self.build()
+            self.build(id_subsets=id_subsets)
 
         if stages is not None:
             for stage_name in stages:
@@ -330,13 +339,13 @@ class Pipeline(BaseModel):
         )
 
         if backend == "jobmon":
-            from onemod.backend import evaluate_with_jobmon
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(
                 model=self, method=method, stages=ordered_stages, **kwargs
             )
         else:
-            from onemod.backend import evaluate_local
+            from onemod.backend.local_backend import evaluate_local
 
             evaluate_local(model=self, method=method, stages=ordered_stages)
 

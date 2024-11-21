@@ -231,7 +231,7 @@ def evaluate_with_jobmon(
 
     # Set config
     if isinstance(model, Stage):
-        model_config = model.dataif.config
+        model_config = model.dataif.load(key="config")
     elif isinstance(model, Pipeline):
         model_config = model.config
 

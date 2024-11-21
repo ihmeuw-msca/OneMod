@@ -1,9 +1,23 @@
 from unittest.mock import patch
 
+import polars as pl
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
-from tests.helpers.dummy_stages import assert_stage_logs
+from tests.helpers.dummy_stages import MultiplyByTwoStage, assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
+
+from onemod.config import ModelConfig, PipelineConfig
+from onemod.pipeline import Pipeline
+
+
+@pytest.fixture
+def sample_data():
+    return {
+        "age_group_id": [1, 2, 2, 3],
+        "location_id": [10, 20, 20, 30],
+        "sex_id": [1, 2, 1, 2],
+        "value": [100, 200, 300, 400],
+    }
 
 
 def create_dummy_preprocessing_output_file(test_base_dir, stages):
@@ -112,6 +126,68 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 
 @pytest.mark.integration
 @pytest.mark.requires_data
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
+    """Test that Pipeline.evaluate() raises an error when an invalid id_subsets key is provided."""
+    dummy_pipeline, stages = setup_dummy_pipeline(
+        small_input_data, test_base_dir
+    )
+
+    subset_stage_names = {"preprocessing"}
+
+    with pytest.raises(
+        ValueError,
+        match="id_subsets keys {'invalid_id_col_name'} do not match groupby columns {'sex_id'}",
+    ):
+        dummy_pipeline.evaluate(
+            method=method,
+            stages=subset_stage_names,
+            id_subsets={"invalid_id_col_name": [1, 2, 3]},
+        )
+
+
+@pytest.mark.integration
+def test_evaluate_with_id_subsets(test_base_dir, sample_data):
+    """Test that Pipeline.evaluate() correctly evaluates single stage with id_subsets."""
+    sample_input_data = test_base_dir / "test_input_data.parquet"
+    df = pl.DataFrame(sample_data)
+    df.write_parquet(sample_input_data)
+
+    test_pipeline = Pipeline(
+        name="dummy_pipeline",
+        config=PipelineConfig(
+            id_columns=["age_group_id", "location_id", "sex_id"],
+            model_type="binomial",
+        ),
+        directory=test_base_dir,
+        data=sample_input_data,
+        groupby={"age_group_id"},
+    )
+    test_stage = MultiplyByTwoStage(
+        name="multiply_by_two", config=ModelConfig()
+    )
+    test_pipeline.add_stages([test_stage])
+    test_stage(data=test_pipeline.data)
+
+    # Ensure input data is as expected for the test
+    assert sample_input_data.exists()
+    input_df = pl.read_parquet(sample_input_data)
+    assert input_df.shape == (4, 4)
+
+    test_pipeline.evaluate(method="run", id_subsets={"age_group_id": [1]})
+
+    # Verify that output only contains rows with specified subset(s) for age_group_id
+    output_df = test_stage.dataif.load("data.parquet", key="output")
+    assert output_df.select(pl.col("age_group_id")).n_unique() == 1
+    assert output_df.shape == (1, 4)
+
+
+@pytest.mark.skip(
+    "Jobmon test - Run manually until better jobmon testing solution in place"
+)
+@pytest.mark.integration
+@pytest.mark.requires_data
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_evaluate_with_jobmon_subset_call(
     dummy_resources, small_input_data, test_base_dir, method

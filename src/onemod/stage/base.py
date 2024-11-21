@@ -10,13 +10,13 @@ from inspect import getfile
 from pathlib import Path
 from typing import Any, Literal
 
-from pandas import DataFrame
-from pplkit.data.interface import DataInterface
+from polars import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
 from onemod.dtypes import Data
+from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
 from onemod.utils.decorators import computed_property
 from onemod.utils.parameters import create_params, get_params
@@ -34,9 +34,9 @@ class Stage(BaseModel, ABC):
     config : StageConfig
         Stage configuration.
     input_validation : dict, optional
-        Description.
+        Optional specification of input data validation.
     output_validation : dict, optional
-        Description.
+        Optional specification of output data validation.
 
     """
 
@@ -60,12 +60,12 @@ class Stage(BaseModel, ABC):
 
         Examples
         --------
-        * Load config: stage.dataif.load_config()
-        * Load input: stage.dataif.load_{input_name}()
+        * Load config: stage.dataif.load(key="config")
+        * Load input: stage.dataif.load(key=f"{input_name}")
         * Load output:
-          stage.dataif.load_output("{output_name}.{output_extension}")
+          stage.dataif.load(f"{output_name}.{output_extension}", key="output")
         * Dump output:
-          stage.dataif.load_output(output, "{output_name}.{output_extension}")
+          stage.dataif.dump(output, f"{output_name}.{output_extension}", key="output")
 
         """
         if self._dataif is None:
@@ -84,9 +84,9 @@ class Stage(BaseModel, ABC):
         )
         for item_name, item_value in self.input.items.items():
             if isinstance(item_value, Path):
-                self._dataif.add_dir(item_name, item_value)
+                self._dataif.add_path(item_name, item_value)
             elif isinstance(item_value, Data):
-                self._dataif.add_dir(
+                self._dataif.add_path(
                     item_name, directory / item_value.stage / item_value.path
                 )
         if not (directory / self.name).exists():
@@ -211,7 +211,7 @@ class Stage(BaseModel, ABC):
             return
         method = method if hasattr(self, method) else "run"
         if backend == "jobmon":
-            from onemod.backend import evaluate_with_jobmon
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(model=self, method=method, **kwargs)
         else:
@@ -280,8 +280,7 @@ class Stage(BaseModel, ABC):
             Field item.
 
         """
-        with open(self.dataif.config, "r") as file:
-            config = json.load(file)
+        config = self.dataif.load(key="config")
         if stage_name is not None:
             config = config["stages"][stage_name]
         for key in field.split("-"):
@@ -354,7 +353,7 @@ class ModelStage(Stage, ABC):
     def subset_ids(self) -> set[int]:
         if self.groupby is not None and not self._subset_ids:
             try:
-                subsets = self.dataif.load_output("subsets.csv")
+                subsets = self.dataif.load("subsets.csv", key="output")
                 self._subset_ids = set(subsets["subset_id"])
             except FileNotFoundError:
                 raise AttributeError(
@@ -366,7 +365,7 @@ class ModelStage(Stage, ABC):
     def param_ids(self) -> set[int]:
         if self.crossby is not None and not self._param_ids:
             try:
-                params = self.dataif.load_output("parameters.csv")
+                params = self.dataif.load("parameters.csv", key="output")
                 self._param_ids = set(params["param_id"])
             except FileNotFoundError:
                 raise AttributeError(
@@ -383,24 +382,32 @@ class ModelStage(Stage, ABC):
         if "crossby" in stage_config:
             self._crossby = stage_config["crossby"]
 
-    def create_stage_subsets(self, data: Path | str) -> None:
-        """Create stage data subsets from groupby."""
+    def create_stage_subsets(
+        self, data_key: str, id_subsets: dict[str, list[Any]] | None = None
+    ) -> None:
+        """Create stage data subsets from groupby and id_subsets."""
         if self.groupby is None:
             raise AttributeError(
                 f"{self.name} does not have a groupby attribute"
             )
 
-        subsets = create_subsets(
-            self.groupby, self.dataif.load(data, columns=self.groupby)
+        lf = self.dataif.load(
+            key=data_key,
+            columns=list(self.groupby),
+            id_subsets=id_subsets,
+            return_type="polars_lazyframe",
         )
-        self._subset_ids = set(subsets["subset_id"])
-        self.dataif.dump_output(subsets, "subsets.csv")
+
+        subsets_df = create_subsets(self.groupby, lf)
+        self._subset_ids = set(subsets_df["subset_id"].to_list())
+
+        self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
     def get_stage_subset(self, subset_id: int) -> DataFrame:
         """Get stage data subset."""
         return get_subset(
-            self.dataif.load_data(),
-            self.dataif.load_output("subsets.csv"),
+            self.dataif.load(key="data"),
+            self.dataif.load("subsets.csv", key="output"),
             subset_id,
         )
 
@@ -408,13 +415,15 @@ class ModelStage(Stage, ABC):
         """Create stage parameter sets from config."""
         params = create_params(self.config)
         if params is not None:
-            self._crossby = set(params.drop(columns="param_id").columns)
+            self._crossby = set(params.drop("param_id").columns)
             self._param_ids = set(params["param_id"])
-            self.dataif.dump_output(params, "parameters.csv")
+            self.dataif.dump(params, "parameters.csv", key="output")
 
     def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
-        params = get_params(self.dataif.load_output("parameters.csv"), param_id)
+        params = get_params(
+            self.dataif.load("parameters.csv", key="output"), param_id
+        )
         for param_name, param_value in params.items():
             self.config[param_name] = param_value
 
@@ -464,7 +473,7 @@ class ModelStage(Stage, ABC):
             warnings.warn(f"{self.name} skips the '{method}' method")
             return
         if backend == "jobmon":
-            from onemod.backend import evaluate_with_jobmon
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(model=self, method=method, **kwargs)
         else:
@@ -476,7 +485,7 @@ class ModelStage(Stage, ABC):
                 if subset_id is not None or param_id is not None:
                     self.__getattribute__(method)(subset_id, param_id)
                 else:
-                    from onemod.backend import evaluate_local
+                    from onemod.backend.local_backend import evaluate_local
 
                     evaluate_local(model=self, method=method)
 
