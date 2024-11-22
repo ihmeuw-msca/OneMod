@@ -31,7 +31,7 @@ minutes, while all other methods request ten minutes.
 
 import sys
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Literal
 
 import yaml
 from jobmon.client.api import Tool
@@ -96,7 +96,7 @@ def get_tasks(
                 name=f"{stage.name}_{method}",
                 upstream_tasks=upstream_tasks,
                 max_attempts=1,
-                **cast(dict[str, Any], task_args),
+                **task_args,
             )
         ]
 
@@ -231,13 +231,13 @@ def evaluate_with_jobmon(
 
     # Set config
     if isinstance(model, Stage):
-        model_config = model.dataif.load(key="config")
+        config_path = model.dataif.get_path("config")
     elif isinstance(model, Pipeline):
-        model_config = model.config
+        config_path = model.directory / f"{model.name}.json"
 
     task_args: dict[str, str] = {
         "python": str(python or sys.executable),
-        "config": str(model_config),
+        "config": str(config_path),
     }
 
     # Create tasks
