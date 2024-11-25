@@ -122,8 +122,8 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
 @validate_call
 def evaluate(
     config: Path | str,
-    stage_name: str | None = None,
     method: Literal["run", "fit", "predict", "collect"] = "run",
+    stages: str | set[str] | None = None,
     backend: Literal["local", "jobmon"] = "local",
     **kwargs,
 ) -> None:
@@ -133,11 +133,11 @@ def evaluate(
     ----------
     config : Path or str
         Path to config file.
-    stage_name : str or None, optional
-        Name of stage to evaluate. If None, evaluate pipeline.
-        Default is None.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
+    stages : str, set of str, or None, optional
+        Names of stages to evaluate. If None, evaluate entire pipeline.
+        Default is None.
     backend : str, optional
         Whether to evaluate the method locally or with Jobmon.
         Default is 'local'.
@@ -156,13 +156,11 @@ def evaluate(
     """
     model: Pipeline | Stage
 
-    if stage_name is None:
-        model = load_pipeline(config)
-        if method == "collect":
-            raise ValueError(f"{method} is not a valid method for a pipeline")
+    if isinstance(stages, str):
+        model = load_stage(config, stages)
         model.evaluate(method, backend, **kwargs)
     else:
-        model = load_stage(config, stage_name)
+        model = load_pipeline(config)
         model.evaluate(method, backend, **kwargs)
 
 
