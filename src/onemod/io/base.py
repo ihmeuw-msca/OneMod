@@ -80,7 +80,9 @@ class Input(IO):
         }
         self._expected_types = {}
         for item in {*self.required, *self.optional}:
-            item_name, item_type = item.split(".")
+            item_specs = item.split(".")
+            item_name = item_specs[0]
+            item_type = "directory" if len(item_specs) == 1 else item_specs[1]
             self._expected_types[item_name] = item_type
         if self.items:
             for item_name in list(self.items.keys()):
@@ -157,7 +159,8 @@ class Input(IO):
         if item_name in self._expected_types:
             if isinstance(item_value, Data):
                 item_value = item_value.path
-            if item_value.suffix[1:] != self._expected_types[item_name]:
+            suffix = item_value.suffix[1:] or "directory"
+            if suffix != self._expected_types[item_name]:
                 raise TypeError(
                     f"Invalid type for {self.stage} input: {item_name}"
                 )
