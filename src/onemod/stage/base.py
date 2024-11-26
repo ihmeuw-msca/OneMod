@@ -38,6 +38,13 @@ class Stage(BaseModel, ABC):
     output_validation : dict, optional
         Optional specification of output data validation.
 
+    Notes
+    -----
+    Input/output items in _required_input, _optional_input, and _output
+    items are specified using syntax "f{name}.{extension}". For example,
+    "data.parquet". If input/output is a directory instead of a file,
+    exclude the extension. For example, "submodels".
+
     """
 
     model_config = ConfigDict(validate_assignment=True)
@@ -50,9 +57,9 @@ class Stage(BaseModel, ABC):
     _module: Path | None = None  # set by from_json
     _skip: set[str] = set()  # defined by class
     _input: Input | None = None  # set by __call__, from_json
-    _required_input: set[str] = set()  # name.extension, defined by class
-    _optional_input: set[str] = set()  # name.extension, defined by class
-    _output: set[str] = set()  # name.extension, defined by class
+    _required_input: set[str] = set()  # defined by class
+    _optional_input: set[str] = set()  # defined by class
+    _output: set[str] = set()  # defined by class
 
     @property
     def dataif(self) -> DataInterface:
@@ -60,12 +67,19 @@ class Stage(BaseModel, ABC):
 
         Examples
         --------
-        * Load config: stage.dataif.load(key="config")
-        * Load input: stage.dataif.load(key=f"{input_name}")
-        * Load output:
-          stage.dataif.load(f"{output_name}.{output_extension}", key="output")
-        * Dump output:
-          stage.dataif.dump(output, f"{output_name}.{output_extension}", key="output")
+        Load input file:
+        * _requred_input: {"data.parquet"}
+        * data = self.dataif.load(key="data")
+
+        Load file from input directory:
+        * _required_input: {"submodels"}
+        * model = self.dataif.load(f"model_{subset_id}.pkl", key="submodels")
+
+        Load output file:
+        * subsets = self.dataif.load("subsets.csv", key="output")
+
+        Dump output file:
+        * self.dataif.dump(f"submodels/model_{subset_id}.pkl", key="output")
 
         """
         if self._dataif is None:
@@ -73,9 +87,21 @@ class Stage(BaseModel, ABC):
         return self._dataif
 
     def set_dataif(self, config_path: Path | str) -> None:
-        if self.input is None:
-            return
+        """Set stage data interface.
 
+        Parameters
+        ----------
+        config_path : Path or str
+            Path to config file.
+
+        Notes
+        -----
+        * This method is called in Pipeline.build.
+        * This method assumes the pipeline's data flow has already been
+          defined (if the stage's input is changed after pipeline is
+          built, the data interface will not contain the new input).
+
+        """
         directory = Path(config_path).parent
         self._dataif = DataInterface(
             directory=directory,
@@ -121,8 +147,12 @@ class Stage(BaseModel, ABC):
     def output(self) -> Output:
         output_items = {}
         for item in self._output:
-            item_name = item.split(".")[0]  # remove extension
-            output_items[item_name] = Data(stage=self.name, path=Path(item))
+            item_specs = item.split(".")
+            item_name = item_specs[0]
+            item_type = "directory" if len(item_specs) == 1 else item_specs[1]
+            output_items[item_name] = Data(
+                stage=self.name, path=Path(item), format=item_type
+            )
         return Output(stage=self.name, items=output_items)
 
     @property
@@ -166,8 +196,8 @@ class Stage(BaseModel, ABC):
             stage._module = stage_config["module"]
         if hasattr(stage, "apply_stage_specific_config"):
             stage.apply_stage_specific_config(stage_config)
-        if "input" in stage_config:
-            stage(**stage_config["input"])
+        if input := stage_config.get("input") is not None:
+            stage(**input)
         stage.set_dataif(config_path)
         return stage
 
@@ -207,7 +237,7 @@ class Stage(BaseModel, ABC):
 
         """
         if method in self.skip:
-            warnings.warn(f"{self.name} skips the '{method}' method")
+            warnings.warn(f"'{self.name}' stage skips the '{method}' method")
             return
         method = method if hasattr(self, method) else "run"
         if backend == "jobmon":
@@ -295,6 +325,7 @@ class Stage(BaseModel, ABC):
     @validate_call
     def __call__(self, **input: Data | Path) -> Output:
         """Define stage dependencies."""
+        # FIXME: Update data interface if it exists?
         self.input.check_missing({**self.input.items, **input})
         self.input.update(input)
         return self.output
