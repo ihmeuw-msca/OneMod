@@ -282,10 +282,10 @@ class Pipeline(BaseModel):
     @validate_call
     def evaluate(
         self,
-        method: Literal["run", "fit", "predict"] = "run",
+        method: Literal["run", "fit", "predict", "collect"] = "run",
+        stages: set[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
-        stages: set[str] | None = None,
         id_subsets: dict[str, list[Any]] | None = None,
         **kwargs,
     ) -> None:
@@ -295,12 +295,14 @@ class Pipeline(BaseModel):
         ----------
         method : str, optional
             Name of method to evaluate. Default is 'run'.
+        stages : set of str, optional
+            Names of stages to evaluate. Default is None.
+            If None, evaluate entire pipeline.
         backend : str, optional
             How to evaluate the method. Default is 'local'.
         build : bool, optional
-            Whether to build the pipeline before evaluation. Default is True.
-        stages : set of str, optional
-            Stages to evaluate. Default is None.
+            Whether to build the pipeline before evaluation.
+            Default is True.
         id_subsets : dict of str: list of Any, optional
 
         Other Parameters
@@ -310,7 +312,13 @@ class Pipeline(BaseModel):
         resources : Path or str, optional
             Path to resources yaml file. Required if `backend` is
             'jobmon'.
+
         """
+        if method == "collect":
+            raise ValueError(
+                "Method 'collect' can only be called on a 'ModelStage' object"
+            )
+
         if build:
             self.build(id_subsets=id_subsets)
 

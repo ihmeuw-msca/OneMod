@@ -236,10 +236,17 @@ class Stage(BaseModel, ABC):
         `predict` is called.
 
         """
+        if method == "collect":
+            raise ValueError(
+                "Method 'collect' can only be called for 'ModelStage' objects"
+            )
+
         if method in self.skip:
             warnings.warn(f"'{self.name}' stage skips the '{method}' method")
             return
+
         method = method if hasattr(self, method) else "run"
+
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
@@ -478,9 +485,11 @@ class ModelStage(Stage, ABC):
         Other Parameters
         ----------------
         subset_id : int, optional
-            Submodel data subset ID. Ignored if `backend` is 'jobmon'.
+            Submodel data subset ID. Ignored if `backend` is 'jobmon' or
+            method is `collect`.
         param_id : int, optional
-            Submodel parameter set ID. Ignored if `backend` is 'jobmon'.
+            Submodel parameter set ID. Ignored if `backend` is 'jobmon'
+            or method is `collect`.
         config : Path or str, optional
             Path to config file. Required if `backend` is 'jobmon'.
         cluster : str, optional
@@ -503,7 +512,13 @@ class ModelStage(Stage, ABC):
         if method in self.skip:
             warnings.warn(f"{self.name} skips the '{method}' method")
             return
+
         if backend == "jobmon":
+            if method == "collect":
+                raise ValueError(
+                    "Method 'collect' cannot be used with 'jobmon' backend"
+                )
+
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(model=self, method=method, **kwargs)
