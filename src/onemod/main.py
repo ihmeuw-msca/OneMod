@@ -161,7 +161,7 @@ def evaluate(
         model.evaluate(method, backend, **kwargs)
     else:
         model = load_pipeline(config)
-        model.evaluate(method, backend, **kwargs)
+        model.evaluate(method, stages, backend, **kwargs)
 
 
 def call_function(
