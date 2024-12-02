@@ -490,8 +490,6 @@ class ModelStage(Stage, ABC):
         param_id : int, optional
             Submodel parameter set ID. Ignored if `backend` is 'jobmon'
             or method is `collect`.
-        config : Path or str, optional
-            Path to config file. Required if `backend` is 'jobmon'.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path or str, optional

@@ -18,7 +18,6 @@ TODO: Update pandas commands to polars
 
 import numpy as np
 import pandas as pd
-import polars as pl
 from loguru import logger
 from spxmod.model import XModel
 from xspline import XSpline
