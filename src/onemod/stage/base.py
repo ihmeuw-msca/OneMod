@@ -40,10 +40,21 @@ class Stage(BaseModel, ABC):
 
     Notes
     -----
-    Input/output items in _required_input, _optional_input, and _output
-    items are specified using syntax "f{name}.{extension}". For example,
-    "data.parquet". If input/output is a directory instead of a file,
-    exclude the extension. For example, "submodels".
+    * Private attributes that are defined automatically:
+      * `_dataif : `DataInterface` object for loading/dumping input,
+        created in `Pipeline.build()` or `Stage.from_json()`.
+      * `_module`: Path to custom stage definition, created in
+        `Stage.module` or `Stage.from_json()`.
+      * `_input`: `Input` object that organizes `Stage` input, created
+        in `Stage.input` or `Stage.from_json()`, modified by
+        `Stage.__call__()`.
+    * Private attributes that must be defined by class:
+      * `_required_input`, `_optional_input`, `_output`: Strings with
+        syntax "f{name}.{extension}". For example, "data.parquet". If
+        input/output is a directory instead of a file, exclude the
+        extension. For example, "submodels".
+      * `_skip`: Methods that the stage does not implement (e.g., 'fit'
+        or 'predict').
 
     """
 
@@ -53,13 +64,13 @@ class Stage(BaseModel, ABC):
     config: StageConfig
     input_validation: dict[str, Data] = Field(default_factory=dict)
     output_validation: dict[str, Data] = Field(default_factory=dict)
-    _dataif: DataInterface | None = None  # set by Pipeline.build, from_json
-    _module: Path | None = None  # set by from_json
-    _skip: set[str] = set()  # defined by class
-    _input: Input | None = None  # set by __call__, from_json
-    _required_input: set[str] = set()  # defined by class
-    _optional_input: set[str] = set()  # defined by class
-    _output: set[str] = set()  # defined by class
+    _dataif: DataInterface | None = None
+    _module: Path | None = None
+    _input: Input | None = None
+    _required_input: set[str] = set()
+    _optional_input: set[str] = set()
+    _output: set[str] = set()
+    _skip: set[str] = set()
 
     @property
     def dataif(self) -> DataInterface:
@@ -98,8 +109,8 @@ class Stage(BaseModel, ABC):
         -----
         * This method is called in Pipeline.build.
         * This method assumes the pipeline's data flow has already been
-          defined (if the stage's input is changed after pipeline is
-          built, the data interface will not contain the new input).
+          defined (i.e., if the stage's input is changed after pipeline
+          is built, the data interface will not contain the new input).
 
         """
         directory = Path(config_path).parent
@@ -196,7 +207,7 @@ class Stage(BaseModel, ABC):
             stage._module = stage_config["module"]
         if hasattr(stage, "apply_stage_specific_config"):
             stage.apply_stage_specific_config(stage_config)
-        if input := stage_config.get("input") is not None:
+        if (input := stage_config.get("input")) is not None:
             stage(**input)
         stage.set_dataif(config_path)
         return stage
@@ -351,8 +362,9 @@ class ModelStage(Stage, ABC):
     Model stages can also be run for different parameter combinations
     using the `crossby` attribute. For example, a single stage could be
     run for various hyperparameter values, and then the results could be
-    combined into an ensemble. Any parameter in config.crossable_params
-    can be specified as either a single value or a list of values.
+    combined into an ensemble. Any parameter in
+    `config.crossable_params` can be specified as either a single value
+    or a list of values.
 
     When a model stage method is evaluated, all submodels (identified by
     their `subset_id` and `param_id`) are evaluated, and then, if
@@ -373,15 +385,45 @@ class ModelStage(Stage, ABC):
     output_validation : dict, optional
         Description.
 
+    Notes
+    -----
+    * Private attributes that are defined automatically:
+      * `_dataif : `DataInterface` object for loading/dumping input,
+        created `Stage.set_dataif()` and called by `Pipeline.build()`
+        or `Stage.from_json()`.
+      * `_module`: Path to custom stage definition, created in
+        `Stage.module` or `Stage.from_json()`.
+      * `_input`: `Input` object that organizes `Stage` input, created
+        in `Stage.input` or `Stage.from_json()`, modified by
+        `Stage.__call__()`.
+      * `_crossby`: Names of parameters using multiple values. Created
+        in `ModelStage.create_stage_params()` AND CALLED BY
+      * `_subset_ids`: Data subset ID values. Created in
+        `ModelStage.create_stage_subsets()` and CALLED BY
+      * `_param_ids`: Parameter set ID values. Created in
+        `ModelStage.create_stage_params()` and CALLED BY
+    * Private attributes that must be defined by class:
+      * `_required_input`, `_optional_input`, `_output`: Strings with
+        syntax "f{name}.{extension}". For example, "data.parquet"
+        (required to use `groupby` attribute). If input/output is a
+        directory instead of a file, exclude the extension. For example,
+        "submodels".
+      * `_skip`: Methods that the stage does not implement (e.g., 'fit'
+        or 'predict').
+      * `_collect_after`: Methods that create submodel results (e.g.,
+        data subsets or parameter sets) that must be collected. For
+        example, collect submodel results for parameter sets to select
+        best parameter values after the 'fit'  method, or collect
+        submodel results for data subsets after the 'predict' method.
+
     """
 
     config: ModelConfig
     groupby: set[str] | None = None
-    _crossby: set[str] | None = None  # set by create_stage_params
-    _subset_ids: set[int] = set()  # set by create_stage_subsets
-    _param_ids: set[int] = set()  # set by create_stage_params
-    _required_input: set[str] = set()  # data required for groupby
-    _collect_after: set[str] = set()  # defined by class
+    _crossby: set[str] | None = None
+    _subset_ids: set[int] = set()
+    _param_ids: set[int] = set()
+    _collect_after: set[str] = set()
 
     @computed_property
     def crossby(self) -> set[str] | None:
