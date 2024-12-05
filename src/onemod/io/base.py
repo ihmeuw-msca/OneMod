@@ -7,6 +7,11 @@ Notes
 * Provides validation
 * No need to create stage-specific subclasses
 
+TODO: Could simplify Input class functions if all items were Data (as
+opposed to Data or Path). Would have to update Data class to allow stage
+attribute to be None, and would have to convert Paths to Data when
+adding to Input.items.
+
 """
 
 from abc import ABC
@@ -132,6 +137,47 @@ class Input(IO):
         if missing_items:
             raise KeyError(
                 f"Stage '{self.stage}' missing required input: {missing_items}"
+            )
+
+    def check_exists(
+        self,
+        item_names: set[str] | None = None,
+        upstream_stages: set[str] | None = None,
+    ) -> None:
+        """Check stage input items exist.
+
+        Parameters
+        ----------
+        item_names : set of str, optional
+            Names of input items to check. If None, check all input
+            path items and all input data items in `upstream_stages`.
+            Default is None.
+        upstream_stages : set of str, optional
+            Names of upstream stages to check input items from. If None,
+            check input items from all upstream stages.
+
+        Raises
+        ------
+        FileNotFoundError
+            If any stage input items do not exist.
+
+        """
+        item_names = item_names or self.items.keys()
+        upstream_stages = upstream_stages or self.dependencies
+
+        missing_items = {}
+        for item_name in item_names:
+            if isinstance(item_value := self.__getitem__[item_name], Path):
+                item_path = item_value
+            else:  # item_value: Data
+                if item_value.stage in upstream_stages:
+                    item_path = item_value.path
+            if not item_path.exists():
+                missing_items[item_name] = str(item_path)
+
+        if missing_items:
+            raise FileNotFoundError(
+                f"Stage {self.stage} input items do not exist: {missing_items}"
             )
 
     def _check_cycles(
