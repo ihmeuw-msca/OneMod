@@ -481,7 +481,7 @@ class ModelStage(Stage, ABC):
             return_type="polars_lazyframe",
         )
 
-        subsets_df = create_subsets(self.groupby, lf)
+        subsets_df = create_subsets(self.groupby, lf.collect().to_pandas())
         self._subset_ids = set(subsets_df["subset_id"].to_list())
 
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
