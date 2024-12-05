@@ -349,7 +349,7 @@ class Stage(BaseModel, ABC):
         return self.output
 
     def __repr__(self) -> str:
-        return f"{self.type}({self.name})"
+        return f"{self.type}(name={self.name})"
 
 
 class ModelStage(Stage, ABC):
