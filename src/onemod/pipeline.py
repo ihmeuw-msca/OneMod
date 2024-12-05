@@ -137,19 +137,6 @@ class Pipeline(BaseModel):
         stage.config.inherit(self.config)
         self._stages[stage.name] = stage
 
-    def check_upstream_outputs_exist(
-        self, stage_name: str, upstream_name: str
-    ) -> bool:
-        """Check if outputs from the specified upstream dependency exist for the inputs of a given stage."""
-        stage = self.stages[stage_name]
-
-        for input_name, input_data in stage.input.items.items():
-            if input_data.stage == upstream_name:
-                upstream_output_path = input_data.path
-                if not upstream_output_path.exists():
-                    return False
-        return True
-
     def get_execution_order(self) -> list[str]:
         """
         Return topologically sorted order of stages, ensuring no cycles.
@@ -322,29 +309,22 @@ class Pipeline(BaseModel):
         if build:
             self.build(id_subsets=id_subsets)
 
-        if stages is not None:
-            for stage_name in stages:
-                if stage_name not in self.stages:
-                    raise ValueError(
-                        f"Stage '{stage_name}' not found in pipeline."
-                    )
+        stages = stages or self.stages.keys()
+        for stage_name in stages:
+            if stage_name not in self.stages:
+                raise ValueError(f"Stage '{stage_name}' not found in pipeline.")
+            else:
+                # Check input from upstream stages not being run already exists
+                stage = self.stages[stage_name]
+                stage.input.check_exists(
+                    upstream_stages=[
+                        dep for dep in stage.dependencies if dep not in stages
+                    ]
+                )
 
-            for stage_name in stages:
-                stage: Stage = self.stages.get(stage_name)
-                for dep in stage.dependencies:
-                    if dep not in stages:
-                        if not self.check_upstream_outputs_exist(
-                            stage_name, dep
-                        ):
-                            raise ValueError(
-                                f"Required input to stage '{stage_name}' is missing. Missing output from upstream dependency '{dep}'."
-                            )
-
-        ordered_stages = (
-            [stage for stage in self.get_execution_order() if stage in stages]
-            if stages is not None
-            else self.get_execution_order()
-        )
+        ordered_stages = [
+            stage for stage in self.get_execution_order() if stage in stages
+        ]
 
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
