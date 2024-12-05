@@ -18,6 +18,7 @@ from abc import ABC
 from pathlib import Path
 from typing import Any
 
+from onemod.dtypes import Data
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -25,8 +26,6 @@ from pydantic import (
     model_serializer,
     validate_call,
 )
-
-from onemod.dtypes import Data
 
 
 class IO(BaseModel, ABC):
@@ -169,11 +168,13 @@ class Input(IO):
 
         missing_items = {}
         for item_name in item_names:
-            if isinstance(item_value := self.__getitem__[item_name], Path):
+            if isinstance(item_value := self.__getitem__(item_name), Path):
                 item_path = item_value
             else:  # item_value: Data
                 if item_value.stage in upstream_stages:
                     item_path = item_value.path
+                else:
+                    continue
             if not item_path.exists():
                 missing_items[item_name] = str(item_path)
 
@@ -254,4 +255,6 @@ class Output(IO):
             raise KeyError(
                 f"{self.stage} does not contain output '{item_name}'"
             )
+        return self.items[item_name]
+        return self.items[item_name]
         return self.items[item_name]
