@@ -598,7 +598,7 @@ class ModelStage(Stage, ABC):
         raise NotImplementedError("Subclasses must implement this method.")
 
     def __repr__(self) -> str:
-        stage_str = f"{self.type}({self.name}"
+        stage_str = f"{self.type}(name={self.name}"
         if self.groupby is not None:
             stage_str += f", groupby={self.groupby}"
         if self.crossby is not None:
