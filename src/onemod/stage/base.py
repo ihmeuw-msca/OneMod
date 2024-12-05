@@ -258,6 +258,8 @@ class Stage(BaseModel, ABC):
 
         method = method if hasattr(self, method) else "run"
 
+        self.input.check_exists()
+
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
@@ -552,6 +554,8 @@ class ModelStage(Stage, ABC):
         if method in self.skip:
             warnings.warn(f"{self.name} skips the '{method}' method")
             return
+
+        self.input.check_exists()
 
         if backend == "jobmon":
             if method == "collect":
