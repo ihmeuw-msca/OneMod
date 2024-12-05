@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import Literal
 
 import fire
-from pydantic import validate_call
-
 import onemod.stage as onemod_stages
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
+from pydantic import validate_call
 
 
 def init(directory: Path | str) -> None:
@@ -53,7 +52,12 @@ def load_stage(config: Path | str, stage_name: str) -> Stage:
 
     """
     stage_class = _get_stage(config, stage_name)
-    return stage_class.from_json(config, stage_name)
+    stage = stage_class.from_json(config, stage_name)
+    # inherit the pipeline config
+    with open(config, "r") as f:
+        config_dict = json.load(f)
+    stage.config.inherit(config_dict["config"])
+    return stage
 
 
 def _get_stage(config: Path | str, stage_name: str) -> Stage:
