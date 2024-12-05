@@ -123,9 +123,10 @@ class Stage(BaseModel, ABC):
             if isinstance(item_value, Path):
                 self._dataif.add_path(item_name, item_value)
             elif isinstance(item_value, Data):
-                self._dataif.add_path(
-                    item_name, directory / item_value.stage / item_value.path
-                )
+                item_value.path = directory / item_value.stage / item_value.path
+                self._dataif.add_path(item_name, item_value.path)
+        for item_name, item_value in self.output.items.items():
+            item_value.path = directory / self.name / item_value.path
         if not (directory / self.name).exists():
             (directory / self.name).mkdir()
 

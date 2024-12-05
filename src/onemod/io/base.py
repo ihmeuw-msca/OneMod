@@ -161,6 +161,8 @@ class Input(IO):
         FileNotFoundError
             If any stage input items do not exist.
 
+        FIXME: Assumes pipeline has been built (so paths are absolute)
+
         """
         item_names = item_names or self.items.keys()
         upstream_stages = upstream_stages or self.dependencies
