@@ -109,6 +109,20 @@ class Input(IO):
     def check_missing(
         self, items: dict[str, Data | Path] | None = None
     ) -> None:
+        """Check stage input items have been defined.
+
+        Parameters
+        ----------
+        items : dict of str: Data or Path, optional
+            Input items to check. If None, check all stage input items.
+            Default is None.
+
+        Raises
+        ------
+        KeyError
+            If any stage input items have not been defined.
+
+        """
         items = items or self.items
         missing_items = [
             item_name
@@ -117,7 +131,7 @@ class Input(IO):
         ]
         if missing_items:
             raise KeyError(
-                f"{self.stage} missing required input: {missing_items}"
+                f"Stage '{self.stage}' missing required input: {missing_items}"
             )
 
     def _check_cycles(
