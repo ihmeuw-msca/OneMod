@@ -25,8 +25,8 @@ def evaluate_local(
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     stages : set of str or None, optional
-        Names of stages to evaluate. If None, evaluate entire pipeline.
-        Default is None.
+        Names of stages to evaluate if `model` is a pipeline instance.
+        If None, evaluate entire pipeline. Default is None.
 
     Other Parameters
     ----------------
@@ -37,10 +37,7 @@ def evaluate_local(
 
     """
     if isinstance(model, Pipeline):
-        if stages is None:
-            stages = model.get_execution_order()
-
-        for stage_name in stages:
+        for stage_name in model.get_execution_order(stages):
             stage = model.stages[stage_name]
             if method not in stage.skip:
                 _evaluate_stage(stage, method)

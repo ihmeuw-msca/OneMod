@@ -236,7 +236,8 @@ def evaluate_with_jobmon(
     method : str, optional
         Name of method to evalaute. Default is 'run'.
     stages : set of str or None, optional
-        Set of stage names to evaluate. Default is None.
+        Names of stages to evaluate if `model` is a pipeline instance.
+        If None, evaluate entire pipeline. Default is None.
 
     TODO: Optional stage-specific Python environments
     TODO: User-defined max_attempts
@@ -262,10 +263,7 @@ def evaluate_with_jobmon(
         tasks = []
         task_dict: dict[str, list[Task]] = {}
 
-        if stages is None:
-            stages = model.get_execution_order()
-
-        for stage_name in stages:
+        for stage_name in model.get_execution_order(stages):
             stage = model.stages[stage_name]
             if method not in stage.skip:
                 upstream_tasks = get_upstream_tasks(

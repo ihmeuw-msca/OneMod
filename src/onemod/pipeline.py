@@ -137,10 +137,33 @@ class Pipeline(BaseModel):
         stage.config.inherit(self.config)
         self._stages[stage.name] = stage
 
-    def get_execution_order(self) -> list[str]:
-        """
-        Return topologically sorted order of stages, ensuring no cycles.
-        Uses Kahn's algorithm to find the topological order of the stages.
+    def get_execution_order(self, stages: set[str] | None = None) -> list[str]:
+        """Get stages sorted in execution order.
+
+        Use Kahn's algorithm to find the topoligical order of the
+        stages, ensuring no cycles.
+
+        Parameters
+        ----------
+        stages: set of str, optional
+            Name of stages to sort. If None, sort all pipeline stages.
+            Default is None.
+
+        Returns
+        -------
+        list of str
+            Stages sorted in execution order.
+
+        Raises
+        ------
+        ValueError
+            If cycle detected in DAG.
+
+        TODO: What if stages have a gap? For example, pipeline has
+        Rover -> SPxMod -> KReg, but `stages` only includes Rover and
+        Kreg. KReg will be run on outdated SPxMod results (if they
+        exist).
+
         """
         reverse_graph: dict[str, list[str]] = {
             stage: [] for stage in self.dependencies
@@ -173,6 +196,8 @@ class Pipeline(BaseModel):
                 f"Cycle detected! Unable to process the following stages: {unvisited}"
             )
 
+        if stages:
+            return [stage for stage in topological_order if stage in stages]
         return topological_order
 
     def validate_dag(self, collector: ValidationErrorCollector) -> None:
@@ -322,20 +347,16 @@ class Pipeline(BaseModel):
                     ]
                 )
 
-        ordered_stages = [
-            stage for stage in self.get_execution_order() if stage in stages
-        ]
-
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(
-                model=self, method=method, stages=ordered_stages, **kwargs
+                model=self, method=method, stages=stages, **kwargs
             )
         else:
             from onemod.backend.local_backend import evaluate_local
 
-            evaluate_local(model=self, method=method, stages=ordered_stages)
+            evaluate_local(model=self, method=method, stages=stages)
 
     def run(
         self,
