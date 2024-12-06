@@ -238,7 +238,7 @@ def test_missing_self():
     with pytest.raises(KeyError) as error:
         test_input.check_missing()
     observed = str(error.value).strip('"')
-    expected = f"{test_input.stage} missing required input: "
+    expected = f"Stage '{test_input.stage}' missing required input: "
     assert (
         observed == expected + "['data', 'covariates']"
         or observed == expected + "['covariates', 'data']"
@@ -257,7 +257,7 @@ def test_missing_items():
             }
         )
     observed = str(error.value).strip('"')
-    expected = f"{test_input.stage} missing required input: "
+    expected = f"Stage '{test_input.stage}' missing required input: "
     assert (
         observed == expected + "['data', 'covariates']"
         or observed == expected + "['covariates', 'data']"
