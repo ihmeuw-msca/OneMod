@@ -256,5 +256,3 @@ class Output(IO):
                 f"{self.stage} does not contain output '{item_name}'"
             )
         return self.items[item_name]
-        return self.items[item_name]
-        return self.items[item_name]
