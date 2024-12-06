@@ -11,9 +11,9 @@ from onemod import Pipeline
 from onemod.config import (
     KregConfig,
     PipelineConfig,
-    PreprocessingConfig,
     RoverConfig,
     SpxmodConfig,
+    StageConfig,
 )
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
@@ -23,7 +23,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     """Set up a dummy pipeline, including specific dummy stages."""
     preprocessing = DummyPreprocessingStage(
         name="preprocessing",
-        config=PreprocessingConfig(),
+        config=StageConfig(),
         input_validation={
             "data": Data(
                 stage="input_data",

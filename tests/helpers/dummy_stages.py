@@ -4,8 +4,8 @@ from pydantic import Field
 from onemod.config import (
     KregConfig,
     ModelConfig,
-    PreprocessingConfig,
     RoverConfig,
+    StageConfig,
     SpxmodConfig,
 )
 from onemod.stage import ModelStage, Stage
@@ -115,7 +115,7 @@ class DummyKregStage(ModelStage):
 class DummyPreprocessingStage(Stage):
     """Preprocessing stage."""
 
-    config: PreprocessingConfig
+    config: StageConfig
     _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {
