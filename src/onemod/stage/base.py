@@ -486,10 +486,12 @@ class ModelStage(Stage, ABC):
 
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
-    def get_stage_subset(self, subset_id: int) -> DataFrame:
-        """Get stage data subset."""
+    def get_stage_subset(
+        self, subset_id: int, *fparts: str, key: str = "data", **options
+    ) -> DataFrame:
+        """Filter data by stage subset_id."""
         return get_subset(
-            self.dataif.load(key="data"),
+            self.dataif.load(*fparts, key=key, **options),
             self.dataif.load("subsets.csv", key="output"),
             subset_id,
         )
