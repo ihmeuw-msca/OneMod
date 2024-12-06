@@ -264,6 +264,14 @@ def test_missing_items():
     )
 
 
+# TODO: Write tests for input.check_exists()
+# - input with empty items
+# - input with nonemtpy items that don't exist
+# - ignore missing/nonexisting item if not in item_names
+# - ignore missing/nonexisting item if dependency not in upstream_stages
+# - upstream_stages arg not used if item_names passed
+
+
 @pytest.mark.unit
 def test_serialize():
     test_input = get_input(VALID_ITEMS)

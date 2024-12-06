@@ -5,8 +5,8 @@ from onemod.config import (
     KregConfig,
     ModelConfig,
     RoverConfig,
-    StageConfig,
     SpxmodConfig,
+    StageConfig,
 )
 from onemod.stage import ModelStage, Stage
 
