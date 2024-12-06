@@ -53,10 +53,6 @@ def load_stage(config: Path | str, stage_name: str) -> Stage:
     """
     stage_class = _get_stage(config, stage_name)
     stage = stage_class.from_json(config, stage_name)
-    # inherit the pipeline config
-    with open(config, "r") as f:
-        config_dict = json.load(f)
-    stage.config.inherit(config_dict["config"])
     return stage
 
 
@@ -81,11 +77,13 @@ def _get_stage(config: Path | str, stage_name: str) -> Stage:
     if stage_name not in config_dict["stages"]:
         raise KeyError(f"Config does not contain a stage named '{stage_name}'")
     config_dict = config_dict["stages"][stage_name]
-    if hasattr(onemod_stages, stage_type := config_dict["type"]):
+    stage_type = config_dict["type"]
+
+    if "module" in config_dict:
+        return _get_custom_stage(stage_type, config_dict["module"])
+    if hasattr(onemod_stages, stage_type):
         return getattr(onemod_stages, stage_type)
-    if "module" not in config_dict:
-        raise KeyError(f"Config does not contain a module for {stage_name}")
-    return _get_custom_stage(stage_type, config_dict["module"])
+    raise KeyError(f"Config does not contain a module for {stage_name}")
 
 
 def _get_custom_stage(stage_type: str, module: str) -> Stage:
