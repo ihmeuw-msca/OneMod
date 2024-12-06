@@ -21,28 +21,6 @@
         "sex_id"
     ],
     "stages": {
-        "preprocessing": {
-            "name": "preprocessing",
-            "config": {
-                "id_columns": [
-                    "year_id",
-                    "sex_id",
-                    "age_group_id",
-                    "location_id"
-                ],
-                "model_type": "binomial",
-                "observation_column": "obs",
-                "prediction_column": "pred",
-                "weight_column": "weights",
-                "test_column": "test",
-                "holdout_columns": [],
-                "coef_bounds": {}
-            },
-            "input": {
-                "data": "/path/to/data.parquet"
-            },
-            "type": "PreprocessingStage"
-        },
         "covariate_selection": {
             "name": "covariate_selection",
             "config": {
@@ -80,10 +58,7 @@
             ],
             "crossby": [],
             "input": {
-                "data": {
-                    "stage": "preprocessing",
-                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
-                }
+                "data": "/path/to/data.parquet"
             },
             "type": "RoverStage"
         },
@@ -179,10 +154,7 @@
             ],
             "crossby": [],
             "input": {
-                "data": {
-                    "stage": "preprocessing",
-                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
-                },
+                "data": "/path/to/data.parquet",
                 "offset": {
                     "stage": "global_model",
                     "path": "/path/to/experiment/directory/global_model/predictions.parquet"
@@ -233,10 +205,7 @@
             ],
             "crossby": [],
             "input": {
-                "data": {
-                    "stage": "preprocessing",
-                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
-                },
+                "data": "/path/to/data.parquet",
                 "offset": {
                     "stage": "location_model",
                     "path": "/path/to/experiment/directory/location_model/predictions.parquet"
@@ -274,10 +243,7 @@
             ],
             "module": "/path/to/custom_stage.py",
             "input": {
-                "observations": {
-                    "stage": "preprocessing",
-                    "path": "/path/to/experiment/directory/preprocessing/data.parquet"
-                },
+                "observations": "/path/to/data.parquet",
                 "predictions": {
                     "stage": "smoothing",
                     "path": "/path/to/experiment/directory/smoothing/predictions.parquet"
@@ -287,25 +253,18 @@
         }
     },
     "dependencies": {
-        "preprocessing": [],
-        "covariate_selection": [
-            "preprocessing"
-        ],
+        "covariate_selection": [],
         "global_model": [
-            "covariate_selection",
-            "preprocessing"
+            "covariate_selection"
         ],
         "location_model": [
-            "global_model",
-            "preprocessing"
+            "global_model"
         ],
         "smoothing": [
-            "location_model",
-            "preprocessing"
+            "location_model"
         ],
         "custom_stage": [
-            "smoothing",
-            "preprocessing"
+            "smoothing"
         ]
     }
 }

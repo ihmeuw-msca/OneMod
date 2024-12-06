@@ -72,6 +72,11 @@ def _get_stage(config: Path | str, stage_name: str) -> Stage:
     Stage
         Stage class.
 
+    Notes
+    -----
+    When a custom stage class has the same name as a built-in OneMod
+    stage class, this function returns the custom stage class.
+
     """
     with open(config, "r") as f:
         config_dict = json.load(f)
@@ -84,7 +89,9 @@ def _get_stage(config: Path | str, stage_name: str) -> Stage:
         return _get_custom_stage(stage_type, config_dict["module"])
     if hasattr(onemod_stages, stage_type):
         return getattr(onemod_stages, stage_type)
-    raise KeyError(f"Config does not contain a module for {stage_name}")
+    raise KeyError(
+        f"Config does not contain a module for custom stage '{stage_name}'"
+    )
 
 
 def _get_custom_stage(stage_type: str, module: str) -> Stage:

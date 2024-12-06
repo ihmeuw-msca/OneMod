@@ -4,14 +4,13 @@ import fire
 from custom_stage import CustomStage
 
 from onemod import Pipeline
-from onemod.stage import KregStage, PreprocessingStage, RoverStage, SpxmodStage
+from onemod.stage import KregStage, RoverStage, SpxmodStage
 
 
 def create_pipeline(directory: str, data: str):
     # Create stages
     # Stage-specific validation specifications go here.
     # Stage classes may also implement default validation specifications.
-    preprocessing = PreprocessingStage(name="preprocessing", config={})
     covariate_selection = RoverStage(
         name="covariate_selection",
         config={"cov_exploring": ["cov1", "cov2", "cov3"]},
@@ -68,7 +67,6 @@ def create_pipeline(directory: str, data: str):
     # Add stages
     example_pipeline.add_stages(
         [
-            preprocessing,
             covariate_selection,
             global_model,
             location_model,
@@ -78,24 +76,13 @@ def create_pipeline(directory: str, data: str):
     )
 
     # Define dependencies
-    preprocessing(data=example_pipeline.data)
-    covariate_selection(data=preprocessing.output["data"])
+    covariate_selection(data=data)
     global_model(
-        data=preprocessing.output["data"],
-        selected_covs=covariate_selection.output["selected_covs"],
+        data=data, selected_covs=covariate_selection.output["selected_covs"]
     )
-    location_model(
-        data=preprocessing.output["data"],
-        offset=global_model.output["predictions"],
-    )
-    smoothing(
-        data=preprocessing.output["data"],
-        offset=location_model.output["predictions"],
-    )
-    custom_stage(
-        observations=preprocessing.output["data"],
-        predictions=smoothing.output["predictions"],
-    )
+    location_model(data=data, offset=global_model.output["predictions"])
+    smoothing(data=data, offset=location_model.output["predictions"])
+    custom_stage(observations=data, predictions=smoothing.output["predictions"])
 
     # Serialize pipeline
     example_pipeline.to_json()
@@ -111,7 +98,7 @@ def create_pipeline(directory: str, data: str):
 
     # Fit specific stages
     example_pipeline.evaluate(
-        method="fit", stages=["preprocessing", "covariate_selection"]
+        method="fit", stages=["covariate_selection", "global_model"]
     )
 
     # Predict for specific locations
