@@ -18,7 +18,6 @@ from abc import ABC
 from pathlib import Path
 from typing import Any
 
-from onemod.dtypes import Data
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -26,6 +25,8 @@ from pydantic import (
     model_serializer,
     validate_call,
 )
+
+from onemod.dtypes import Data
 
 
 class IO(BaseModel, ABC):

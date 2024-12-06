@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Literal
 
 import fire
+from pydantic import validate_call
+
 import onemod.stage as onemod_stages
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
-from pydantic import validate_call
 
 
 def init(directory: Path | str) -> None:

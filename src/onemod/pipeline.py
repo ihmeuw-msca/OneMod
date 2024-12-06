@@ -8,12 +8,13 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Literal
 
+from pydantic import BaseModel, validate_call
+
 from onemod.config import PipelineConfig
 from onemod.serialization import serialize
 from onemod.stage import ModelStage, Stage
 from onemod.utils.decorators import computed_property
 from onemod.validation import ValidationErrorCollector, handle_error
-from pydantic import BaseModel, validate_call
 
 logger = logging.getLogger(__name__)
 
