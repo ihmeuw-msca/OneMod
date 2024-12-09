@@ -53,7 +53,8 @@ def load_stage(config: Path | str, stage_name: str) -> Stage:
 
     """
     stage_class = _get_stage(config, stage_name)
-    return stage_class.from_json(config, stage_name)
+    stage = stage_class.from_json(config, stage_name)
+    return stage
 
 
 def _get_stage(config: Path | str, stage_name: str) -> Stage:
@@ -71,17 +72,26 @@ def _get_stage(config: Path | str, stage_name: str) -> Stage:
     Stage
         Stage class.
 
+    Notes
+    -----
+    When a custom stage class has the same name as a built-in OneMod
+    stage class, this function returns the custom stage class.
+
     """
     with open(config, "r") as f:
         config_dict = json.load(f)
     if stage_name not in config_dict["stages"]:
         raise KeyError(f"Config does not contain a stage named '{stage_name}'")
     config_dict = config_dict["stages"][stage_name]
-    if hasattr(onemod_stages, stage_type := config_dict["type"]):
+    stage_type = config_dict["type"]
+
+    if "module" in config_dict:
+        return _get_custom_stage(stage_type, config_dict["module"])
+    if hasattr(onemod_stages, stage_type):
         return getattr(onemod_stages, stage_type)
-    if "module" not in config_dict:
-        raise KeyError(f"Config does not contain a module for {stage_name}")
-    return _get_custom_stage(stage_type, config_dict["module"])
+    raise KeyError(
+        f"Config does not contain a module for custom stage '{stage_name}'"
+    )
 
 
 def _get_custom_stage(stage_type: str, module: str) -> Stage:
@@ -122,8 +132,8 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
 @validate_call
 def evaluate(
     config: Path | str,
-    stage_name: str | None = None,
     method: Literal["run", "fit", "predict", "collect"] = "run",
+    stages: str | set[str] | None = None,
     backend: Literal["local", "jobmon"] = "local",
     **kwargs,
 ) -> None:
@@ -133,11 +143,11 @@ def evaluate(
     ----------
     config : Path or str
         Path to config file.
-    stage_name : str or None, optional
-        Name of stage to evaluate. If None, evaluate pipeline.
-        Default is None.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
+    stages : str, set of str, or None, optional
+        Names of stages to evaluate. If None, evaluate entire pipeline.
+        Default is None.
     backend : str, optional
         Whether to evaluate the method locally or with Jobmon.
         Default is 'local'.
@@ -156,14 +166,12 @@ def evaluate(
     """
     model: Pipeline | Stage
 
-    if stage_name is None:
-        model = load_pipeline(config)
-        if method == "collect":
-            raise ValueError(f"{method} is not a valid method for a pipeline")
+    if isinstance(stages, str):
+        model = load_stage(config, stages)
         model.evaluate(method, backend, **kwargs)
     else:
-        model = load_stage(config, stage_name)
-        model.evaluate(method, backend, **kwargs)
+        model = load_pipeline(config)
+        model.evaluate(method, stages, backend, **kwargs)
 
 
 def call_function(

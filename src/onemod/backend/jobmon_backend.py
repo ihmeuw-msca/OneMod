@@ -31,7 +31,7 @@ minutes, while all other methods request ten minutes.
 
 import sys
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Literal
 
 import yaml
 from jobmon.client.api import Tool
@@ -96,7 +96,7 @@ def get_tasks(
                 name=f"{stage.name}_{method}",
                 upstream_tasks=upstream_tasks,
                 max_attempts=1,
-                **cast(dict[str, Any], task_args),
+                **task_args,
             )
         ]
 
@@ -141,8 +141,8 @@ def get_command_template(
         "{python}"
         f" {Path(__file__).parents[1] / 'main.py'}"
         " --config {config}"
-        f" --stage_name {stage_name}"
         f" --method {method}"
+        f" --stages {stage_name}"
     )
 
     for node_arg in node_args:
@@ -167,21 +167,38 @@ def get_task_resources(
 def get_upstream_tasks(
     stage: Stage,
     method: Literal["run", "fit", "predict"],
-    stages: dict[str, Stage],
+    stage_dict: dict[str, Stage],
     task_dict: dict[str, list[Task]],
-    specified_stages: set[str] | None = None,
+    stages: set[str] | None = None,
 ) -> list[Task]:
-    """Get upstream stage tasks."""
+    """Get upstream stage tasks.
+
+    Parameters
+    ----------
+    stage : Stage
+        Current stage.
+    method : str
+        Name of  method to evaluate.
+    stage_dict : dict[str, Stage]
+        Dictionary of all upstream pipeline stages.
+    task_dict : dict[str, list[Task]]
+        Dictionary of all tasks being evaluated.
+    stages : set[str] or None, optional
+        Name of all pipeline stages being evaluated.
+
+    Returns
+    -------
+    list of Task
+        Upstream tasks for current stage.
+
+    """
     upstream_tasks = []
 
     for upstream_name in stage.dependencies:
-        if (
-            specified_stages is not None
-            and upstream_name not in specified_stages
-        ):
+        if stages is not None and upstream_name not in stages:
             continue
 
-        upstream = stages[upstream_name]
+        upstream = stage_dict[upstream_name]
         if method not in upstream.skip:
             if (
                 isinstance(upstream, ModelStage)
@@ -200,8 +217,8 @@ def evaluate_with_jobmon(
     cluster: str,
     resources: Path | str,
     python: Path | str | None = None,
-    method: Literal["run", "fit", "predict", "collect"] = "run",
-    stages: list[str] | None = None,
+    method: Literal["run", "fit", "predict"] = "run",
+    stages: set[str] | None = None,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -219,7 +236,8 @@ def evaluate_with_jobmon(
     method : str, optional
         Name of method to evalaute. Default is 'run'.
     stages : set of str or None, optional
-        Set of stage names to evaluate. Default is None.
+        Names of stages to evaluate if `model` is a pipeline instance.
+        If None, evaluate entire pipeline. Default is None.
 
     TODO: Optional stage-specific Python environments
     TODO: User-defined max_attempts
@@ -231,13 +249,13 @@ def evaluate_with_jobmon(
 
     # Set config
     if isinstance(model, Stage):
-        model_config = model.dataif.load(key="config")
+        config_path = model.dataif.get_path("config")
     elif isinstance(model, Pipeline):
-        model_config = model.config
+        config_path = model.directory / f"{model.name}.json"
 
     task_args: dict[str, str] = {
         "python": str(python or sys.executable),
-        "config": str(model_config),
+        "config": str(config_path),
     }
 
     # Create tasks
@@ -245,20 +263,11 @@ def evaluate_with_jobmon(
         tasks = []
         task_dict: dict[str, list[Task]] = {}
 
-        if stages is None:
-            stages = model.get_execution_order()
-
-        for stage_name in stages:
+        for stage_name in model.get_execution_order(stages):
             stage = model.stages[stage_name]
-            if (
-                method not in stage.skip and method != "collect"
-            ):  # TODO: handle collect
+            if method not in stage.skip:
                 upstream_tasks = get_upstream_tasks(
-                    stage,
-                    method,
-                    model.stages,
-                    task_dict,
-                    specified_stages=set(stages),
+                    stage, method, model.stages, task_dict, stages
                 )
                 task_dict[stage_name] = get_tasks(
                     tool, resources, stage, method, task_args, upstream_tasks

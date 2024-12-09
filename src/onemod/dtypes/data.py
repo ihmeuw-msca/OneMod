@@ -12,6 +12,8 @@ from onemod.validation.error_handling import (
     handle_error,
 )
 
+# FIXME: Update for new DataInterface class
+
 
 class Data(BaseModel):
     stage: str
@@ -42,24 +44,25 @@ class Data(BaseModel):
                 "File path is required.",
                 collector,
             )
-        else:
-            # FIXME: Path won't exist until stage has been run
-            # if kind == "input" and not self.path.exists():
-            #     handle_error(
-            #         self.stage,
-            #         "Data validation",
-            #         FileNotFoundError,
-            #         f"File {self.path} does not exist.",
-            #         collector,
-            #     )
-            if self.format not in DataIOHandler.supported_formats:
-                handle_error(
-                    self.stage,
-                    "Data validation",
-                    ValueError,
-                    f"Unsupported file format {self.format}.",
-                    collector,
-                )
+        # else:
+        #     FIXME: Path won't exist until stage has been run
+        #     if kind == "input" and not self.path.exists():
+        #         handle_error(
+        #             self.stage,
+        #             "Data validation",
+        #             FileNotFoundError,
+        #             f"File {self.path} does not exist.",
+        #             collector,
+        #         )
+        #     FIXME: Update for new DataInterface class
+        #     if self.format not in DataIOHandler.supported_formats:
+        #         handle_error(
+        #             self.stage,
+        #             "Data validation",
+        #             ValueError,
+        #             f"Unsupported file format {self.format}.",
+        #             collector,
+        #         )
 
         if self.shape:
             if not isinstance(self.shape, tuple) or len(self.shape) != 2:

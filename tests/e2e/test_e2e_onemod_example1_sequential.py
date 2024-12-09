@@ -3,9 +3,8 @@ from pathlib import Path
 import pytest
 
 from onemod import Pipeline
-from onemod.config import PreprocessingConfig
 from onemod.dtypes import Data
-from onemod.stage import KregStage, PreprocessingStage, RoverStage, SpxmodStage
+from onemod.stage import KregStage, RoverStage, SpxmodStage
 
 
 @pytest.mark.skip(
@@ -13,24 +12,10 @@ from onemod.stage import KregStage, PreprocessingStage, RoverStage, SpxmodStage
 )
 @pytest.mark.e2e
 @pytest.mark.requires_data
-def test_e2e_onemod_example1_sequential(small_input_data, test_base_dir):
+def test_e2e_onemod_example1_sequential(test_base_dir):
     """
     End-to-end test for a the OneMod example1 pipeline.
     """
-
-    # Define Stages
-    preprocessing = PreprocessingStage(
-        name="1_preprocessing",
-        config=PreprocessingConfig(data=small_input_data),
-        input_validation=dict(data=small_input_data),
-        output_validation=dict(
-            data=Data(
-                stage="1_preprocessing",
-                path=Path(test_base_dir, "data", "preprocessed_data.parquet"),
-                format="parquet",
-            )
-        ),
-    )
 
     covariate_selection = RoverStage(
         name="2_covariate_selection",
@@ -147,30 +132,17 @@ def test_e2e_onemod_example1_sequential(small_input_data, test_base_dir):
 
     # Add stages
     dummy_pipeline.add_stages(
-        [
-            preprocessing,
-            covariate_selection,
-            global_model,
-            location_model,
-            smoothing,
-        ]
+        [covariate_selection, global_model, location_model, smoothing]
     )
 
     # Define dependencies
-    preprocessing(data=Path(test_base_dir, "data", "input_data.parquet"))
-    covariate_selection(data=preprocessing.output["data"])
+    data = Path(test_base_dir, "data", "input_data.parquet")
+    covariate_selection(data=data)
     global_model(
-        data=preprocessing.output["data"],
-        selected_covs=covariate_selection.output["selected_covs"],
+        data=data, selected_covs=covariate_selection.output["selected_covs"]
     )
-    location_model(
-        data=preprocessing.output["data"],
-        offset=global_model.output["predictions"],
-    )
-    smoothing(
-        data=preprocessing.output["data"],
-        offset=location_model.output["predictions"],
-    )
+    location_model(data=data, offset=global_model.output["predictions"])
+    smoothing(data=data, offset=location_model.output["predictions"])
 
     # Execute stages in sequence
     dummy_pipeline.evaluate(backend="local")

@@ -45,10 +45,13 @@ class DataIO(ABC):
         self,
         obj: pl.DataFrame | pl.LazyFrame | pd.DataFrame,
         fpath: Path | str,
+        mkdir: bool = True,
         **options,
     ):
         """Dump data to given path."""
         fpath = Path(fpath)
+        if mkdir:
+            fpath.parent.mkdir(parents=True, exist_ok=True)
 
         if isinstance(obj, pl.LazyFrame):
             obj = obj.collect()

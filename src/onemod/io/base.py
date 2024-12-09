@@ -7,6 +7,11 @@ Notes
 * Provides validation
 * No need to create stage-specific subclasses
 
+TODO: Could simplify Input class functions if all items were Data (as
+opposed to Data or Path). Would have to update Data class to allow stage
+attribute to be None, and would have to convert Paths to Data when
+adding to Input.items.
+
 """
 
 from abc import ABC
@@ -80,7 +85,9 @@ class Input(IO):
         }
         self._expected_types = {}
         for item in {*self.required, *self.optional}:
-            item_name, item_type = item.split(".")
+            item_specs = item.split(".")
+            item_name = item_specs[0]
+            item_type = "directory" if len(item_specs) == 1 else item_specs[1]
             self._expected_types[item_name] = item_type
         if self.items:
             for item_name in list(self.items.keys()):
@@ -107,6 +114,20 @@ class Input(IO):
     def check_missing(
         self, items: dict[str, Data | Path] | None = None
     ) -> None:
+        """Check stage input items have been defined.
+
+        Parameters
+        ----------
+        items : dict of str: Data or Path, optional
+            Input items to check. If None, check all stage input items.
+            Default is None.
+
+        Raises
+        ------
+        KeyError
+            If any stage input items have not been defined.
+
+        """
         items = items or self.items
         missing_items = [
             item_name
@@ -115,7 +136,52 @@ class Input(IO):
         ]
         if missing_items:
             raise KeyError(
-                f"{self.stage} missing required input: {missing_items}"
+                f"Stage '{self.stage}' missing required input: {missing_items}"
+            )
+
+    def check_exists(
+        self,
+        item_names: set[str] | None = None,
+        upstream_stages: set[str] | None = None,
+    ) -> None:
+        """Check stage input items exist.
+
+        Parameters
+        ----------
+        item_names : set of str, optional
+            Names of input items to check. If None, check all input
+            path items and all input data items in `upstream_stages`.
+            Default is None.
+        upstream_stages : set of str, optional
+            Names of upstream stages to check input items from. If None,
+            check input items from all upstream stages.
+
+        Raises
+        ------
+        FileNotFoundError
+            If any stage input items do not exist.
+
+        FIXME: Assumes pipeline has been built (so paths are absolute)
+
+        """
+        item_names = item_names or set(self.items.keys())
+        upstream_stages = upstream_stages or self.dependencies
+
+        missing_items = {}
+        for item_name in item_names:
+            if isinstance(item_value := self.__getitem__(item_name), Path):
+                item_path = item_value
+            else:  # item_value: Data
+                if item_value.stage in upstream_stages:
+                    item_path = item_value.path
+                else:
+                    continue
+            if not item_path.exists():
+                missing_items[item_name] = str(item_path)
+
+        if missing_items:
+            raise FileNotFoundError(
+                f"Stage {self.stage} input items do not exist: {missing_items}"
             )
 
     def _check_cycles(
@@ -157,7 +223,8 @@ class Input(IO):
         if item_name in self._expected_types:
             if isinstance(item_value, Data):
                 item_value = item_value.path
-            if item_value.suffix[1:] != self._expected_types[item_name]:
+            suffix = item_value.suffix[1:] or "directory"
+            if suffix != self._expected_types[item_name]:
                 raise TypeError(
                     f"Invalid type for {self.stage} input: {item_name}"
                 )

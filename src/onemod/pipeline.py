@@ -137,23 +137,33 @@ class Pipeline(BaseModel):
         stage.config.inherit(self.config)
         self._stages[stage.name] = stage
 
-    def check_upstream_outputs_exist(
-        self, stage_name: str, upstream_name: str
-    ) -> bool:
-        """Check if outputs from the specified upstream dependency exist for the inputs of a given stage."""
-        stage = self.stages[stage_name]
+    def get_execution_order(self, stages: set[str] | None = None) -> list[str]:
+        """Get stages sorted in execution order.
 
-        for input_name, input_data in stage.input.items.items():
-            if input_data.stage == upstream_name:
-                upstream_output_path = input_data.path
-                if not upstream_output_path.exists():
-                    return False
-        return True
+        Use Kahn's algorithm to find the topoligical order of the
+        stages, ensuring no cycles.
 
-    def get_execution_order(self) -> list[str]:
-        """
-        Return topologically sorted order of stages, ensuring no cycles.
-        Uses Kahn's algorithm to find the topological order of the stages.
+        Parameters
+        ----------
+        stages: set of str, optional
+            Name of stages to sort. If None, sort all pipeline stages.
+            Default is None.
+
+        Returns
+        -------
+        list of str
+            Stages sorted in execution order.
+
+        Raises
+        ------
+        ValueError
+            If cycle detected in DAG.
+
+        TODO: What if stages have a gap? For example, pipeline has
+        Rover -> SPxMod -> KReg, but `stages` only includes Rover and
+        Kreg. KReg will be run on outdated SPxMod results (if they
+        exist).
+
         """
         reverse_graph: dict[str, list[str]] = {
             stage: [] for stage in self.dependencies
@@ -186,6 +196,8 @@ class Pipeline(BaseModel):
                 f"Cycle detected! Unable to process the following stages: {unvisited}"
             )
 
+        if stages:
+            return [stage for stage in topological_order if stage in stages]
         return topological_order
 
     def validate_dag(self, collector: ValidationErrorCollector) -> None:
@@ -282,10 +294,10 @@ class Pipeline(BaseModel):
     @validate_call
     def evaluate(
         self,
-        method: Literal["run", "fit", "predict"] = "run",
+        method: Literal["run", "fit", "predict", "collect"] = "run",
+        stages: set[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
-        stages: set[str] | None = None,
         id_subsets: dict[str, list[Any]] | None = None,
         **kwargs,
     ) -> None:
@@ -295,12 +307,14 @@ class Pipeline(BaseModel):
         ----------
         method : str, optional
             Name of method to evaluate. Default is 'run'.
+        stages : set of str, optional
+            Names of stages to evaluate. Default is None.
+            If None, evaluate entire pipeline.
         backend : str, optional
             How to evaluate the method. Default is 'local'.
         build : bool, optional
-            Whether to build the pipeline before evaluation. Default is True.
-        stages : set of str, optional
-            Stages to evaluate. Default is None.
+            Whether to build the pipeline before evaluation.
+            Default is True.
         id_subsets : dict of str: list of Any, optional
 
         Other Parameters
@@ -310,44 +324,39 @@ class Pipeline(BaseModel):
         resources : Path or str, optional
             Path to resources yaml file. Required if `backend` is
             'jobmon'.
+
         """
+        if method == "collect":
+            raise ValueError(
+                "Method 'collect' can only be called on a 'ModelStage' object"
+            )
+
         if build:
             self.build(id_subsets=id_subsets)
 
-        if stages is not None:
-            for stage_name in stages:
-                if stage_name not in self.stages:
-                    raise ValueError(
-                        f"Stage '{stage_name}' not found in pipeline."
-                    )
-
-            for stage_name in stages:
-                stage: Stage = self.stages.get(stage_name)
-                for dep in stage.dependencies:
-                    if dep not in stages:
-                        if not self.check_upstream_outputs_exist(
-                            stage_name, dep
-                        ):
-                            raise ValueError(
-                                f"Required input to stage '{stage_name}' is missing. Missing output from upstream dependency '{dep}'."
-                            )
-
-        ordered_stages = (
-            [stage for stage in self.get_execution_order() if stage in stages]
-            if stages is not None
-            else self.get_execution_order()
-        )
+        stages = stages or self.stages.keys()
+        for stage_name in stages:
+            if stage_name not in self.stages:
+                raise ValueError(f"Stage '{stage_name}' not found in pipeline.")
+            else:
+                # Check input from upstream stages not being run already exists
+                stage = self.stages[stage_name]
+                stage.input.check_exists(
+                    upstream_stages=[
+                        dep for dep in stage.dependencies if dep not in stages
+                    ]
+                )
 
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(
-                model=self, method=method, stages=ordered_stages, **kwargs
+                model=self, method=method, stages=stages, **kwargs
             )
         else:
             from onemod.backend.local_backend import evaluate_local
 
-            evaluate_local(model=self, method=method, stages=ordered_stages)
+            evaluate_local(model=self, method=method, stages=stages)
 
     def run(
         self,
@@ -382,6 +391,6 @@ class Pipeline(BaseModel):
 
     def __repr__(self) -> str:
         return (
-            f"{type(self).__name__}({self.name},"
+            f"{type(self).__name__}(name={self.name},"
             f" stages={list(self.stages.values())})"
         )

@@ -8,6 +8,8 @@ Notes
   'age_group_id', submodels will be fit separately for each age/sex
   pair, and covariates will be selected separately for each sex.
 
+TODO: Update pandas commands to polars
+
 """
 
 import warnings
@@ -68,7 +70,7 @@ class RoverStage(ModelStage):
 
             # Fit submodel
             submodel.fit(
-                data=data,
+                data=data.to_pandas(),
                 strategies=list(self.config.strategies),
                 top_pct_score=self.config.top_pct_score,
                 top_pct_learner=self.config.top_pct_learner,
@@ -121,14 +123,18 @@ class RoverStage(ModelStage):
 
     def _get_rover_summaries(self) -> pd.DataFrame:
         """Concatenate rover coefficient summaries."""
-        subsets = self.dataif.load("subsets.csv", key="output")
+        subsets = self.dataif.load(
+            "subsets.csv", key="output", return_type="pandas_dataframe"
+        )
 
         # Collect coefficient summaries
         summaries = []
         for subset_id in self.subset_ids:
             try:
                 summary = self.dataif.load(
-                    f"submodels/{subset_id}/summary.csv", key="output"
+                    f"submodels/{subset_id}/summary.csv",
+                    key="output",
+                    return_type="pandas_dataframe",
                 )
                 summary["subset_id"] = subset_id
                 summaries.append(summary)

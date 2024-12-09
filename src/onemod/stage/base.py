@@ -38,6 +38,24 @@ class Stage(BaseModel, ABC):
     output_validation : dict, optional
         Optional specification of output data validation.
 
+    Notes
+    -----
+    * Private attributes that are defined automatically:
+      * `_dataif : `DataInterface` object for loading/dumping input,
+        created in `Pipeline.build()` or `Stage.from_json()`.
+      * `_module`: Path to custom stage definition, created in
+        `Stage.module` or `Stage.from_json()`.
+      * `_input`: `Input` object that organizes `Stage` input, created
+        in `Stage.input` or `Stage.from_json()`, modified by
+        `Stage.__call__()`.
+    * Private attributes that must be defined by class:
+      * `_required_input`, `_optional_input`, `_output`: Strings with
+        syntax "f{name}.{extension}". For example, "data.parquet". If
+        input/output is a directory instead of a file, exclude the
+        extension. For example, "submodels".
+      * `_skip`: Methods that the stage does not implement (e.g., 'fit'
+        or 'predict').
+
     """
 
     model_config = ConfigDict(validate_assignment=True)
@@ -46,13 +64,13 @@ class Stage(BaseModel, ABC):
     config: StageConfig
     input_validation: dict[str, Data] = Field(default_factory=dict)
     output_validation: dict[str, Data] = Field(default_factory=dict)
-    _dataif: DataInterface | None = None  # set by Pipeline.build, from_json
-    _module: Path | None = None  # set by from_json
-    _skip: set[str] = set()  # defined by class
-    _input: Input | None = None  # set by __call__, from_json
-    _required_input: set[str] = set()  # name.extension, defined by class
-    _optional_input: set[str] = set()  # name.extension, defined by class
-    _output: set[str] = set()  # name.extension, defined by class
+    _dataif: DataInterface | None = None
+    _module: Path | None = None
+    _input: Input | None = None
+    _required_input: set[str] = set()
+    _optional_input: set[str] = set()
+    _output: set[str] = set()
+    _skip: set[str] = set()
 
     @property
     def dataif(self) -> DataInterface:
@@ -60,12 +78,19 @@ class Stage(BaseModel, ABC):
 
         Examples
         --------
-        * Load config: stage.dataif.load(key="config")
-        * Load input: stage.dataif.load(key=f"{input_name}")
-        * Load output:
-          stage.dataif.load(f"{output_name}.{output_extension}", key="output")
-        * Dump output:
-          stage.dataif.dump(output, f"{output_name}.{output_extension}", key="output")
+        Load input file:
+        * _requred_input: {"data.parquet"}
+        * data = self.dataif.load(key="data")
+
+        Load file from input directory:
+        * _required_input: {"submodels"}
+        * model = self.dataif.load(f"model_{subset_id}.pkl", key="submodels")
+
+        Load output file:
+        * subsets = self.dataif.load("subsets.csv", key="output")
+
+        Dump output file:
+        * self.dataif.dump(f"submodels/model_{subset_id}.pkl", key="output")
 
         """
         if self._dataif is None:
@@ -73,9 +98,21 @@ class Stage(BaseModel, ABC):
         return self._dataif
 
     def set_dataif(self, config_path: Path | str) -> None:
-        if self.input is None:
-            return
+        """Set stage data interface.
 
+        Parameters
+        ----------
+        config_path : Path or str
+            Path to config file.
+
+        Notes
+        -----
+        * This method is called in Pipeline.build.
+        * This method assumes the pipeline's data flow has already been
+          defined (i.e., if the stage's input is changed after pipeline
+          is built, the data interface will not contain the new input).
+
+        """
         directory = Path(config_path).parent
         self._dataif = DataInterface(
             directory=directory,
@@ -86,9 +123,10 @@ class Stage(BaseModel, ABC):
             if isinstance(item_value, Path):
                 self._dataif.add_path(item_name, item_value)
             elif isinstance(item_value, Data):
-                self._dataif.add_path(
-                    item_name, directory / item_value.stage / item_value.path
-                )
+                item_value.path = directory / item_value.stage / item_value.path
+                self._dataif.add_path(item_name, item_value.path)
+        for item_name, item_value in self.output.items.items():
+            item_value.path = directory / self.name / item_value.path
         if not (directory / self.name).exists():
             (directory / self.name).mkdir()
 
@@ -121,8 +159,12 @@ class Stage(BaseModel, ABC):
     def output(self) -> Output:
         output_items = {}
         for item in self._output:
-            item_name = item.split(".")[0]  # remove extension
-            output_items[item_name] = Data(stage=self.name, path=Path(item))
+            item_specs = item.split(".")
+            item_name = item_specs[0]
+            item_type = "directory" if len(item_specs) == 1 else item_specs[1]
+            output_items[item_name] = Data(
+                stage=self.name, path=Path(item), format=item_type
+            )
         return Output(stage=self.name, items=output_items)
 
     @property
@@ -166,8 +208,8 @@ class Stage(BaseModel, ABC):
             stage._module = stage_config["module"]
         if hasattr(stage, "apply_stage_specific_config"):
             stage.apply_stage_specific_config(stage_config)
-        if "input" in stage_config:
-            stage(**stage_config["input"])
+        if (input := stage_config.get("input")) is not None:
+            stage(**input)
         stage.set_dataif(config_path)
         return stage
 
@@ -206,10 +248,19 @@ class Stage(BaseModel, ABC):
         `predict` is called.
 
         """
+        if method == "collect":
+            raise ValueError(
+                "Method 'collect' can only be called for 'ModelStage' objects"
+            )
+
         if method in self.skip:
-            warnings.warn(f"{self.name} skips the '{method}' method")
+            warnings.warn(f"'{self.name}' stage skips the '{method}' method")
             return
+
         method = method if hasattr(self, method) else "run"
+
+        self.input.check_exists()
+
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
@@ -295,12 +346,13 @@ class Stage(BaseModel, ABC):
     @validate_call
     def __call__(self, **input: Data | Path) -> Output:
         """Define stage dependencies."""
+        # FIXME: Update data interface if it exists?
         self.input.check_missing({**self.input.items, **input})
         self.input.update(input)
         return self.output
 
     def __repr__(self) -> str:
-        return f"{self.type}({self.name})"
+        return f"{self.type}(name={self.name})"
 
 
 class ModelStage(Stage, ABC):
@@ -313,8 +365,9 @@ class ModelStage(Stage, ABC):
     Model stages can also be run for different parameter combinations
     using the `crossby` attribute. For example, a single stage could be
     run for various hyperparameter values, and then the results could be
-    combined into an ensemble. Any parameter in config.crossable_params
-    can be specified as either a single value or a list of values.
+    combined into an ensemble. Any parameter in
+    `config.crossable_params` can be specified as either a single value
+    or a list of values.
 
     When a model stage method is evaluated, all submodels (identified by
     their `subset_id` and `param_id`) are evaluated, and then, if
@@ -335,15 +388,45 @@ class ModelStage(Stage, ABC):
     output_validation : dict, optional
         Description.
 
+    Notes
+    -----
+    * Private attributes that are defined automatically:
+      * `_dataif : `DataInterface` object for loading/dumping input,
+        created `Stage.set_dataif()` and called by `Pipeline.build()`
+        or `Stage.from_json()`.
+      * `_module`: Path to custom stage definition, created in
+        `Stage.module` or `Stage.from_json()`.
+      * `_input`: `Input` object that organizes `Stage` input, created
+        in `Stage.input` or `Stage.from_json()`, modified by
+        `Stage.__call__()`.
+      * `_crossby`: Names of parameters using multiple values. Created
+        in `ModelStage.create_stage_params()` AND CALLED BY
+      * `_subset_ids`: Data subset ID values. Created in
+        `ModelStage.create_stage_subsets()` and CALLED BY
+      * `_param_ids`: Parameter set ID values. Created in
+        `ModelStage.create_stage_params()` and CALLED BY
+    * Private attributes that must be defined by class:
+      * `_required_input`, `_optional_input`, `_output`: Strings with
+        syntax "f{name}.{extension}". For example, "data.parquet"
+        (required to use `groupby` attribute). If input/output is a
+        directory instead of a file, exclude the extension. For example,
+        "submodels".
+      * `_skip`: Methods that the stage does not implement (e.g., 'fit'
+        or 'predict').
+      * `_collect_after`: Methods that create submodel results (e.g.,
+        data subsets or parameter sets) that must be collected. For
+        example, collect submodel results for parameter sets to select
+        best parameter values after the 'fit'  method, or collect
+        submodel results for data subsets after the 'predict' method.
+
     """
 
     config: ModelConfig
     groupby: set[str] | None = None
-    _crossby: set[str] | None = None  # set by create_stage_params
-    _subset_ids: set[int] = set()  # set by create_stage_subsets
-    _param_ids: set[int] = set()  # set by create_stage_params
-    _required_input: set[str] = set()  # data required for groupby
-    _collect_after: set[str] = set()  # defined by class
+    _crossby: set[str] | None = None
+    _subset_ids: set[int] = set()
+    _param_ids: set[int] = set()
+    _collect_after: set[str] = set()
 
     @computed_property
     def crossby(self) -> set[str] | None:
@@ -398,15 +481,17 @@ class ModelStage(Stage, ABC):
             return_type="polars_lazyframe",
         )
 
-        subsets_df = create_subsets(self.groupby, lf)
+        subsets_df = create_subsets(self.groupby, lf.collect().to_pandas())
         self._subset_ids = set(subsets_df["subset_id"].to_list())
 
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
-    def get_stage_subset(self, subset_id: int) -> DataFrame:
-        """Get stage data subset."""
+    def get_stage_subset(
+        self, subset_id: int, *fparts: str, key: str = "data", **options
+    ) -> DataFrame:
+        """Filter data by stage subset_id."""
         return get_subset(
-            self.dataif.load(key="data"),
+            self.dataif.load(*fparts, key=key, **options),
             self.dataif.load("subsets.csv", key="output"),
             subset_id,
         )
@@ -447,11 +532,11 @@ class ModelStage(Stage, ABC):
         Other Parameters
         ----------------
         subset_id : int, optional
-            Submodel data subset ID. Ignored if `backend` is 'jobmon'.
+            Submodel data subset ID. Ignored if `backend` is 'jobmon' or
+            method is `collect`.
         param_id : int, optional
-            Submodel parameter set ID. Ignored if `backend` is 'jobmon'.
-        config : Path or str, optional
-            Path to config file. Required if `backend` is 'jobmon'.
+            Submodel parameter set ID. Ignored if `backend` is 'jobmon'
+            or method is `collect`.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path or str, optional
@@ -472,7 +557,15 @@ class ModelStage(Stage, ABC):
         if method in self.skip:
             warnings.warn(f"{self.name} skips the '{method}' method")
             return
+
+        self.input.check_exists()
+
         if backend == "jobmon":
+            if method == "collect":
+                raise ValueError(
+                    "Method 'collect' cannot be used with 'jobmon' backend"
+                )
+
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
             evaluate_with_jobmon(model=self, method=method, **kwargs)
@@ -512,7 +605,7 @@ class ModelStage(Stage, ABC):
         raise NotImplementedError("Subclasses must implement this method.")
 
     def __repr__(self) -> str:
-        stage_str = f"{self.type}({self.name}"
+        stage_str = f"{self.type}(name={self.name}"
         if self.groupby is not None:
             stage_str += f", groupby={self.groupby}"
         if self.crossby is not None:

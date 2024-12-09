@@ -1,18 +1,19 @@
 """Functions for working with groupby and subsets."""
 
+import pandas as pd
 import polars as pl
 
 
-def create_subsets(groupby: set[str], lf: pl.LazyFrame) -> pl.DataFrame:
+def create_subsets(groupby: set[str], data: pd.DataFrame) -> pd.DataFrame:
     """Create subsets from groupby."""
-    subsets = (
-        lf.select(list(groupby))
-        .unique()
-        .with_row_index(name="subset_id")
-        .collect()
+    sorted_groupby = sorted(groupby)
+    groups = data.groupby(sorted_groupby)
+    subsets = pd.DataFrame(
+        [subset for subset in groups.groups.keys()], columns=sorted_groupby
     )
-
-    return subsets
+    subsets.sort_values(by=sorted_groupby)
+    subsets["subset_id"] = subsets.index
+    return subsets[["subset_id", *sorted_groupby]]
 
 
 def get_subset(

@@ -238,7 +238,7 @@ def test_missing_self():
     with pytest.raises(KeyError) as error:
         test_input.check_missing()
     observed = str(error.value).strip('"')
-    expected = f"{test_input.stage} missing required input: "
+    expected = f"Stage '{test_input.stage}' missing required input: "
     assert (
         observed == expected + "['data', 'covariates']"
         or observed == expected + "['covariates', 'data']"
@@ -257,11 +257,19 @@ def test_missing_items():
             }
         )
     observed = str(error.value).strip('"')
-    expected = f"{test_input.stage} missing required input: "
+    expected = f"Stage '{test_input.stage}' missing required input: "
     assert (
         observed == expected + "['data', 'covariates']"
         or observed == expected + "['covariates', 'data']"
     )
+
+
+# TODO: Write tests for input.check_exists()
+# - input with empty items
+# - input with nonemtpy items that don't exist
+# - ignore missing/nonexisting item if not in item_names
+# - ignore missing/nonexisting item if dependency not in upstream_stages
+# - upstream_stages arg not used if item_names passed
 
 
 @pytest.mark.unit

@@ -12,12 +12,12 @@ Notes
 TODO: Update for new spxmod version with splines
 TODO: Make selected_covs more flexible, not hard-coded to age_mid
 TODO: Implement priors input
+TODO: Update pandas commands to polars
 
 """
 
 import numpy as np
 import pandas as pd
-import polars as pl
 from loguru import logger
 from spxmod.model import XModel
 from xspline import XSpline
@@ -193,6 +193,7 @@ class SpxmodStage(ModelStage):
                     self.dataif.load(
                         f"submodels/{subset_id}/predictions.parquet",
                         key="output",
+                        return_type="pandas_dataframe",
                     )
                     for subset_id in self.subset_ids
                 ]
@@ -209,11 +210,7 @@ class SpxmodStage(ModelStage):
         """Load submodel data."""
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data_subset = self.get_stage_subset(
-            subset_id
-        )  # TODO: Potentially add pandas as backend to internal methods if users will be using them in their custom stages
-        if isinstance(data_subset, pl.DataFrame):
-            data = data_subset.to_pandas()
+        data = self.get_stage_subset(subset_id).to_pandas()
 
         # Add spline basis to data
         spline_vars = []
@@ -234,6 +231,7 @@ class SpxmodStage(ModelStage):
                     columns=list(self.config["id_columns"])
                     + [self.config["prediction_column"]],
                     key="offset",
+                    return_type="pandas_dataframe",
                 ).rename(columns={self.config["prediction_column"]: "offset"}),
                 on=list(self.config["id_columns"]),
                 how="left",
@@ -274,7 +272,7 @@ class SpxmodStage(ModelStage):
                 subset_id,
                 id_names=pipeline_groupby,
             )
-        selected_covs = selected_covs["cov"].tolist()
+        selected_covs = selected_covs["cov"].to_list()
 
         # Get fixed covariates
         fixed_covs = self.get_field(

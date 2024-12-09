@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any, Literal
 
+import pandas as pd
 import polars as pl
 
 from onemod.fsutils.config_loader import ConfigLoader
@@ -62,7 +63,7 @@ class DataInterface(PathManager):
     def dump(self, obj: Any, *fparts: str, key: str, **options) -> None:
         """Dump data or config files based on object type and key."""
         path = self.get_full_path(*fparts, key=key)
-        if isinstance(obj, (pl.DataFrame, pl.LazyFrame)):
+        if isinstance(obj, (pl.DataFrame, pl.LazyFrame, pd.DataFrame)):
             return self.data_loader.dump(obj, path, **options)
         else:
             return self.config_loader.dump(obj, path, **options)
