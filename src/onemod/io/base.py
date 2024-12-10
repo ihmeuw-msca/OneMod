@@ -169,13 +169,17 @@ class Input(IO):
 
         missing_items = {}
         for item_name in item_names:
-            if isinstance(item_value := self.__getitem__(item_name), Path):
-                item_path = item_value
-            else:  # item_value: Data
-                if item_value.stage in upstream_stages:
-                    item_path = item_value.path
-                else:
-                    continue
+            item_value = self.__getitem__(item_name)
+            # Skip data items from upstream stages, haven't produced yet
+            if (
+                isinstance(item_value, Data)
+                and item_value.stage in upstream_stages
+            ):
+                continue
+            item_path = item_value
+            if isinstance(item_value, Data):
+                item_path = item_value.path
+
             if not item_path.exists():
                 missing_items[item_name] = str(item_path)
 
