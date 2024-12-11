@@ -164,8 +164,10 @@ class Input(IO):
         FIXME: Assumes pipeline has been built (so paths are absolute)
 
         """
-        item_names = item_names or set(self.items.keys())
-        upstream_stages = upstream_stages or self.dependencies
+        if item_names is None:
+            item_names = set(self.items.keys())
+        if upstream_stages is None:
+            upstream_stages = self.dependencies
 
         missing_items = {}
         for item_name in item_names:
