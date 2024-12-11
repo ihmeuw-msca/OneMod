@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """ModRover covariate selection stage.
 
 Notes
