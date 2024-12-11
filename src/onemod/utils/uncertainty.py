@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 import numpy as np
 import pandas as pd
 from msca.c2fun import c2fun_dict

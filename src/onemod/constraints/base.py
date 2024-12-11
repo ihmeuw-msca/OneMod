@@ -13,7 +13,7 @@ class Constraint(BaseModel):
     name: str
     args: dict[str, Any]
 
-    func: Callable[[Series], None] = Field(default=None, exclude=True)
+    func: Callable[[Series], None] | None = Field(default=None, exclude=True)
 
     def model_post_init(self, __context):
         """Reconstruct the `func` attribute after deserialization."""
