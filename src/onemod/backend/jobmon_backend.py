@@ -257,7 +257,7 @@ def evaluate_with_jobmon(
     resources_dict: dict
     if isinstance(resources, (Path, str)):
         config_loader = ConfigLoader()
-        resources_dict = config_loader.load(resources)
+        resources_dict = config_loader.load(Path(resources))
     else:
         resources_dict = resources
 
