@@ -254,12 +254,15 @@ def evaluate_with_jobmon(
 
     """
     # Get compute resources
+    resources_dict: dict
     if isinstance(resources, (Path, str)):
         config_loader = ConfigLoader()
-        resources = config_loader(resources)
+        resources_dict = config_loader.load(resources)
+    else:
+        resources_dict = resources
 
     # Get tool
-    tool = get_tool(model.name, cluster, resources)
+    tool = get_tool(model.name, cluster, resources_dict)
 
     # Set config
     if isinstance(model, Stage):
@@ -284,11 +287,16 @@ def evaluate_with_jobmon(
                     stage, method, model.stages, task_dict, stages
                 )
                 task_dict[stage_name] = get_tasks(
-                    tool, resources, stage, method, task_args, upstream_tasks
+                    tool,
+                    resources_dict,
+                    stage,
+                    method,
+                    task_args,
+                    upstream_tasks,
                 )
                 tasks.extend(task_dict[stage_name])
     else:
-        tasks = get_tasks(tool, resources, model, method, task_args)
+        tasks = get_tasks(tool, resources_dict, model, method, task_args)
 
     # Create and run workflow
     run_workflow(model.name, tool, tasks)
