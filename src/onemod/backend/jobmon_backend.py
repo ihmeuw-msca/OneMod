@@ -34,7 +34,6 @@ import sys
 from pathlib import Path
 from typing import Literal
 
-import yaml
 from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
