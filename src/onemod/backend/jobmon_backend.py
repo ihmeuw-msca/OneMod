@@ -2,30 +2,31 @@
 
 Examples
 --------
-Resources yaml file requires tool resources:
+Compute resources can be passed as a dictionary or a path to a resources
+file (e.g., json, toml, yaml).
+
+Required tool resources:
 
 .. code-block:: yaml
 
     tool_resources:
-      cluster_name:
-        cores: 1
-        memory: 1G
+      {cluster_name}:
         project: proj_name
         queue: queue_name.q
-        runtime: 00:01:00
 
-Optional stage resources can be specified at the stage or method level:
+Optional stage resources can be specified at the stage or stage + method
+level:
 
     task_template_resources:
-      stage_name:
-        cluster_name:
-          runtime: 00:10:00
-      stage_name_collect:
-        cluster_name:
-          runtime: 00:05:00
+      {stage_name}:
+        {cluster_name}:
+            ...
+      {stage_name}_{collect}:
+        {cluster_name}:
+            ...
 
-In the above example, the stage's `collect` method requests five
-minutes, while all other methods request ten minutes.
+See Jobmon documentation for additional optional resources and default
+values.
 
 """
 
@@ -33,21 +34,23 @@ import sys
 from pathlib import Path
 from typing import Literal
 
-import yaml
 from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
 from pydantic import validate_call
 
+from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
 from onemod.stage import ModelStage, Stage
 
 
-def get_tool(name: str, cluster: str, resources: Path | str) -> Tool:
+def get_tool(name: str, cluster: str, resources: dict) -> Tool:
     """Get tool."""
     tool = Tool(name=f"{name}")
     tool.set_default_cluster_name(cluster)
-    tool.set_default_compute_resources_from_yaml(cluster, str(resources))
+    tool.set_default_compute_resources_from_dict(
+        cluster, resources["tool_resources"][cluster]
+    )
     return tool
 
 
@@ -66,7 +69,7 @@ def run_workflow(name: str, tool: Tool, tasks: list[Task]) -> None:
 
 def get_tasks(
     tool: Tool,
-    resources: Path | str,
+    resources: dict,
     stage: Stage,
     method: str,
     task_args: dict[str, str],
@@ -110,7 +113,7 @@ def get_tasks(
 
 def get_task_template(
     tool: Tool,
-    resources: Path | str,
+    resources: dict,
     stage_name: str,
     method: str,
     node_args: list[str],
@@ -152,15 +155,21 @@ def get_command_template(
 
 
 def get_task_resources(
-    resources: Path | str, cluster: str, stage_name: str, method: str
+    resources: dict, cluster: str, stage_name: str, method: str
 ) -> dict | None:
     """Get task-specific resources."""
-    with open(resources, "r") as f:
-        resource_dict = yaml.safe_load(f)["task_template_resources"]
-    if f"{stage_name}_{method}" in resource_dict:
-        return resource_dict[f"{stage_name}_{method}"][cluster]
-    if stage_name in resource_dict:
-        return resource_dict[stage_name][cluster]
+    task_resources = resources.get("task_template_resources")
+    if task_resources is not None:
+        stage_resources = task_resources.get(stage_name, {})
+        method_resources = task_resources.get(f"{stage_name}_{method}", {})
+        if method_resources:
+            return stage_resources.get(cluster)
+        if stage_resources:
+            return method_resources.get(cluster)
+        return {
+            **stage_resources.get(cluster, {}),
+            **method_resources.get(cluster, {}),
+        }
     return None
 
 
@@ -215,7 +224,7 @@ def get_upstream_tasks(
 def evaluate_with_jobmon(
     model: Pipeline | Stage,
     cluster: str,
-    resources: Path | str,
+    resources: Path | str | dict,
     python: Path | str | None = None,
     method: Literal["run", "fit", "predict"] = "run",
     stages: set[str] | None = None,
@@ -228,8 +237,8 @@ def evaluate_with_jobmon(
         Pipeline or stage instance.
     cluster : str
         Cluster name.
-    resources : Path or str
-        Path to resources yaml file.
+    resources : Path, str, or dict
+        Dictionary of compute resources or path to resources file.
     python : Path, str, or None, optional
         Path to Python environment. If None, use sys.executable.
         Default is None.
@@ -244,8 +253,16 @@ def evaluate_with_jobmon(
     TODO: Could dependencies be method specific?
 
     """
+    # Get compute resources
+    resources_dict: dict
+    if isinstance(resources, (Path, str)):
+        config_loader = ConfigLoader()
+        resources_dict = config_loader.load(Path(resources))
+    else:
+        resources_dict = resources
+
     # Get tool
-    tool = get_tool(model.name, cluster, resources)
+    tool = get_tool(model.name, cluster, resources_dict)
 
     # Set config
     if isinstance(model, Stage):
@@ -270,11 +287,16 @@ def evaluate_with_jobmon(
                     stage, method, model.stages, task_dict, stages
                 )
                 task_dict[stage_name] = get_tasks(
-                    tool, resources, stage, method, task_args, upstream_tasks
+                    tool,
+                    resources_dict,
+                    stage,
+                    method,
+                    task_args,
+                    upstream_tasks,
                 )
                 tasks.extend(task_dict[stage_name])
     else:
-        tasks = get_tasks(tool, resources, model, method, task_args)
+        tasks = get_tasks(tool, resources_dict, model, method, task_args)
 
     # Create and run workflow
     run_workflow(model.name, tool, tasks)

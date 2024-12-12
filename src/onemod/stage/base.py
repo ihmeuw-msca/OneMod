@@ -234,9 +234,9 @@ class Stage(BaseModel, ABC):
         ----------------
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
-        resources : Path or str, optional
-            Path to resources yaml file. Required if `backend` is
-            'jobmon'.
+        resources : Path, str, or dict, optional
+            Dictionary of compute resources or path to resources file.
+            Required if `backend` is 'jobmon'.
 
         Notes
         -----
@@ -539,9 +539,9 @@ class ModelStage(Stage, ABC):
             or method is `collect`.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
-        resources : Path or str, optional
-            Path to resources yaml file. Required if `backend` is
-            'jobmon'.
+        resources : Path, str, or dict, optional
+            Dictionary of compute resources or path to resources file.
+            Required if `backend` is 'jobmon'.
 
         Notes
         -----
