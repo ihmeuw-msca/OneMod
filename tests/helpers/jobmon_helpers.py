@@ -38,6 +38,7 @@ Data Columns
 from pathlib import Path
 
 import pandas as pd
+from pydantic import Field
 
 from onemod import Pipeline
 from onemod.config import ModelConfig
@@ -47,17 +48,21 @@ from onemod.stage import ModelStage, Stage
 class SimpleStage(Stage):
     _required_input: set[str] = {"input.csv"}
     _output: set[str] = {"output.csv"}
+    _log: list[str] = []
+
+    def get_log(self) -> list[str]:
+        return self._log
 
     def run(self) -> None:
-        print(f"Running stage '{self.name}'")
+        self._log.append(f"run: name={self.name}")
         self._create_output()
 
     def fit(self) -> None:
-        print(f"Fitting stage '{self.name}'")
+        self._log.append(f"fit: name={self.name}")
         self._create_output()
 
     def predict(self) -> None:
-        print(f"Predicting stage '{self.name}'")
+        self._log.append(f"predict: name={self.name}")
         self._create_output()
 
     def _create_output(self) -> None:
@@ -68,14 +73,10 @@ class SimpleStage(Stage):
 
 
 class SimpleStageFit(SimpleStage):
-    _required_input: set[str] = {"input.csv"}
-    _output: set[str] = {"output.csv"}
     _skip: set[str] = {"predict"}
 
 
 class SimpleStagePredict(SimpleStage):
-    _required_input: set[str] = {"input.csv"}
-    _output: set[str] = {"output.csv"}
     _skip: set[str] = {"fit"}
 
 
@@ -90,28 +91,32 @@ class ParallelStage(ModelStage):
     _required_input: set[str] = {"input1.csv", "input2.csv"}
     _output: set[str] = {"output.csv"}
     _collect_after: set[str] = {"run", "fit", "predict"}
+    _log: list[str] = []
+
+    def get_log(self) -> list[str]:
+        return self._log
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
-        print(
-            f"Running stage '{self.name}', subset_id: {subset_id}, param_id: {param_id}"
+        self._log.append(
+            f"run: name={self.name}, subset={subset_id}, param={param_id}"
         )
         self._create_output(subset_id, param_id)
 
     def fit(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
-        print(
-            f"Fitting stage '{self.name}', subset_id: {subset_id}, param_id: {param_id}"
+        self._log.append(
+            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
         )
         self._create_output(subset_id, param_id)
 
     def predict(
         self, subset_id: int | None = None, param_id: int | None = None
     ) -> None:
-        print(
-            f"Predicting stage '{self.name}', subset_id: {subset_id}, param_id: {param_id}"
+        self._log.append(
+            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
         )
         self._create_output(subset_id, param_id)
 
@@ -156,7 +161,7 @@ class ParallelStage(ModelStage):
         )
 
     def collect(self) -> None:
-        print(f"Collecting stage '{self.name}'")
+        self._log.append(f"collect: name={self.name}")
         output = []
         for subset_id in self.subset_ids or [None]:
             for param_id in self.param_ids or [None]:
@@ -184,34 +189,30 @@ class ParallelStage(ModelStage):
 
 
 class ParallelStageFit(ParallelStage):
-    _required_input: set[str] = {"input1.csv", "input2.csv"}
-    _output: set[str] = {"output.csv"}
     _skip: set[str] = {"predict"}
     _collect_after: set[str] = {"run", "fit"}
 
 
 class ParallelStagePredict(ParallelStage):
-    _required_input: set[str] = {"input1.csv", "input2.csv"}
-    _output: set[str] = {"output.csv"}
     _skip: set[str] = {"fit"}
     _collect_after: set[str] = {"run", "predict"}
 
 
-def create_data(directory):
+def create_data(directory: Path):
     data = pd.DataFrame(
         [[sex_id, year_id] for sex_id in [1, 2] for year_id in [1, 2]],
         columns=["sex_id", "year_id"],
     )
     data["stage"] = "pipeline_input"
-    data.to_csv(directory + "/data.csv", index=False)
+    data.to_csv(directory / "data.csv", index=False)
 
 
-def create_pipeline(directory) -> Pipeline:
+def create_pipeline(directory: Path) -> Pipeline:
     return Pipeline(
         name="jobmon_test_pipeline",
         config={"id_columns": ["sex_id", "year_id"], "model_type": "gaussian"},
         directory=directory,
-        data=directory + "/data.csv",
+        data=directory / "data.csv",
     )
 
 
@@ -243,7 +244,7 @@ def define_dataflow(stages: list[Stage], input: Path) -> None:
     stages[5](input1=stage_3_output, input2=stage_4_output)
 
 
-def setup_pipeline(directory):
+def setup_pipeline(directory: Path):
     create_data(directory)
     pipeline = create_pipeline(directory)
     stages = create_stages()
