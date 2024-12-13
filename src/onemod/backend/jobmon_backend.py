@@ -174,9 +174,10 @@ def get_tasks(
         List of Jobmon tasks.
 
     """
-    task_args = (
-        {"python": str(python or sys.executable), "config": get_config(model)},
-    )
+    task_args = {
+        "python": str(python or sys.executable),
+        "config": get_config(model),
+    }
     if isinstance(model, Pipeline):
         return get_pipeline_tasks(
             tool, resources, model, method, task_args, stages
