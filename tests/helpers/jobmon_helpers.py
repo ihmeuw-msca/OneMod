@@ -35,10 +35,10 @@ Data Columns
 
 """
 
+from itertools import product
 from pathlib import Path
 
 import pandas as pd
-from pydantic import Field
 
 from onemod import Pipeline
 from onemod.config import ModelConfig
@@ -252,3 +252,33 @@ def setup_pipeline(directory: Path):
     define_dataflow(stages, pipeline.data)
     pipeline.build()
     return pipeline
+
+
+def assert_stage_logs(
+    stage: SimpleStage | ParallelStage,
+    method: str,
+    subset_ids: list[int] | None = None,
+    param_ids: list[int] | None = None,
+) -> None:
+    """Assert that the expected method was logged for a given stage.
+
+    Does not work for calls to evaluate a single submodel for a parallel
+    stage (i.e., assumes all submodels logged and collect method
+    logged).
+
+    """
+    if method not in stage.skip:
+        log = stage.get_log()
+        if isinstance(stage, SimpleStage):
+            assert f"{method}: name={stage.name}" in log
+        else:
+            if method != "collect":
+                for subset_id, param_id in product(
+                    list(subset_ids), list(param_ids)
+                ):
+                    assert (
+                        f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
+                        in log
+                    )
+            if method == "collect" or method in stage._collect_after:
+                assert f"collect: name={stage.name}" in log
