@@ -1,11 +1,11 @@
-ENV_TYPE ?= venv  # Default to venv; override with `make ENV_TYPE=conda`
-PYTHON_VERSION ?= 3.10  # Default to 3.10; override with `make PYTHON_VERSION=3.11`
+ENV_TYPE ?= venv
+PYTHON_VERSION ?= 3.10
 VENV_DIR := .venv
-CONDA_ENV ?= onemod  # Default to onemod; override with `make CONDA_ENV=other_env_name`
+CONDA_ENV ?= onemod
 
 .PHONY: list-vars check-python setup clean mypy pre-commit
 
-list-vars:  ## List current values of variables
+list-vars:  ## List variables
 	@echo "ENV_TYPE        = $(ENV_TYPE)"
 	@echo "PYTHON_VERSION  = $(PYTHON_VERSION)"
 	@echo "VENV_DIR        = $(VENV_DIR)"
@@ -27,7 +27,8 @@ ifeq ($(ENV_TYPE),venv)
 	$(VENV_DIR)/bin/pre-commit install
 else ifeq ($(ENV_TYPE),conda)
 	conda create -n $(CONDA_ENV) python=$(PYTHON_VERSION) -y
-	conda run -n $(CONDA_ENV) pip install -U pip && pip install -e ".[dev]"
+	conda run -n $(CONDA_ENV) pip install -U pip
+	conda run -n $(CONDA_ENV) pip install -e ".[dev]"
 	conda run -n $(CONDA_ENV) pre-commit install
 else
 	$(error ENV_TYPE must be 'venv' or 'conda')
