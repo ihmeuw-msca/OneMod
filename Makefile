@@ -1,3 +1,9 @@
+# Include .env file if it exists
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
 ENV_TYPE ?= venv
 PYTHON_VERSION ?= 3.10
 VENV_DIR := .venv

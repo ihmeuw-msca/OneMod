@@ -15,4 +15,5 @@ repos:
     hooks:
       - id: mypy
         files: ^(src|tests)
-        args: ["--config-file", "pyproject.toml", "--install-types"]
+        args: ["--config-file", "pyproject.toml"]
+        additional_dependencies: [types-PyYAML]
