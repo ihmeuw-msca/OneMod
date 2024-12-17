@@ -254,12 +254,7 @@ def setup_pipeline(directory: Path):
     return pipeline
 
 
-def assert_stage_logs(
-    stage: SimpleStage | ParallelStage,
-    method: str,
-    subset_ids: list[int] | None = None,
-    param_ids: list[int] | None = None,
-) -> None:
+def assert_stage_logs(stage: SimpleStage | ParallelStage, method: str) -> None:
     """Assert that the expected method was logged for a given stage.
 
     Does not work for calls to evaluate a single submodel for a parallel
@@ -272,13 +267,29 @@ def assert_stage_logs(
         if isinstance(stage, SimpleStage):
             assert f"{method}: name={stage.name}" in log
         else:
-            if method != "collect":
-                for subset_id, param_id in product(
-                    list(subset_ids), list(param_ids)
-                ):
-                    assert (
-                        f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
-                        in log
-                    )
-            if method == "collect" or method in stage._collect_after:
+            for subset_id, param_id in product(
+                stage.subset_ids or [None], stage.param_ids or [None]
+            ):
+                assert (
+                    f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
+                    in log
+                )
+            if method in stage._collect_after:
                 assert f"collect: name={stage.name}" in log
+
+
+def assert_stage_output(stage: SimpleStage | ParallelStage) -> None:
+    """Assert input columns match upstream stages."""
+    output = stage.dataif.load(
+        "output.csv", key="output", return_type="pandas_dataframe"
+    )
+    if isinstance(stage, SimpleStage):
+        input_names = ["input"]
+    else:
+        input_names = ["input1", "input2"]
+    for input_name in input_names:
+        input_column = output[input_name].unique()[0]
+        if isinstance(stage.input[input_name], Path):
+            assert input_column == "pipeline_input"
+        else:
+            assert input_column.startswith(stage.input[input_name].stage)
