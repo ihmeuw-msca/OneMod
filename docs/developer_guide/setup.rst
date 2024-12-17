@@ -123,9 +123,9 @@ To manually run development tools, you can use the ``Makefile`` shortcuts:
 
 For details on testing, contributing, or other development workflows, see the corresponding sections in the documentation:
 
-- **Testing**: :ref:`running_tests`
-- **Contributing Code**: :ref:`contributing_code`
-- **Contributing Documentation**: :ref:`contributing_docs`
+- **Testing**: :ref:`Running Tests <running_tests>`
+- **Contributing to the Codebase**: :ref:`Contributing Code <contributing_code>`
+- **Contributing Documentation**: :ref:`Contributing Docs <contributing_docs>`
 
 
 6. Notes for Contributors
