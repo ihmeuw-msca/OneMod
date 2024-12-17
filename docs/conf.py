@@ -13,7 +13,7 @@ autoclass_content = "init"
 pygments_style = "sphinx"
 
 # HTML output options
-# html_theme = "furo"
+html_theme = "furo"
 
 
 # Additional configurations

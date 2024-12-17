@@ -3,7 +3,7 @@
 Running Tests
 =============
 
-`OneMod` uses `pytest` for testing. To ensure all tests pass, follow these steps:
+``OneMod`` uses ``pytest`` for testing. To ensure all tests pass, follow these steps:
 
 1. Run the test suite:
 
@@ -23,6 +23,6 @@ Running Tests
 
        pytest --cov=onemod --cov-report=html
 
-   Open the `htmlcov/index.html` file in your browser to inspect test coverage.
+   Open the ``htmlcov/index.html`` file in your browser to inspect test coverage.
 
 Remember to write tests for new features or bug fixes!
