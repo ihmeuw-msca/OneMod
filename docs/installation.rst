@@ -14,4 +14,3 @@ Installation
 #. Install the OneMod package from Github without Jobmon::
 
     pip install git+https://github.com/ihmeuw-msca/OneMod@main
-

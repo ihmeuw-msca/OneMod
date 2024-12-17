@@ -7,7 +7,7 @@ resources=
 
 handle_options() {
     while [ $# -gt 0 ]; do
-        case $1 in 
+        case $1 in
             -s | --stage)
                 stage_name=$2
                 ;;

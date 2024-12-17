@@ -1,8 +1,5 @@
 # General configuration
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosectionlabel",
-]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.autosectionlabel"]
 autoapi_dirs = ["../"]
 # templates_path = ['_templates']
 source_suffix = ".rst"
@@ -16,7 +13,7 @@ autoclass_content = "init"
 pygments_style = "sphinx"
 
 # HTML output options
-html_theme = "furo"
+# html_theme = "furo"
 
 
 # Additional configurations
