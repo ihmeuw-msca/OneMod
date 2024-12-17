@@ -1,3 +1,5 @@
+.. _setup:
+
 Setting Up Your Development Environment
 =======================================
 
@@ -113,20 +115,26 @@ Congratulations! You’re ready to start contributing to `OneMod`.
 To manually run development tools, you can use the `Makefile` shortcuts:
 
 - **Run `mypy` for type checking**:
-  .. code-block:: bash
 
-     make mypy
+.. code-block:: bash
+
+   make mypy
+
+---
 
 - **Clean up the environment**:
-  .. code-block:: bash
 
-     make clean
+.. code-block:: bash
+
+   make clean
+
+---
 
 For details on testing, contributing, or other development workflows, see the corresponding sections in the documentation:
 
-- **Testing**: :ref:`Running Tests`
-- **Contributing Code**: :ref:`Contributing Code`
-- **Contributing Documentation**: :ref:`Contributing to Documentation`
+- **Testing**: :ref:`running_tests`
+- **Contributing Code**: :ref:`contributing_code`
+- **Contributing Documentation**: :ref:`contributing_docs`
 
 ---
 
