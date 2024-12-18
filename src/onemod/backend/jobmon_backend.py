@@ -39,7 +39,6 @@ See Jobmon documentation for additional resources and default values.
 """
 
 import sys
-from json import tool
 from pathlib import Path
 from typing import Any, Literal
 
@@ -143,12 +142,12 @@ def get_tool(
 
 
 def get_tasks(
-    tool: tool,
+    tool: Tool,
     resources: dict[str, Any],
     model: Pipeline | Stage,
-    method: str,
+    method: Literal["run", "fit", "predict"],
     python: Path | str | None,
-    stages: list[str] | None,
+    stages: set[str] | None,
 ) -> list[Task]:
     """Get Jobmon tasks.
 
@@ -164,7 +163,7 @@ def get_tasks(
         Name of method to evaluate.
     python : str or None
         Path to Python environment. If None, use sys.executable.
-    stages : list of str or None
+    stages : set of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate entire pipeline.
 
@@ -208,9 +207,9 @@ def get_pipeline_tasks(
     tool: Tool,
     resources: dict[str, Any],
     pipeline: Pipeline,
-    method: str,
-    task_args: dict[str, str],
-    stages: list[str] | None,
+    method: Literal["run", "fit", "predict"],
+    task_args: dict[str, Any],
+    stages: set[str] | None,
 ) -> list[Task]:
     """Get pipeline stage tasks.
 
@@ -227,7 +226,7 @@ def get_pipeline_tasks(
     task_args : dict
         Dictionary containing paths to python environment and pipeline
         config file.
-    stages : list of str or None
+    stages : set of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate entire pipeline.
 
@@ -313,8 +312,8 @@ def get_stage_tasks(
     tool: Tool,
     resources: dict[str, Any],
     stage: Stage,
-    method: str,
-    task_args: dict[str, str],
+    method: Literal["run", "fit", "predict", "collect"],
+    task_args: dict[str, Any],
     upstream_tasks: list[Task] = [],
 ) -> list[Task]:
     """Get stage tasks.
@@ -386,7 +385,7 @@ def get_task_template(
     tool: Tool,
     resources: dict[str, Any],
     stage_name: str,
-    method: str,
+    method: Literal["run", "fit", "predict", "collect"],
     node_args: list[str],
 ) -> TaskTemplate:
     """Get stage task template.
@@ -414,9 +413,9 @@ def get_task_template(
     task_template = tool.get_task_template(
         template_name=f"{stage_name}_{method}",
         command_template=get_command_template(stage_name, method, node_args),
-        node_args=node_args,
-        task_args=["config"],
         op_args=["python"],
+        task_args=["config"],
+        node_args=node_args,
     )
 
     task_resources = get_task_resources(
@@ -431,7 +430,9 @@ def get_task_template(
 
 
 def get_command_template(
-    stage_name: str, method: str, node_args: list[str]
+    stage_name: str,
+    method: Literal["run", "fit", "predict", "collect"],
+    node_args: list[str],
 ) -> str:
     """Get stage command template.
 
@@ -472,7 +473,10 @@ def get_command_template(
 
 
 def get_task_resources(
-    resources: dict[str, Any], cluster: str, stage_name: str, method: str
+    resources: dict[str, Any],
+    cluster: str,
+    stage_name: str,
+    method: Literal["run", "fit", "predict", "collect"],
 ) -> dict[str, Any]:
     """Get task-specific resources.
 

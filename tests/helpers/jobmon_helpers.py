@@ -165,7 +165,7 @@ class ParallelStage(ModelStage):
         output = []
         for subset_id in self.subset_ids or [None]:
             for param_id in self.param_ids or [None]:
-                output_dir = self.dataif.get_path(key="output")
+                output_dir = Path(self.dataif.get_path(key="output"))
                 output_path = self._get_output_path(subset_id, param_id)
                 if (output_dir / output_path).exists():
                     output.append(
@@ -198,21 +198,22 @@ class ParallelStagePredict(ParallelStage):
     _collect_after: set[str] = {"run", "predict"}
 
 
-def create_data(directory: Path):
+def create_data(directory: Path) -> Path:
     data = pd.DataFrame(
         [[sex_id, year_id] for sex_id in [1, 2] for year_id in [1, 2]],
         columns=["sex_id", "year_id"],
     )
     data["stage"] = "pipeline_input"
-    data.to_csv(directory / "data.csv", index=False)
+    data.to_csv(data_path := directory / "data.csv", index=False)
+    return data_path
 
 
-def create_pipeline(directory: Path) -> Pipeline:
+def create_pipeline(directory: Path, data_path: Path) -> Pipeline:
     return Pipeline(
         name="jobmon_test_pipeline",
         config={"id_columns": ["sex_id", "year_id"], "model_type": "gaussian"},
         directory=directory,
-        data=directory / "data.csv",
+        data=data_path,
     )
 
 
@@ -235,21 +236,23 @@ def create_stages() -> list[Stage]:
     ]
 
 
-def define_dataflow(stages: list[Stage], input: Path) -> None:
-    stage_1_output = stages[0](input=input)["output"]
+def define_dataflow(stages: list[Stage], data_path: Path) -> None:
+    stage_1_output = stages[0](input=data_path)["output"]
     stage_2_output = stages[1](input=stage_1_output)["output"]
     stage_3_output = stages[2](input=stage_1_output)["output"]
-    stage_4_output = stages[3](input1=input, input2=stage_1_output)["output"]
+    stage_4_output = stages[3](input1=data_path, input2=stage_1_output)[
+        "output"
+    ]
     stages[4](input1=stage_2_output, input2=stage_4_output)
     stages[5](input1=stage_3_output, input2=stage_4_output)
 
 
 def setup_pipeline(directory: Path):
-    create_data(directory)
-    pipeline = create_pipeline(directory)
+    data_path = create_data(directory)
+    pipeline = create_pipeline(directory, data_path)
     stages = create_stages()
     pipeline.add_stages(stages)
-    define_dataflow(stages, pipeline.data)
+    define_dataflow(stages, data_path)
     pipeline.build()
     return pipeline
 
