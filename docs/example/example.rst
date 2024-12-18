@@ -79,4 +79,3 @@ If `save_intermediate` is True, intermediate results are saved in each model dir
         - predictions.parquet
         - performance.csv
         - subsets.csv
-
