@@ -58,6 +58,9 @@ skip-magic-trailing-comma = true
 select = ["E4", "E7", "E9", "F", "I"]
 task-tags = ["TODO", "FIXME"]
 
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 

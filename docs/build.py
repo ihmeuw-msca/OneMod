@@ -1,8 +1,8 @@
 import functools
 import subprocess
+from typing import TextIO
 
 import tomllib
-from typing import TextIO
 
 run = functools.partial(subprocess.run, shell=True)
 

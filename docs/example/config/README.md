@@ -20,7 +20,7 @@ Parameters:
 
 **Rover settings**
 
-See the [ModRover documentation](https://ihmeuw-msca.github.io/modrover/) for a full description of the Rover stage parameters. 
+See the [ModRover documentation](https://ihmeuw-msca.github.io/modrover/) for a full description of the Rover stage parameters.
 
 Optional parameters:
 - `col_offset` (str, optional) - Column name for model offset values. If not specified, default offset value is 0.
