@@ -20,7 +20,7 @@ def create_params(config: ModelConfig) -> DataFrame | None:
 
     params = DataFrame(
         [param_set for param_set in product(*param_dict.values())],
-        columns=(crossby := param_dict.keys()),
+        columns=(crossby := list(param_dict.keys())),
     )
     params["param_id"] = params.index
 
@@ -30,6 +30,6 @@ def create_params(config: ModelConfig) -> DataFrame | None:
 def get_params(params: DataFrame, param_id: int) -> dict[str, Any]:
     params = params.query("param_id == @param_id").drop(columns=["param_id"])
     return {
-        param_name: param_value.item()
+        str(param_name): param_value.item()
         for param_name, param_value in params.items()
     }

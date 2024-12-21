@@ -31,6 +31,9 @@ class DataLoader:
 
         if return_type == "pandas_dataframe":
             pandas_df = self.io_dict[path.suffix].load_eager(path, **options)
+            assert isinstance(
+                pandas_df, pd.DataFrame
+            ), "Expected a pandas DataFrame"
 
             if columns:
                 pandas_df = pandas_df[columns]
