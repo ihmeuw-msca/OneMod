@@ -1,6 +1,7 @@
 import numpy as np
+import pandas as pd
+import polars as pl
 import pytest
-from polars import DataFrame
 
 from onemod.fsutils.interface import DataInterface
 
@@ -27,14 +28,52 @@ def sample_config():
 
 @pytest.mark.unit
 @pytest.mark.parametrize("extension", [".csv", ".parquet"])
-def test_data_interface(sample_data1, extension, tmp_path):
+def test_data_interface_eager_polars(sample_data1, extension, tmp_path):
     dataif = DataInterface(tmp=tmp_path)
 
-    df = DataFrame(sample_data1)
+    df = pl.DataFrame(sample_data1)
 
     dataif.dump(df, "data" + extension, key="tmp")
 
     loaded_data = dataif.load("data" + extension, key="tmp")
+
+    for key in ["a", "b"]:
+        assert np.allclose(sample_data1[key], loaded_data[key])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("extension", [".csv", ".parquet"])
+def test_data_interface_lazy_polars(sample_data1, extension, tmp_path):
+    dataif = DataInterface(tmp=tmp_path)
+
+    df = pl.LazyFrame(sample_data1)
+
+    dataif.dump(df, "data" + extension, key="tmp")
+
+    lf = dataif.load(
+        "data" + extension, key="tmp", return_type="polars_lazyframe"
+    )
+
+    assert type(lf) is pl.LazyFrame
+
+    loaded_data = lf.collect()
+
+    for key in ["a", "b"]:
+        assert np.allclose(sample_data1[key], loaded_data[key])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("extension", [".csv", ".parquet"])
+def test_data_interface_eager_pandas(sample_data1, extension, tmp_path):
+    dataif = DataInterface(tmp=tmp_path)
+
+    df = pd.DataFrame(sample_data1)
+
+    dataif.dump(df, "data" + extension, key="tmp")
+
+    loaded_data = dataif.load(
+        "data" + extension, key="tmp", return_type="pandas_dataframe"
+    )
 
     for key in ["a", "b"]:
         assert np.allclose(sample_data1[key], loaded_data[key])
@@ -77,7 +116,7 @@ def test_remove_path(tmp_path):
 @pytest.fixture
 def data_files(sample_data2, tmp_path):
     """Create small CSV and Parquet files for testing."""
-    data = DataFrame(sample_data2)
+    data = pl.DataFrame(sample_data2)
     csv_path = tmp_path / "data.csv"
     parquet_path = tmp_path / "data.parquet"
 

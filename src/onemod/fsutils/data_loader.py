@@ -17,33 +17,44 @@ class DataLoader:
         self,
         path: Path,
         return_type: Literal[
-            "polars_dataframe", "polars_lazyframe", "pandas_dataframe"
-        ] = "polars_dataframe",
+            "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
+        ] = "pandas_dataframe",
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
         **options,
-    ) -> pl.DataFrame | pl.LazyFrame | pd.DataFrame:
+    ) -> pd.DataFrame | pl.DataFrame | pl.LazyFrame:
         """Load data with lazy loading and subset filtering. Polars and
         Pandas options available for the type of the returned data object."""
 
         if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
-        polars_lf = self.io_dict[path.suffix].load_lazy(path, **options)
+        if return_type == "pandas_dataframe":
+            pandas_df = self.io_dict[path.suffix].load_eager(path, **options)
 
-        if columns:
-            polars_lf = polars_lf.select(columns)
+            if columns:
+                pandas_df = pandas_df[columns]
 
-        if id_subsets:
-            for col, values in id_subsets.items():
-                polars_lf = polars_lf.filter(pl.col(col).is_in(values))
+            if id_subsets:
+                for col, values in id_subsets.items():
+                    pandas_df = pandas_df[pandas_df[col].isin(values)]
+                    pandas_df.reset_index(drop=True, inplace=True)
 
-        if return_type == "polars_dataframe":
-            return polars_lf.collect()
-        elif return_type == "polars_lazyframe":
-            return polars_lf
-        elif return_type == "pandas_dataframe":
-            return polars_lf.collect().to_pandas()
+            return pandas_df
+        elif return_type in ["polars_dataframe", "polars_lazyframe"]:
+            polars_lf = self.io_dict[path.suffix].load_lazy(path, **options)
+
+            if columns:
+                polars_lf = polars_lf.select(columns)
+
+            if id_subsets:
+                for col, values in id_subsets.items():
+                    polars_lf = polars_lf.filter(pl.col(col).is_in(values))
+
+            if return_type == "polars_dataframe":
+                return polars_lf.collect()
+            elif return_type == "polars_lazyframe":
+                return polars_lf
         else:
             raise ValueError(
                 "Return type must be one of 'polars_dataframe', 'polars_lazyframe', or 'pandas_dataframe'"
@@ -51,7 +62,7 @@ class DataLoader:
 
     def dump(
         self,
-        obj: pl.DataFrame | pl.LazyFrame | pd.DataFrame,
+        obj: pd.DataFrame | pl.DataFrame | pl.LazyFrame,
         path: Path,
         **options,
     ) -> None:

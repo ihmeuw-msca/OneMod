@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-import polars as pl
+import pandas as pd
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import MultiplyByTwoStage, assert_stage_logs
@@ -150,8 +150,8 @@ def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
 def test_evaluate_with_id_subsets(test_base_dir, sample_data):
     """Test that Pipeline.evaluate() correctly evaluates single stage with id_subsets."""
     sample_input_data = test_base_dir / "test_input_data.parquet"
-    df = pl.DataFrame(sample_data)
-    df.write_parquet(sample_input_data)
+    df = pd.DataFrame(sample_data)
+    df.to_parquet(sample_input_data)
 
     test_pipeline = Pipeline(
         name="dummy_pipeline",
@@ -171,14 +171,14 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
 
     # Ensure input data is as expected for the test
     assert sample_input_data.exists()
-    input_df = pl.read_parquet(sample_input_data)
+    input_df = pd.read_parquet(sample_input_data)
     assert input_df.shape == (4, 4)
 
     test_pipeline.evaluate(method="run", id_subsets={"age_group_id": [1]})
 
     # Verify that output only contains rows with specified subset(s) for age_group_id
     output_df = test_stage.dataif.load("data.parquet", key="output")
-    assert output_df.select(pl.col("age_group_id")).n_unique() == 1
+    assert output_df["age_group_id"].nunique() == 1
     assert output_df.shape == (1, 4)
 
 
