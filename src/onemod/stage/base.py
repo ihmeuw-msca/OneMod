@@ -500,7 +500,10 @@ class ModelStage(Stage, ABC):
         """Create stage parameter sets from config."""
         params = create_params(self.config)
         if params is not None:
-            self._crossby = set(params.drop("param_id").columns)
+            if "param_id" not in params.columns:
+                raise KeyError("Parameter set ID column 'param_id' not found")
+
+            self._crossby = set(params.columns) - {"param_id"}
             self._param_ids = set(params["param_id"])
             self.dataif.dump(params, "parameters.csv", key="output")
 

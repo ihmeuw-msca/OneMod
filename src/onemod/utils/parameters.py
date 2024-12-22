@@ -15,16 +15,15 @@ def create_params(config: ModelConfig) -> DataFrame | None:
         for param_name in config.crossable_params
         if isinstance(param_values := config[param_name], set)
     }
-    if len(param_dict) == 0:
+    if not param_dict:
         return None
 
     params = DataFrame(
-        [param_set for param_set in product(*param_dict.values())],
-        columns=(crossby := list(param_dict.keys())),
+        list(product(*param_dict.values())), columns=list(param_dict.keys())
     )
     params["param_id"] = params.index
 
-    return params[["param_id", *crossby]]
+    return params[["param_id", *param_dict.keys()]]
 
 
 def get_params(params: DataFrame, param_id: int) -> dict[str, Any]:

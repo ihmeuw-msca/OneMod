@@ -118,8 +118,8 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
     subset_stage_names = {"covariate_selection"}
 
     with pytest.raises(
-        ValueError,
-        match="Required input to stage 'covariate_selection' is missing. Missing output from upstream dependency 'preprocessing'.",
+        FileNotFoundError,
+        match=f"Stage covariate_selection input items do not exist: {{'data': '{test_base_dir}/preprocessing/data.parquet'}}",
     ):
         dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
 
