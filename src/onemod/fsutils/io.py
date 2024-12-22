@@ -15,14 +15,14 @@ class DataIO(ABC):
     """Bridge class that unifies the I/O for different data file types."""
 
     fextns: tuple[str, ...] = ("",)
-    dtypes: tuple[Type, ...] = (pl.DataFrame, pl.LazyFrame, pd.DataFrame)
+    dtypes: tuple[Type, ...] = (pd.DataFrame, pl.DataFrame, pl.LazyFrame)
 
     def load_eager(
         self,
         fpath: Path | str,
-        backend: Literal["polars", "pandas"] = "polars",
+        backend: Literal["pandas", "polars"] = "pandas",
         **options,
-    ) -> pl.DataFrame | pd.DataFrame:
+    ) -> pd.DataFrame | pl.DataFrame:
         """Load data from given path."""
         fpath = Path(fpath)
         if fpath.suffix not in self.fextns:

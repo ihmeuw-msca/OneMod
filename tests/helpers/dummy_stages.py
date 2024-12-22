@@ -1,4 +1,3 @@
-import polars as pl
 from pydantic import Field
 
 from onemod.config import (
@@ -249,7 +248,7 @@ class MultiplyByTwoStage(ModelStage):
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""
         df = self.get_stage_subset(subset_id)
-        df = df.with_columns((pl.col("value") * 2).alias("value"))
+        df["value"] = df["value"] * 2
         self.dataif.dump(df, "data.parquet", key="output")
 
     def fit(self) -> None:

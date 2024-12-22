@@ -52,12 +52,29 @@ def test_input(stage_1):
 
 @pytest.mark.integration
 def test_output(stage_1):
-    assert stage_1.output == Output(
-        stage=stage_1.name,
-        items={
-            "predictions": Data(stage=stage_1.name, path="predictions.parquet"),
-            "model": Data(stage=stage_1.name, path="model.pkl"),
-        },
+    # print(stage_1.output)
+    # print(Output(
+    #     stage=stage_1.name,
+    #     items={
+    #         "model": Data(stage=stage_1.name, path="model.pkl"),
+    #         "predictions": Data(stage=stage_1.name, path="predictions.parquet"),
+    #     },
+    # ))
+    assert (
+        stage_1.output
+        == Output(
+            stage=stage_1.name,
+            items={
+                "predictions": Data(
+                    stage=stage_1.name,
+                    path="predictions.parquet",
+                    format="parquet",
+                ),
+                "model": Data(
+                    stage=stage_1.name, path="model.pkl", format="pkl"
+                ),  # FIXME: implicit format pending update of Data class with new version of DataInterface
+            },
+        )
     )
 
 
@@ -81,7 +98,7 @@ def test_input_with_missing():
     with pytest.raises(KeyError) as error:
         stage_3(priors="/path/to/priors.pkl")
     observed = str(error.value).strip('"')
-    expected = f"{stage_3.name} missing required input: "
+    expected = f"Stage '{stage_3.name}' missing required input: "
     assert (
         observed == expected + "['data', 'covariates']"
         or observed == expected + "['covariates', 'data']"
