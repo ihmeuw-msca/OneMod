@@ -1,4 +1,3 @@
-# mypy: ignore-errors
 """ModRover covariate selection stage.
 
 Notes
@@ -144,7 +143,9 @@ class RoverStage(ModelStage):
 
         # Merge with subsets and add t-statistic
         summaries_df = summaries_df.merge(subsets, on="subset_id", how="left")
-        summaries_df["abs_t_stat"] = summaries_df.eval("abs(coef / coef_sd)")
+        summaries_df["abs_t_stat"] = (
+            summaries_df["coef"].abs() / summaries_df["coef_sd"]
+        )
         return summaries_df
 
     def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
@@ -185,8 +186,8 @@ class RoverStage(ModelStage):
             .mean()
             .sort_values(ascending=False)
             .reset_index()
-            .eval(f"selected = abs_t_stat >= {self.config.t_threshold}")
         )
+        t_stats["selected"] = t_stats["abs_t_stat"] >= self.config.t_threshold
 
         # Add/remove covariates based on min_covs/max_covs
         if (
