@@ -210,7 +210,7 @@ class SpxmodStage(ModelStage):
         """Load submodel data."""
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id).to_pandas()
+        data = self.get_stage_subset(subset_id)
 
         # Add spline basis to data
         spline_vars = []

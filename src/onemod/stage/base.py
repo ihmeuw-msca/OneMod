@@ -10,7 +10,7 @@ from inspect import getfile
 from pathlib import Path
 from typing import Any, Literal
 
-from polars import DataFrame
+from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
@@ -474,14 +474,14 @@ class ModelStage(Stage, ABC):
                 f"{self.name} does not have a groupby attribute"
             )
 
-        lf = self.dataif.load(
+        df = self.dataif.load(
             key=data_key,
             columns=list(self.groupby),
             id_subsets=id_subsets,
-            return_type="polars_lazyframe",
+            return_type="pandas_dataframe",
         )
 
-        subsets_df = create_subsets(self.groupby, lf.collect().to_pandas())
+        subsets_df = create_subsets(self.groupby, df)
         self._subset_ids = set(subsets_df["subset_id"].to_list())
 
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
@@ -500,7 +500,10 @@ class ModelStage(Stage, ABC):
         """Create stage parameter sets from config."""
         params = create_params(self.config)
         if params is not None:
-            self._crossby = set(params.drop("param_id").columns)
+            if "param_id" not in params.columns:
+                raise KeyError("Parameter set ID column 'param_id' not found")
+
+            self._crossby = set(params.columns) - {"param_id"}
             self._param_ids = set(params["param_id"])
             self.dataif.dump(params, "parameters.csv", key="output")
 

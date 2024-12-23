@@ -16,7 +16,6 @@ TODO: Update pandas commands to polars
 import warnings
 
 import pandas as pd
-import polars as pl
 from loguru import logger
 from modrover.api import Rover
 
@@ -52,8 +51,8 @@ class RoverStage(ModelStage):
         """
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id).filter(
-            pl.col(self.config["test_column"]) == 0
+        data = self.get_stage_subset(subset_id).query(
+            f"{self.config['test_column']} == 0"
         )
 
         if len(data) > 0:
@@ -71,7 +70,7 @@ class RoverStage(ModelStage):
 
             # Fit submodel
             submodel.fit(
-                data=data.to_pandas(),
+                data=data,
                 strategies=list(self.config.strategies),
                 top_pct_score=self.config.top_pct_score,
                 top_pct_learner=self.config.top_pct_learner,

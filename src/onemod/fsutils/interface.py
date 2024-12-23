@@ -22,8 +22,8 @@ class DataInterface(PathManager):
         *fparts: str,
         key: str,
         return_type: Literal[
-            "polars_dataframe", "polars_lazyframe", "pandas_dataframe"
-        ] = "polars_dataframe",
+            "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
+        ] = "pandas_dataframe",
         columns: list[str] | None = None,
         id_subsets: dict[str, list] | None = None,
         **options,
@@ -32,7 +32,7 @@ class DataInterface(PathManager):
 
         Parameters
         ----------
-        return_type : {'polars_dataframe', 'polars_lazyframe', 'pandas_dataframe'}, optional
+        return_type : {'pandas_dataframe', 'polars_dataframe', 'polars_lazyframe'}, optional
             Return type of loaded data object, applicable only for data files.
         columns : list of str, optional
             Specific columns to load, applicable only for data files.
@@ -63,7 +63,7 @@ class DataInterface(PathManager):
     def dump(self, obj: Any, *fparts: str, key: str, **options) -> None:
         """Dump data or config files based on object type and key."""
         path = self.get_full_path(*fparts, key=key)
-        if isinstance(obj, (pl.DataFrame, pl.LazyFrame, pd.DataFrame)):
+        if isinstance(obj, (pd.DataFrame, pl.DataFrame, pl.LazyFrame)):
             return self.data_loader.dump(obj, path, **options)
         else:
             return self.config_loader.dump(obj, path, **options)
