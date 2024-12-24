@@ -14,7 +14,7 @@ from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
-from onemod.config import ModelConfig, StageConfig
+from onemod.config import StageConfig
 from onemod.dtypes import Data
 from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
@@ -378,7 +378,7 @@ class ModelStage(Stage, ABC):
     ----------
     name : str
         Stage name.
-    config : ModelConfig
+    config : StageConfig
         Stage configuration.
     groupby : set of str or None, optional
         Column names used to create data subsets.
@@ -421,7 +421,7 @@ class ModelStage(Stage, ABC):
 
     """
 
-    config: ModelConfig
+    config: StageConfig
     groupby: set[str] | None = None
     _crossby: set[str] | None = None
     _subset_ids: set[int] = set()

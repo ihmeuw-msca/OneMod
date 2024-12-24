@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, validate_call
 
-from onemod.config import PipelineConfig
+from onemod.config import Config
 from onemod.serialization import serialize
 from onemod.stage import ModelStage, Stage
 from onemod.utils.decorators import computed_property
@@ -26,7 +26,7 @@ class Pipeline(BaseModel):
     ----------
     name : str
         Pipeline name.
-    config : PipelineConfig
+    config :Config
         Pipeline configuration.
     directory : Path
         Experiment directory.
@@ -41,7 +41,7 @@ class Pipeline(BaseModel):
     """
 
     name: str
-    config: PipelineConfig
+    config: Config
     directory: Path
     groupby: set[str] | None = None
     groupby_data: Path | None = None
