@@ -21,6 +21,19 @@ def stage_config(pipeline_config):
     return stage_config
 
 
+def test_pipeline_config_from_dict():
+    stage_config = StageConfig(
+        stage_key="stage_value", shared_key="stage_shared_value"
+    )
+    stage_config.pipeline_config = {
+        "pipeline_key": "pipeline_value",
+        "shared_key": "pipeline_shared_value",
+    }
+    assert isinstance(stage_config.pipeline_config, Config)
+    assert stage_config.pipeline_config["pipeline_key"] == "pipeline_value"
+    assert stage_config.pipeline_config["shared_key"] == "pipeline_shared_value"
+
+
 def test_contains(stage_config):
     assert "pipeline_key" in stage_config
     assert "stage_key" in stage_config
