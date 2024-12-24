@@ -14,7 +14,7 @@ class UniqueList(BaseModel, Generic[T]):
 
     @model_validator(mode="before")
     @classmethod
-    def check_uniqueness(cls, value: List[T]) -> dict:
+    def validate_input(cls, value: List[T]) -> dict:
         if isinstance(value, dict) and "items" in value:
             value = value["items"]
         if not isinstance(value, list):
