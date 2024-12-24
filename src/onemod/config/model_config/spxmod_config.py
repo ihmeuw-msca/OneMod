@@ -10,7 +10,7 @@ from typing import Any, Literal
 from pydantic import Field
 from typing_extensions import Annotated
 
-from onemod.config import Config, ModelConfig
+from onemod.config import Config, StageConfig
 
 
 class SpxmodDimensionConfig(Config):
@@ -217,7 +217,7 @@ class SpxmodModelConfig(Config):
     lam: float = Field(ge=0, default=0)
 
 
-class SpxmodConfig(ModelConfig):
+class SpxmodConfig(StageConfig):
     """SpXMod regression stage settings.
 
     For more details, please check out the SpXMod package

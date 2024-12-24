@@ -6,7 +6,7 @@ TODO: Add custom kernels
 
 """
 
-from onemod.config import Config, ModelConfig
+from onemod.config import Config, StageConfig
 
 
 class KregModelConfig(Config):
@@ -81,7 +81,7 @@ class KregUncertaintyConfig(Config):
     lanczos_order: int = 150
 
 
-class KregConfig(ModelConfig):
+class KregConfig(StageConfig):
     """KReg kernel regression stage settings.
 
     For more details, please check out the KReg package

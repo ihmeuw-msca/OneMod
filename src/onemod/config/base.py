@@ -1,156 +1,98 @@
 """Configuration classes."""
 
-from abc import ABC
-from typing import Any, Literal
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, validate_call
-
-
-class Config(BaseModel, ABC):
-    """Base configuration class."""
-
-    model_config = ConfigDict(validate_assignment=True, protected_namespaces=())
-
-    def get(self, key: str, default: Any = None) -> Any:
-        if not self.__contains__(key):
-            return default
-        return self.__getitem__(key)
-
-    def __getitem__(self, key: str) -> Any:
-        if not self.__contains__(key):
-            raise KeyError(f"Invalid config item: {key}")
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        self.__setattr__(key, value)
-
-    def __contains__(self, key: str) -> bool:
-        return key in self.model_fields
+from pydantic import BaseModel, ConfigDict
 
 
-class PipelineConfig(Config):
-    """Pipeline configuration class.
+class Config(BaseModel):
+    """Configuration class.
 
-    Attributes
-    ----------
-    id_columns : set[str]
-        ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
-        or 'year_id'. ID columns should contain nonnegative integers.
-    model_type : str
-        Model type; either 'binomial', 'gaussian', or 'poisson'.
-    observation_column : str, optional
-        Observation column name for pipeline input. Default is 'obs'.
-    prediction_column : str, optional
-        Prediction column name for pipeline output. Default is 'pred'.
-    weights_column : str, optional
-        Weights column name for pipeline input. The weights column
-        should contain nonnegative floats. Default is 'weights'.
-    test_column : str, optional
-        Test column name. The test column should contain values 0
-        (train) or 1 (test). The test set is never used to train stage
-        models, so it can be used to evaluate out-of-sample performance
-        for the entire pipeline. If no test column is provided, all
-        missing observations will be treated as the test set. Default is
-        'test'.
-    holdout_columns : set[str] or None, optional
-        Holdout column names. The holdout columns should contain values
-        0 (train), 1 (holdout), or NaN (missing observations). Holdout
-        sets are used to evaluate stage model out-of-sample performance.
-        Default is None.
-    coef_bounds : dict or None, optional
-        Dictionary of coefficient bounds with entries
-        cov_name: (lower, upper). Default is None.
+    Config instances are dictionary-like objects that contains settings.
+    For attribute validation, users can create custom configuration
+    classes by subclassing Config. Alternatively, users can add extra
+    attributes to Config instances without validation.
 
     """
 
-    id_columns: set[str]
-    model_type: Literal["binomial", "gaussian", "poisson"]
-    observation_column: str = "obs"
-    prediction_column: str = "pred"
-    weights_column: str = "weights"
-    test_column: str = "test"
-    holdout_columns: set[str] | None = None
-    coef_bounds: dict[str, tuple[float, float]] | None = None
+    model_config = ConfigDict(
+        extra="allow", validate_assignment=True, protected_namespaces=()
+    )
+
+    def get(self, key: str, default: Any = None) -> Any:
+        if self.__contains__(key):
+            return getattr(self, key)
+        return default
+
+    def __getitem__(self, key: str) -> Any:
+        if self.__contains__(key):
+            return getattr(self, key)
+        raise KeyError(f"Invalid config item: {key}")
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.model_fields or key in self.model_extra
 
 
 class StageConfig(Config):
     """Stage configuration class.
 
-    If None, setting inherited from Pipeline.
+    StageConfig instances are dictionary-like objects that contains
+    settings that apply to a particular pipeline stage. For attribute
+    validation, users can create custom stage configuration classes by
+    subclassing StageConfig. Alternatively, users can add extra
+    attributes to StageConfig instances without validation.
 
-    Attributes
-    ----------
-    id_columns : set[str] or None, optional
-        ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
-        or 'year_id'. ID columns should contain nonnegative integers.
-        Default is None.
-    model_type : str or None, optional
-        Model type; either 'binomial', 'gaussian', or 'poisson'.
-        Default is None.
-    observation_column : str or None, optional
-        Observation column name for pipeline input. Default is None.
-    prediction_column : str or None, optional
-        Prediction column name for pipeline output. Default is None.
-    weights_column : str or None, optional
-        Weights column name for pipeline input. The weights column
-        should contain nonnegative floats. Default is None.
-    test_column : str or None, optional
-        Test column name. The test column should contain values 0
-        (train) or 1 (test). The test set is never used to train stage
-        models, so it can be used to evaluate out-of-sample performance
-        for the entire pipeline. If no test column is provided, all
-        missing observations will be treated as the test set. Default is
-        None.
-    holdout_columns : set[str] or None, optional
-        Holdout column names. The holdout columns should contain values
-        0 (train), 1 (holdout), or NaN (missing observations). Holdout
-        sets are used to evaluate stage model out-of-sample performance.
-        Default is None.
-    coef_bounds : dict or None, optional
-        Dictionary of coefficient bounds with entries
-        cov_name: (lower, upper). Default is None.
+    If a StageConfig instances does not contain an attribute, the get
+    and __getitem__ methods will return the corresponding pipeline
+    attribute, if it exists.
 
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(
+        extra="allow", validate_assignment=True, protected_namespaces=()
+    )
 
-    id_columns: set[str] | None = None
-    model_type: Literal["binomial", "gaussian", "poisson"] | None = None
-    observation_column: str | None = None
-    prediction_column: str | None = None
-    weights_column: str | None = None
-    test_column: str | None = None
-    holdout_columns: set[str] | None = None
-    coef_bounds: dict[str, tuple[float, float]] | None = None
-    _global: PipelineConfig
+    _pipeline_config: Config = Config()
+    _crossable_params: set[str] = set()  # TODO: unique list
 
-    @validate_call
-    def inherit(self, config: PipelineConfig) -> None:
-        """Inherit global settings from pipeline."""
-        self._global = config
+    @property
+    def pipeline_config(self) -> Config:
+        return self._pipeline_config
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get setting or global setting if not None, else default."""
-        if not self.__contains__(key):
-            return default
-        if (value := getattr(self, key)) is None:
-            return self._global.get(key, default)
-        return value
-
-    def __getitem__(self, key: str) -> Any:
-        """Get setting if not None, else global setting."""
-        if not self.__contains__(key):
-            raise KeyError(f"Invalid config item: {key}")
-        if (value := getattr(self, key)) is None:
-            return self._global[key]
-        return value
-
-
-class ModelConfig(StageConfig):
-    """Model stage configuration class."""
-
-    _crossable_params: set[str] = set()  # defined by class
+    @pipeline_config.setter
+    def pipeline_config(self, config: Config) -> None:
+        self._pipeline_config = config
 
     @property
     def crossable_params(self) -> set[str]:
         return self._crossable_params
+
+    def stage_contains(self, key: str) -> bool:
+        return key in self.model_fields or key in self.model_extra
+
+    def pipeline_contains(self, key: str) -> bool:
+        return key in self.pipeline_config
+
+    def get_from_stage(self, key: str, default: Any = None) -> Any:
+        if self.stage_contains(key):
+            return getattr(self, key)
+        return default
+
+    def get_from_pipeline(self, key: str, default: Any = None) -> Any:
+        return self.pipeline_config.get(key, default)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        if self.stage_contains(key):
+            return getattr(self, key)
+        return self.pipeline_config.get(key, default)
+
+    def __getitem__(self, key: str) -> Any:
+        if self.stage_contains(key):
+            return getattr(self, key)
+        return self.pipeline_config[key]
+
+    def __contains__(self, key: str) -> bool:
+        return self.stage_contains(key) or self.pipeline_contains(key)

@@ -9,10 +9,10 @@ from typing import Literal
 from pydantic import Field, NonNegativeInt, model_validator
 from typing_extensions import Self
 
-from onemod.config import ModelConfig
+from onemod.config import StageConfig
 
 
-class RoverConfig(ModelConfig):
+class RoverConfig(StageConfig):
     """ModRover covariate selection stage settings.
 
     For more details, please check out the ModRover package
