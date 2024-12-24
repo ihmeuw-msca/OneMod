@@ -1,0 +1,120 @@
+"""Test stage config class."""
+
+import pytest
+
+from onemod.config import Config, StageConfig
+
+
+@pytest.fixture(scope="function")
+def pipeline_config():
+    return Config(
+        pipeline_key="pipeline_value", shared_key="pipeline_shared_value"
+    )
+
+
+@pytest.fixture(scope="function")
+def stage_config(pipeline_config):
+    stage_config = StageConfig(
+        stage_key="stage_value", shared_key="stage_shared_value"
+    )
+    stage_config.pipeline_config = pipeline_config
+    return stage_config
+
+
+def test_contains(stage_config):
+    assert "pipeline_key" in stage_config
+    assert "stage_key" in stage_config
+    assert "shared_key" in stage_config
+    assert "dummy" not in stage_config
+
+
+def test_stage_contains(stage_config):
+    assert stage_config.stage_contains("pipeline_key") is False
+    assert stage_config.stage_contains("stage_key") is True
+    assert stage_config.stage_contains("shared_key") is True
+    assert stage_config.stage_contains("dummy") is False
+
+
+def test_pipeline_contains(stage_config):
+    assert stage_config.pipeline_contains("pipeline_key") is True
+    assert stage_config.pipeline_contains("stage_key") is False
+    assert stage_config.pipeline_contains("shared_key") is True
+    assert stage_config.pipeline_contains("dummy") is False
+
+
+def test_get(stage_config, pipeline_config):
+    assert stage_config.get("pipeline_key") == pipeline_config["pipeline_key"]
+    assert stage_config.get("stage_key") == "stage_value"
+    assert stage_config.get("shared_key") == "stage_shared_value"
+
+
+@pytest.mark.parametrize("default", [None, "default"])
+def test_get_default(stage_config, default):
+    if default is None:
+        assert stage_config.get("dummy") is None
+    else:
+        assert stage_config.get("dummy", default) == default
+
+
+def test_get_from_stage(stage_config):
+    assert stage_config.get_from_stage("stage_key") == "stage_value"
+    assert stage_config.get_from_stage("shared_key") == "stage_shared_value"
+
+
+@pytest.mark.parametrize("default", [None, "default"])
+def test_get_from_stage_default(stage_config, default):
+    if default is None:
+        assert stage_config.get_from_stage("pipeline_key") is None
+    else:
+        assert stage_config.get_from_stage("pipeline_key", default) == default
+
+
+def test_get_from_pipeline(stage_config):
+    assert stage_config.get_from_pipeline("pipeline_key") == "pipeline_value"
+    assert (
+        stage_config.get_from_pipeline("shared_key") == "pipeline_shared_value"
+    )
+
+
+@pytest.mark.parametrize("default", [None, "default"])
+def test_get_from_pipeline_default(stage_config, default):
+    if default is None:
+        assert stage_config.get_from_pipeline("stage_key") is None
+    else:
+        assert stage_config.get_from_pipeline("stage_key", default) == default
+
+
+def test_getitem(stage_config, pipeline_config):
+    assert stage_config["pipeline_key"] == pipeline_config["pipeline_key"]
+    assert stage_config["stage_key"] == "stage_value"
+    assert stage_config["shared_key"] == "stage_shared_value"
+
+
+def test_getitem_error(stage_config):
+    with pytest.raises(KeyError) as e:
+        stage_config["dummy"]
+        assert str(e) == "'Invalid config item: dummy'"
+
+
+@pytest.mark.parametrize("key", ["stage_key", "new_key"])
+def test_setitem_stage(stage_config, key):
+    stage_config[key] = "new_value"
+    assert key in stage_config
+    assert stage_config.stage_contains(key) is True
+    assert stage_config.pipeline_contains(key) is False
+    assert stage_config.get(key) == "new_value"
+    assert stage_config.get_from_stage(key) == "new_value"
+    assert stage_config.get_from_pipeline(key) is None
+    assert stage_config[key] == "new_value"
+
+
+@pytest.mark.parametrize("key", ["pipeline_key", "new_key"])
+def test_setitem_pipeline(stage_config, pipeline_config, key):
+    pipeline_config[key] = "new_value"
+    assert key in stage_config
+    assert stage_config.stage_contains(key) is False
+    assert stage_config.pipeline_contains(key) is True
+    assert stage_config.get(key) == "new_value"
+    assert stage_config.get_from_stage(key) is None
+    assert stage_config.get_from_pipeline(key) == "new_value"
+    assert stage_config[key] == "new_value"
