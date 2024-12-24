@@ -159,7 +159,7 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
         directory=test_base_dir,
-        data=test_base_dir / "data" / "data.parquet",
+        groupby_data=test_base_dir / "data" / "data.parquet",
         groupby=["age_group_id"],
     )
     pipeline.add_stage(stage_1)
@@ -176,7 +176,7 @@ def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
         directory=test_base_dir,
-        data=test_base_dir / "data" / "data.parquet",
+        groupby_data=test_base_dir / "data" / "data.parquet",
         groupby=["age_group_id"],
     )
     pipeline.add_stages([stage_1, stage_2])
@@ -197,7 +197,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
     pipeline_dict_expected = {
         "name": "test_pipeline",
         "directory": str(test_base_dir),
-        "data": str(test_base_dir / "data" / "data.parquet"),
+        "groupby_data": str(test_base_dir / "data" / "data.parquet"),
         "groupby": ["age_group_id"],
         "config": {
             "id_columns": ["age_group_id", "location_id"],

@@ -126,7 +126,7 @@ def test_e2e_onemod_example1_sequential(test_base_dir):
             mtype="binomial",
         ),
         directory=test_base_dir,
-        data=Path(test_base_dir, "data", "data.parquet"),
+        groupby_data=Path(test_base_dir, "data", "data.parquet"),
         groupby=["sex_id"],
     )
 
