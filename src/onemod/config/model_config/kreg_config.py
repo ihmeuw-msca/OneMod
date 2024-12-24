@@ -1,5 +1,6 @@
 """KReg kernel regression stage settings.
 
+TODO: Add expected attributes from old ConfigClasses
 TODO: Add descriptions and default values
 TODO: Generalize KReg config
 TODO: Add custom kernels
