@@ -203,7 +203,7 @@ class Stage(BaseModel, ABC):
                 f"{pipeline_config['name']} does not contain a stage named '{stage_name}'"
             )
         stage = cls(**stage_config)
-        stage.config.inherit(pipeline_config["config"])
+        stage.config.pipeline_config = pipeline_config["config"]
         if "module" in stage_config:
             stage._module = stage_config["module"]
         if hasattr(stage, "apply_stage_specific_config"):

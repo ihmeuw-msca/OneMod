@@ -63,7 +63,9 @@ class StageConfig(Config):
         return self._pipeline_config
 
     @pipeline_config.setter
-    def pipeline_config(self, config: Config) -> None:
+    def pipeline_config(self, config: Config | dict) -> None:
+        if isinstance(config, dict):
+            config = Config(**config)
         self._pipeline_config = config
 
     @property
