@@ -1,5 +1,6 @@
 """ModRover covariate selection stage settings.
 
+TODO: Add expected attributes from old ConfigClasses
 FIXME: improve top_pct_score and top_pct_learner descriptions
 
 """

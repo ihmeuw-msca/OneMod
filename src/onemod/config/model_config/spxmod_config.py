@@ -1,5 +1,6 @@
 """SpXMod regression stage settings.
 
+TODO: Add expected attributes from old ConfigClasses
 TODO: Update spline config and stage code for spxmod package updates
 TODO: Update docstrings to clarify what spxmod defaults are (e.g., lam, priors)
 

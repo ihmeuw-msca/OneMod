@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class Config(BaseModel):
-    """Configuration class.
+    """Base configuration class.
 
     Config instances are dictionary-like objects that contains settings.
     For attribute validation, users can create custom configuration
