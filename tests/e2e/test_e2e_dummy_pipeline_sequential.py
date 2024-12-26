@@ -26,7 +26,7 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
 
     assert dummy_pipeline_dict["name"] == "dummy_pipeline"
     assert dummy_pipeline_dict["directory"] == str(test_base_dir)
-    assert dummy_pipeline_dict["data"] == str(small_input_data)
+    assert dummy_pipeline_dict["groupby_data"] == str(small_input_data)
     assert dummy_pipeline_dict["groupby"] == ["sex_id"]
     assert_equal_unordered(
         dummy_pipeline_dict["config"],

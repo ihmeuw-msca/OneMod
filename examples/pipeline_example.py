@@ -60,7 +60,7 @@ def create_pipeline(directory: str, data: str):
             "model_type": "binomial",
         },
         directory=directory,
-        data=data,
+        groupby_data=data,
         groupby=["sex_id"],
     )
 

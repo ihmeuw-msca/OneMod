@@ -30,19 +30,21 @@ class Pipeline(BaseModel):
         Pipeline configuration.
     directory : Path
         Experiment directory.
-    data : Path or None, optional
-        Input data used to create data subsets. Required for pipeline or
-        stage `groupby` attribute. Default is None.
     groupby : set of str or None, optional
         Column names used to create data subsets. Default is None.
+    groupby_data : Path or None, optional
+        Path to the data file used for creating data subsets. Default is None.
+        Required when specifying pipeline or stage `groupby` attribute.
+        All columns specified in pipeline or stage `groupby` must be present in
+        `groupby_data`.
 
     """
 
     name: str
     config: PipelineConfig
     directory: Path
-    data: Path | None = None
     groupby: set[str] | None = None
+    groupby_data: Path | None = None
     id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
 
@@ -262,7 +264,7 @@ class Pipeline(BaseModel):
         config_path = self.directory / (self.name + ".json")
         for stage in self.stages.values():
             stage.set_dataif(config_path)
-            stage.dataif.add_path("pipeline_data", self.data)
+            stage.dataif.add_path("pipeline_groupby_data", self.groupby_data)
 
             # Create data subsets
             if isinstance(stage, ModelStage):
@@ -272,10 +274,11 @@ class Pipeline(BaseModel):
                     else:
                         stage.groupby.update(self.groupby)
                 if stage.groupby:
-                    if self.data is None:
+                    if self.groupby_data is None:
                         raise AttributeError("Data is required for groupby")
                     stage.create_stage_subsets(
-                        data_key="pipeline_data", id_subsets=self.id_subsets
+                        data_key="pipeline_groupby_data",
+                        id_subsets=self.id_subsets,
                     )
                 # Create parameter sets
                 if stage.config.crossable_params:

@@ -16,7 +16,7 @@
         "coef_bounds": {}
     },
     "directory": "/path/to/experiment/directory",
-    "data": "/path/to/data.parquet",
+    "groupby_data": "/path/to/data.parquet",
     "groupby": [
         "sex_id"
     ],
