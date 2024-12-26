@@ -8,8 +8,6 @@ Notes
   'age_group_id', submodels will be fit separately for each age/sex
   pair, and covariates will be selected separately for each sex.
 
-TODO: Update pandas commands to polars
-
 """
 
 import warnings
