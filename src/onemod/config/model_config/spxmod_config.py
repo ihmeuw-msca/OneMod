@@ -1,6 +1,5 @@
 """SpXMod regression stage settings.
 
-TODO: Add expected attributes from old ConfigClasses
 TODO: Update spline config and stage code for spxmod package updates
 TODO: Update docstrings to clarify what spxmod defaults are (e.g., lam, priors)
 
@@ -226,6 +225,28 @@ class SpxmodConfig(StageConfig):
 
     Attributes
     ----------
+    id_columns : set[str]
+        ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
+        or 'year_id'. ID columns should contain nonnegative integers.
+    model_type : str
+        Model type; either 'binomial', 'gaussian', or 'poisson'.
+    observation_column : str, optional
+        Observation column name for pipeline input. Default is 'obs'.
+    prediction_column : str, optional
+        Prediction column name for pipeline output. Default is 'pred'.
+    weights_column : str, optional
+        Weights column name for pipeline input. The weights column
+        should contain nonnegative floats. Default is 'weights'.
+    test_column : str, optional
+        Test column name. The test column should contain values 0
+        (train) or 1 (test). The test set is never used to train stage
+        models, so it can be used to evaluate out-of-sample performance
+        for the entire pipeline. If no test column is provided, all
+        missing observations will be treated as the test set. Default is
+        'test'.
+    coef_bounds : dict or None, optional
+        Dictionary of coefficient bounds with entries
+        cov_name: (lower, upper). Default is None.
     xmodel : SpxmodModelConfig
         SpXMod model settings.
     xmodel_fit : dict, optional
@@ -233,5 +254,12 @@ class SpxmodConfig(StageConfig):
 
     """
 
+    id_columns: set[str]
+    model_type: Literal["binomial", "gaussian", "poisson"]
+    observation_column: str = "obs"
+    prediction_column: str = "pred"
+    weights_column: str = "weights"
+    test_column: str = "test"
+    coef_bounds: dict[str, tuple[float, float]] | None = None
     xmodel: SpxmodModelConfig
     xmodel_fit: dict[str, Any] = {}

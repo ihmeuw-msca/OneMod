@@ -1,6 +1,5 @@
 """ModRover covariate selection stage settings.
 
-TODO: Add expected attributes from old ConfigClasses
 FIXME: improve top_pct_score and top_pct_learner descriptions
 
 """
@@ -21,6 +20,28 @@ class RoverConfig(StageConfig):
 
     Attributes
     ----------
+    model_type : str
+        Model type; either 'binomial', 'gaussian', or 'poisson'.
+    observation_column : str, optional
+        Observation column name for pipeline input. Default is 'obs'.
+    weights_column : str, optional
+        Weights column name for pipeline input. The weights column
+        should contain nonnegative floats. Default is 'weights'.
+    test_column : str, optional
+        Test column name. The test column should contain values 0
+        (train) or 1 (test). The test set is never used to train stage
+        models, so it can be used to evaluate out-of-sample performance
+        for the entire pipeline. If no test column is provided, all
+        missing observations will be treated as the test set. Default is
+        'test'.
+    holdout_columns : set[str] or None, optional
+        Holdout column names. The holdout columns should contain values
+        0 (train), 1 (holdout), or NaN (missing observations). Holdout
+        sets are used to evaluate stage model out-of-sample performance.
+        Default is None.
+    coef_bounds : dict or None, optional
+        Dictionary of coefficient bounds with entries
+        cov_name: (lower, upper). Default is None.
     cov_exploring : set[str]
         Names of covariates to explore.
     cov_fixed : set[str], optional
@@ -42,6 +63,12 @@ class RoverConfig(StageConfig):
 
     """
 
+    model_type: Literal["binomial", "gaussian", "poisson"]
+    observation_column: str = "obs"
+    weights_column: str = "weights"
+    test_column: str = "test"
+    holdout_columns: set[str]
+    coef_bounds: dict[str, tuple[float, float]] | None = None
     cov_exploring: set[str]
     cov_fixed: set[str] = {"intercept"}
     strategies: set[Literal["full", "forward", "backward"]] = {"forward"}

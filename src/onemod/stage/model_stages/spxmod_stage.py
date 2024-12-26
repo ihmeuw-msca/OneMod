@@ -12,7 +12,6 @@ Notes
 TODO: Update for new spxmod version with splines
 TODO: Make selected_covs more flexible, not hard-coded to age_mid
 TODO: Implement priors input
-TODO: Update pandas commands to polars
 
 """
 
