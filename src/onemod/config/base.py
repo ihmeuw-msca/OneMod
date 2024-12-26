@@ -33,7 +33,9 @@ class Config(BaseModel):
         setattr(self, key, value)
 
     def __contains__(self, key: str) -> bool:
-        return key in self.model_fields or key in self.model_extra
+        if key in self.model_fields or key in self.model_extra:
+            return getattr(self, key) is not None
+        return False
 
 
 class StageConfig(Config):
@@ -63,17 +65,19 @@ class StageConfig(Config):
         return self._pipeline_config
 
     @pipeline_config.setter
-    def pipeline_config(self, config: Config | dict) -> None:
-        if isinstance(config, dict):
-            config = Config(**config)
-        self._pipeline_config = config
+    def pipeline_config(self, pipeline_config: Config | dict) -> None:
+        if isinstance(pipeline_config, dict):
+            pipeline_config = Config(**pipeline_config)
+        self._pipeline_config = pipeline_config
 
     @property
     def crossable_params(self) -> set[str]:
         return self._crossable_params
 
     def stage_contains(self, key: str) -> bool:
-        return key in self.model_fields or key in self.model_extra
+        if key in self.model_fields or key in self.model_extra:
+            return getattr(self, key) is not None
+        return False
 
     def pipeline_contains(self, key: str) -> bool:
         return key in self.pipeline_config

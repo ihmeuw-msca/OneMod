@@ -7,31 +7,34 @@ from onemod.config import Config
 
 @pytest.fixture(scope="function")
 def config():
-    return Config(key="value")
+    return Config(key="value", none_key=None)
 
 
 def test_contains(config):
     assert "key" in config
-    assert "dummy" not in config
+    assert "none_key" not in config
+    assert "dummy_key" not in config
 
 
 def test_get(config):
     assert config.get("key") == "value"
 
 
-def test_get_default(config):
-    assert config.get("dummy") is None
-    assert config.get("dummy", "default") == "default"
+@pytest.mark.parametrize("key", ["none_key", "dummy_key"])
+def test_get_default(config, key):
+    assert config.get(key) is None
+    assert config.get(key, "default") == "default"
 
 
 def test_getitem(config):
     assert config["key"] == "value"
 
 
-def test_getitem_error(config):
+@pytest.mark.parametrize("key", ["none_key", "dummy_key"])
+def test_getitem_error(config, key):
     with pytest.raises(KeyError) as e:
-        config["dummy"]
-        assert str(e) == "'Invalid config item: dummy'"
+        config[key]
+        assert str(e) == f"'Invalid config item: {key}'"
 
 
 @pytest.mark.parametrize("key", ["key", "new_key"])
