@@ -223,27 +223,31 @@ class SpxmodConfig(StageConfig):
     For more details, please check out the SpXMod package
     `documentation <https://github.com/ihmeuw-msca/spxmod/tree/v0.2.1>`_.
 
+    Attributes `id_columns`, `model_type`, `observation_column`,
+    `prediction_column`, and `weights_column` must be included in either
+    the stage's config or the pipeline's config.
+
     Attributes
     ----------
-    id_columns : set[str]
+    id_columns : set[str], optional
         ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
         or 'year_id'. ID columns should contain nonnegative integers.
-    model_type : str
-        Model type; either 'binomial', 'gaussian', or 'poisson'.
+        Default is None.
+    model_type : str, optional
+        Model type; either 'binomial', 'gaussian', or 'poisson'. Default
+        is None.
     observation_column : str, optional
-        Observation column name for pipeline input. Default is 'obs'.
+        Observation column name for pipeline input. Default is None.
     prediction_column : str, optional
-        Prediction column name for pipeline output. Default is 'pred'.
+        Prediction column name for pipeline output. Default is None.
     weights_column : str, optional
         Weights column name for pipeline input. The weights column
-        should contain nonnegative floats. Default is 'weights'.
-    test_column : str, optional
-        Test column name. The test column should contain values 0
-        (train) or 1 (test). The test set is never used to train stage
-        models, so it can be used to evaluate out-of-sample performance
-        for the entire pipeline. If no test column is provided, all
-        missing observations will be treated as the test set. Default is
-        'test'.
+        should contain nonnegative floats. Default is None.
+    train_column : str, optional
+        Training data column name. The train column should contain
+        values 1 (train) or 0 (test). If no train column is provided,
+        all non-null observations will be included in training. Default
+        is None.
     coef_bounds : dict or None, optional
         Dictionary of coefficient bounds with entries
         cov_name: (lower, upper). Default is None.
@@ -254,12 +258,37 @@ class SpxmodConfig(StageConfig):
 
     """
 
-    id_columns: set[str]
-    model_type: Literal["binomial", "gaussian", "poisson"]
-    observation_column: str = "obs"
-    prediction_column: str = "pred"
-    weights_column: str = "weights"
-    test_column: str = "test"
+    id_columns: set[str] | None = None
+    model_type: Literal["binomial", "gaussian", "poisson"] | None = None
+    observation_column: str | None = None
+    prediction_column: str | None = None
+    weights_column: str | None = None
+    train_column: str | None = None
     coef_bounds: dict[str, tuple[float, float]] | None = None
     xmodel: SpxmodModelConfig
     xmodel_fit: dict[str, Any] = {}
+    _pipeline_config: Config = Config()
+
+    @property
+    def pipeline_config(self) -> Config:
+        return self._pipeline_config
+
+    @pipeline_config.setter
+    def pipeline_config(self, pipeline_config: Config | dict) -> None:
+        if isinstance(pipeline_config, dict):
+            pipeline_config = Config(**pipeline_config)
+
+        missing = []
+        for attribute in [
+            "id_columns",
+            "model_type",
+            "observation_column",
+            "prediction_column",
+            "weights_column",
+        ]:
+            if not self.__contains__(attribute):
+                missing.append(attribute)
+        if missing:
+            raise AttributeError(f"Missing required attributes: {missing}")
+
+        self._pipeline_config = pipeline_config

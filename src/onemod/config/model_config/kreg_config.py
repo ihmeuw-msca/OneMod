@@ -1,13 +1,10 @@
 """KReg kernel regression stage settings.
 
-TODO: Remove any unused config items
 TODO: Add descriptions and default values
 TODO: Generalize KReg config
 TODO: Add custom kernels
 
 """
-
-from typing import Literal
 
 from onemod.config import Config, StageConfig
 
@@ -92,33 +89,6 @@ class KregConfig(StageConfig):
 
     Attributes
     ----------
-    id_columns : set[str]
-        ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
-        or 'year_id'. ID columns should contain nonnegative integers.
-    model_type : str
-        Model type; either 'binomial', 'gaussian', or 'poisson'.
-    observation_column : str, optional
-        Observation column name for pipeline input. Default is 'obs'.
-    prediction_column : str, optional
-        Prediction column name for pipeline output. Default is 'pred'.
-    weights_column : str, optional
-        Weights column name for pipeline input. The weights column
-        should contain nonnegative floats. Default is 'weights'.
-    test_column : str, optional
-        Test column name. The test column should contain values 0
-        (train) or 1 (test). The test set is never used to train stage
-        models, so it can be used to evaluate out-of-sample performance
-        for the entire pipeline. If no test column is provided, all
-        missing observations will be treated as the test set. Default is
-        'test'.
-    holdout_columns : set[str] or None, optional
-        Holdout column names. The holdout columns should contain values
-        0 (train), 1 (holdout), or NaN (missing observations). Holdout
-        sets are used to evaluate stage model out-of-sample performance.
-        Default is None.
-    coef_bounds : dict or None, optional
-        Dictionary of coefficient bounds with entries
-        cov_name: (lower, upper). Default is None.
     kreg_model : KregModelConfig
         Description.
     kreg_fit : KregFitConfig
@@ -128,14 +98,6 @@ class KregConfig(StageConfig):
 
     """
 
-    id_columns: set[str]
-    model_type: Literal["binomial", "gaussian", "poisson"]
-    observation_column: str = "obs"
-    prediction_column: str = "pred"
-    weights_column: str = "weights"
-    test_column: str = "test"
-    holdout_columns: set[str] | None = None
-    coef_bounds: dict[str, tuple[float, float]] | None = None
     kreg_model: KregModelConfig
     kreg_fit: KregFitConfig
     kreg_uncertainty: KregUncertaintyConfig = KregUncertaintyConfig()
