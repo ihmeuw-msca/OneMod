@@ -6,7 +6,7 @@ from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import MultiplyByTwoStage, assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
 
-from onemod.config import ModelConfig, PipelineConfig
+from onemod.config import Config, StageConfig
 from onemod.pipeline import Pipeline
 
 
@@ -155,7 +155,7 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
 
     test_pipeline = Pipeline(
         name="dummy_pipeline",
-        config=PipelineConfig(
+        config=Config(
             id_columns=["age_group_id", "location_id", "sex_id"],
             model_type="binomial",
         ),
@@ -164,7 +164,7 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
         groupby={"age_group_id"},
     )
     test_stage = MultiplyByTwoStage(
-        name="multiply_by_two", config=ModelConfig()
+        name="multiply_by_two", config=StageConfig()
     )
     test_pipeline.add_stages([test_stage])
     test_stage(data=test_pipeline.data)
