@@ -107,9 +107,9 @@ class SpxmodStage(ModelStage):
 
         # Create and fit submodel
         logger.info(f"Fitting {self.name} submodel {subset_id}")
-        train = data.query(
-            f"({self.config['test_column']} == 0) & {self.config['observation_column']}.notnull()"
-        )
+        train = data.query(f"{self.config['observation_column']}.notnull()")
+        if (train_column := self.config.get("train_column")) is not None:
+            train = train.query(f"{train_column} == 1")
         model = XModel.from_config(xmodel_args)
         model.fit(data=train, data_span=data, **self.config.xmodel_fit)
 
@@ -308,7 +308,7 @@ class SpxmodStage(ModelStage):
             xmodel_args["param_specs"] = {"offset": "offset"}
 
         # Add coef_bounds and lam to all variables
-        coef_bounds = self.config["coef_bounds"] or {}
+        coef_bounds = self.config.get("coef_bounds", {})
         lam = xmodel_args.pop("lam")
         xmodel_args = self._add_prior_settings(xmodel_args, coef_bounds, lam)
 
