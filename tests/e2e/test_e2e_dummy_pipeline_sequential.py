@@ -33,10 +33,6 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
         {
             "id_columns": ["age_group_id", "location_id", "year_id", "sex_id"],
             "model_type": "binomial",
-            "observation_column": "obs",
-            "prediction_column": "pred",
-            "weights_column": "weights",
-            "test_column": "test",
         },
     )
     assert_equal_unordered(
