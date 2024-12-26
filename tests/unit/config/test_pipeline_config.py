@@ -19,12 +19,9 @@ def test_get(config):
     assert config.get("key") == "value"
 
 
-@pytest.mark.parametrize("default", [None, "default"])
-def test_get_default(config, default):
-    if default is None:
-        assert config.get("dummy") is None
-    else:
-        assert config.get("dummy", default) == default
+def test_get_default(config):
+    assert config.get("dummy") is None
+    assert config.get("dummy", "default") == "default"
 
 
 def test_getitem(config):

@@ -21,14 +21,15 @@ def stage_config(pipeline_config):
     return stage_config
 
 
-def test_pipeline_config_from_dict():
+@pytest.mark.parametrize("from_config", [True, False])
+def test_pipeline_config(pipeline_config, from_config):
     stage_config = StageConfig(
         stage_key="stage_value", shared_key="stage_shared_value"
     )
-    stage_config.pipeline_config = {
-        "pipeline_key": "pipeline_value",
-        "shared_key": "pipeline_shared_value",
-    }
+    if from_config:
+        stage_config.pipeline_config = pipeline_config
+    else:  # from dictionary
+        stage_config.pipeline_config = pipeline_config.model_dump()
     assert isinstance(stage_config.pipeline_config, Config)
     assert stage_config.pipeline_config["pipeline_key"] == "pipeline_value"
     assert stage_config.pipeline_config["shared_key"] == "pipeline_shared_value"
@@ -55,18 +56,15 @@ def test_pipeline_contains(stage_config):
     assert stage_config.pipeline_contains("dummy") is False
 
 
-def test_get(stage_config, pipeline_config):
-    assert stage_config.get("pipeline_key") == pipeline_config["pipeline_key"]
+def test_get(stage_config):
+    assert stage_config.get("pipeline_key") == "pipeline_value"
     assert stage_config.get("stage_key") == "stage_value"
     assert stage_config.get("shared_key") == "stage_shared_value"
 
 
-@pytest.mark.parametrize("default", [None, "default"])
-def test_get_default(stage_config, default):
-    if default is None:
-        assert stage_config.get("dummy") is None
-    else:
-        assert stage_config.get("dummy", default) == default
+def test_get_default(stage_config):
+    assert stage_config.get("dummy") is None
+    assert stage_config.get("dummy", "default") == "default"
 
 
 def test_get_from_stage(stage_config):
@@ -74,12 +72,9 @@ def test_get_from_stage(stage_config):
     assert stage_config.get_from_stage("shared_key") == "stage_shared_value"
 
 
-@pytest.mark.parametrize("default", [None, "default"])
-def test_get_from_stage_default(stage_config, default):
-    if default is None:
-        assert stage_config.get_from_stage("pipeline_key") is None
-    else:
-        assert stage_config.get_from_stage("pipeline_key", default) == default
+def test_get_from_stage_default(stage_config):
+    assert stage_config.get_from_stage("pipeline_key") is None
+    assert stage_config.get_from_stage("pipeline_key", "default") == "default"
 
 
 def test_get_from_pipeline(stage_config):
@@ -89,16 +84,13 @@ def test_get_from_pipeline(stage_config):
     )
 
 
-@pytest.mark.parametrize("default", [None, "default"])
-def test_get_from_pipeline_default(stage_config, default):
-    if default is None:
-        assert stage_config.get_from_pipeline("stage_key") is None
-    else:
-        assert stage_config.get_from_pipeline("stage_key", default) == default
+def test_get_from_pipeline_default(stage_config):
+    assert stage_config.get_from_pipeline("stage_key") is None
+    assert stage_config.get_from_pipeline("stage_key", "default") == "default"
 
 
-def test_getitem(stage_config, pipeline_config):
-    assert stage_config["pipeline_key"] == pipeline_config["pipeline_key"]
+def test_getitem(stage_config):
+    assert stage_config["pipeline_key"] == "pipeline_value"
     assert stage_config["stage_key"] == "stage_value"
     assert stage_config["shared_key"] == "stage_shared_value"
 
