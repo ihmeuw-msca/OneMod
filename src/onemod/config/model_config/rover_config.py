@@ -85,7 +85,7 @@ class RoverConfig(StageConfig):
         "model_type",
         "observation_column",
         "weights_column",
-        "holdout_column",
+        "holdout_columns",
     }
 
     @model_validator(mode="after")
