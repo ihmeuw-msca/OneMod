@@ -1,6 +1,7 @@
 """Kreg stage."""
 
 from onemod.config import KregConfig
+from onemod.dtypes import UniqueList
 from onemod.stage import ModelStage
 
 
@@ -8,9 +9,9 @@ class KregStage(ModelStage):
     """Kreg stage."""
 
     config: KregConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _optional_input: UniqueList[str] = ["offset.parquet", "priors.pkl"]
+    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None

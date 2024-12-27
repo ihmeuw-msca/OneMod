@@ -23,6 +23,7 @@ from spxmod.model import XModel
 from xspline import XSpline
 
 from onemod.config import SpxmodConfig
+from onemod.dtypes import UniqueList
 from onemod.stage import ModelStage
 from onemod.utils.residual import ResidualCalculator
 from onemod.utils.subsets import get_subset
@@ -32,14 +33,14 @@ class SpxmodStage(ModelStage):
     """Spxmod stage."""
 
     config: SpxmodConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _optional_input: UniqueList[str] = [
         "selected_covs.csv",
         "offset.parquet",
         "priors.pkl",
-    }
-    _output: set[str] = {"predictions.parquet"}
-    _collect_after: set[str] = {"run", "predict"}
+    ]
+    _output: UniqueList[str] = ["predictions.parquet"]
+    _collect_after: UniqueList[str] = ["run", "predict"]
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run spxmod submodel.

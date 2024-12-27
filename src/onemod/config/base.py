@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, validate_call
 
+from onemod.dtypes import UniqueList
+
 
 class Config(BaseModel, ABC):
     """Base configuration class."""
@@ -33,7 +35,7 @@ class PipelineConfig(Config):
 
     Attributes
     ----------
-    id_columns : set[str]
+    id_columns : UniqueList[str]
         ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
         or 'year_id'. ID columns should contain nonnegative integers.
     model_type : str
@@ -52,7 +54,7 @@ class PipelineConfig(Config):
         for the entire pipeline. If no test column is provided, all
         missing observations will be treated as the test set. Default is
         'test'.
-    holdout_columns : set[str] or None, optional
+    holdout_columns : UniqueList[str] or None, optional
         Holdout column names. The holdout columns should contain values
         0 (train), 1 (holdout), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
@@ -63,13 +65,13 @@ class PipelineConfig(Config):
 
     """
 
-    id_columns: set[str]
+    id_columns: UniqueList[str]
     model_type: Literal["binomial", "gaussian", "poisson"]
     observation_column: str = "obs"
     prediction_column: str = "pred"
     weights_column: str = "weights"
     test_column: str = "test"
-    holdout_columns: set[str] | None = None
+    holdout_columns: UniqueList[str] | None = None
     coef_bounds: dict[str, tuple[float, float]] | None = None
 
 
@@ -80,7 +82,7 @@ class StageConfig(Config):
 
     Attributes
     ----------
-    id_columns : set[str] or None, optional
+    id_columns : UniqueList[str] or None, optional
         ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
         or 'year_id'. ID columns should contain nonnegative integers.
         Default is None.
@@ -101,7 +103,7 @@ class StageConfig(Config):
         for the entire pipeline. If no test column is provided, all
         missing observations will be treated as the test set. Default is
         None.
-    holdout_columns : set[str] or None, optional
+    holdout_columns : UniqueList[str] or None, optional
         Holdout column names. The holdout columns should contain values
         0 (train), 1 (holdout), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
@@ -114,13 +116,13 @@ class StageConfig(Config):
 
     model_config = ConfigDict(extra="allow")
 
-    id_columns: set[str] | None = None
+    id_columns: UniqueList[str] | None = None
     model_type: Literal["binomial", "gaussian", "poisson"] | None = None
     observation_column: str | None = None
     prediction_column: str | None = None
     weights_column: str | None = None
     test_column: str | None = None
-    holdout_columns: set[str] | None = None
+    holdout_columns: UniqueList[str] | None = None
     coef_bounds: dict[str, tuple[float, float]] | None = None
     _global: PipelineConfig
 
@@ -149,8 +151,8 @@ class StageConfig(Config):
 class ModelConfig(StageConfig):
     """Model stage configuration class."""
 
-    _crossable_params: set[str] = set()  # defined by class
+    _crossable_params: UniqueList[str] = list()  # defined by class
 
     @property
-    def crossable_params(self) -> set[str]:
+    def crossable_params(self) -> UniqueList[str]:
         return self._crossable_params

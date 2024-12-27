@@ -2,8 +2,12 @@
 
 import pandas as pd
 
+from onemod.dtypes import UniqueList
 
-def create_subsets(groupby: set[str], data: pd.DataFrame) -> pd.DataFrame:
+
+def create_subsets(
+    groupby: UniqueList[str], data: pd.DataFrame
+) -> pd.DataFrame:
     """Create subsets from groupby."""
     sorted_groupby = sorted(groupby)
     groups = data.groupby(sorted_groupby)

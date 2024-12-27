@@ -39,6 +39,7 @@ from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
 from pydantic import validate_call
 
+from onemod.dtypes import UniqueList
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
 from onemod.stage import ModelStage, Stage
@@ -178,7 +179,7 @@ def get_upstream_tasks(
     method: Literal["run", "fit", "predict"],
     stage_dict: dict[str, Stage],
     task_dict: dict[str, list[Task]],
-    stages: set[str] | None = None,
+    stages: UniqueList[str] | None = None,
 ) -> list[Task]:
     """Get upstream stage tasks.
 
@@ -192,7 +193,7 @@ def get_upstream_tasks(
         Dictionary of all upstream pipeline stages.
     task_dict : dict[str, list[Task]]
         Dictionary of all tasks being evaluated.
-    stages : set[str] or None, optional
+    stages : UniqueList[str] or None, optional
         Name of all pipeline stages being evaluated.
 
     Returns
@@ -227,7 +228,7 @@ def evaluate_with_jobmon(
     resources: Path | str | dict,
     python: Path | str | None = None,
     method: Literal["run", "fit", "predict"] = "run",
-    stages: set[str] | None = None,
+    stages: UniqueList[str] | None = None,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -244,7 +245,7 @@ def evaluate_with_jobmon(
         Default is None.
     method : str, optional
         Name of method to evalaute. Default is 'run'.
-    stages : set of str or None, optional
+    stages : UniqueList of str or None, optional
         Names of stages to evaluate if `model` is a pipeline instance.
         If None, evaluate entire pipeline. Default is None.
 

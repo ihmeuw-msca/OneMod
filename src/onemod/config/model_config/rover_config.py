@@ -10,6 +10,7 @@ from pydantic import Field, NonNegativeInt, model_validator
 from typing_extensions import Self
 
 from onemod.config import ModelConfig
+from onemod.dtypes import UniqueList
 
 
 class RoverConfig(ModelConfig):
@@ -20,11 +21,11 @@ class RoverConfig(ModelConfig):
 
     Attributes
     ----------
-    cov_exploring : set[str]
+    cov_exploring : UniqueList[str]
         Names of covariates to explore.
-    cov_fixed : set[str], optional
+    cov_fixed : UniqueList[str], optional
         Fixed covariate names. Default is {'intercept'}.
-    strategies : set[str], optional
+    strategies : UniqueList[str], optional
         Set of strategies to use; either 'full', 'forward', and/or
         'backward'. Default is {'forward'}.
     top_pct_score : float in [0, 1], optional
@@ -41,9 +42,9 @@ class RoverConfig(ModelConfig):
 
     """
 
-    cov_exploring: set[str]
-    cov_fixed: set[str] = {"intercept"}
-    strategies: set[Literal["full", "forward", "backward"]] = {"forward"}
+    cov_exploring: UniqueList[str]
+    cov_fixed: UniqueList[str] = ["intercept"]
+    strategies: UniqueList[Literal["full", "forward", "backward"]] = ["forward"]
     top_pct_score: float = Field(ge=0, le=1, default=0.1)
     top_pct_learner: float = Field(ge=0, le=1, default=1.0)
     t_threshold: float = Field(ge=0, default=1.0)

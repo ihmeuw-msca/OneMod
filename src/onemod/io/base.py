@@ -26,7 +26,7 @@ from pydantic import (
     validate_call,
 )
 
-from onemod.dtypes import Data
+from onemod.dtypes import Data, UniqueList
 
 
 class IO(BaseModel, ABC):
@@ -68,16 +68,16 @@ class IO(BaseModel, ABC):
 class Input(IO):
     """Stage input class."""
 
-    required: set[str] = set()  # name.extension, defined by stage class
-    optional: set[str] = set()  # name.extension, defined by stage class
+    required: UniqueList[str] = list()  # name.extension, defined by stage class
+    optional: UniqueList[str] = list()  # name.extension, defined by stage class
     _expected_names: set[str] = PrivateAttr(default_factory=set)
     _expected_types: dict[str, str] = PrivateAttr(default_factory=dict)
 
     @property
-    def dependencies(self) -> set[str]:
-        return set(
+    def dependencies(self) -> UniqueList[str]:
+        return [
             item.stage for item in self.items.values() if isinstance(item, Data)
-        )
+        ]
 
     def model_post_init(self, *args, **kwargs) -> None:
         self._expected_names = {
@@ -141,18 +141,18 @@ class Input(IO):
 
     def check_exists(
         self,
-        item_names: set[str] | None = None,
-        upstream_stages: set[str] | None = None,
+        item_names: UniqueList[str] | None = None,
+        upstream_stages: UniqueList[str] | None = None,
     ) -> None:
         """Check stage input items exist.
 
         Parameters
         ----------
-        item_names : set of str, optional
+        item_names : UniqueList of str, optional
             Names of input items to check. If None, check all input
             path items and all input data items in `upstream_stages`.
             Default is None.
-        upstream_stages : set of str, optional
+        upstream_stages : UniqueList of str, optional
             Names of upstream stages to check input items from. If None,
             check input items from all upstream stages.
 
@@ -165,7 +165,7 @@ class Input(IO):
 
         """
         if item_names is None:
-            item_names = set(self.items.keys())
+            item_names = list(self.items.keys())
         if upstream_stages is None:
             upstream_stages = self.dependencies
 

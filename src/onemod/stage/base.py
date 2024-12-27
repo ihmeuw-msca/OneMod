@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import ModelConfig, StageConfig
-from onemod.dtypes import Data
+from onemod.dtypes import Data, UniqueList
 from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
 from onemod.utils.decorators import computed_property
@@ -67,10 +67,10 @@ class Stage(BaseModel, ABC):
     _dataif: DataInterface | None = None
     _module: Path | None = None
     _input: Input | None = None
-    _required_input: set[str] = set()
-    _optional_input: set[str] = set()
-    _output: set[str] = set()
-    _skip: set[str] = set()
+    _required_input: UniqueList[str] = list()
+    _optional_input: UniqueList[str] = list()
+    _output: UniqueList[str] = list()
+    _skip: UniqueList[str] = list()
 
     @property
     def dataif(self) -> DataInterface:
@@ -79,11 +79,11 @@ class Stage(BaseModel, ABC):
         Examples
         --------
         Load input file:
-        * _requred_input: {"data.parquet"}
+        * _requred_input: ["data.parquet"]
         * data = self.dataif.load(key="data")
 
         Load file from input directory:
-        * _required_input: {"submodels"}
+        * _required_input: ["submodels"]
         * model = self.dataif.load(f"model_{subset_id}.pkl", key="submodels")
 
         Load output file:
@@ -142,7 +142,7 @@ class Stage(BaseModel, ABC):
         return self._module
 
     @property
-    def skip(self) -> set[str]:
+    def skip(self) -> UniqueList[str]:
         return self._skip
 
     @computed_property
@@ -168,9 +168,9 @@ class Stage(BaseModel, ABC):
         return Output(stage=self.name, items=output_items)
 
     @property
-    def dependencies(self) -> set[str]:
+    def dependencies(self) -> UniqueList[str]:
         if self.input is None:
-            return set()
+            return list()
         return self.input.dependencies
 
     @computed_property
@@ -380,7 +380,7 @@ class ModelStage(Stage, ABC):
         Stage name.
     config : ModelConfig
         Stage configuration.
-    groupby : set of str or None, optional
+    groupby : UniqueList of str or None, optional
         Column names used to create data subsets.
         Default is None.
     input_validation : dict, optional
@@ -422,14 +422,14 @@ class ModelStage(Stage, ABC):
     """
 
     config: ModelConfig
-    groupby: set[str] | None = None
-    _crossby: set[str] | None = None
+    groupby: UniqueList[str] | None = None
+    _crossby: UniqueList[str] | None = None
     _subset_ids: set[int] = set()
     _param_ids: set[int] = set()
-    _collect_after: set[str] = set()
+    _collect_after: UniqueList[str] = list()
 
     @computed_property
-    def crossby(self) -> set[str] | None:
+    def crossby(self) -> UniqueList[str] | None:
         return self._crossby
 
     @property
@@ -457,7 +457,7 @@ class ModelStage(Stage, ABC):
         return self._param_ids
 
     @property
-    def collect_after(self) -> set[str]:
+    def collect_after(self) -> UniqueList[str]:
         return self._collect_after
 
     def apply_stage_specific_config(self, stage_config: dict) -> None:
@@ -503,7 +503,7 @@ class ModelStage(Stage, ABC):
             if "param_id" not in params.columns:
                 raise KeyError("Parameter set ID column 'param_id' not found")
 
-            self._crossby = set(params.columns) - {"param_id"}
+            self._crossby = [col for col in params.columns if col != "param_id"]
             self._param_ids = set(params["param_id"])
             self.dataif.dump(params, "parameters.csv", key="output")
 

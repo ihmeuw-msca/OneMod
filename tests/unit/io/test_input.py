@@ -223,13 +223,13 @@ def test_contains():
 @pytest.mark.unit
 def test_dependencies():
     test_input = get_input(VALID_ITEMS)
-    assert test_input.dependencies == {"first_stage", "second_stage"}
+    assert test_input.dependencies == ["first_stage", "second_stage"]
 
 
 @pytest.mark.unit
 def test_no_dependencies():
     test_input = get_input(items={"data": "/path/to/predictions.parquet"})
-    assert test_input.dependencies == set()
+    assert test_input.dependencies == []
 
 
 @pytest.mark.unit

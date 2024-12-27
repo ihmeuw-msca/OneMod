@@ -6,15 +6,15 @@ import pytest
 
 from onemod.config import StageConfig
 from onemod.constraints import Constraint
-from onemod.dtypes import ColumnSpec, Data
+from onemod.dtypes import ColumnSpec, Data, UniqueList
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: set[str] = {"data.parquet", "covariates.csv"}
-    _optional_input: set[str] = {"priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _required_input: UniqueList[str] = ["data.parquet", "covariates.csv"]
+    _optional_input: UniqueList[str] = ["priors.pkl"]
+    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
 
     def run(self):
         pass
@@ -288,7 +288,7 @@ def test_input_types(test_base_dir, stage_1):
     assert stage_1.input_validation["data"].path == Path("data.parquet")
     assert stage_1.input_validation["data"].format == "parquet"
     assert stage_1.input_validation["data"].shape is None
-    assert stage_1.dependencies == set()
+    assert stage_1.dependencies == []
 
 
 @pytest.mark.integration
