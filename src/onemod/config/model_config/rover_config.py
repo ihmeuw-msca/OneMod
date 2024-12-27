@@ -84,32 +84,12 @@ class RoverConfig(StageConfig):
     min_covs: NonNegativeInt | None = None
     max_covs: NonNegativeInt | None = None
     _pipeline_config: Config = Config()
-
-    @property
-    def pipeline_config(self) -> Config:
-        return self._pipeline_config
-
-    @pipeline_config.setter
-    def pipeline_config(self, pipeline_config: Config | dict) -> None:
-        if isinstance(pipeline_config, dict):
-            pipeline_config = Config(**pipeline_config)
-
-        missing = []
-        for attribute in [
-            "model_type",
-            "observation_column",
-            "weights_column",
-            "holdout_columns",
-        ]:
-            if (
-                not self.stage_contains(attribute)
-                and attribute not in pipeline_config
-            ):
-                missing.append(attribute)
-        if missing:
-            raise AttributeError(f"Missing required attributes: {missing}")
-
-        self._pipeline_config = pipeline_config
+    _required: set[str] = {
+        "model_type",
+        "observation_column",
+        "weights_column",
+        "holdout_column",
+    }
 
     @model_validator(mode="after")
     def check_min_max(self) -> Self:

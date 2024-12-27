@@ -60,6 +60,7 @@ class StageConfig(Config):
     )
 
     _pipeline_config: Config = Config()
+    _required: set[str] = set()  # TODO: unique list
     _crossable_params: set[str] = set()  # TODO: unique list
 
     @property
@@ -69,6 +70,14 @@ class StageConfig(Config):
     def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):
             pipeline_config = Config(**pipeline_config)
+
+        missing = []
+        for item in self._required:
+            if not self.stage_contains(item) and item not in pipeline_config:
+                missing.append(item)
+        if missing:
+            raise AttributeError(f"Missing required config items: {missing}")
+
         self._pipeline_config = pipeline_config
 
     def get(self, key: str, default: Any = None) -> Any:
