@@ -286,7 +286,10 @@ class SpxmodConfig(StageConfig):
             "prediction_column",
             "weights_column",
         ]:
-            if not self.__contains__(attribute):
+            if (
+                not self.stage_contains(attribute)
+                and attribute not in pipeline_config
+            ):
                 missing.append(attribute)
         if missing:
             raise AttributeError(f"Missing required attributes: {missing}")
