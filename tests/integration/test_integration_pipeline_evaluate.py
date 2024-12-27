@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch
 
 import pandas as pd
@@ -68,7 +69,7 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
         small_input_data, test_base_dir
     )
 
-    subset_stage_names = {"preprocessing", "covariate_selection"}
+    subset_stage_names = ["preprocessing", "covariate_selection"]
     subset_stages = [
         stage for stage in stages if stage.name in subset_stage_names
     ]
@@ -115,7 +116,7 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
         small_input_data, test_base_dir
     )
 
-    subset_stage_names = {"covariate_selection"}
+    subset_stage_names = ["covariate_selection"]
 
     with pytest.raises(
         FileNotFoundError,
@@ -133,11 +134,13 @@ def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
         small_input_data, test_base_dir
     )
 
-    subset_stage_names = {"preprocessing"}
+    subset_stage_names = ["preprocessing"]
 
     with pytest.raises(
         ValueError,
-        match="id_subsets keys {'invalid_id_col_name'} do not match groupby columns {'sex_id'}",
+        match=re.escape(
+            "id_subsets keys {'invalid_id_col_name'} do not match groupby columns ['sex_id']"
+        ),
     ):
         dummy_pipeline.evaluate(
             method=method,
