@@ -132,3 +132,10 @@ def test_setitem_pipeline(stage_config, pipeline_config, key):
     assert stage_config.get_from_stage(key) is None
     assert stage_config.get_from_pipeline(key) == "new_value"
     assert stage_config[key] == "new_value"
+
+
+def test_repr(stage_config):
+    assert (
+        repr(stage_config)
+        == "StageConfig(pipeline_key='pipeline_value', shared_key='stage_shared_value', stage_key='stage_value')"
+    )
