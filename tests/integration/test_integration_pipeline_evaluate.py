@@ -160,14 +160,14 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
             model_type="binomial",
         ),
         directory=test_base_dir,
-        data=sample_input_data,
+        groupby_data=sample_input_data,
         groupby={"age_group_id"},
     )
     test_stage = MultiplyByTwoStage(
         name="multiply_by_two", config=StageConfig()
     )
     test_pipeline.add_stages([test_stage])
-    test_stage(data=test_pipeline.data)
+    test_stage(data=test_pipeline.groupby_data)
 
     # Ensure input data is as expected for the test
     assert sample_input_data.exists()

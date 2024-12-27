@@ -104,7 +104,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
             model_type="binomial",
         ),
         directory=test_base_dir,
-        data=test_input_data,
+        groupby_data=test_input_data,
         groupby={"sex_id"},
     )
 
@@ -121,7 +121,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
 
     # Define dependencies
-    preprocessing(data=dummy_pipeline.data)
+    preprocessing(data=dummy_pipeline.groupby_data)
     covariate_selection(data=preprocessing.output["data"])
     global_model(
         data=preprocessing.output["data"],
