@@ -134,7 +134,7 @@ class Pipeline(BaseModel):
         if stage.name in self.stages:
             raise ValueError(f"Stage '{stage.name}' already exists")
 
-        stage.config.pipeline_config = self.config
+        stage.config.add_pipeline_config(self.config)
         self._stages[stage.name] = stage
 
     def get_execution_order(self, stages: set[str] | None = None) -> list[str]:

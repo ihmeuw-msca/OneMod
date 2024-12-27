@@ -63,23 +63,18 @@ class StageConfig(Config):
     _crossable_params: set[str] = set()  # TODO: unique list
 
     @property
-    def pipeline_config(self) -> Config:
-        return self._pipeline_config
+    def crossable_params(self) -> set[str]:
+        return self._crossable_params
 
-    @pipeline_config.setter
-    def pipeline_config(self, pipeline_config: Config | dict) -> None:
+    def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):
             pipeline_config = Config(**pipeline_config)
         self._pipeline_config = pipeline_config
 
-    @property
-    def crossable_params(self) -> set[str]:
-        return self._crossable_params
-
     def get(self, key: str, default: Any = None) -> Any:
         if self.stage_contains(key):
             return getattr(self, key)
-        return self.pipeline_config.get(key, default)
+        return self._pipeline_config.get(key, default)
 
     def get_from_stage(self, key: str, default: Any = None) -> Any:
         if self.stage_contains(key):
@@ -87,12 +82,12 @@ class StageConfig(Config):
         return default
 
     def get_from_pipeline(self, key: str, default: Any = None) -> Any:
-        return self.pipeline_config.get(key, default)
+        return self._pipeline_config.get(key, default)
 
     def __getitem__(self, key: str) -> Any:
         if self.stage_contains(key):
             return getattr(self, key)
-        return self.pipeline_config[key]
+        return self._pipeline_config[key]
 
     def __contains__(self, key: str) -> bool:
         return self.stage_contains(key) or self.pipeline_contains(key)
@@ -101,7 +96,7 @@ class StageConfig(Config):
         return key in self._get_stage_fields()
 
     def pipeline_contains(self, key: str) -> bool:
-        return key in self.pipeline_config
+        return key in self._pipeline_config
 
     def _get_fields(self) -> list[str]:
         return list(set(self._get_stage_fields() + self._get_pipeline_fields()))
@@ -110,7 +105,7 @@ class StageConfig(Config):
         return list(self.model_dump(exclude_none=True))
 
     def _get_pipeline_fields(self) -> list[str]:
-        return self.pipeline_config._get_fields()
+        return self._pipeline_config._get_fields()
 
     def __repr__(self) -> str:
         arg_list = []
