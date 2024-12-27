@@ -38,8 +38,12 @@ def test_getitem_error(config, key):
 
 
 @pytest.mark.parametrize("key", ["key", "new_key"])
-def test_item(config, key):
+def test_setitem(config, key):
     config[key] = "new_value"
     assert key in config
     assert config.get(key) == "new_value"
     assert config[key] == "new_value"
+
+
+def test_repr(config):
+    assert repr(config) == "Config(key='value')"
