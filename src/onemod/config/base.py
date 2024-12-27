@@ -76,6 +76,7 @@ class StageConfig(Config):
             if not self.stage_contains(item) and item not in pipeline_config:
                 missing.append(item)
         if missing:
+            missing.sort()  # for consistent ordering, remove once unique list
             raise AttributeError(f"Missing required config items: {missing}")
 
         self._pipeline_config = pipeline_config

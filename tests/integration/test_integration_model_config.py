@@ -16,10 +16,10 @@ CONFIG_ITEMS = {
 
 REQUIRED_ITEMS = {
     "rover": [
+        "holdout_columns",
         "model_type",
         "observation_column",
         "weights_column",
-        "holdout_columns",
     ],
     "spxmod": [
         "id_columns",
@@ -40,7 +40,6 @@ STAGE_DICT = {
 @pytest.mark.parametrize("is_none", [True, False])
 def test_config_forward(stage, is_none):
     stage_config = STAGE_DICT[stage]
-    pipeline_config = Config()
     if is_none:
         pipeline_config = Config(
             **{item: None for item in REQUIRED_ITEMS[stage]}
@@ -52,7 +51,7 @@ def test_config_forward(stage, is_none):
     for item in REQUIRED_ITEMS[stage]:
         with pytest.raises(AttributeError) as e:
             stage_config.add_pipeline_config(pipeline_config)
-            assert e.message == f"Missing required attributes: {missing}"
+        assert str(e.value) == f"Missing required config items: {missing}"
 
         pipeline_config[item] = CONFIG_ITEMS[item]
         missing.remove(item)
@@ -74,4 +73,4 @@ def test_config_backward(stage, is_none):
 
         with pytest.raises(AttributeError) as e:
             stage_config.add_pipeline_config(pipeline_config)
-            assert e.message == f"Missing required attributes: {missing}"
+        assert str(e.value) == f"Missing required config items: {missing}"
