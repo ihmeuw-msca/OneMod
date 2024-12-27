@@ -2,9 +2,6 @@
 
 FIXME: improve top_pct_score and top_pct_learner descriptions
 
-TODO: Update docstrings, default is None, if None, must inherit from
-pipeline_config, what is required to run model vs. optional?
-
 """
 
 from typing import Literal
