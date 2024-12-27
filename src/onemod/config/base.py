@@ -33,20 +33,17 @@ class Config(BaseModel):
         setattr(self, key, value)
 
     def __contains__(self, key: str) -> bool:
-        if key in self._get_fields():
-            return getattr(self, key) is not None
-        return False
+        return key in self._get_fields()
 
-    def __repr_str__(self, join_str: str) -> str:
+    def __repr__(self) -> str:
         arg_list = []
         for key in self._get_fields():
-            if (value := getattr(self, key)) is not None:
-                arg_list.append(f"{key}={value!r}")
+            arg_list.append(f"{key}={getattr(self, key)!r}")
         arg_list.sort()
-        return join_str.join(arg_list)
+        return f"{type(self).__name__}({', '.join(arg_list)})"
 
     def _get_fields(self) -> list[str]:
-        return [*self.model_fields] + [*self.model_extra]
+        return list(self.model_dump(exclude_none=True))
 
 
 class StageConfig(Config):
@@ -101,9 +98,7 @@ class StageConfig(Config):
         return self.stage_contains(key) or self.pipeline_contains(key)
 
     def stage_contains(self, key: str) -> bool:
-        if key in self._get_stage_fields():
-            return getattr(self, key) is not None
-        return False
+        return key in self._get_stage_fields()
 
     def pipeline_contains(self, key: str) -> bool:
         return key in self.pipeline_config
@@ -112,15 +107,14 @@ class StageConfig(Config):
         return list(set(self._get_stage_fields() + self._get_pipeline_fields()))
 
     def _get_stage_fields(self) -> list[str]:
-        return [*self.model_fields] + [*self.model_extra]
+        return list(self.model_dump(exclude_none=True))
 
     def _get_pipeline_fields(self) -> list[str]:
         return self.pipeline_config._get_fields()
 
-    def __repr_str__(self, join_str: str) -> str:
+    def __repr__(self) -> str:
         arg_list = []
         for key in self._get_fields():
-            if (value := self.get(key)) is not None:
-                arg_list.append(f"{key}={value!r}")
+            arg_list.append(f"{key}={self.get(key)!r}")
         arg_list.sort()
-        return join_str.join(arg_list)
+        return f"{type(self).__name__}({', '.join(arg_list)})"
