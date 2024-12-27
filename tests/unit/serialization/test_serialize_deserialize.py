@@ -47,7 +47,7 @@ def test_model() -> ExampleModel:
         ids=[1, 2, 3],
         shape=(5, 10),
         config={"key": "value"},
-        groupby={"a", "b", "c"},
+        groupby=["a", "b", "c"],
         items={"path1": Path("data1.parquet"), "path2": Path("data2.csv")},
     )
 

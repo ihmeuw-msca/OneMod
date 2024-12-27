@@ -8,8 +8,8 @@ from pydantic import ValidationError
 from onemod.dtypes import Data
 from onemod.io import Input
 
-REQUIRED_INPUT = {"data.parquet", "covariates.csv"}
-OPTIONAL_INPUT = {"priors.pkl"}
+REQUIRED_INPUT = ["data.parquet", "covariates.csv"]
+OPTIONAL_INPUT = ["priors.pkl"]
 VALID_ITEMS = {
     "data": "/path/to/predictions.parquet",
     "covariates": Data(
