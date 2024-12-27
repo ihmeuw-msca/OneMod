@@ -3,6 +3,7 @@
 import pytest
 
 from onemod.config import Config, RoverConfig, SpxmodConfig
+from onemod.config.model_config.spxmod_config import SpxmodModelConfig
 
 CONFIG_ITEMS = {
     "id_columns": ["sex_id", "year_id"],
@@ -30,8 +31,8 @@ REQUIRED_ITEMS = {
 }
 
 STAGE_DICT = {
-    "rover": RoverConfig(cov_exploring=["cov1", "cov2"]),
-    "spxmod": SpxmodConfig(xmodel={"variables": []}),
+    "rover": RoverConfig(cov_exploring={"cov1", "cov2"}),
+    "spxmod": SpxmodConfig(xmodel=SpxmodModelConfig(variables=[])),
 }
 
 
@@ -50,7 +51,7 @@ def test_config_forward(stage, is_none):
 
     for item in REQUIRED_ITEMS[stage]:
         with pytest.raises(AttributeError) as e:
-            stage_config.pipeline_config = pipeline_config
+            stage_config.add_pipeline_config(pipeline_config)
             assert e.message == f"Missing required attributes: {missing}"
 
         pipeline_config[item] = CONFIG_ITEMS[item]
@@ -72,5 +73,5 @@ def test_config_backward(stage, is_none):
         missing.append(item)
 
         with pytest.raises(AttributeError) as e:
-            stage_config.pipeline_config = pipeline_config
+            stage_config.add_pipeline_config(pipeline_config)
             assert e.message == f"Missing required attributes: {missing}"

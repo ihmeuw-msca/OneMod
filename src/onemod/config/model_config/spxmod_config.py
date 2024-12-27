@@ -268,30 +268,10 @@ class SpxmodConfig(StageConfig):
     xmodel: SpxmodModelConfig
     xmodel_fit: dict[str, Any] = {}
     _pipeline_config: Config = Config()
-
-    @property
-    def pipeline_config(self) -> Config:
-        return self._pipeline_config
-
-    @pipeline_config.setter
-    def pipeline_config(self, pipeline_config: Config | dict) -> None:
-        if isinstance(pipeline_config, dict):
-            pipeline_config = Config(**pipeline_config)
-
-        missing = []
-        for attribute in [
-            "id_columns",
-            "model_type",
-            "observation_column",
-            "prediction_column",
-            "weights_column",
-        ]:
-            if (
-                not self.stage_contains(attribute)
-                and attribute not in pipeline_config
-            ):
-                missing.append(attribute)
-        if missing:
-            raise AttributeError(f"Missing required attributes: {missing}")
-
-        self._pipeline_config = pipeline_config
+    _required: set[str] = {
+        "id_columns",
+        "model_type",
+        "observation_column",
+        "prediction_column",
+        "weights_column",
+    }
