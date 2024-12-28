@@ -45,6 +45,8 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
         name="covariate_selection",
         config=RoverConfig(
             model_type="binomial",
+            observation_column="fake_observation_column",
+            weights_column="fake_weights_column",
             holdout_columns=["holdout1", "holdout2", "holdout3"],
             cov_exploring=["cov1", "cov2", "cov3"],
         ),
@@ -55,6 +57,9 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
         config=SpxmodConfig(
             id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
             model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
             xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
         ),
     )
@@ -63,6 +68,9 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
         config=SpxmodConfig(
             id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
             model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
             xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
         ),
         groupby={"location_id"},
