@@ -38,7 +38,7 @@ class RoverConfig(StageConfig):
         values 1 (train) or 0 (test). If no train column is provided,
         all non-null observations will be included in training. Default
         is None.
-    holdout_columns : set[str] or None, optional
+    holdout_columns : UniqueList[str] or None, optional
         Holdout column names. The holdout columns should contain values
         1 (holdout), 0 (train), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
@@ -71,7 +71,7 @@ class RoverConfig(StageConfig):
     observation_column: str | None = None
     weights_column: str | None = None
     train_column: str | None = None
-    holdout_columns: set[str] | None = None
+    holdout_columns: UniqueList[str] | None = None
     coef_bounds: dict[str, tuple[float, float]] | None = None
     cov_exploring: UniqueList[str]
     cov_fixed: UniqueList[str] = ["intercept"]

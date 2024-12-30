@@ -424,8 +424,8 @@ class ModelStage(Stage, ABC):
     config: StageConfig
     groupby: UniqueList[str] | None = None
     _crossby: UniqueList[str] | None = None
-    _subset_ids: set[int] = set()
-    _param_ids: set[int] = set()
+    _subset_ids: UniqueList[int | None] = list()
+    _param_ids: UniqueList[int | None] = list()
     _collect_after: UniqueList[str] = list()
 
     @computed_property
@@ -433,11 +433,11 @@ class ModelStage(Stage, ABC):
         return self._crossby
 
     @property
-    def subset_ids(self) -> set[int]:
+    def subset_ids(self) -> UniqueList[int | None]:
         if self.groupby is not None and not self._subset_ids:
             try:
                 subsets = self.dataif.load("subsets.csv", key="output")
-                self._subset_ids = set(subsets["subset_id"])
+                self._subset_ids = list(set(subsets["subset_id"]))
             except FileNotFoundError:
                 raise AttributeError(
                     f"{self.name} data subsets have not been created"
@@ -445,11 +445,11 @@ class ModelStage(Stage, ABC):
         return self._subset_ids
 
     @property
-    def param_ids(self) -> set[int]:
+    def param_ids(self) -> UniqueList[int | None]:
         if self.crossby is not None and not self._param_ids:
             try:
                 params = self.dataif.load("parameters.csv", key="output")
-                self._param_ids = set(params["param_id"])
+                self._param_ids = list(set(params["param_id"]))
             except FileNotFoundError:
                 raise AttributeError(
                     f"{self.name} parameter sets have not been created"
@@ -482,7 +482,7 @@ class ModelStage(Stage, ABC):
         )
 
         subsets_df = create_subsets(self.groupby, df)
-        self._subset_ids = set(subsets_df["subset_id"].to_list())
+        self._subset_ids = list(set(subsets_df["subset_id"]))
 
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
@@ -504,7 +504,7 @@ class ModelStage(Stage, ABC):
                 raise KeyError("Parameter set ID column 'param_id' not found")
 
             self._crossby = [col for col in params.columns if col != "param_id"]
-            self._param_ids = set(params["param_id"])
+            self._param_ids = list(set(params["param_id"]))
             self.dataif.dump(params, "parameters.csv", key="output")
 
     def set_params(self, param_id: int) -> None:
