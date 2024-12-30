@@ -1,11 +1,11 @@
 """Example custom stage."""
 
-from onemod.config import ModelConfig
+from onemod.config import StageConfig
 from onemod.dtypes import UniqueList
 from onemod.stage import ModelStage
 
 
-class CustomConfig(ModelConfig):
+class CustomConfig(StageConfig):
     """Custom stage config."""
 
     custom_param: int | set[int] = 1

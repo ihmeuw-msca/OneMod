@@ -26,17 +26,13 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
 
     assert dummy_pipeline_dict["name"] == "dummy_pipeline"
     assert dummy_pipeline_dict["directory"] == str(test_base_dir)
-    assert dummy_pipeline_dict["data"] == str(small_input_data)
+    assert dummy_pipeline_dict["groupby_data"] == str(small_input_data)
     assert dummy_pipeline_dict["groupby"] == ["sex_id"]
     assert_equal_unordered(
         dummy_pipeline_dict["config"],
         {
             "id_columns": ["age_group_id", "location_id", "year_id", "sex_id"],
             "model_type": "binomial",
-            "observation_column": "obs",
-            "prediction_column": "pred",
-            "weights_column": "weights",
-            "test_column": "test",
         },
     )
     assert_equal_unordered(

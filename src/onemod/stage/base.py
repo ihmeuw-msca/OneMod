@@ -14,7 +14,7 @@ from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
-from onemod.config import ModelConfig, StageConfig
+from onemod.config import StageConfig
 from onemod.dtypes import Data, UniqueList
 from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
@@ -203,7 +203,7 @@ class Stage(BaseModel, ABC):
                 f"{pipeline_config['name']} does not contain a stage named '{stage_name}'"
             )
         stage = cls(**stage_config)
-        stage.config.inherit(pipeline_config["config"])
+        stage.config.add_pipeline_config(pipeline_config["config"])
         if "module" in stage_config:
             stage._module = stage_config["module"]
         if hasattr(stage, "apply_stage_specific_config"):
@@ -378,7 +378,7 @@ class ModelStage(Stage, ABC):
     ----------
     name : str
         Stage name.
-    config : ModelConfig
+    config : StageConfig
         Stage configuration.
     groupby : UniqueList of str or None, optional
         Column names used to create data subsets.
@@ -421,7 +421,7 @@ class ModelStage(Stage, ABC):
 
     """
 
-    config: ModelConfig
+    config: StageConfig
     groupby: UniqueList[str] | None = None
     _crossby: UniqueList[str] | None = None
     _subset_ids: set[int] = set()

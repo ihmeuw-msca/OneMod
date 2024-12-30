@@ -1,17 +1,11 @@
 from pydantic import Field
 
-from onemod.config import (
-    KregConfig,
-    ModelConfig,
-    RoverConfig,
-    SpxmodConfig,
-    StageConfig,
-)
+from onemod.config import KregConfig, RoverConfig, SpxmodConfig, StageConfig
 from onemod.dtypes import UniqueList
 from onemod.stage import ModelStage, Stage
 
 
-class CustomConfig(ModelConfig):
+class CustomConfig(StageConfig):
     """Custom stage config."""
 
     custom_param: int | set[int] = 1
@@ -240,7 +234,7 @@ class DummySpxmodStage(ModelStage):
 class MultiplyByTwoStage(ModelStage):
     """Stage that multiplies the value column by 2."""
 
-    config: ModelConfig
+    config: StageConfig
     _skip: UniqueList[str] = ["predict"]
     _required_input: UniqueList[str] = ["data.parquet"]
     _optional_input: UniqueList[str] = [

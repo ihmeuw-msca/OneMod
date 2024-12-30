@@ -1,4 +1,8 @@
-"""Kreg stage."""
+"""Kreg stage.
+
+TODO: Implement stage
+
+"""
 
 from onemod.config import KregConfig
 from onemod.dtypes import UniqueList

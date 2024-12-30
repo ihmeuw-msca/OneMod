@@ -96,16 +96,7 @@ def stage_1_model_expected(test_base_dir):
         "name": "stage_1",
         "type": "DummyStage",
         "module": Path(__file__),
-        "config": {
-            "coef_bounds": None,
-            "holdout_columns": None,
-            "id_columns": None,
-            "model_type": None,
-            "observation_column": None,
-            "prediction_column": None,
-            "test_column": None,
-            "weights_column": None,
-        },
+        "config": {},
         "input_validation": {
             "covariates": {
                 "stage": "stage_0",
@@ -224,16 +215,7 @@ def stage_2_model_expected(test_base_dir):
     return {
         "name": "stage_2",
         "type": "DummyStage",
-        "config": {
-            "coef_bounds": None,
-            "holdout_columns": None,
-            "id_columns": None,
-            "model_type": None,
-            "observation_column": None,
-            "prediction_column": None,
-            "test_column": None,
-            "weights_column": None,
-        },
+        "config": {},
         "module": Path(__file__),
         "input_validation": {
             "data": {

@@ -10,7 +10,8 @@ from typing import Any, Literal
 from pydantic import Field
 from typing_extensions import Annotated
 
-from onemod.config import Config, ModelConfig
+from onemod.config import Config, StageConfig
+from onemod.dtypes import UniqueList
 
 
 class SpxmodDimensionConfig(Config):
@@ -217,14 +218,40 @@ class SpxmodModelConfig(Config):
     lam: float = Field(ge=0, default=0)
 
 
-class SpxmodConfig(ModelConfig):
+class SpxmodConfig(StageConfig):
     """SpXMod regression stage settings.
 
     For more details, please check out the SpXMod package
     `documentation <https://github.com/ihmeuw-msca/spxmod/tree/v0.2.1>`_.
 
+    Attributes `id_columns`, `model_type`, `observation_column`,
+    `prediction_column`, and `weights_column` must be included in either
+    the stage's config or the pipeline's config.
+
     Attributes
     ----------
+    id_columns : UniqueList[str], optional
+        ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
+        or 'year_id'. ID columns should contain nonnegative integers.
+        Default is None.
+    model_type : str, optional
+        Model type; either 'binomial', 'gaussian', or 'poisson'. Default
+        is None.
+    observation_column : str, optional
+        Observation column name for pipeline input. Default is None.
+    prediction_column : str, optional
+        Prediction column name for pipeline output. Default is None.
+    weights_column : str, optional
+        Weights column name for pipeline input. The weights column
+        should contain nonnegative floats. Default is None.
+    train_column : str, optional
+        Training data column name. The train column should contain
+        values 1 (train) or 0 (test). If no train column is provided,
+        all non-null observations will be included in training. Default
+        is None.
+    coef_bounds : dict or None, optional
+        Dictionary of coefficient bounds with entries
+        cov_name: (lower, upper). Default is None.
     xmodel : SpxmodModelConfig
         SpXMod model settings.
     xmodel_fit : dict, optional
@@ -232,5 +259,20 @@ class SpxmodConfig(ModelConfig):
 
     """
 
+    id_columns: UniqueList[str] | None = None
+    model_type: Literal["binomial", "gaussian", "poisson"] | None = None
+    observation_column: str | None = None
+    prediction_column: str | None = None
+    weights_column: str | None = None
+    train_column: str | None = None
+    coef_bounds: dict[str, tuple[float, float]] | None = None
     xmodel: SpxmodModelConfig
     xmodel_fit: dict[str, Any] = {}
+    _pipeline_config: Config = Config()
+    _required: UniqueList[str] = [
+        "id_columns",
+        "model_type",
+        "observation_column",
+        "prediction_column",
+        "weights_column",
+    ]

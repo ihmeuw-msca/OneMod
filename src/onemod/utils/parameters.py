@@ -5,10 +5,10 @@ from typing import Any
 
 from pandas import DataFrame
 
-from onemod.config import ModelConfig
+from onemod.config import StageConfig
 
 
-def create_params(config: ModelConfig) -> DataFrame | None:
+def create_params(config: StageConfig) -> DataFrame | None:
     """Create parameter sets from crossby."""
     param_dict = {
         param_name: param_values
