@@ -4,7 +4,7 @@ import pytest
 from polars import DataFrame
 from tests.helpers.utils import assert_equal_unordered
 
-from onemod.config import PipelineConfig, StageConfig
+from onemod.config import Config, StageConfig
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
 from onemod.pipeline import Pipeline
@@ -155,7 +155,7 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
-        config=PipelineConfig(
+        config=Config(
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
         directory=test_base_dir,
@@ -172,7 +172,7 @@ def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
     """A sample pipeline with multiple stages and dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
-        config=PipelineConfig(
+        config=Config(
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
         directory=test_base_dir,
@@ -201,10 +201,6 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
         "groupby": ["age_group_id"],
         "config": {
             "id_columns": ["age_group_id", "location_id"],
-            "observation_column": "obs",
-            "prediction_column": "pred",
-            "weights_column": "weights",
-            "test_column": "test",
             "model_type": "binomial",
         },
         "stages": {

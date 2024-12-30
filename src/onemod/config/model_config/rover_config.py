@@ -9,17 +9,42 @@ from typing import Literal
 from pydantic import Field, NonNegativeInt, model_validator
 from typing_extensions import Self
 
-from onemod.config import ModelConfig
+from onemod.config import Config, StageConfig
 
 
-class RoverConfig(ModelConfig):
+class RoverConfig(StageConfig):
     """ModRover covariate selection stage settings.
 
     For more details, please check out the ModRover package
     `documentation <https://ihmeuw-msca.github.io/modrover/>`_.
 
+    Attributes `model_type`, `observation_column`, `weights_column`, and
+    `holdout_columns` must be included in either the stage's config or
+    the pipeline's config.
+
     Attributes
     ----------
+    model_type : str, optional
+        Model type; either 'binomial', 'gaussian', or 'poisson'. Default
+        is None.
+    observation_column : str, optional
+        Observation column name for pipeline input. Default is None.
+    weights_column : str, optional
+        Weights column name for pipeline input. The weights column
+        should contain nonnegative floats. Default is None.
+    train_column : str, optional
+        Training data column name. The train column should contain
+        values 1 (train) or 0 (test). If no train column is provided,
+        all non-null observations will be included in training. Default
+        is None.
+    holdout_columns : set[str] or None, optional
+        Holdout column names. The holdout columns should contain values
+        1 (holdout), 0 (train), or NaN (missing observations). Holdout
+        sets are used to evaluate stage model out-of-sample performance.
+        Default is None.
+    coef_bounds : dict, optional
+        Dictionary of coefficient bounds with entries
+        cov_name: (lower, upper). Default is None.
     cov_exploring : set[str]
         Names of covariates to explore.
     cov_fixed : set[str], optional
@@ -41,6 +66,12 @@ class RoverConfig(ModelConfig):
 
     """
 
+    model_type: Literal["binomial", "gaussian", "poisson"] | None = None
+    observation_column: str | None = None
+    weights_column: str | None = None
+    train_column: str | None = None
+    holdout_columns: set[str] | None = None
+    coef_bounds: dict[str, tuple[float, float]] | None = None
     cov_exploring: set[str]
     cov_fixed: set[str] = {"intercept"}
     strategies: set[Literal["full", "forward", "backward"]] = {"forward"}
@@ -49,14 +80,13 @@ class RoverConfig(ModelConfig):
     t_threshold: float = Field(ge=0, default=1.0)
     min_covs: NonNegativeInt | None = None
     max_covs: NonNegativeInt | None = None
-
-    # FIXME: Validate after pipeline settings passed to stage settings
-    # @model_validator(mode="after")
-    # def check_holdouts(self) -> Self:
-    #     """Make sure holdouts present."""
-    #     if self.holdout_columns is None:
-    #         raise ValueError("Holdout columns required for rover stage")
-    #     return self
+    _pipeline_config: Config = Config()
+    _required: set[str] = {
+        "model_type",
+        "observation_column",
+        "weights_column",
+        "holdout_columns",
+    }
 
     @model_validator(mode="after")
     def check_min_max(self) -> Self:
