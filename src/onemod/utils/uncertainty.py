@@ -1,4 +1,3 @@
-# mypy: ignore-errors
 import numpy as np
 import pandas as pd
 from msca.c2fun import c2fun_dict
@@ -48,8 +47,10 @@ def get_ci_coverage(
     data["lwr"] = norm.ppf(lwr, loc=data[pred], scale=data[pred_sd])
     data["upr"] = norm.ppf(upr, loc=data[pred], scale=data[pred_sd])
 
-    coverage = data.eval(f"{truth} >= lwr and {truth} <= upr").mean()
-    return coverage
+    data["coverage_bool"] = (data[truth] >= data["lwr"]) & (
+        data[truth] <= data["upr"]
+    )
+    return data["coverage_bool"].mean()
 
 
 def get_pi_coverage(
@@ -105,8 +106,10 @@ def get_pi_coverage(
     upr = 1.0 - lwr
     residual["lwr"] = norm.ppf(lwr, loc=0.0, scale=residual["total_sd"])
     residual["upr"] = norm.ppf(upr, loc=0.0, scale=residual["total_sd"])
-    coverage = residual.eval("residual >= lwr and residual <= upr").mean()
-    return coverage
+    residual["coverage_bool"] = (residual["residual"] >= residual["lwr"]) & (
+        residual["residual"] <= residual["upr"]
+    )
+    return residual["coverage_bool"].mean()
 
 
 def calibrate_pred_sd(
@@ -166,13 +169,16 @@ def calibrate_pred_sd(
         # deviation is bounded by the range of the random variable divided by 2.
         # So, we want to find an alpha such that the maximum absolute value of
         # the Person residual is less than 1.
+        residual_squared = residual["residual"] ** 2
+        residual_se_squared = residual["residual_se"] ** 2
+        adjusted_residual = residual_squared - residual_se_squared
+
         alpha_upr = 1.1 * np.sqrt(
-            np.max(
-                residual.eval("residual ** 2 - residual_se ** 2")
-                / data[pred_sd] ** 2
-            )
+            np.max(adjusted_residual / (data[pred_sd] ** 2))
         )
+
         alpha = brentq(equation, 0.0, alpha_upr)
+
     else:
         alpha = 0.0
 

@@ -9,8 +9,8 @@ from tests.helpers.dummy_stages import (
 
 from onemod import Pipeline
 from onemod.config import (
+    Config,
     KregConfig,
-    PipelineConfig,
     RoverConfig,
     SpxmodConfig,
     StageConfig,
@@ -43,25 +43,43 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
     covariate_selection = DummyRoverStage(
         name="covariate_selection",
-        config=RoverConfig(cov_exploring=["cov1", "cov2", "cov3"]),
+        config=RoverConfig(
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            weights_column="fake_weights_column",
+            holdout_columns=["holdout1", "holdout2", "holdout3"],
+            cov_exploring=["cov1", "cov2", "cov3"],
+        ),
         groupby={"age_group_id"},
     )
     global_model = DummySpxmodStage(
         name="global_model",
         config=SpxmodConfig(
-            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]}
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
+            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
         ),
     )
     location_model = DummySpxmodStage(
         name="location_model",
         config=SpxmodConfig(
-            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]}
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
+            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
         ),
         groupby={"location_id"},
     )
     smoothing = DummyKregStage(
         name="smoothing",
         config=KregConfig(
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
             kreg_model={
                 "age_scale": 1,
                 "gamma_age": 1,
@@ -89,12 +107,12 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     # Create pipeline
     dummy_pipeline = Pipeline(
         name="dummy_pipeline",
-        config=PipelineConfig(
+        config=Config(
             id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
             model_type="binomial",
         ),
         directory=test_base_dir,
-        data=test_input_data,
+        groupby_data=test_input_data,
         groupby={"sex_id"},
     )
 
@@ -111,7 +129,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
 
     # Define dependencies
-    preprocessing(data=dummy_pipeline.data)
+    preprocessing(data=dummy_pipeline.groupby_data)
     covariate_selection(data=preprocessing.output["data"])
     global_model(
         data=preprocessing.output["data"],

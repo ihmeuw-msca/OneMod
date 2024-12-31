@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
-import polars as pl
+import pandas as pd
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import MultiplyByTwoStage, assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
 
-from onemod.config import ModelConfig, PipelineConfig
+from onemod.config import Config, StageConfig
 from onemod.pipeline import Pipeline
 
 
@@ -118,8 +118,8 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
     subset_stage_names = {"covariate_selection"}
 
     with pytest.raises(
-        ValueError,
-        match="Required input to stage 'covariate_selection' is missing. Missing output from upstream dependency 'preprocessing'.",
+        FileNotFoundError,
+        match=f"Stage covariate_selection input items do not exist: {{'data': '{test_base_dir}/preprocessing/data.parquet'}}",
     ):
         dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
 
@@ -150,35 +150,35 @@ def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
 def test_evaluate_with_id_subsets(test_base_dir, sample_data):
     """Test that Pipeline.evaluate() correctly evaluates single stage with id_subsets."""
     sample_input_data = test_base_dir / "test_input_data.parquet"
-    df = pl.DataFrame(sample_data)
-    df.write_parquet(sample_input_data)
+    df = pd.DataFrame(sample_data)
+    df.to_parquet(sample_input_data)
 
     test_pipeline = Pipeline(
         name="dummy_pipeline",
-        config=PipelineConfig(
+        config=Config(
             id_columns=["age_group_id", "location_id", "sex_id"],
             model_type="binomial",
         ),
         directory=test_base_dir,
-        data=sample_input_data,
+        groupby_data=sample_input_data,
         groupby={"age_group_id"},
     )
     test_stage = MultiplyByTwoStage(
-        name="multiply_by_two", config=ModelConfig()
+        name="multiply_by_two", config=StageConfig()
     )
     test_pipeline.add_stages([test_stage])
-    test_stage(data=test_pipeline.data)
+    test_stage(data=test_pipeline.groupby_data)
 
     # Ensure input data is as expected for the test
     assert sample_input_data.exists()
-    input_df = pl.read_parquet(sample_input_data)
+    input_df = pd.read_parquet(sample_input_data)
     assert input_df.shape == (4, 4)
 
     test_pipeline.evaluate(method="run", id_subsets={"age_group_id": [1]})
 
     # Verify that output only contains rows with specified subset(s) for age_group_id
     output_df = test_stage.dataif.load("data.parquet", key="output")
-    assert output_df.select(pl.col("age_group_id")).n_unique() == 1
+    assert output_df["age_group_id"].nunique() == 1
     assert output_df.shape == (1, 4)
 
 

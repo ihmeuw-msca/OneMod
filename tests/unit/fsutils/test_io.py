@@ -1,6 +1,7 @@
 import numpy as np
+import pandas as pd
+import polars as pl
 import pytest
-from polars import DataFrame, LazyFrame
 
 from onemod.fsutils.io import CSVIO, JSONIO, TOMLIO, YAMLIO, ParquetIO, PickleIO
 
@@ -12,12 +13,12 @@ def data():
 
 @pytest.mark.unit
 def test_csvio_eager(data, tmp_path):
-    data = DataFrame(data)
+    data = pd.DataFrame(data)
     port = CSVIO()
     port.dump(data, tmp_path / "file.csv")
     loaded_data = port.load_eager(tmp_path / "file.csv")
 
-    assert type(loaded_data) is DataFrame
+    assert type(loaded_data) is pd.DataFrame
 
     for key in ["a", "b"]:
         assert np.allclose(data[key], loaded_data[key])
@@ -25,12 +26,12 @@ def test_csvio_eager(data, tmp_path):
 
 @pytest.mark.unit
 def test_csvio_lazy(data, tmp_path):
-    data = DataFrame(data)
+    data = pd.DataFrame(data)
     port = CSVIO()
     port.dump(data, tmp_path / "file.csv")
     lazy_loaded_data = port.load_lazy(tmp_path / "file.csv")
 
-    assert type(lazy_loaded_data) is LazyFrame
+    assert type(lazy_loaded_data) is pl.LazyFrame
 
     loaded_data = lazy_loaded_data.collect()
 
@@ -59,13 +60,26 @@ def test_yamlio(data, tmp_path):
 
 
 @pytest.mark.unit
-def test_parquetio_eager(data, tmp_path):
-    data = DataFrame(data)
+def test_parquetio_eager_pandas(data, tmp_path):
+    data = pd.DataFrame(data)
     port = ParquetIO()
     port.dump(data, tmp_path / "file.parquet")
     loaded_data = port.load_eager(tmp_path / "file.parquet")
 
-    assert type(loaded_data) is DataFrame
+    assert type(loaded_data) is pd.DataFrame
+
+    for key in ["a", "b"]:
+        assert np.allclose(data[key], loaded_data[key])
+
+
+@pytest.mark.unit
+def test_parquetio_eager_polars(data, tmp_path):
+    data = pl.DataFrame(data)
+    port = ParquetIO()
+    port.dump(data, tmp_path / "file.parquet")
+    loaded_data = port.load_eager(tmp_path / "file.parquet", backend="polars")
+
+    assert type(loaded_data) is pl.DataFrame
 
     for key in ["a", "b"]:
         assert np.allclose(data[key], loaded_data[key])
@@ -73,12 +87,12 @@ def test_parquetio_eager(data, tmp_path):
 
 @pytest.mark.unit
 def test_parquetio_lazy(data, tmp_path):
-    data = DataFrame(data)
+    data = pd.DataFrame(data)
     port = ParquetIO()
     port.dump(data, tmp_path / "file.parquet")
     lazy_loaded_data = port.load_lazy(tmp_path / "file.parquet")
 
-    assert type(lazy_loaded_data) is LazyFrame
+    assert type(lazy_loaded_data) is pl.LazyFrame
 
     loaded_data = lazy_loaded_data.collect()
 

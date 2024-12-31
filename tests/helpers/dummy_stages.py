@@ -1,17 +1,10 @@
-import polars as pl
 from pydantic import Field
 
-from onemod.config import (
-    KregConfig,
-    ModelConfig,
-    RoverConfig,
-    SpxmodConfig,
-    StageConfig,
-)
+from onemod.config import KregConfig, RoverConfig, SpxmodConfig, StageConfig
 from onemod.stage import ModelStage, Stage
 
 
-class CustomConfig(ModelConfig):
+class CustomConfig(StageConfig):
     """Custom stage config."""
 
     custom_param: int | set[int] = 1
@@ -237,7 +230,7 @@ class DummySpxmodStage(ModelStage):
 class MultiplyByTwoStage(ModelStage):
     """Stage that multiplies the value column by 2."""
 
-    config: ModelConfig
+    config: StageConfig
     _skip: set[str] = {"predict"}
     _required_input: set[str] = {"data.parquet"}
     _optional_input: set[str] = {
@@ -249,7 +242,7 @@ class MultiplyByTwoStage(ModelStage):
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""
         df = self.get_stage_subset(subset_id)
-        df = df.with_columns((pl.col("value") * 2).alias("value"))
+        df["value"] = df["value"] * 2
         self.dataif.dump(df, "data.parquet", key="output")
 
     def fit(self) -> None:

@@ -52,12 +52,29 @@ def test_input(stage_1):
 
 @pytest.mark.integration
 def test_output(stage_1):
-    assert stage_1.output == Output(
-        stage=stage_1.name,
-        items={
-            "predictions": Data(stage=stage_1.name, path="predictions.parquet"),
-            "model": Data(stage=stage_1.name, path="model.pkl"),
-        },
+    # print(stage_1.output)
+    # print(Output(
+    #     stage=stage_1.name,
+    #     items={
+    #         "model": Data(stage=stage_1.name, path="model.pkl"),
+    #         "predictions": Data(stage=stage_1.name, path="predictions.parquet"),
+    #     },
+    # ))
+    assert (
+        stage_1.output
+        == Output(
+            stage=stage_1.name,
+            items={
+                "predictions": Data(
+                    stage=stage_1.name,
+                    path="predictions.parquet",
+                    format="parquet",
+                ),
+                "model": Data(
+                    stage=stage_1.name, path="model.pkl", format="pkl"
+                ),  # FIXME: implicit format pending update of Data class with new version of DataInterface
+            },
+        )
     )
 
 
@@ -81,7 +98,7 @@ def test_input_with_missing():
     with pytest.raises(KeyError) as error:
         stage_3(priors="/path/to/priors.pkl")
     observed = str(error.value).strip('"')
-    expected = f"{stage_3.name} missing required input: "
+    expected = f"Stage '{stage_3.name}' missing required input: "
     assert (
         observed == expected + "['data', 'covariates']"
         or observed == expected + "['covariates', 'data']"
@@ -108,16 +125,7 @@ def test_stage_model(stage_1, stage_2):
     stage_1_model_expected = {
         "name": "stage_1",
         "type": "DummyStage",
-        "config": {
-            "coef_bounds": None,
-            "holdout_columns": None,
-            "id_columns": None,
-            "model_type": None,
-            "observation_column": None,
-            "prediction_column": None,
-            "test_column": None,
-            "weights_column": None,
-        },
+        "config": {},
         "input_validation": {},
         "output_validation": {},
         "module": Path(__file__),
@@ -134,16 +142,7 @@ def test_stage_model(stage_1, stage_2):
     stage_2_model_expected = {
         "name": "stage_2",
         "type": "DummyStage",
-        "config": {
-            "coef_bounds": None,
-            "holdout_columns": None,
-            "id_columns": None,
-            "model_type": None,
-            "observation_column": None,
-            "prediction_column": None,
-            "test_column": None,
-            "weights_column": None,
-        },
+        "config": {},
         "input_validation": {},
         "output_validation": {},
         "module": Path(__file__),

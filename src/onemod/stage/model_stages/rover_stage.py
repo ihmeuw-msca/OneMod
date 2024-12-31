@@ -1,4 +1,3 @@
-# mypy: ignore-errors
 """ModRover covariate selection stage.
 
 Notes
@@ -9,14 +8,11 @@ Notes
   'age_group_id', submodels will be fit separately for each age/sex
   pair, and covariates will be selected separately for each sex.
 
-TODO: Update pandas commands to polars
-
 """
 
 import warnings
 
 import pandas as pd
-import polars as pl
 from loguru import logger
 from modrover.api import Rover
 
@@ -52,11 +48,13 @@ class RoverStage(ModelStage):
         """
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id).filter(
-            pl.col(self.config["test_column"]) == 0
+        train = self.get_stage_subset(subset_id).query(
+            f"{self.config['observation_column']}.notnull()"
         )
+        if (train_column := self.config.get("train_column")) is not None:
+            train = train.query(f"{train_column} == 1")
 
-        if len(data) > 0:
+        if len(train) > 0:
             logger.info(f"Fitting {self.name} submodel {subset_id}")
 
             # Create submodel
@@ -71,11 +69,11 @@ class RoverStage(ModelStage):
 
             # Fit submodel
             submodel.fit(
-                data=data.to_pandas(),
+                data=train,
                 strategies=list(self.config.strategies),
                 top_pct_score=self.config.top_pct_score,
                 top_pct_learner=self.config.top_pct_learner,
-                coef_bounds=self.config["coef_bounds"] or {},
+                coef_bounds=self.config.get("coef_bounds", {}),
             )
 
             # Save results
@@ -145,7 +143,9 @@ class RoverStage(ModelStage):
 
         # Merge with subsets and add t-statistic
         summaries_df = summaries_df.merge(subsets, on="subset_id", how="left")
-        summaries_df["abs_t_stat"] = summaries_df.eval("abs(coef / coef_sd)")
+        summaries_df["abs_t_stat"] = (
+            summaries_df["coef"].abs() / summaries_df["coef_sd"]
+        )
         return summaries_df
 
     def _get_selected_covs(self, summaries: pd.DataFrame) -> pd.DataFrame:
@@ -186,8 +186,8 @@ class RoverStage(ModelStage):
             .mean()
             .sort_values(ascending=False)
             .reset_index()
-            .eval(f"selected = abs_t_stat >= {self.config.t_threshold}")
         )
+        t_stats["selected"] = t_stats["abs_t_stat"] >= self.config.t_threshold
 
         # Add/remove covariates based on min_covs/max_covs
         if (

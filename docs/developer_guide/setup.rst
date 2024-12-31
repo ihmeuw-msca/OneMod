@@ -85,15 +85,9 @@ Activate the Conda environment:
 4. Verify the Setup
 -------------------
 
-After setting up the environment, verify that everything works as expected:
+After setting up and **activating your environment**, verify that everything works as expected:
 
-.. code-block:: bash
-
-   make list-vars
-
-This will display the current values of key environment variables, including ``ENV_TYPE``, ``PYTHON_VERSION``, and ``CONDA_ENV``.
-
-To confirm that ``pre-commit`` hooks and tools (e.g., ``mypy``, ``ruff``) are working, run:
+To confirm that ``pre-commit`` hooks and tools (e.g., ``mypy``, ``ruff``) are working, you can run:
 
 .. code-block:: bash
 
@@ -105,20 +99,34 @@ To confirm that ``pre-commit`` hooks and tools (e.g., ``mypy``, ``ruff``) are wo
 
 Congratulations! You’re ready to start contributing to ``OneMod``.
 
-To manually run development tools, you can use the ``Makefile`` shortcuts:
+To manually run development tools, first ensure your environment is activated, for example:
+
+.. code-block:: bash
+
+   source .venv/bin/activate  # Or `conda activate onemod`
+
+
+Then, you can run the following commands as needed:
+
+- **Run `pytest` for testing**:
+
+.. code-block:: bash
+
+   pytest
+
 
 - **Run `mypy` for type checking**:
 
 .. code-block:: bash
 
-   make mypy
+   mypy src/ tests/
 
 
-- **Clean up the environment**:
+- **Run `ruff` for linting**:
 
 .. code-block:: bash
 
-   make clean
+   ruff --check
 
 
 For details on testing, contributing, or other development workflows, see the corresponding sections in the documentation:
