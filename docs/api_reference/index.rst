@@ -1,8 +1,8 @@
-#############
 API Reference
-#############
+=============
 
-.. autosummary::
-    :toctree: generated
+.. toctree::
+   :glob:
 
-    ../pipeline
+TODO: Description
+TODO: Add modules
