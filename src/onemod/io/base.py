@@ -26,7 +26,8 @@ from pydantic import (
     validate_call,
 )
 
-from onemod.dtypes import Data, UniqueList
+from onemod.dtypes import Data
+from onemod.dtypes.unique_list import UniqueList, unique_list
 
 
 class IO(BaseModel, ABC):
@@ -75,9 +76,13 @@ class Input(IO):
 
     @property
     def dependencies(self) -> UniqueList[str]:
-        return [
-            item.stage for item in self.items.values() if isinstance(item, Data)
-        ]
+        return unique_list(
+            [
+                item.stage
+                for item in self.items.values()
+                if isinstance(item, Data)
+            ]
+        )
 
     def model_post_init(self, *args, **kwargs) -> None:
         self._expected_names = {
