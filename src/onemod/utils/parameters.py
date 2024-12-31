@@ -13,7 +13,7 @@ def create_params(config: StageConfig) -> DataFrame | None:
     param_dict = {
         param_name: param_values
         for param_name in config.crossable_params
-        if isinstance(param_values := config[param_name], set)
+        if isinstance(param_values := config[param_name], list)
     }
     if not param_dict:
         return None
