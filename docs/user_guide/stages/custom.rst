@@ -1,4 +1,0 @@
-Custom Stages
-=============
-
-TODO

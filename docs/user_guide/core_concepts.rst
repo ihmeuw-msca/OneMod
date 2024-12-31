@@ -1,12 +1,5 @@
-.. _core-concepts:
-
 Core Concepts
 =============
-
-Config
-------
-
-TODO
 
 Pipeline
 --------
@@ -23,17 +16,16 @@ groupby
 
 TODO
 
-subset_id
-"""""""""
-
-TODO
-
 crossby
 ^^^^^^^
 
 TODO
 
-param_id
-""""""""
+Config
+------
 
 TODO
+
+..
+   What else should we add?
+   Some concepts can be left for advanced usage
