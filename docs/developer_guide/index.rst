@@ -13,10 +13,10 @@ Welcome to the `OneMod` developer guide! This section provides instructions and 
 
 .. note::
 
-   For getting started and local environment setup, see :ref:`Setup`.
+   For getting started and local environment setup, see :ref:`Setup <setup>`.
 
-   For testing instructions, see :ref:`Running Tests`.
+   For testing instructions, see :ref:`Running Tests <running_tests>`.
 
-   For details on contributing to the codebase, see :ref:`Contributing Code`.
+   For details on contributing to the codebase, see :ref:`Contributing Code <contributing_code>`.
 
-   For documentation contributions, see :ref:`Contributing Docs`.
+   For documentation contributions, see :ref:`Contributing Docs <contributing_docs>`.
