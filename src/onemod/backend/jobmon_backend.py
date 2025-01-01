@@ -80,11 +80,10 @@ def evaluate_with_jobmon(
         Names of stages to evaluate if `model` is a pipeline instance.
         If None, evaluate entire pipeline. Default is None.
 
-    TODO: Optional stage-specific Python environments
-    TODO: User-defined max_attempts
-    TODO: Could dependencies be method specific?
-
     """
+    # TODO: Optional stage-specific Python environments
+    # TODO: User-defined max_attempts
+    # TODO: Could dependencies be method specific?
     resources_dict = get_resources(resources)
     tool = get_tool(model.name, method, cluster, resources_dict)
     tasks = get_tasks(tool, resources_dict, model, method, python, stages)
