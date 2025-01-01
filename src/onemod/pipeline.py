@@ -59,6 +59,8 @@ class Pipeline(BaseModel):
         return self._stages
 
     def model_post_init(self, *args, **kwargs) -> None:
+        if self.groupby is not None and self.groupby_data is None:
+            raise AttributeError("groupby_data is required for groupby")
         if not self.directory.exists():
             self.directory.mkdir(parents=True)
 
@@ -264,10 +266,9 @@ class Pipeline(BaseModel):
         config_path = self.directory / (self.name + ".json")
         for stage in self.stages.values():
             stage.set_dataif(config_path)
-            stage.dataif.add_path("pipeline_groupby_data", self.groupby_data)
 
-            # Create data subsets
             if isinstance(stage, ModelStage):
+                # Create data subsets
                 if self.groupby is not None:
                     if stage.groupby is None:
                         stage.groupby = self.groupby
@@ -276,10 +277,12 @@ class Pipeline(BaseModel):
                 if stage.groupby:
                     if self.groupby_data is None:
                         raise AttributeError("Data is required for groupby")
+                    else:
+                        stage.dataif.add_path("groupby_data", self.groupby_data)
                     stage.create_stage_subsets(
-                        data_key="pipeline_groupby_data",
-                        id_subsets=self.id_subsets,
+                        data_key="groupby_data", id_subsets=self.id_subsets
                     )
+
                 # Create parameter sets
                 if stage.config.crossable_params:
                     stage.create_stage_params()
