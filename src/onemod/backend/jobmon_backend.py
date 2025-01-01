@@ -105,6 +105,7 @@ def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
         Dictionary of compute resources.
 
     """
+    # TODO: should we check format, minimum resources, cluster?
     if isinstance(resources, (Path, str)):
         config_loader = ConfigLoader()
         return config_loader.load(Path(resources))
@@ -161,7 +162,7 @@ def get_tasks(
         Pipeline or stage instance.
     method : str
         Name of method to evaluate.
-    python : str or None
+    python : Path, str, or None
         Path to Python environment. If None, use sys.executable.
     stages : set of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
@@ -173,34 +174,11 @@ def get_tasks(
         List of Jobmon tasks.
 
     """
-    task_args = {
-        "python": str(python or sys.executable),
-        "config": get_config(model),
-    }
     if isinstance(model, Pipeline):
         return get_pipeline_tasks(
-            tool, resources, model, method, task_args, stages
+            tool, resources, model, method, python, stages
         )
-    return get_stage_tasks(tool, resources, model, method, task_args)
-
-
-def get_config(model: Pipeline | Stage) -> str:
-    """Get path to pipeline config file.
-
-    Parameters
-    ----------
-    model : Pipeline or Stage
-        Pipeline or stage instance.
-
-    Returns
-    -------
-    str
-        Path to pipeline config file.
-
-    """
-    if isinstance(model, Pipeline):
-        return str(model.directory / f"{model.name}.json")
-    return str(model.dataif.get_path("config"))
+    return get_stage_tasks(tool, resources, model, method, python)
 
 
 def get_pipeline_tasks(
@@ -208,7 +186,7 @@ def get_pipeline_tasks(
     resources: dict[str, Any],
     pipeline: Pipeline,
     method: Literal["run", "fit", "predict"],
-    task_args: dict[str, Any],
+    python: Path | str | None,
     stages: set[str] | None,
 ) -> list[Task]:
     """Get pipeline stage tasks.
@@ -223,9 +201,8 @@ def get_pipeline_tasks(
         Pipeline instance.
     method : str
         Name of method to evaluate.
-    task_args : dict
-        Dictionary containing paths to python environment and pipeline
-        config file.
+    python : Path, str, or None
+        Path to Python environment. If None, use sys.executable.
     stages : set of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate entire pipeline.
@@ -246,7 +223,7 @@ def get_pipeline_tasks(
                 stage, method, pipeline.stages, task_dict, stages
             )
             task_dict[stage_name] = get_stage_tasks(
-                tool, resources, stage, method, task_args, upstream_tasks
+                tool, resources, stage, method, python, upstream_tasks
             )
             tasks.extend(task_dict[stage_name])
 
@@ -313,7 +290,7 @@ def get_stage_tasks(
     resources: dict[str, Any],
     stage: Stage,
     method: Literal["run", "fit", "predict", "collect"],
-    task_args: dict[str, Any],
+    python: Path | str | None,
     upstream_tasks: list[Task] = [],
 ) -> list[Task]:
     """Get stage tasks.
@@ -332,9 +309,8 @@ def get_stage_tasks(
         Stage instance.
     method : str
         Name of method to evaluate.
-    task_args : dict
-        Dictionary containing paths to python environment and pipeline
-        config file.
+    python : Path, str, or None
+        Path to Python environment. If None, use sys.executable.
     upstream_tasks : list of Task, optional
         List of upstream stage tasks. Default is an empty list.
 
@@ -344,12 +320,9 @@ def get_stage_tasks(
         List of stage tasks.
 
     """
-    node_args = {}
-    if isinstance(stage, ModelStage) and method != "collect":
-        # get all subset_id and/or param_id values
-        for node_arg in ["subset_id", "param_id"]:
-            if len(node_vals := getattr(stage, node_arg + "s")) > 0:
-                node_args[node_arg] = node_vals
+    python_path = get_python_path(python)
+    config_path = get_config_path(stage)
+    node_args = get_node_args(stage, method)
 
     task_template = get_task_template(
         tool, resources, stage.name, method, list(node_args.keys())
@@ -360,7 +333,9 @@ def get_stage_tasks(
             name=f"{stage.name}_{method}",
             upstream_tasks=upstream_tasks,
             max_attempts=1,
-            **{**task_args, **node_args},
+            python=python_path,
+            config=config_path,
+            **node_args,
         )
     else:
         tasks = [
@@ -368,17 +343,78 @@ def get_stage_tasks(
                 name=f"{stage.name}_{method}",
                 upstream_tasks=upstream_tasks,
                 max_attempts=1,
-                **task_args,
+                python=python_path,
+                config=config_path,
             )
         ]
 
     if isinstance(stage, ModelStage) and method in stage.collect_after:
         # get task for collect method
         tasks.extend(
-            get_stage_tasks(tool, resources, stage, "collect", task_args, tasks)
+            get_stage_tasks(tool, resources, stage, "collect", python, tasks)
         )
 
     return tasks
+
+
+def get_python_path(python: Path | str | None) -> str:
+    """Get path to python environment.
+
+    Parameters
+    ----------
+    python : Path, str, or None
+        Path to python environment. If None, use sys.executable.
+
+    Returns
+    -------
+    str
+        Path to python environment.
+
+    """
+    return str(python or sys.executable)
+
+
+def get_config_path(stage: Stage) -> str:
+    """Get path to pipeline config file.
+
+    Parameters
+    ----------
+    stage : Stage
+        Stage instance.
+
+    Returns
+    -------
+    str
+        Path to pipeline config file.
+
+    """
+    return str(stage.dataif.get_path("config"))
+
+
+def get_node_args(
+    stage: Stage, method: Literal["run", "fit", "predict", "collect"]
+) -> dict[str, Any]:
+    """Get dictionary of subset_id and/or param_id values.
+
+    Parameters
+    ----------
+    stage : Stage
+        Stage instance.
+    method : str
+        Method being evaluated.
+
+    Returns
+    -------
+    dict
+        Dictionary of subset_id and/or param_id values.
+
+    """
+    node_args = {}
+    if isinstance(stage, ModelStage) and method != "collect":
+        for node_arg in ["subset_id", "param_id"]:
+            if len(node_vals := getattr(stage, node_arg + "s")) > 0:
+                node_args[node_arg] = node_vals
+    return node_args
 
 
 def get_task_template(
