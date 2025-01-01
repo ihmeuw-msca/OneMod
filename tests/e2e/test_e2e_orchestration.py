@@ -8,6 +8,8 @@ just make sure the workflow finishes successfully.
 import pytest
 import tests.helpers.orchestration_helpers as helpers
 
+from onemod.main import evaluate
+
 SETUP_PIPELINE = {
     "simple": helpers.setup_simple_pipeline,
     "parallel": helpers.setup_parallel_pipeline,
@@ -26,20 +28,29 @@ ASSERT_OUTPUT = {
 
 @pytest.mark.e2e
 @pytest.mark.parametrize("pipeline_type", ["simple", "parallel"])
+@pytest.mark.parametrize("main", [True, False])
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 @pytest.mark.parametrize("stage_names", [None, ["run_1", "fit_2"]])
-def test_local_pipeline(tmp_path, pipeline_type, method, stage_names):
+def test_local_pipeline(tmp_path, pipeline_type, main, method, stage_names):
     # Setup the pipeline
     pipeline = SETUP_PIPELINE[pipeline_type](tmp_path)
 
     # Run pipeline through Jobmon backend on dummy cluster
-    pipeline.evaluate(method=method, stages=stage_names, backend="local")
+    if main:
+        evaluate(
+            config=pipeline.directory / f"{pipeline.name}.json",
+            method=method,
+            stages=stage_names,
+        )
+    else:
+        pipeline.evaluate(method=method, stages=stage_names)
 
     # Check logs and output
     stage_names = stage_names or pipeline.stages.keys()
     for stage_name in stage_names or pipeline.stages:
         stage = pipeline.stages[stage_name]
-        ASSERT_LOGS[pipeline_type](stage, method)
+        if not main:
+            ASSERT_LOGS[pipeline_type](stage, method)
         ASSERT_OUTPUT[pipeline_type](stage, method)
 
 
@@ -52,7 +63,8 @@ def test_jobmon_pipeline(tmp_path, pipeline_type, method, stages):
     pipeline = SETUP_PIPELINE[pipeline_type](tmp_path)
 
     # Run pipeline through Jobmon backend on dummy cluster
-    pipeline.evaluate(
+    evaluate(
+        config=pipeline.directory / f"{pipeline.name}.json",
         method=method,
         stages=stages,
         backend="jobmon",
