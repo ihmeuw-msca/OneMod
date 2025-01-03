@@ -12,7 +12,7 @@ from pydantic import BaseModel, validate_call
 
 from onemod.config import Config
 from onemod.serialization import serialize
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 from onemod.utils.decorators import computed_property
 from onemod.validation import ValidationErrorCollector, handle_error
 
@@ -267,25 +267,24 @@ class Pipeline(BaseModel):
         for stage in self.stages.values():
             stage.set_dataif(config_path)
 
-            if isinstance(stage, ModelStage):
-                # Create data subsets
-                if self.groupby is not None:
-                    if stage.groupby is None:
-                        stage.groupby = self.groupby
-                    else:
-                        stage.groupby.update(self.groupby)
-                if stage.groupby:
-                    if self.groupby_data is None:
-                        raise AttributeError("Data is required for groupby")
-                    else:
-                        stage.dataif.add_path("groupby_data", self.groupby_data)
-                    stage.create_stage_subsets(
-                        data_key="groupby_data", id_subsets=self.id_subsets
-                    )
+            # Create data subsets
+            if self.groupby is not None:
+                if stage.groupby is None:
+                    stage.groupby = self.groupby
+                else:
+                    stage.groupby.update(self.groupby)
+            if stage.groupby:
+                if self.groupby_data is None:
+                    raise AttributeError("Data is required for groupby")
+                else:
+                    stage.dataif.add_path("groupby_data", self.groupby_data)
+                stage.create_stage_subsets(
+                    data_key="groupby_data", id_subsets=self.id_subsets
+                )
 
-                # Create parameter sets
-                if stage.config.crossable_params:
-                    stage.create_stage_params()
+            # Create parameter sets
+            if stage.config.crossable_params:
+                stage.create_stage_params()
 
         self.to_json(config_path)
 

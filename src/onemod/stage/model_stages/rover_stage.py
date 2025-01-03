@@ -17,10 +17,10 @@ from loguru import logger
 from modrover.api import Rover
 
 from onemod.config import RoverConfig
-from onemod.stage import ModelStage
+from onemod.stage import Stage
 
 
-class RoverStage(ModelStage):
+class RoverStage(Stage):
     """ModRover covariate selection stage."""
 
     config: RoverConfig

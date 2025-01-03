@@ -5,10 +5,10 @@ TODO: Implement stage
 """
 
 from onemod.config import KregConfig
-from onemod.stage import ModelStage
+from onemod.stage import Stage
 
 
-class KregStage(ModelStage):
+class KregStage(Stage):
     """Kreg stage."""
 
     config: KregConfig

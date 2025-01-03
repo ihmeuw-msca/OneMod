@@ -22,12 +22,12 @@ from spxmod.model import XModel
 from xspline import XSpline
 
 from onemod.config import SpxmodConfig
-from onemod.stage import ModelStage
+from onemod.stage import Stage
 from onemod.utils.residual import ResidualCalculator
 from onemod.utils.subsets import get_subset
 
 
-class SpxmodStage(ModelStage):
+class SpxmodStage(Stage):
     """Spxmod stage."""
 
     config: SpxmodConfig

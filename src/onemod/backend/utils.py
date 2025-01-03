@@ -4,7 +4,7 @@
 import warnings
 
 from onemod.pipeline import Pipeline
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 
 
 def check_method(model: Pipeline | Stage, method: str, backend: str) -> None:
@@ -13,15 +13,10 @@ def check_method(model: Pipeline | Stage, method: str, backend: str) -> None:
             warnings.warn(f"{model.name} skips the '{method}' method")
             return
 
-    if method == "collect":
-        if not isinstance(model, ModelStage):
-            raise ValueError(
-                "Method 'collect' can only be called on instances of 'ModelStage'"
-            )
-        if backend == "jobmon":
-            raise ValueError(
-                "Method 'collect' cannot be used with 'jobmon' backend"
-            )
+    if method == "collect" and backend == "jobmon":
+        raise ValueError(
+            "Method 'collect' cannot be used with 'jobmon' backend"
+        )
 
 
 def check_input(

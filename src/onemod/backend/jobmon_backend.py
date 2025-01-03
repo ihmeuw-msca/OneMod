@@ -50,7 +50,7 @@ from pydantic import validate_call
 from onemod.backend.utils import check_input, check_method
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 
 
 @validate_call
@@ -241,11 +241,6 @@ def get_upstream_tasks(
 ) -> list[Task]:
     """Get upstream tasks for current stage.
 
-    Only include tasks corresponding to the current stage's
-    dependencies. If a dependency is an instance of `ModelStage`, only
-    include the task corresponding to the model stage's 'collect'
-    method.
-
     Parameters
     ----------
     stage : Stage
@@ -265,6 +260,14 @@ def get_upstream_tasks(
     list of Task
         Upstream stage tasks for current stage.
 
+    Notes
+    -----
+    * Only include tasks corresponding to the current stage's
+      dependencies that are included in `stages`.
+    * If an upstream stage has submodels and `method` is in the
+      upstream's `collect_after`, only include the task corresponding to
+      the upstream's `collect` method.
+
     """
     upstream_tasks = []
 
@@ -276,7 +279,7 @@ def get_upstream_tasks(
         upstream_stage = stage_dict[upstream_name]
         if method not in upstream_stage.skip:
             if (
-                isinstance(upstream_stage, ModelStage)
+                upstream_stage.has_submodels
                 and method in upstream_stage.collect_after
             ):
                 # only include task corresponding to 'collect' method
@@ -297,9 +300,9 @@ def get_stage_tasks(
 ) -> list[Task]:
     """Get stage tasks.
 
-    If stage is an instance of `ModelStage` and method is not 'collect',
-    get tasks for all subset_id and param_id values and task for collect
-    method.
+    If stage has submodels and `method` is not 'collect', get tasks for
+    all submodels. If `method` not in stage's `collect_after`, add a
+    task for stage's `collect` method.
 
     Parameters
     ----------
@@ -350,7 +353,7 @@ def get_stage_tasks(
             )
         ]
 
-    if isinstance(stage, ModelStage) and method in stage.collect_after:
+    if stage.has_submodels and method in stage.collect_after:
         # get task for collect method
         tasks.extend(
             get_stage_tasks(
@@ -363,6 +366,8 @@ def get_stage_tasks(
 
 def get_entrypoint(python: Path | str | None = None) -> str:
     """Get path to python entrypoint.
+
+    All stages methods are called via `onemod.main.evaluate()`.
 
     Parameters
     ----------
@@ -401,6 +406,10 @@ def get_node_args(
 ) -> dict[str, Any]:
     """Get dictionary of subset_id and/or param_id values.
 
+    If stage has submodels and `method` is not 'collect', additional
+    args for 'subset_id' and/or 'param_id' are included in the command
+    template.
+
     Parameters
     ----------
     stage : Stage
@@ -415,7 +424,7 @@ def get_node_args(
 
     """
     node_args = {}
-    if isinstance(stage, ModelStage) and method != "collect":
+    if stage.has_submodels and method != "collect":
         for node_arg in ["subset_id", "param_id"]:
             if len(node_vals := getattr(stage, node_arg + "s")) > 0:
                 node_args[node_arg] = node_vals
@@ -442,8 +451,7 @@ def get_task_template(
     method : str
         Name of method being evaluated.
     node_args : list of str
-        List including 'subset_id' and/or 'param_id' if stage is an
-        instance of `ModelStage` and `method` is not 'collect'.
+        List including 'subset_id' and/or 'param_id'.
 
     Returns
     -------
@@ -478,9 +486,8 @@ def get_command_template(
     """Get stage command template.
 
     All stages methods are called via `onemod.main.evaluate()`. If stage
-    is an instance of `ModelStage` and `method` is not 'collect',
-    additional args for 'subset_id' and/or 'param_id' are included in
-    the command template.
+    has submodels and `method` is not 'collect', additional args for
+    'subset_id' and/or 'param_id' are included in the command template.
 
     Parameters
     ----------
@@ -489,8 +496,7 @@ def get_command_template(
     method : str
         Name of method being evaluated.
     node_args : list of str
-        List including 'subset_id' and/or 'param_id' if stage is an
-        instance of `ModelStage` and `method` is not 'collect'.
+        List including 'subset_id' and/or 'param_id'.
 
     Returns
     -------
