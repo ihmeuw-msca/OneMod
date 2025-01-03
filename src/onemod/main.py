@@ -14,11 +14,6 @@ from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
-def init(directory: Path | str) -> None:
-    """Initialize project directory."""
-    raise NotImplementedError()
-
-
 def load_pipeline(config: Path | str) -> Pipeline:
     """Load pipeline instance from JSON file.
 
@@ -174,19 +169,8 @@ def evaluate(
         model.evaluate(method, stages, backend, **kwargs)
 
 
-def call_function(
-    method: Literal["init", "run", "fit", "predict", "collect"], **kwargs
-):
-    if method == "init":
-        init(**kwargs)
-    elif method in ["run", "fit", "predict", "collect"]:
-        evaluate(method=method, **kwargs)
-    else:
-        raise ValueError(f"Invalid function name: {method}")
-
-
 def main():
-    fire.Fire(call_function)
+    fire.Fire(evaluate)
 
 
 if __name__ == "__main__":
