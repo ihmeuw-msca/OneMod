@@ -8,6 +8,7 @@ import pandas as pd
 
 from onemod import Pipeline, load_stage
 from onemod.config import StageConfig
+from onemod.dtypes import Data
 from onemod.stage import ModelStage, Stage
 from onemod.utils.subsets import get_subset
 
@@ -315,9 +316,26 @@ def setup_parallel_pipeline(directory: Path) -> Pipeline:
     # Define dataflow
     # TODO: Update once stage instance can be passed as input
     run_1(input1=directory, input2=directory)
-    fit_2(input1=directory / "run_1", input2=directory)
-    predict_3(input1=directory / "run_1", input2=directory)
-    run_4(input1=directory / "fit_2", input2=directory / "predict_3")
+    fit_2(
+        input1=Data(
+            stage="run_1", path=directory / "run_1", format="directory"
+        ),
+        input2=directory,
+    )
+    predict_3(
+        input1=Data(
+            stage="run_1", path=directory / "run_1", format="directory"
+        ),
+        input2=directory,
+    )
+    run_4(
+        input1=Data(
+            stage="fit_2", path=directory / "fit_2", format="directory"
+        ),
+        input2=Data(
+            stage="predict_3", path=directory / "predict_3", format="directory"
+        ),
+    )
 
     # Build and return pipeline
     pipeline.build()
