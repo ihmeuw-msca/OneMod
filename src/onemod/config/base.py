@@ -44,7 +44,7 @@ class Config(BaseModel):
         arg_list.sort()
         return f"{type(self).__name__}({', '.join(arg_list)})"
 
-    def _get_fields(self) -> list[str]:
+    def _get_fields(self) -> List[str]:
         return list(self.model_dump(exclude_none=True))
 
 
@@ -110,13 +110,15 @@ class StageConfig(Config):
     def pipeline_contains(self, key: str) -> bool:
         return key in self._pipeline_config
 
-    def _get_fields(self) -> list[str]:
-        return list(set(self._get_stage_fields() + self._get_pipeline_fields()))
+    def _get_fields(self) -> List[str]:
+        return unique_list(
+            self._get_stage_fields() + self._get_pipeline_fields()
+        )
 
-    def _get_stage_fields(self) -> list[str]:
+    def _get_stage_fields(self) -> List[str]:
         return list(self.model_dump(exclude_none=True))
 
-    def _get_pipeline_fields(self) -> list[str]:
+    def _get_pipeline_fields(self) -> List[str]:
         return self._pipeline_config._get_fields()
 
     def __repr__(self) -> str:

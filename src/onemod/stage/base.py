@@ -440,7 +440,7 @@ class ModelStage(Stage, ABC):
         if self.groupby is not None and not self._subset_ids:
             try:
                 subsets = self.dataif.load("subsets.csv", key="output")
-                self._subset_ids = list(set(subsets["subset_id"]))
+                self._subset_ids = unique_list(subsets["subset_id"].tolist())
             except FileNotFoundError:
                 raise AttributeError(
                     f"{self.name} data subsets have not been created"
@@ -452,7 +452,7 @@ class ModelStage(Stage, ABC):
         if self.crossby is not None and not self._param_ids:
             try:
                 params = self.dataif.load("parameters.csv", key="output")
-                self._param_ids = list(set(params["param_id"]))
+                self._param_ids = unique_list(params["param_id"].tolist())
             except FileNotFoundError:
                 raise AttributeError(
                     f"{self.name} parameter sets have not been created"
@@ -485,7 +485,7 @@ class ModelStage(Stage, ABC):
         )
 
         subsets_df = create_subsets(self.groupby, df)
-        self._subset_ids = list(set(subsets_df["subset_id"]))
+        self._subset_ids = unique_list(subsets_df["subset_id"].tolist())
 
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
@@ -507,7 +507,7 @@ class ModelStage(Stage, ABC):
                 raise KeyError("Parameter set ID column 'param_id' not found")
 
             self._crossby = [col for col in params.columns if col != "param_id"]
-            self._param_ids = list(set(params["param_id"]))
+            self._param_ids = unique_list(params["param_id"].tolist())
             self.dataif.dump(params, "parameters.csv", key="output")
 
     def set_params(self, param_id: int) -> None:
