@@ -47,13 +47,14 @@ from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
 from pydantic import validate_call
 
+from onemod.backend.utils import check_input, check_method
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
 from onemod.stage import ModelStage, Stage
 
 
 @validate_call
-def evaluate_with_jobmon(
+def evaluate(
     model: Pipeline | Stage,
     cluster: str,
     resources: Path | str | dict[str, Any],
@@ -77,13 +78,15 @@ def evaluate_with_jobmon(
     method : str, optional
         Name of method to evalaute. Default is 'run'.
     stages : set of str or None, optional
-        Names of stages to evaluate if `model` is a pipeline instance.
+        Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate entire pipeline. Default is None.
 
     """
     # TODO: Optional stage-specific Python environments
     # TODO: User-defined max_attempts
     # TODO: Could dependencies be method specific?
+    check_method(model, method, backend="jobmon")
+    check_input(model, stages)
     resources_dict = get_resources(resources)
     tool = get_tool(model.name, method, cluster, resources_dict)
     tasks = get_tasks(tool, resources_dict, model, method, python, stages)

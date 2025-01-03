@@ -332,37 +332,15 @@ class Pipeline(BaseModel):
             Required if `backend` is 'jobmon'.
 
         """
-        if method == "collect":
-            raise ValueError(
-                "Method 'collect' can only be called on a 'ModelStage' object"
-            )
-
         if build:
             self.build(id_subsets=id_subsets)
 
-        stages = stages or self.stages.keys()
-        for stage_name in stages:
-            if stage_name not in self.stages:
-                raise ValueError(f"Stage '{stage_name}' not found in pipeline.")
-            else:
-                # Check input from upstream stages not being run already exists
-                stage = self.stages[stage_name]
-                stage.input.check_exists(
-                    upstream_stages=[
-                        dep for dep in stage.dependencies if dep not in stages
-                    ]
-                )
-
         if backend == "jobmon":
-            from onemod.backend.jobmon_backend import evaluate_with_jobmon
-
-            evaluate_with_jobmon(
-                model=self, method=method, stages=stages, **kwargs
-            )
+            from onemod.backend.jobmon_backend import evaluate
         else:
-            from onemod.backend.local_backend import evaluate_local
+            from onemod.backend.local_backend import evaluate
 
-            evaluate_local(model=self, method=method, stages=stages)
+        evaluate(model=self, method=method, stages=stages, **kwargs)
 
     def run(
         self,

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
@@ -248,25 +247,14 @@ class Stage(BaseModel, ABC):
         `predict` is called.
 
         """
-        if method == "collect":
-            raise ValueError(
-                "Method 'collect' can only be called for 'ModelStage' objects"
-            )
-
-        if method in self.skip:
-            warnings.warn(f"'{self.name}' stage skips the '{method}' method")
-            return
-
         method = method if hasattr(self, method) else "run"
 
-        self.input.check_exists()
-
         if backend == "jobmon":
-            from onemod.backend.jobmon_backend import evaluate_with_jobmon
-
-            evaluate_with_jobmon(model=self, method=method, **kwargs)
+            from onemod.backend.jobmon_backend import evaluate
         else:
-            self.__getattribute__(method)()
+            from onemod.backend.local_backend import evaluate
+
+        evaluate(model=self, method=method, **kwargs)
 
     def validate_build(self, collector: ValidationErrorCollector) -> None:
         """Perfom build-time validation."""
@@ -557,33 +545,12 @@ class ModelStage(Stage, ABC):
         collect the submodel results.
 
         """
-        if method in self.skip:
-            warnings.warn(f"{self.name} skips the '{method}' method")
-            return
-
-        self.input.check_exists()
-
         if backend == "jobmon":
-            if method == "collect":
-                raise ValueError(
-                    "Method 'collect' cannot be used with 'jobmon' backend"
-                )
-
-            from onemod.backend.jobmon_backend import evaluate_with_jobmon
-
-            evaluate_with_jobmon(model=self, method=method, **kwargs)
+            from onemod.backend.jobmon_backend import evaluate
         else:
-            if method == "collect":
-                self.collect()
-            else:
-                subset_id = kwargs.get("subset_id")
-                param_id = kwargs.get("param_id")
-                if subset_id is not None or param_id is not None:
-                    self.__getattribute__(method)(subset_id, param_id)
-                else:
-                    from onemod.backend.local_backend import evaluate_local
+            from onemod.backend.local_backend import evaluate
 
-                    evaluate_local(model=self, method=method)
+        evaluate(model=self, method=method, **kwargs)
 
     @abstractmethod
     def run(self, *args, **kwargs) -> None:
