@@ -9,7 +9,7 @@ import pandas as pd
 from onemod import Pipeline, load_stage
 from onemod.config import StageConfig
 from onemod.dtypes import Data
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 from onemod.utils.subsets import get_subset
 
 
@@ -75,7 +75,7 @@ class ParallelConfig(StageConfig):
     param: int | set[int]
 
 
-class ParallelStage(ModelStage):
+class ParallelStage(Stage):
     """Used to test groupby, crossby, and collect_after."""
 
     # TODO: Update once stage instance can be passed as input
