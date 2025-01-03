@@ -1,4 +1,4 @@
-"""Run pipeline and stages through local backend."""
+"""End-to-end tests for local backend."""
 # TODO: Write tests for id_subsets
 
 import pytest
