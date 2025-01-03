@@ -322,7 +322,7 @@ def get_stage_tasks(
         List of stage tasks.
 
     """
-    python_path = get_python_path(python)
+    entrypoint = get_entrypoint(python)
     config_path = get_config_path(stage)
     node_args = get_node_args(stage, method)
 
@@ -335,7 +335,7 @@ def get_stage_tasks(
             name=f"{stage.name}_{method}",
             upstream_tasks=upstream_tasks,
             max_attempts=1,
-            python=python_path,
+            entrypoint=entrypoint,
             config=config_path,
             **node_args,
         )
@@ -345,7 +345,7 @@ def get_stage_tasks(
                 name=f"{stage.name}_{method}",
                 upstream_tasks=upstream_tasks,
                 max_attempts=1,
-                python=python_path,
+                entrypoint=entrypoint,
                 config=config_path,
             )
         ]
@@ -353,27 +353,30 @@ def get_stage_tasks(
     if isinstance(stage, ModelStage) and method in stage.collect_after:
         # get task for collect method
         tasks.extend(
-            get_stage_tasks(tool, resources, stage, "collect", python, tasks)
+            get_stage_tasks(
+                tool, resources, stage, "collect", entrypoint, tasks
+            )
         )
 
     return tasks
 
 
-def get_python_path(python: Path | str | None) -> str:
-    """Get path to python environment.
+def get_entrypoint(python: Path | str | None = None) -> str:
+    """Get path to python entrypoint.
 
     Parameters
     ----------
-    python : Path, str, or None
+    python : Path or str, optional
         Path to python environment. If None, use sys.executable.
+        Default is None.
 
     Returns
     -------
     str
-        Path to python environment.
+        Path to python entrypoint.
 
     """
-    return str(python or sys.executable)
+    return str(Path(python or sys.executable).parent / "onemod")
 
 
 def get_config_path(stage: Stage) -> str:
@@ -451,7 +454,7 @@ def get_task_template(
     task_template = tool.get_task_template(
         template_name=f"{stage_name}_{method}",
         command_template=get_command_template(stage_name, method, node_args),
-        op_args=["python"],
+        op_args=["entrypoint"],
         task_args=["config"],
         node_args=node_args,
     )
@@ -496,11 +499,8 @@ def get_command_template(
 
     """
     command_template = (
-        "{python}"
-        f" {Path(__file__).parents[1] / 'main.py'}"
-        " --config {config}"
-        f" --method {method}"
-        f" --stages {stage_name}"
+        "{entrypoint} --config {config}"
+        f" --method {method} --stages {stage_name}"
     )
 
     for node_arg in node_args:
