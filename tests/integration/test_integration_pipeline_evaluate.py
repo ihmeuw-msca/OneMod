@@ -129,17 +129,27 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 @pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_duplicate_stage_names(small_input_data, test_base_dir, method):
-    """Test that Pipeline.evaluate() raises an error when duplicate stage names are provided."""
+    """Test that duplicate stage names passed to Pipeline.evaluate() are coerced to unique stage names."""
     dummy_pipeline, stages = setup_dummy_pipeline(
         small_input_data, test_base_dir
     )
 
     subset_stage_names = ["preprocessing", "preprocessing"]
 
-    with pytest.raises(
-        ValueError, match="Duplicate stage names in 'stages' list"
-    ):
-        dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+    dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+
+    # Check that preprocessing was evaluated only once
+    assert (
+        len([stage for stage in stages if stage.name == "preprocessing"]) == 1
+    )
+    for stage in stages:
+        if stage.name == "preprocessing":
+            if method in ["run", "fit"]:
+                assert stage.get_log() == [f"run: name={stage.name}"]
+            else:
+                assert stage.get_log() == []
+        else:
+            assert stage.get_log() == []
 
 
 @pytest.mark.integration
