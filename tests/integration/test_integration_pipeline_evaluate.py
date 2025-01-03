@@ -128,6 +128,23 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 @pytest.mark.integration
 @pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_duplicate_stage_names(small_input_data, test_base_dir, method):
+    """Test that Pipeline.evaluate() raises an error when duplicate stage names are provided."""
+    dummy_pipeline, stages = setup_dummy_pipeline(
+        small_input_data, test_base_dir
+    )
+
+    subset_stage_names = ["preprocessing", "preprocessing"]
+
+    with pytest.raises(
+        ValueError, match="Duplicate stage names in 'stages' list"
+    ):
+        dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+
+
+@pytest.mark.integration
+@pytest.mark.requires_data
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() raises an error when an invalid id_subsets key is provided."""
     dummy_pipeline, stages = setup_dummy_pipeline(

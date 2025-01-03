@@ -1,15 +1,23 @@
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, validate_call
 
 from onemod.dtypes.unique_list import UniqueList, unique_list
 
 
+# Sub-class of BaseModel with a UniqueList[int] field
 class UniqueListIntModel(BaseModel):
     unique_list: UniqueList[int]
 
 
+# Sub-class of BaseModel with a UniqueList[str] field
 class UniqueListStrModel(BaseModel):
     unique_list: UniqueList[str]
+
+
+# Function taking a UniqueList[str] argument
+@validate_call
+def unique_list_func(unique_list: UniqueList[str]):
+    return unique_list
 
 
 # Test the unique_list validator function
@@ -55,3 +63,13 @@ def test_unique_list_model_none_as_list():
     assert len(errors) == 1
     assert errors[0]["type"] == "list_type"
     assert errors[0]["msg"] == "Input should be a valid list"
+
+
+@pytest.mark.unit
+def test_unique_list_func_valid():
+    assert unique_list_func(["a", "b", "c"]) == ["a", "b", "c"]
+
+
+@pytest.mark.unit
+def test_unique_list_func_non_unique():
+    assert unique_list_func(["a", "b", "b"]) == ["a", "b"]

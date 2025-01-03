@@ -1,8 +1,7 @@
 from pathlib import Path
+from typing import List
 
 from polars import DataFrame, read_parquet
-
-from onemod.dtypes.unique_list import UniqueList
 
 
 class DataIOHandler:
@@ -15,7 +14,7 @@ class DataIOHandler:
     * TODO: expanding this vs. using DataInterface
     """
 
-    supported_formats: UniqueList[str] = ["parquet"]
+    supported_formats: List[str] = ["parquet"]
 
     @staticmethod
     def read_data(path: Path) -> DataFrame:

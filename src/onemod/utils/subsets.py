@@ -1,10 +1,14 @@
 """Functions for working with groupby and subsets."""
 
+from typing import List
+
 import pandas as pd
+from pydantic import ConfigDict, validate_call
 
 from onemod.dtypes import UniqueList
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def create_subsets(
     groupby: UniqueList[str], data: pd.DataFrame
 ) -> pd.DataFrame:
@@ -23,7 +27,7 @@ def get_subset(
     data: pd.DataFrame,
     subsets: pd.DataFrame,
     subset_id: int,
-    id_names: list[str] | None = None,
+    id_names: List[str] | None = None,
 ) -> pd.DataFrame:
     """Get data subset by subset_id."""
     id_subsets = get_id_subsets(subsets, subset_id)

@@ -6,12 +6,16 @@ import json
 import logging
 from collections import deque
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, List, Literal
 
 from pydantic import BaseModel, validate_call
 
 from onemod.config import Config
-from onemod.dtypes.unique_list import UniqueList, update_unique_list
+from onemod.dtypes.unique_list import (
+    UniqueList,
+    unique_list,
+    update_unique_list,
+)
 from onemod.serialization import serialize
 from onemod.stage import ModelStage, Stage
 from onemod.utils.decorators import computed_property
@@ -46,13 +50,14 @@ class Pipeline(BaseModel):
     directory: Path
     groupby: UniqueList[str] | None = None
     groupby_data: Path | None = None
-    id_subsets: dict[str, list[Any]] | None = None
+    id_subsets: dict[str, List[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
 
     @computed_property
     def dependencies(self) -> dict[str, UniqueList[str]]:
         return {
-            stage.name: stage.dependencies for stage in self.stages.values()
+            stage.name: unique_list(stage.dependencies)
+            for stage in self.stages.values()
         }
 
     @computed_property
@@ -113,12 +118,12 @@ class Pipeline(BaseModel):
                 )
             )
 
-    def add_stages(self, stages: list[Stage]) -> None:
+    def add_stages(self, stages: List[Stage]) -> None:
         """Add stages to pipeline.
 
         Parameters
         ----------
-        stages : list of Stage
+        stages : List of Stage
             Stages to add to the pipeline.
 
         """
@@ -142,7 +147,7 @@ class Pipeline(BaseModel):
 
     def get_execution_order(
         self, stages: UniqueList[str] | None = None
-    ) -> list[str]:
+    ) -> List[str]:
         """Get stages sorted in execution order.
 
         Use Kahn's algorithm to find the topoligical order of the
@@ -156,7 +161,7 @@ class Pipeline(BaseModel):
 
         Returns
         -------
-        list of str
+        List of str
             Stages sorted in execution order.
 
         Raises
@@ -170,7 +175,7 @@ class Pipeline(BaseModel):
         exist).
 
         """
-        reverse_graph: dict[str, list[str]] = {
+        reverse_graph: dict[str, List[str]] = {
             stage: [] for stage in self.dependencies
         }
         in_degree = {stage: 0 for stage in self.dependencies}
@@ -243,7 +248,7 @@ class Pipeline(BaseModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self, id_subsets: dict[str, list[Any]] | None = None) -> None:
+    def build(self, id_subsets: dict[str, List[Any]] | None = None) -> None:
         """Assemble pipeline, perform build-time validation, and save to JSON."""
         self.id_subsets = id_subsets
         collector = ValidationErrorCollector()
@@ -306,7 +311,7 @@ class Pipeline(BaseModel):
         stages: UniqueList[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
-        id_subsets: dict[str, list[Any]] | None = None,
+        id_subsets: dict[str, List[Any]] | None = None,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.

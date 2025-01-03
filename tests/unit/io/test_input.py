@@ -32,6 +32,13 @@ ITEMS_WITH_INVALID_TYPES = {
     "priors": Data(stage="second_stage", path=Path("/path/to/model.zip")),
 }
 ITEMS_WITH_EXTRAS = {"dummy": "/path/to/dummy.parquet", **VALID_ITEMS}
+ITEMS_WITH_SHARED_DEPENDENCY = {
+    "data": "/path/to/predictions.parquet",
+    "covariates": Data(
+        stage="first_stage", path=Path("/path/to/selected_covs.csv")
+    ),
+    "priors": Data(stage="first_stage", path=Path("/path/to/model.pkl")),
+}
 
 
 def get_input(items: dict[str, Path | Data] = {}) -> Input:
@@ -224,6 +231,12 @@ def test_contains():
 def test_dependencies():
     test_input = get_input(VALID_ITEMS)
     assert test_input.dependencies == ["first_stage", "second_stage"]
+
+
+@pytest.mark.unit
+def test_dependencies_with_duplicate_dependencies():
+    test_input = get_input(ITEMS_WITH_SHARED_DEPENDENCY)
+    assert test_input.dependencies == ["first_stage"]
 
 
 @pytest.mark.unit

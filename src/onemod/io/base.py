@@ -16,7 +16,7 @@ adding to Input.items.
 
 from abc import ABC
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 from pydantic import (
     BaseModel,
@@ -75,7 +75,7 @@ class Input(IO):
     _expected_types: dict[str, str] = PrivateAttr(default_factory=dict)
 
     @property
-    def dependencies(self) -> UniqueList[str]:
+    def dependencies(self) -> List[str]:
         return unique_list(
             [
                 item.stage
@@ -144,6 +144,7 @@ class Input(IO):
                 f"Stage '{self.stage}' missing required input: {missing_items}"
             )
 
+    @validate_call
     def check_exists(
         self,
         item_names: UniqueList[str] | None = None,

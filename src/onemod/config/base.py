@@ -1,10 +1,10 @@
 """Configuration classes."""
 
-from typing import Any
+from typing import Any, List
 
 from pydantic import BaseModel, ConfigDict
 
-from onemod.dtypes import UniqueList
+from onemod.dtypes.unique_list import UniqueList, unique_list
 
 
 class Config(BaseModel):
@@ -66,8 +66,8 @@ class StageConfig(Config):
     _crossable_params: UniqueList[str] = list()
 
     @property
-    def crossable_params(self) -> UniqueList[str]:
-        return self._crossable_params
+    def crossable_params(self) -> List[str]:
+        return unique_list(self._crossable_params)
 
     def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):

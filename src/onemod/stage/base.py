@@ -8,14 +8,15 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, List, Literal
 
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import StageConfig
-from onemod.dtypes import Data, UniqueList
+from onemod.dtypes import Data
+from onemod.dtypes.unique_list import UniqueList, unique_list
 from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
 from onemod.utils.decorators import computed_property
@@ -142,8 +143,8 @@ class Stage(BaseModel, ABC):
         return self._module
 
     @property
-    def skip(self) -> UniqueList[str]:
-        return self._skip
+    def skip(self) -> List[str]:
+        return unique_list(self._skip)
 
     @computed_property
     def input(self) -> Input | None:
@@ -168,10 +169,10 @@ class Stage(BaseModel, ABC):
         return Output(stage=self.name, items=output_items)
 
     @property
-    def dependencies(self) -> UniqueList[str]:
+    def dependencies(self) -> List[str]:
         if self.input is None:
             return list()
-        return self.input.dependencies
+        return unique_list(self.input.dependencies)
 
     @computed_property
     def type(self) -> str:
@@ -429,11 +430,13 @@ class ModelStage(Stage, ABC):
     _collect_after: UniqueList[str] = list()
 
     @computed_property
-    def crossby(self) -> UniqueList[str] | None:
-        return self._crossby
+    def crossby(self) -> List[str] | None:
+        if self._crossby is None:
+            return None
+        return unique_list(self._crossby)
 
     @property
-    def subset_ids(self) -> UniqueList[int | None]:
+    def subset_ids(self) -> List[int | None]:
         if self.groupby is not None and not self._subset_ids:
             try:
                 subsets = self.dataif.load("subsets.csv", key="output")
@@ -445,7 +448,7 @@ class ModelStage(Stage, ABC):
         return self._subset_ids
 
     @property
-    def param_ids(self) -> UniqueList[int | None]:
+    def param_ids(self) -> List[int | None]:
         if self.crossby is not None and not self._param_ids:
             try:
                 params = self.dataif.load("parameters.csv", key="output")
@@ -457,8 +460,8 @@ class ModelStage(Stage, ABC):
         return self._param_ids
 
     @property
-    def collect_after(self) -> UniqueList[str]:
-        return self._collect_after
+    def collect_after(self) -> List[str]:
+        return unique_list(self._collect_after)
 
     def apply_stage_specific_config(self, stage_config: dict) -> None:
         """Apply ModelStage-specific configuration."""
@@ -466,7 +469,7 @@ class ModelStage(Stage, ABC):
             self._crossby = stage_config["crossby"]
 
     def create_stage_subsets(
-        self, data_key: str, id_subsets: dict[str, list[Any]] | None = None
+        self, data_key: str, id_subsets: dict[str, List[Any]] | None = None
     ) -> None:
         """Create stage data subsets from groupby and id_subsets."""
         if self.groupby is None:

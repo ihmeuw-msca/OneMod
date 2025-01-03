@@ -188,6 +188,19 @@ def test_pipeline_with_undefined_dependencies(test_base_dir):
 
 
 @pytest.mark.integration
+def test_pipeline_with_duplicate_groupby(test_base_dir):
+    pipeline_dir = test_base_dir / "duplicate_groupby_pipeline"
+    pipeline = Pipeline(
+        name="duplicate_groupby_pipeline",
+        config={"id_columns": [], "model_type": "binomial"},
+        directory=pipeline_dir,
+        groupby=["age_group_id", "age_group_id", "location_id"],
+    )
+
+    assert pipeline.groupby == ["age_group_id", "location_id"]
+
+
+@pytest.mark.integration
 def test_validate_dag_with_self_dependency(test_base_dir):
     pipeline = Pipeline(
         name="test_pipeline",
