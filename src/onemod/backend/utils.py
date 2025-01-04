@@ -9,6 +9,11 @@ from onemod.stage import Stage
 
 def check_method(model: Pipeline | Stage, method: str, backend: str) -> None:
     if isinstance(model, Stage):
+        if method == "collect" and not model.has_submodels:
+            raise ValueError(
+                "Method 'collect' cannot be called on stage without submodels"
+            )
+
         if method in model.skip:
             warnings.warn(f"{model.name} skips the '{method}' method")
             return
