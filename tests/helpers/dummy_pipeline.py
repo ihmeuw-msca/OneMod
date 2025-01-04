@@ -161,6 +161,11 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
 def get_expected_args() -> dict:
     """Dictionary of the expected arguments for each stage."""
     return {
+        "preprocessing": {
+            "methods": {"run": ["run"], "fit": ["run"], "predict": None},
+            "subset_ids": range(2),
+            "param_ids": None,
+        },
         "covariate_selection": {
             "methods": {"run": ["run", "fit"], "fit": ["fit"], "predict": None},
             "subset_ids": range(3),

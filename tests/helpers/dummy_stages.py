@@ -120,9 +120,18 @@ class DummyPreprocessingStage(Stage):
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
 
-    def run(self) -> None:
+    def run(
+        self, subset_id: int | None = None, param_id: int | None = None
+    ) -> None:
         """Run preprocessing stage."""
-        self.log.append(f"run: name={self.name}")
+        self.log.append(
+            f"run: name={self.name}, subset={subset_id}, param={param_id}"
+        )
+
+    def fit(
+        self, subset_id: int | None = None, param_id: int | None = None
+    ) -> None:
+        self.run(subset_id, param_id)
 
     # Dummy-specific methods
     def get_log(self) -> list[str]:
