@@ -16,8 +16,9 @@ class DummyStage(Stage):
     _required_input: set[str] = {"data.parquet", "covariates.parquet"}
     _optional_input: set[str] = {"priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _skip: set[str] = {"fit", "predict"}
 
-    def run(self):
+    def run(self, *args, **kwargs):
         pass
 
 
@@ -31,7 +32,15 @@ def create_dummy_data(test_base_dir):
     stage_1_dir.mkdir(parents=True, exist_ok=True)
     stage_2_dir.mkdir(parents=True, exist_ok=True)
 
-    data_df = DataFrame({"id_col": [1], "bounded_col": [0.5], "str_col": ["a"]})
+    data_df = DataFrame(
+        {
+            "id_col": [1],
+            "age_group_id": [1],
+            "location_id": [1],
+            "bounded_col": [0.5],
+            "str_col": ["a"],
+        }
+    )
     data_parquet_path = data_dir / "data.parquet"
     data_df.write_parquet(data_parquet_path)
 
@@ -209,6 +218,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "type": "DummyStage",
                 "module": __file__,
                 "config": {},
+                "groupby": ["age_group_id"],
                 "input": {
                     "data": str(test_base_dir / "data" / "data.parquet"),
                     "covariates": str(
