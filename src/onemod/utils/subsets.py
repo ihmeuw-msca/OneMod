@@ -5,6 +5,7 @@ import pandas as pd
 
 def create_subsets(groupby: set[str], data: pd.DataFrame) -> pd.DataFrame:
     """Create subsets from groupby."""
+    # TODO: Simplify once groupby set changed to list
     sorted_groupby = sorted(groupby)
     groups = data.groupby(sorted_groupby)
     subsets = pd.DataFrame(
