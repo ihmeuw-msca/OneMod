@@ -78,18 +78,19 @@ def _evaluate_stage(
     if method == "collect":
         stage.collect()
     else:
-        if stage.groupby is None and stage.crossby is None:
-            stage.__getattribute__(method)
-        else:
+        stage_method = stage.__getattribute__(method)
+        if stage.has_submodels:
             subset_passed = stage.groupby is not None and subset_id is not None
             param_passed = stage.crossby is not None and param_id is not None
             if (stage.groupby is None or subset_passed) and (
                 stage.crossby is None or param_passed
             ):
-                stage.__getattribute__(method)(subset_id, param_id)
+                stage_method(subset_id, param_id)
             else:
                 for subset_id in stage.subset_ids or [None]:
                     for param_id in stage.param_ids or [None]:
-                        stage.__getattribute__(method)(subset_id, param_id)
+                        stage_method(subset_id, param_id)
                 if method in stage.collect_after:
                     stage.collect()
+        else:
+            stage_method()

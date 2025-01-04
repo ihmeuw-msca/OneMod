@@ -151,7 +151,7 @@ class ParallelStage(Stage):
         self, input_name: str, method: str, subset_id: int | None
     ) -> pd.DataFrame:
         # Load input data
-        input_path = self.dataif.get_path(input_name)
+        input_path = Path(self.dataif.get_path(input_name))
         if input_path == self.dataif.get_path("directory"):
             data = self.dataif.load("data.csv", key="directory")
         else:
@@ -418,13 +418,13 @@ def assert_parallel_output(stage: ParallelStage, method: str) -> None:
     # Check input columns
     for input_name in ["input1", "input2"]:
         input_column = output[input_name].unique()
-        input_path = stage.input[input_name]  # TODO: Update if Data object
+        input_item = stage.input[input_name]
 
-        if input_path == stage.dataif.get_path("directory"):
+        if isinstance(input_item, Path):
             assert len(input_column) == 1
             assert input_column[0] == "pipeline_input"
         else:
-            upstream_stage = input_path.name
+            upstream_stage = input_item.stage
             for _, row in output.iterrows():
                 row_stage = row["stage"]
                 row_input = row[input_name]

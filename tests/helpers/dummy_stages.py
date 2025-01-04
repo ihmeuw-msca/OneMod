@@ -1,7 +1,7 @@
 from pydantic import Field
 
 from onemod.config import KregConfig, RoverConfig, SpxmodConfig, StageConfig
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 
 
 class CustomConfig(StageConfig):
@@ -11,7 +11,7 @@ class CustomConfig(StageConfig):
     _crossable_params: set[str] = {"custom_param"}
 
 
-class DummyCustomStage(ModelStage):
+class DummyCustomStage(Stage):
     """Custom stage."""
 
     config: CustomConfig = CustomConfig()  # type: ignore
@@ -57,7 +57,7 @@ class DummyCustomStage(ModelStage):
         return self.log
 
 
-class DummyKregStage(ModelStage):
+class DummyKregStage(Stage):
     """Kreg stage."""
 
     config: KregConfig
@@ -130,7 +130,7 @@ class DummyPreprocessingStage(Stage):
         return self.log
 
 
-class DummyRoverStage(ModelStage):
+class DummyRoverStage(Stage):
     """Rover stage."""
 
     config: RoverConfig
@@ -175,7 +175,7 @@ class DummyRoverStage(ModelStage):
         return self.log
 
 
-class DummySpxmodStage(ModelStage):
+class DummySpxmodStage(Stage):
     """Spxmod stage."""
 
     config: SpxmodConfig
@@ -227,7 +227,7 @@ class DummySpxmodStage(ModelStage):
         return self.log
 
 
-class MultiplyByTwoStage(ModelStage):
+class MultiplyByTwoStage(Stage):
     """Stage that multiplies the value column by 2."""
 
     config: StageConfig
