@@ -7,10 +7,16 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from inspect import getfile
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Generator, Literal
 
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, Field, validate_call
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    validate_call,
+)
 
 import onemod.stage as onemod_stages
 from onemod.config import StageConfig
@@ -46,10 +52,12 @@ class Stage(BaseModel, ABC):
         Stage name.
     config : StageConfig
         Stage configuration.
-    groupby : set of str or None, optional
-        Column names used to create data subsets. Default is None.
-    crossby : set of str or None, optional
-        Parameter names used to create parameter sets. Default is None.
+    groupby : tuple of str, optional
+        Column names used to create data subsets. Default is an empty
+        tuple.
+    crossby : tuple of str, optional
+        Parameter names used to create parameter sets. Default is an
+        empty tuple.
     input_validation : dict, optional
         Optional specification of input data validation.
     output_validation : dict, optional
@@ -90,8 +98,8 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
-    groupby: set[str] | None = None
-    crossby: set[str] | None = None
+    groupby: tuple[str, ...] = tuple()
+    crossby: tuple[str, ...] = tuple()
     input_validation: dict[str, Data] = Field(default_factory=dict)
     output_validation: dict[str, Data] = Field(default_factory=dict)
     _dataif: DataInterface | None = None
@@ -102,8 +110,16 @@ class Stage(BaseModel, ABC):
     _output: set[str] = set()
     _skip: set[str] = set()
     _collect_after: set[str] = set()
-    _subset_ids: set[int] = set()
-    _param_ids: set[int] = set()
+    _subset_ids: tuple[int, ...] = tuple()
+    _param_ids: tuple[int, ...] = tuple()
+
+    @field_validator("groupby", "crossby", model="after")
+    @classmethod
+    def unique_tuple(cls, items: tuple[str, ...]) -> tuple[str, ...]:
+        """Make sure groupby and crossby have unique values."""
+        if len(items) > 0:
+            return tuple(dict.fromkeys(items))
+        return items
 
     @property
     def dataif(self) -> DataInterface:
@@ -216,29 +232,45 @@ class Stage(BaseModel, ABC):
 
     @property
     def has_submodels(self) -> bool:
-        return self.groupby is not None or self.crossby is not None
+        return len(self.groupby) > 0 or len(self.crossby) > 0
 
     @property
-    def subset_ids(self) -> set[int]:
-        if self.groupby is not None and not self._subset_ids:
+    def submodel_ids(self) -> Generator:
+        if not self.has_submodels:
+            raise AttributeError(f"Stage '{self.name}' does not have submodels")
+
+        if len(self.subset_ids) > 0:
+            for subset_id in self.subset_ids:
+                if len(self.param_ids) > 0:
+                    for param_id in self.param_ids:
+                        yield (subset_id, param_id)
+                else:
+                    yield (subset_id, None)
+        else:
+            for param_id in self.param_ids:
+                yield (None, param_id)
+
+    @property
+    def subset_ids(self) -> tuple[int, ...]:
+        if len(self.groupby) > 0 and len(self._subset_ids) == 0:
             try:
                 subsets = self.dataif.load("subsets.csv", key="output")
-                self._subset_ids = set(subsets["subset_id"])
+                self._subset_ids = tuple(subsets["subset_id"])
             except FileNotFoundError:
                 raise AttributeError(
-                    f"{self.name} data subsets have not been created"
+                    f"Stage '{self.name}' data subsets have not been created"
                 )
         return self._subset_ids
 
     @property
-    def param_ids(self) -> set[int]:
-        if self.crossby is not None and not self._param_ids:
+    def param_ids(self) -> tuple[int, ...]:
+        if len(self.crossby) > 0 and len(self._param_ids) == 0:
             try:
                 params = self.dataif.load("parameters.csv", key="output")
-                self._param_ids = set(params["param_id"])
+                self._param_ids = tuple(params["param_id"])
             except FileNotFoundError:
                 raise AttributeError(
-                    f"{self.name} parameter sets have not been created"
+                    f"Stage '{self.name}' parameter sets have not been created"
                 )
         return self._param_ids
 
@@ -246,7 +278,7 @@ class Stage(BaseModel, ABC):
         self, data_key: str, id_subsets: dict[str, list[Any]] | None = None
     ) -> None:
         """Create stage data subsets from groupby and id_subsets."""
-        if self.groupby is None:
+        if len(self.groupby) == 0:
             raise AttributeError(
                 f"Stage '{self.name}' does not use groupby attribute"
             )
@@ -256,14 +288,14 @@ class Stage(BaseModel, ABC):
         )
 
         subsets_df = create_subsets(self.groupby, df)
-        self._subset_ids = set(subsets_df["subset_id"].to_list())
+        self._subset_ids = tuple(subsets_df["subset_id"])
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
     def get_stage_subset(
         self, subset_id: int, *fparts: str, key: str = "data", **options
     ) -> DataFrame:
         """Filter data by stage subset_id."""
-        if self.groupby is None:
+        if len(self.groupby) == 0:
             raise AttributeError(
                 f"Stage '{self.name}' does not use groupby attribute"
             )
@@ -276,18 +308,18 @@ class Stage(BaseModel, ABC):
 
     def create_stage_params(self) -> None:
         """Create stage parameter sets from crossby and config."""
-        if self.crossby is None:
+        if len(self.crossby) == 0:
             raise AttributeError(
                 f"Stage '{self.name}' does not use crossby attribute"
             )
 
         params_df = create_params(self.crossby, self.config)
-        self._param_ids = set(params_df["param_id"].to_list())
+        self._param_ids = tuple(params_df["param_id"])
         self.dataif.dump(params_df, "parameters.csv", key="output")
 
     def set_params(self, param_id: int) -> None:
         """Set stage parameters."""
-        if self.crossby is None:
+        if len(self.crossby) == 0:
             raise AttributeError(
                 f"Stage '{self.name}' does not use crossby attribute"
             )
@@ -328,8 +360,6 @@ class Stage(BaseModel, ABC):
         stage.config.add_pipeline_config(pipeline_config["config"])
         if "module" in stage_config:
             stage._module = stage_config["module"]
-        if "crossby" in stage_config:
-            stage._crossby = stage_config["crossby"]
         if hasattr(stage, "apply_stage_specific_config"):
             stage.apply_stage_specific_config(stage_config)
         if (input := stage_config.get("input")) is not None:
@@ -487,8 +517,8 @@ class Stage(BaseModel, ABC):
 
     def __repr__(self) -> str:
         stage_str = f"{self.type}(name={self.name}"
-        if self.groupby is not None:
+        if len(self.groupby) > 0:
             stage_str += f", groupby={self.groupby}"
-        if self.crossby is not None:
+        if len(self.crossby) > 0:
             stage_str += f", crossby={self.crossby}"
         return stage_str + ")"

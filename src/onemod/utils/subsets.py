@@ -3,17 +3,17 @@
 import pandas as pd
 
 
-def create_subsets(groupby: set[str], data: pd.DataFrame) -> pd.DataFrame:
+def create_subsets(
+    groupby: tuple[str, ...], data: pd.DataFrame
+) -> pd.DataFrame:
     """Create subsets from groupby."""
-    # TODO: Simplify once groupby set changed to list
-    sorted_groupby = sorted(groupby)
-    groups = data.groupby(sorted_groupby)
+    groups = data.groupby(groupby)
     subsets = pd.DataFrame(
-        [subset for subset in groups.groups.keys()], columns=sorted_groupby
+        [subset for subset in groups.groups.keys()], columns=groupby
     )
-    subsets.sort_values(by=sorted_groupby)
+    subsets.sort_values(by=groupby)
     subsets["subset_id"] = subsets.index
-    return subsets[["subset_id", *sorted_groupby]]
+    return subsets[["subset_id", *groupby]]
 
 
 def get_subset(

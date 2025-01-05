@@ -40,6 +40,12 @@ class SpxmodStage(Stage):
     _output: set[str] = {"predictions.parquet"}
     _collect_after: set[str] = {"run", "predict"}
 
+    def model_post_init(self, *args, **kwargs) -> None:
+        if len(self.groupby) == 0:
+            raise AttributeError("SPxModStage requires groupby attribute")
+        if len(self.groupby) > 0:
+            raise AttributeError("SPxModStage does not use crossby attribute")
+
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run spxmod submodel.
 

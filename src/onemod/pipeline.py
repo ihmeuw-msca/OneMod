@@ -8,7 +8,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, validate_call
+from pydantic import BaseModel, field_validator, validate_call
 
 from onemod.config import Config
 from onemod.serialization import serialize
@@ -30,23 +30,32 @@ class Pipeline(BaseModel):
         Pipeline configuration.
     directory : Path
         Experiment directory.
-    groupby : set of str or None, optional
-        Column names used to create data subsets. Default is None.
+    groupby : tuple of str, optional
+        Column names used to create data subsets. Default is an empty
+        tuple.
     groupby_data : Path or None, optional
-        Path to the data file used for creating data subsets. Default is None.
-        Required when specifying pipeline or stage `groupby` attribute.
-        All columns specified in pipeline or stage `groupby` must be present in
-        `groupby_data`.
+        Path to the data file used for creating data subsets. Default is
+        None. Required when specifying pipeline or stage `groupby`
+        attribute. All columns specified in pipeline or stage `groupby`
+        must be present in `groupby_data`.
 
     """
 
     name: str
     config: Config
     directory: Path
-    groupby: set[str] | None = None
+    groupby: tuple[str, ...] = tuple()
     groupby_data: Path | None = None
     id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
+
+    @field_validator("groupby", model="after")
+    @classmethod
+    def unique_tuple(cls, items: tuple[str, ...]) -> tuple[str, ...]:
+        """Make sure groupby and has unique values."""
+        if len(items) > 0:
+            return tuple(dict.fromkeys(items))
+        return items
 
     @computed_property
     def dependencies(self) -> dict[str, set[str]]:
@@ -59,8 +68,10 @@ class Pipeline(BaseModel):
         return self._stages
 
     def model_post_init(self, *args, **kwargs) -> None:
-        if self.groupby is not None and self.groupby_data is None:
-            raise AttributeError("groupby_data is required for groupby")
+        if len(self.groupby) > 0 and self.groupby_data is None:
+            raise AttributeError(
+                "groupby_data is required for groupby attribute"
+            )
         if not self.directory.exists():
             self.directory.mkdir(parents=True)
 
@@ -268,22 +279,25 @@ class Pipeline(BaseModel):
             stage.set_dataif(config_path)
 
             # Create data subsets
-            if self.groupby is not None:
-                if stage.groupby is None:
+            if len(self.groupby) > 0:
+                if len(stage.groupby) == 0:
                     stage.groupby = self.groupby
                 else:
-                    stage.groupby.update(self.groupby)
+                    stage.groupby = tuple(
+                        dict.fromkeys(self.groupby + stage.groupby)
+                    )
             if stage.groupby:
                 if self.groupby_data is None:
-                    raise AttributeError("Data is required for groupby")
-                else:
-                    stage.dataif.add_path("groupby_data", self.groupby_data)
+                    raise AttributeError(
+                        "groupby_data is required for groupby attribute"
+                    )
+                stage.dataif.add_path("groupby_data", self.groupby_data)
                 stage.create_stage_subsets(
                     data_key="groupby_data", id_subsets=self.id_subsets
                 )
 
             # Create parameter sets
-            if stage.config.crossable_params:
+            if len(stage.crossby) > 0:
                 stage.create_stage_params()
 
         self.to_json(config_path)

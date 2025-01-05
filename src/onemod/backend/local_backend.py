@@ -87,9 +87,8 @@ def _evaluate_stage(
             ):
                 stage_method(subset_id, param_id)
             else:
-                for subset_id in stage.subset_ids or [None]:
-                    for param_id in stage.param_ids or [None]:
-                        stage_method(subset_id, param_id)
+                for subset_id, param_id in stage.submodel_ids:
+                    stage_method(subset_id, param_id)
                 if method in stage.collect_after:
                     stage.collect()
         else:
