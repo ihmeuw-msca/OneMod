@@ -113,7 +113,7 @@ class Stage(BaseModel, ABC):
     _subset_ids: tuple[int, ...] = tuple()
     _param_ids: tuple[int, ...] = tuple()
 
-    @field_validator("groupby", "crossby", model="after")
+    @field_validator("groupby", "crossby", mode="after")
     @classmethod
     def unique_tuple(cls, items: tuple[str, ...]) -> tuple[str, ...]:
         """Make sure groupby and crossby have unique values."""

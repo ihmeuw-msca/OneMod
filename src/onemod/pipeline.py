@@ -49,7 +49,7 @@ class Pipeline(BaseModel):
     id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
 
-    @field_validator("groupby", model="after")
+    @field_validator("groupby", mode="after")
     @classmethod
     def unique_tuple(cls, items: tuple[str, ...]) -> tuple[str, ...]:
         """Make sure groupby and has unique values."""
