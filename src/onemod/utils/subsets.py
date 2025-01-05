@@ -7,11 +7,11 @@ def create_subsets(
     groupby: tuple[str, ...], data: pd.DataFrame
 ) -> pd.DataFrame:
     """Create subsets from groupby."""
-    groups = data.groupby(groupby)
+    groups = data.groupby(list(groupby))
     subsets = pd.DataFrame(
         [subset for subset in groups.groups.keys()], columns=groupby
     )
-    subsets.sort_values(by=groupby)
+    subsets.sort_values(by=list(groupby))
     subsets["subset_id"] = subsets.index
     return subsets[["subset_id", *groupby]]
 

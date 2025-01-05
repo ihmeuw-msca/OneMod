@@ -23,7 +23,7 @@ def create_params(crossby: tuple[str, ...], config: StageConfig) -> DataFrame:
     params = DataFrame(
         list(product(*param_dict.values())), columns=list(param_dict.keys())
     )
-    params.sort_values(by=crossby)
+    params.sort_values(by=list(crossby))
     params["param_id"] = params.index
 
     return params[["param_id", *crossby]]

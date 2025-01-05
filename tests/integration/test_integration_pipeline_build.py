@@ -219,6 +219,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "module": __file__,
                 "config": {},
                 "groupby": ["age_group_id"],
+                "crossby": [],
                 "input": {
                     "data": str(test_base_dir / "data" / "data.parquet"),
                     "covariates": str(

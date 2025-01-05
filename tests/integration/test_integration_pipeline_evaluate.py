@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch
 
 import pandas as pd
@@ -132,7 +133,9 @@ def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
 
     with pytest.raises(
         ValueError,
-        match="id_subsets keys {'invalid_id_col_name'} do not match groupby columns {'sex_id'}",
+        match=re.escape(
+            "id_subsets keys {'invalid_id_col_name'} do not match groupby columns ('sex_id',)"
+        ),
     ):
         dummy_pipeline.evaluate(
             method=method,
