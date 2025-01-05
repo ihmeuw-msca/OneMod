@@ -102,6 +102,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
         name="custom_stage",
         config=CustomConfig(custom_param=[1, 2]),
         groupby={"super_region_id"},
+        crossby=["custom_param"],
     )
 
     # Create pipeline
