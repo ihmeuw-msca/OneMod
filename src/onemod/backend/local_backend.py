@@ -82,13 +82,13 @@ def _evaluate_stage(
         if stage.has_submodels:
             eval_submodel = False
             if subset_id is not None:
-                if stage.groupby is None:
+                if len(stage.groupby) == 0:
                     raise ValueError(
                         f"Stage '{stage.name}' does not use groupby attribute"
                     )
                 eval_submodel = True
             if param_id is not None:
-                if stage.crossby is None:
+                if len(stage.crossby) == 0:
                     raise ValueError(
                         f"Stage '{stage.name}' does not use crossby attribute"
                     )
