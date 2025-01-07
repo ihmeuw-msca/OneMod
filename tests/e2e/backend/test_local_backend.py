@@ -44,3 +44,7 @@ def test_parallel_stage(parallel_pipeline, method):
         stage.evaluate(method=method)
         helpers.assert_parallel_logs(stage, method)
         helpers.assert_parallel_output(stage, method)
+
+
+# TODO: Tests where stage run with subset_id and/or param_id
+# (or would these be better for integration tests?)
