@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch
 
 import pandas as pd
@@ -68,7 +69,7 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
         small_input_data, test_base_dir
     )
 
-    subset_stage_names = {"preprocessing", "covariate_selection"}
+    subset_stage_names = ["preprocessing", "covariate_selection"]
     subset_stages = [
         stage for stage in stages if stage.name in subset_stage_names
     ]
@@ -115,7 +116,7 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
         small_input_data, test_base_dir
     )
 
-    subset_stage_names = {"covariate_selection"}
+    subset_stage_names = ["covariate_selection"]
 
     with pytest.raises(
         FileNotFoundError,
@@ -127,17 +128,46 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 @pytest.mark.integration
 @pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
+def test_duplicate_stage_names(small_input_data, test_base_dir, method):
+    """Test that duplicate stage names passed to Pipeline.evaluate() are coerced to unique stage names."""
+    dummy_pipeline, stages = setup_dummy_pipeline(
+        small_input_data, test_base_dir
+    )
+
+    subset_stage_names = ["preprocessing", "preprocessing"]
+
+    dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+
+    # Check that preprocessing was evaluated only once
+    assert (
+        len([stage for stage in stages if stage.name == "preprocessing"]) == 1
+    )
+    for stage in stages:
+        if stage.name == "preprocessing":
+            if method in ["run", "fit"]:
+                assert stage.get_log() == [f"run: name={stage.name}"]
+            else:
+                assert stage.get_log() == []
+        else:
+            assert stage.get_log() == []
+
+
+@pytest.mark.integration
+@pytest.mark.requires_data
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() raises an error when an invalid id_subsets key is provided."""
     dummy_pipeline, stages = setup_dummy_pipeline(
         small_input_data, test_base_dir
     )
 
-    subset_stage_names = {"preprocessing"}
+    subset_stage_names = ["preprocessing"]
 
     with pytest.raises(
         ValueError,
-        match="id_subsets keys {'invalid_id_col_name'} do not match groupby columns {'sex_id'}",
+        match=re.escape(
+            "id_subsets keys {'invalid_id_col_name'} do not match groupby columns ['sex_id']"
+        ),
     ):
         dummy_pipeline.evaluate(
             method=method,

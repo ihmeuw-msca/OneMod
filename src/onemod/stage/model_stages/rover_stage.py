@@ -17,6 +17,7 @@ from loguru import logger
 from modrover.api import Rover
 
 from onemod.config import RoverConfig
+from onemod.dtypes import UniqueList
 from onemod.stage import ModelStage
 
 
@@ -24,10 +25,10 @@ class RoverStage(ModelStage):
     """ModRover covariate selection stage."""
 
     config: RoverConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _output: set[str] = {"selected_covs.csv", "summaries.csv"}
-    _collect_after: set[str] = {"run", "fit"}
+    _skip: UniqueList[str] = ["predict"]
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _output: UniqueList[str] = ["selected_covs.csv", "summaries.csv"]
+    _collect_after: UniqueList[str] = ["run", "fit"]
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run rover submodel."""

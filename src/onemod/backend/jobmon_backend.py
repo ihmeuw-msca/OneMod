@@ -32,13 +32,14 @@ values.
 
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import List, Literal
 
 from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
 from pydantic import validate_call
 
+from onemod.dtypes import UniqueList
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
 from onemod.stage import ModelStage, Stage
@@ -54,7 +55,7 @@ def get_tool(name: str, cluster: str, resources: dict) -> Tool:
     return tool
 
 
-def run_workflow(name: str, tool: Tool, tasks: list[Task]) -> None:
+def run_workflow(name: str, tool: Tool, tasks: List[Task]) -> None:
     """Create and run workflow."""
     workflow = tool.create_workflow(name=f"{name}")
     workflow.add_tasks(tasks)
@@ -73,8 +74,8 @@ def get_tasks(
     stage: Stage,
     method: str,
     task_args: dict[str, str],
-    upstream_tasks: list[Task] = [],
-) -> list[Task]:
+    upstream_tasks: List[Task] = [],
+) -> List[Task]:
     """Get stage tasks."""
     node_args = {}
     if isinstance(stage, ModelStage) and method != "collect":
@@ -116,7 +117,7 @@ def get_task_template(
     resources: dict,
     stage_name: str,
     method: str,
-    node_args: list[str],
+    node_args: List[str],
 ) -> TaskTemplate:
     """Get stage task template."""
     task_template = tool.get_task_template(
@@ -137,7 +138,7 @@ def get_task_template(
 
 
 def get_command_template(
-    stage_name: str, method: str, node_args: list[str]
+    stage_name: str, method: str, node_args: List[str]
 ) -> str:
     """Get stage command template."""
     command_template = (
@@ -173,13 +174,14 @@ def get_task_resources(
     return None
 
 
+@validate_call
 def get_upstream_tasks(
     stage: Stage,
     method: Literal["run", "fit", "predict"],
     stage_dict: dict[str, Stage],
-    task_dict: dict[str, list[Task]],
-    stages: set[str] | None = None,
-) -> list[Task]:
+    task_dict: dict[str, List[Task]],
+    stages: UniqueList[str] | None = None,
+) -> List[Task]:
     """Get upstream stage tasks.
 
     Parameters
@@ -190,14 +192,14 @@ def get_upstream_tasks(
         Name of  method to evaluate.
     stage_dict : dict[str, Stage]
         Dictionary of all upstream pipeline stages.
-    task_dict : dict[str, list[Task]]
+    task_dict : dict[str, List[Task]]
         Dictionary of all tasks being evaluated.
-    stages : set[str] or None, optional
+    stages : UniqueList[str] or None, optional
         Name of all pipeline stages being evaluated.
 
     Returns
     -------
-    list of Task
+    List of Task
         Upstream tasks for current stage.
 
     """
@@ -227,7 +229,7 @@ def evaluate_with_jobmon(
     resources: Path | str | dict,
     python: Path | str | None = None,
     method: Literal["run", "fit", "predict"] = "run",
-    stages: set[str] | None = None,
+    stages: UniqueList[str] | None = None,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -244,7 +246,7 @@ def evaluate_with_jobmon(
         Default is None.
     method : str, optional
         Name of method to evalaute. Default is 'run'.
-    stages : set of str or None, optional
+    stages : UniqueList of str or None, optional
         Names of stages to evaluate if `model` is a pipeline instance.
         If None, evaluate entire pipeline. Default is None.
 
@@ -278,7 +280,7 @@ def evaluate_with_jobmon(
     # Create tasks
     if isinstance(model, Pipeline):
         tasks = []
-        task_dict: dict[str, list[Task]] = {}
+        task_dict: dict[str, List[Task]] = {}
 
         for stage_name in model.get_execution_order(stages):
             stage = model.stages[stage_name]

@@ -6,16 +6,16 @@ from tests.helpers.utils import assert_equal_unordered
 
 from onemod.config import Config, StageConfig
 from onemod.constraints import Constraint
-from onemod.dtypes import ColumnSpec, Data
+from onemod.dtypes import ColumnSpec, Data, UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: set[str] = {"data.parquet", "covariates.parquet"}
-    _optional_input: set[str] = {"priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _required_input: UniqueList[str] = ["data.parquet", "covariates.parquet"]
+    _optional_input: UniqueList[str] = ["priors.pkl"]
+    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
 
     def run(self):
         pass

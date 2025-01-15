@@ -6,11 +6,16 @@ import json
 import logging
 from collections import deque
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, List, Literal
 
 from pydantic import BaseModel, validate_call
 
 from onemod.config import Config
+from onemod.dtypes.unique_list import (
+    UniqueList,
+    unique_list,
+    update_unique_list,
+)
 from onemod.serialization import serialize
 from onemod.stage import ModelStage, Stage
 from onemod.utils.decorators import computed_property
@@ -30,7 +35,7 @@ class Pipeline(BaseModel):
         Pipeline configuration.
     directory : Path
         Experiment directory.
-    groupby : set of str or None, optional
+    groupby : UniqueList of str or None, optional
         Column names used to create data subsets. Default is None.
     groupby_data : Path or None, optional
         Path to the data file used for creating data subsets. Default is None.
@@ -43,15 +48,16 @@ class Pipeline(BaseModel):
     name: str
     config: Config
     directory: Path
-    groupby: set[str] | None = None
+    groupby: UniqueList[str] | None = None
     groupby_data: Path | None = None
-    id_subsets: dict[str, list[Any]] | None = None
+    id_subsets: dict[str, List[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
 
     @computed_property
-    def dependencies(self) -> dict[str, set[str]]:
+    def dependencies(self) -> dict[str, UniqueList[str]]:
         return {
-            stage.name: stage.dependencies for stage in self.stages.values()
+            stage.name: unique_list(stage.dependencies)
+            for stage in self.stages.values()
         }
 
     @computed_property
@@ -112,12 +118,12 @@ class Pipeline(BaseModel):
                 )
             )
 
-    def add_stages(self, stages: list[Stage]) -> None:
+    def add_stages(self, stages: List[Stage]) -> None:
         """Add stages to pipeline.
 
         Parameters
         ----------
-        stages : list of Stage
+        stages : List of Stage
             Stages to add to the pipeline.
 
         """
@@ -139,7 +145,9 @@ class Pipeline(BaseModel):
         stage.config.add_pipeline_config(self.config)
         self._stages[stage.name] = stage
 
-    def get_execution_order(self, stages: set[str] | None = None) -> list[str]:
+    def get_execution_order(
+        self, stages: UniqueList[str] | None = None
+    ) -> List[str]:
         """Get stages sorted in execution order.
 
         Use Kahn's algorithm to find the topoligical order of the
@@ -147,13 +155,13 @@ class Pipeline(BaseModel):
 
         Parameters
         ----------
-        stages: set of str, optional
+        stages: UniqueList of str, optional
             Name of stages to sort. If None, sort all pipeline stages.
             Default is None.
 
         Returns
         -------
-        list of str
+        List of str
             Stages sorted in execution order.
 
         Raises
@@ -167,7 +175,7 @@ class Pipeline(BaseModel):
         exist).
 
         """
-        reverse_graph: dict[str, list[str]] = {
+        reverse_graph: dict[str, List[str]] = {
             stage: [] for stage in self.dependencies
         }
         in_degree = {stage: 0 for stage in self.dependencies}
@@ -240,7 +248,7 @@ class Pipeline(BaseModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self, id_subsets: dict[str, list[Any]] | None = None) -> None:
+    def build(self, id_subsets: dict[str, List[Any]] | None = None) -> None:
         """Assemble pipeline, perform build-time validation, and save to JSON."""
         self.id_subsets = id_subsets
         collector = ValidationErrorCollector()
@@ -272,7 +280,9 @@ class Pipeline(BaseModel):
                     if stage.groupby is None:
                         stage.groupby = self.groupby
                     else:
-                        stage.groupby.update(self.groupby)
+                        stage.groupby = update_unique_list(
+                            stage.groupby, self.groupby
+                        )
                 if stage.groupby:
                     if self.groupby_data is None:
                         raise AttributeError("Data is required for groupby")
@@ -298,10 +308,10 @@ class Pipeline(BaseModel):
     def evaluate(
         self,
         method: Literal["run", "fit", "predict", "collect"] = "run",
-        stages: set[str] | None = None,
+        stages: UniqueList[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
-        id_subsets: dict[str, list[Any]] | None = None,
+        id_subsets: dict[str, List[Any]] | None = None,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
@@ -310,7 +320,7 @@ class Pipeline(BaseModel):
         ----------
         method : str, optional
             Name of method to evaluate. Default is 'run'.
-        stages : set of str, optional
+        stages : UniqueList of str, optional
             Names of stages to evaluate. Default is None.
             If None, evaluate entire pipeline.
         backend : str, optional

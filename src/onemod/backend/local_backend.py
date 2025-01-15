@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import validate_call
 
+from onemod.dtypes import UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import ModelStage, Stage
 
@@ -13,7 +14,7 @@ from onemod.stage import ModelStage, Stage
 def evaluate_local(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict"] = "run",
-    stages: set[str] | None = None,
+    stages: UniqueList[str] | None = None,
     **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method locally.
@@ -24,7 +25,7 @@ def evaluate_local(
         Pipeline or stage instance.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
-    stages : set of str or None, optional
+    stages : UniqueList of str or None, optional
         Names of stages to evaluate if `model` is a pipeline instance.
         If None, evaluate entire pipeline. Default is None.
 

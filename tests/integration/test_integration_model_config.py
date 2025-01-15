@@ -31,7 +31,7 @@ REQUIRED_ITEMS = {
 }
 
 STAGE_DICT = {
-    "rover": RoverConfig(cov_exploring={"cov1", "cov2"}),
+    "rover": RoverConfig(cov_exploring=["cov1", "cov2"]),
     "spxmod": SpxmodConfig(xmodel=SpxmodModelConfig(variables=[])),
 }
 

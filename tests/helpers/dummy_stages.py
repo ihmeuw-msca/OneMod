@@ -1,22 +1,26 @@
 from pydantic import Field
 
 from onemod.config import KregConfig, RoverConfig, SpxmodConfig, StageConfig
+from onemod.dtypes import UniqueList
 from onemod.stage import ModelStage, Stage
 
 
 class CustomConfig(StageConfig):
     """Custom stage config."""
 
-    custom_param: int | set[int] = 1
-    _crossable_params: set[str] = {"custom_param"}
+    custom_param: int | list[int] = 1
+    _crossable_params: UniqueList[str] = ["custom_param"]
 
 
 class DummyCustomStage(ModelStage):
     """Custom stage."""
 
     config: CustomConfig = CustomConfig()  # type: ignore
-    _required_input: set[str] = {"observations.parquet", "predictions.parquet"}
-    _collect_after: set[str] = {"run", "predict"}
+    _required_input: UniqueList[str] = [
+        "observations.parquet",
+        "predictions.parquet",
+    ]
+    _collect_after: UniqueList[str] = ["run", "predict"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -61,10 +65,10 @@ class DummyKregStage(ModelStage):
     """Kreg stage."""
 
     config: KregConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
-    _collect_after: set[str] = {"run", "predict"}
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _optional_input: UniqueList[str] = ["offset.parquet", "priors.pkl"]
+    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
+    _collect_after: UniqueList[str] = ["run", "predict"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -109,13 +113,13 @@ class DummyPreprocessingStage(Stage):
     """Preprocessing stage."""
 
     config: StageConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _skip: UniqueList[str] = ["predict"]
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _optional_input: UniqueList[str] = [
         "age_metadata.parquet",
         "location_metadata.parquet",
-    }
-    _output: set[str] = {"data.parquet"}
+    ]
+    _output: UniqueList[str] = ["data.parquet"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -134,10 +138,10 @@ class DummyRoverStage(ModelStage):
     """Rover stage."""
 
     config: RoverConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _output: set[str] = {"selected_covs.csv"}
-    _collect_after: set[str] = {"run", "fit"}
+    _skip: UniqueList[str] = ["predict"]
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _output: UniqueList[str] = ["selected_covs.csv"]
+    _collect_after: UniqueList[str] = ["run", "fit"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -179,14 +183,14 @@ class DummySpxmodStage(ModelStage):
     """Spxmod stage."""
 
     config: SpxmodConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _optional_input: UniqueList[str] = [
         "selected_covs.csv",
         "offset.parquet",
         "priors.pkl",
-    }
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
-    _collect_after: set[str] = {"run", "predict"}
+    ]
+    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
+    _collect_after: UniqueList[str] = ["run", "predict"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -231,13 +235,13 @@ class MultiplyByTwoStage(ModelStage):
     """Stage that multiplies the value column by 2."""
 
     config: StageConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _skip: UniqueList[str] = ["predict"]
+    _required_input: UniqueList[str] = ["data.parquet"]
+    _optional_input: UniqueList[str] = [
         "age_metadata.parquet",
         "location_metadata.parquet",
-    }
-    _output: set[str] = {"data.parquet"}
+    ]
+    _output: UniqueList[str] = ["data.parquet"]
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""

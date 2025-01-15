@@ -11,6 +11,7 @@ from pydantic import Field
 from typing_extensions import Annotated
 
 from onemod.config import Config, StageConfig
+from onemod.dtypes import UniqueList
 
 
 class SpxmodDimensionConfig(Config):
@@ -229,7 +230,7 @@ class SpxmodConfig(StageConfig):
 
     Attributes
     ----------
-    id_columns : set[str], optional
+    id_columns : UniqueList[str], optional
         ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
         or 'year_id'. ID columns should contain nonnegative integers.
         Default is None.
@@ -258,7 +259,7 @@ class SpxmodConfig(StageConfig):
 
     """
 
-    id_columns: set[str] | None = None
+    id_columns: UniqueList[str] | None = None
     model_type: Literal["binomial", "gaussian", "poisson"] | None = None
     observation_column: str | None = None
     prediction_column: str | None = None
@@ -268,10 +269,10 @@ class SpxmodConfig(StageConfig):
     xmodel: SpxmodModelConfig
     xmodel_fit: dict[str, Any] = {}
     _pipeline_config: Config = Config()
-    _required: set[str] = {
+    _required: UniqueList[str] = [
         "id_columns",
         "model_type",
         "observation_column",
         "prediction_column",
         "weights_column",
-    }
+    ]

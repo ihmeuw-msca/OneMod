@@ -1,8 +1,10 @@
 """Configuration classes."""
 
-from typing import Any
+from typing import Any, List
 
 from pydantic import BaseModel, ConfigDict
+
+from onemod.dtypes.unique_list import UniqueList, unique_list
 
 
 class Config(BaseModel):
@@ -42,7 +44,7 @@ class Config(BaseModel):
         arg_list.sort()
         return f"{type(self).__name__}({', '.join(arg_list)})"
 
-    def _get_fields(self) -> list[str]:
+    def _get_fields(self) -> List[str]:
         return list(self.model_dump(exclude_none=True))
 
 
@@ -60,12 +62,12 @@ class StageConfig(Config):
     )
 
     _pipeline_config: Config = Config()
-    _required: set[str] = set()  # TODO: unique list
-    _crossable_params: set[str] = set()  # TODO: unique list
+    _required: UniqueList[str] = list()
+    _crossable_params: UniqueList[str] = list()
 
     @property
-    def crossable_params(self) -> set[str]:
-        return self._crossable_params
+    def crossable_params(self) -> List[str]:
+        return unique_list(self._crossable_params)
 
     def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):
@@ -108,13 +110,15 @@ class StageConfig(Config):
     def pipeline_contains(self, key: str) -> bool:
         return key in self._pipeline_config
 
-    def _get_fields(self) -> list[str]:
-        return list(set(self._get_stage_fields() + self._get_pipeline_fields()))
+    def _get_fields(self) -> List[str]:
+        return unique_list(
+            self._get_stage_fields() + self._get_pipeline_fields()
+        )
 
-    def _get_stage_fields(self) -> list[str]:
+    def _get_stage_fields(self) -> List[str]:
         return list(self.model_dump(exclude_none=True))
 
-    def _get_pipeline_fields(self) -> list[str]:
+    def _get_pipeline_fields(self) -> List[str]:
         return self._pipeline_config._get_fields()
 
     def __repr__(self) -> str:
