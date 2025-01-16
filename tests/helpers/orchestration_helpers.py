@@ -302,14 +302,22 @@ def setup_parallel_pipeline(directory: Path) -> Pipeline:
     # Create stages and add to pipeline
     # TODO: Add crossby=param once crossby changed
     run_1 = ParallelStage(
-        name="run_1", config={"param": [1, 2]}, groupby=["sex_id"]
+        name="run_1",
+        config={"param": [1, 2]},
+        groupby=["sex_id"],
+        crossby=["param"],
     )
     fit_2 = ParallelStageFit(
         name="fit_2", config={"param": 1}, groupby=["sex_id"]
     )
-    predict_3 = ParallelStagePredict(name="predict_3", config={"param": [1, 2]})
+    predict_3 = ParallelStagePredict(
+        name="predict_3", config={"param": [1, 2]}, crossby=["param"]
+    )
     run_4 = ParallelStage(
-        name="run_4", config={"param": [1, 2]}, groupby=["sex_id"]
+        name="run_4",
+        config={"param": [1, 2]},
+        groupby=["sex_id"],
+        crossby=["param"],
     )
     pipeline.add_stages([run_1, fit_2, predict_3, run_4])
 

@@ -92,7 +92,6 @@ def test_parallel_upstream(parallel_pipeline, method):
         upstream_tasks = jb.get_upstream_tasks(
             stage, method, parallel_pipeline.stages, task_dict
         )
-        print(stage_name, task_dict, stage.dependencies)
 
         if stage_name == "run_1":
             assert upstream_tasks == []

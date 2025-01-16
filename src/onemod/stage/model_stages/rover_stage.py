@@ -29,6 +29,12 @@ class RoverStage(Stage):
     _output: set[str] = {"selected_covs.csv", "summaries.csv"}
     _collect_after: set[str] = {"run", "fit"}
 
+    def model_post_init(self, *args, **kwargs) -> None:
+        if len(self.groupby) == 0:
+            raise AttributeError("RoverStage requires groupby attribute")
+        if len(self.crossby) > 0:
+            raise AttributeError("RoverStage does not use crossby attribute")
+
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run rover submodel."""
         self.fit(subset_id)

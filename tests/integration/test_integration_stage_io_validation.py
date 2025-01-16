@@ -163,8 +163,8 @@ def stage_1_model_expected(test_base_dir):
             "data": str(test_base_dir / "stage_0" / "data.parquet"),
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
-        "groupby": None,
-        "crossby": None,
+        "groupby": (),
+        "crossby": (),
     }
 
 
@@ -264,8 +264,8 @@ def stage_2_model_expected(test_base_dir):
             },
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
-        "groupby": None,
-        "crossby": None,
+        "groupby": (),
+        "crossby": (),
     }
 
 
