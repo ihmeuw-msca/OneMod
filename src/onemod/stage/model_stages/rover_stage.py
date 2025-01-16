@@ -17,10 +17,10 @@ from loguru import logger
 from modrover.api import Rover
 
 from onemod.config import RoverConfig
-from onemod.stage import ModelStage
+from onemod.stage import Stage
 
 
-class RoverStage(ModelStage):
+class RoverStage(Stage):
     """ModRover covariate selection stage."""
 
     config: RoverConfig
@@ -28,6 +28,12 @@ class RoverStage(ModelStage):
     _required_input: set[str] = {"data.parquet"}
     _output: set[str] = {"selected_covs.csv", "summaries.csv"}
     _collect_after: set[str] = {"run", "fit"}
+
+    def model_post_init(self, *args, **kwargs) -> None:
+        if len(self.groupby) == 0:
+            raise AttributeError("RoverStage requires groupby attribute")
+        if len(self.crossby) > 0:
+            raise AttributeError("RoverStage does not use crossby attribute")
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run rover submodel."""

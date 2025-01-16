@@ -54,12 +54,7 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
     expected_args = get_expected_args()
 
     for stage in stages:
-        if stage.name == "preprocessing":
-            if method in ["run", "fit"]:
-                assert stage.get_log() == [f"run: name={stage.name}"]
-            else:
-                assert stage.get_log() == []
-        elif stage.name in expected_args:
+        if stage.name in expected_args:
             assert_stage_logs(
                 stage,
                 expected_args[stage.name]["methods"][method],

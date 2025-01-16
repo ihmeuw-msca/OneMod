@@ -61,11 +61,6 @@ class StageConfig(Config):
 
     _pipeline_config: Config = Config()
     _required: set[str] = set()  # TODO: unique list
-    _crossable_params: set[str] = set()  # TODO: unique list
-
-    @property
-    def crossable_params(self) -> set[str]:
-        return self._crossable_params
 
     def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):

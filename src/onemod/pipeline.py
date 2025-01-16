@@ -11,8 +11,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, validate_call
 
 from onemod.config import Config
+from onemod.dtypes.unique_sequence import UniqueTuple, update_unique_tuple
 from onemod.serialization import serialize
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 from onemod.utils.decorators import computed_property
 from onemod.validation import ValidationErrorCollector, handle_error
 
@@ -30,20 +31,21 @@ class Pipeline(BaseModel):
         Pipeline configuration.
     directory : Path
         Experiment directory.
-    groupby : set of str or None, optional
-        Column names used to create data subsets. Default is None.
+    groupby : tuple of str, optional
+        Column names used to create data subsets. Default is an empty
+        tuple.
     groupby_data : Path or None, optional
-        Path to the data file used for creating data subsets. Default is None.
-        Required when specifying pipeline or stage `groupby` attribute.
-        All columns specified in pipeline or stage `groupby` must be present in
-        `groupby_data`.
+        Path to the data file used for creating data subsets. Default is
+        None. Required when specifying pipeline or stage `groupby`
+        attribute. All columns specified in pipeline or stage `groupby`
+        must be present in `groupby_data`.
 
     """
 
     name: str
     config: Config
     directory: Path
-    groupby: set[str] | None = None
+    groupby: UniqueTuple[str] = tuple()
     groupby_data: Path | None = None
     id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
@@ -59,8 +61,10 @@ class Pipeline(BaseModel):
         return self._stages
 
     def model_post_init(self, *args, **kwargs) -> None:
-        if self.groupby is not None and self.groupby_data is None:
-            raise AttributeError("groupby_data is required for groupby")
+        if len(self.groupby) > 0 and self.groupby_data is None:
+            raise AttributeError(
+                "groupby_data is required for groupby attribute"
+            )
         if not self.directory.exists():
             self.directory.mkdir(parents=True)
 
@@ -267,25 +271,27 @@ class Pipeline(BaseModel):
         for stage in self.stages.values():
             stage.set_dataif(config_path)
 
-            if isinstance(stage, ModelStage):
-                # Create data subsets
-                if self.groupby is not None:
-                    if stage.groupby is None:
-                        stage.groupby = self.groupby
-                    else:
-                        stage.groupby.update(self.groupby)
-                if stage.groupby:
-                    if self.groupby_data is None:
-                        raise AttributeError("Data is required for groupby")
-                    else:
-                        stage.dataif.add_path("groupby_data", self.groupby_data)
-                    stage.create_stage_subsets(
-                        data_key="groupby_data", id_subsets=self.id_subsets
+            # Create data subsets
+            if len(self.groupby) > 0:
+                if len(stage.groupby) == 0:
+                    stage.groupby = self.groupby
+                else:
+                    stage.groupby = update_unique_tuple(
+                        self.groupby, stage.groupby
                     )
+            if stage.groupby:
+                if self.groupby_data is None:
+                    raise AttributeError(
+                        "groupby_data is required for groupby attribute"
+                    )
+                stage.dataif.add_path("groupby_data", self.groupby_data)
+                stage.create_stage_subsets(
+                    data_key="groupby_data", id_subsets=self.id_subsets
+                )
 
-                # Create parameter sets
-                if stage.config.crossable_params:
-                    stage.create_stage_params()
+            # Create parameter sets
+            if len(stage.crossby) > 0:
+                stage.create_stage_params()
 
         self.to_json(config_path)
 

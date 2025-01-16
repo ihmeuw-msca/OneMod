@@ -150,9 +150,9 @@ def evaluate(
     Other Parameters
     ----------------
     subset_id : int, optional
-        Submodel data subset ID. Only used for model stages.
+        Submodel data subset ID. Only used for individual stages.
     param_id : int, optional
-        Submodel parameter set ID. Only used for model stages.
+        Submodel parameter set ID. Only used for individual stages.
     cluster : str, optional
         Cluster name. Required if `backend` is 'jobmon'.
     resources : Path or str, optional

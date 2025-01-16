@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch
 
 import pandas as pd
@@ -85,12 +86,7 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
     expected_args = get_expected_args()
 
     for stage in subset_stages:
-        if stage.name == "preprocessing":
-            if method in ["run", "fit"]:
-                assert stage.get_log() == [f"run: name={stage.name}"]
-            else:
-                assert stage.get_log() == []
-        elif stage.name in expected_args:
+        if stage.name in expected_args:
             assert_stage_logs(
                 stage,
                 expected_args[stage.name]["methods"][method],
@@ -137,7 +133,9 @@ def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
 
     with pytest.raises(
         ValueError,
-        match="id_subsets keys {'invalid_id_col_name'} do not match groupby columns {'sex_id'}",
+        match=re.escape(
+            "id_subsets keys {'invalid_id_col_name'} do not match groupby columns ('sex_id',)"
+        ),
     ):
         dummy_pipeline.evaluate(
             method=method,

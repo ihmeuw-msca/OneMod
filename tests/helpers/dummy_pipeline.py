@@ -102,6 +102,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
         name="custom_stage",
         config=CustomConfig(custom_param=[1, 2]),
         groupby={"super_region_id"},
+        crossby=["custom_param"],
     )
 
     # Create pipeline
@@ -161,6 +162,11 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
 def get_expected_args() -> dict:
     """Dictionary of the expected arguments for each stage."""
     return {
+        "preprocessing": {
+            "methods": {"run": ["run"], "fit": ["run"], "predict": None},
+            "subset_ids": range(2),
+            "param_ids": None,
+        },
         "covariate_selection": {
             "methods": {"run": ["run", "fit"], "fit": ["fit"], "predict": None},
             "subset_ids": range(3),

@@ -15,6 +15,7 @@ class DummyStage(Stage):
     _required_input: set[str] = {"data.parquet", "covariates.csv"}
     _optional_input: set[str] = {"priors.pkl"}
     _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _skip: set[str] = {"fit", "predict"}
 
     def run(self):
         pass
@@ -162,6 +163,8 @@ def stage_1_model_expected(test_base_dir):
             "data": str(test_base_dir / "stage_0" / "data.parquet"),
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
+        "groupby": (),
+        "crossby": (),
     }
 
 
@@ -261,6 +264,8 @@ def stage_2_model_expected(test_base_dir):
             },
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
+        "groupby": (),
+        "crossby": (),
     }
 
 

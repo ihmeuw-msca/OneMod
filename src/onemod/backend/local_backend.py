@@ -6,7 +6,7 @@ from pydantic import validate_call
 
 from onemod.backend.utils import check_input, check_method
 from onemod.pipeline import Pipeline
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 
 
 @validate_call
@@ -29,10 +29,10 @@ def evaluate(
         Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate entire pipeline. Default is None.
     subset_id : int, optional
-        Submodel data subset ID if `model` is a `ModelStage` instance.
+        Submodel data subset ID if `model` is a `Stage` instance.
         If None, evaluate all data subsets. Default is None.
     param_id : int, optional
-        Submodel parameter set ID if `model` is a `ModelStage` instance.
+        Submodel parameter set ID if `model` is a `Stage` instance.
         If None, evaluate all parameter sets. Default is None.
 
     """
@@ -62,24 +62,44 @@ def _evaluate_stage(
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     subset_id : int, optional
-        Submodel data subset ID if `model` is a `ModelStage` instance.
-        If None, evaluate all data subsets. Default is None
+        Submodel data subset ID. If None, evaluate all data subsets.
+        Default is None
     param_id : int, optional
-        Submodel parameter set ID if `model` is a `ModelStage` instance.
-        If None, evaluate all parameter sets. Default is None.
+        Submodel parameter set ID. If None, evaluate all parameter sets.
+        Default is None.
+
+    Notes
+    -----
+    If stage uses both `groupby` and `crossby`, both `subset_id` and
+    `param_id` must be passed to evaluate in individual submodels,
+    otherwise all submodels will be evaluated.
 
     """
-    if isinstance(stage, ModelStage):
-        if method == "collect":
-            stage.collect()
-        else:
-            if subset_id is None and param_id is None:
-                for subset_id in stage.subset_ids or [None]:
-                    for param_id in stage.param_ids or [None]:
-                        stage.__getattribute__(method)(subset_id, param_id)
+    if method == "collect":
+        stage.collect()
+    else:
+        stage_method = stage.__getattribute__(method)
+        if stage.has_submodels:
+            eval_submodel = False
+            if subset_id is not None:
+                if len(stage.groupby) == 0:
+                    raise ValueError(
+                        f"Stage '{stage.name}' does not use groupby attribute"
+                    )
+                eval_submodel = True
+            if param_id is not None:
+                if len(stage.crossby) == 0:
+                    raise ValueError(
+                        f"Stage '{stage.name}' does not use crossby attribute"
+                    )
+                eval_submodel = True
+
+            if eval_submodel:
+                stage_method(subset_id, param_id)
+            else:
+                for subset_id, param_id in stage.submodel_ids:
+                    stage_method(subset_id, param_id)
                 if method in stage.collect_after:
                     stage.collect()
-            else:
-                stage.__getattribute__(method)(subset_id, param_id)
-    else:
-        stage.__getattribute__(method)()
+        else:
+            stage_method()

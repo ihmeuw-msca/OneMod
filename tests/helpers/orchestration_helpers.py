@@ -9,7 +9,7 @@ import pandas as pd
 from onemod import Pipeline, load_stage
 from onemod.config import StageConfig
 from onemod.dtypes import Data
-from onemod.stage import ModelStage, Stage
+from onemod.stage import Stage
 from onemod.utils.subsets import get_subset
 
 
@@ -75,7 +75,7 @@ class ParallelConfig(StageConfig):
     param: int | set[int]
 
 
-class ParallelStage(ModelStage):
+class ParallelStage(Stage):
     """Used to test groupby, crossby, and collect_after."""
 
     # TODO: Update once stage instance can be passed as input
@@ -151,7 +151,7 @@ class ParallelStage(ModelStage):
         self, input_name: str, method: str, subset_id: int | None
     ) -> pd.DataFrame:
         # Load input data
-        input_path = self.dataif.get_path(input_name)
+        input_path = Path(self.dataif.get_path(input_name))
         if input_path == self.dataif.get_path("directory"):
             data = self.dataif.load("data.csv", key="directory")
         else:
@@ -302,14 +302,22 @@ def setup_parallel_pipeline(directory: Path) -> Pipeline:
     # Create stages and add to pipeline
     # TODO: Add crossby=param once crossby changed
     run_1 = ParallelStage(
-        name="run_1", config={"param": [1, 2]}, groupby=["sex_id"]
+        name="run_1",
+        config={"param": [1, 2]},
+        groupby=["sex_id"],
+        crossby=["param"],
     )
     fit_2 = ParallelStageFit(
         name="fit_2", config={"param": 1}, groupby=["sex_id"]
     )
-    predict_3 = ParallelStagePredict(name="predict_3", config={"param": [1, 2]})
+    predict_3 = ParallelStagePredict(
+        name="predict_3", config={"param": [1, 2]}, crossby=["param"]
+    )
     run_4 = ParallelStage(
-        name="run_4", config={"param": [1, 2]}, groupby=["sex_id"]
+        name="run_4",
+        config={"param": [1, 2]},
+        groupby=["sex_id"],
+        crossby=["param"],
     )
     pipeline.add_stages([run_1, fit_2, predict_3, run_4])
 
@@ -418,13 +426,13 @@ def assert_parallel_output(stage: ParallelStage, method: str) -> None:
     # Check input columns
     for input_name in ["input1", "input2"]:
         input_column = output[input_name].unique()
-        input_path = stage.input[input_name]  # TODO: Update if Data object
+        input_item = stage.input[input_name]
 
-        if input_path == stage.dataif.get_path("directory"):
+        if isinstance(input_item, Path):
             assert len(input_column) == 1
             assert input_column[0] == "pipeline_input"
         else:
-            upstream_stage = input_path.name
+            upstream_stage = input_item.stage
             for _, row in output.iterrows():
                 row_stage = row["stage"]
                 row_input = row[input_name]
