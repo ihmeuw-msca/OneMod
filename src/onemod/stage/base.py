@@ -10,17 +10,12 @@ from pathlib import Path
 from typing import Any, Generator, Literal
 
 from pandas import DataFrame
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    field_validator,
-    validate_call,
-)
+from pydantic import BaseModel, ConfigDict, Field, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import StageConfig
 from onemod.dtypes import Data
+from onemod.dtypes.unique_sequence import UniqueTuple, unique_tuple
 from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
 from onemod.utils.decorators import computed_property
@@ -98,8 +93,8 @@ class Stage(BaseModel, ABC):
 
     name: str
     config: StageConfig
-    groupby: tuple[str, ...] = tuple()
-    crossby: tuple[str, ...] = tuple()
+    groupby: UniqueTuple[str] = tuple()
+    crossby: UniqueTuple[str] = tuple()
     input_validation: dict[str, Data] = Field(default_factory=dict)
     output_validation: dict[str, Data] = Field(default_factory=dict)
     _dataif: DataInterface | None = None
@@ -112,14 +107,6 @@ class Stage(BaseModel, ABC):
     _collect_after: set[str] = set()
     _subset_ids: tuple[int, ...] = tuple()
     _param_ids: tuple[int, ...] = tuple()
-
-    @field_validator("groupby", "crossby", mode="after")
-    @classmethod
-    def unique_tuple(cls, items: tuple[str, ...]) -> tuple[str, ...]:
-        """Make sure groupby and crossby have unique values."""
-        if len(items) > 0:
-            return tuple(dict.fromkeys(items))
-        return items
 
     @property
     def dataif(self) -> DataInterface:
@@ -255,7 +242,7 @@ class Stage(BaseModel, ABC):
         if len(self.groupby) > 0 and len(self._subset_ids) == 0:
             try:
                 subsets = self.dataif.load("subsets.csv", key="output")
-                self._subset_ids = tuple(subsets["subset_id"])
+                self._subset_ids = unique_tuple(subsets["subset_id"])
             except FileNotFoundError:
                 raise AttributeError(
                     f"Stage '{self.name}' data subsets have not been created"
@@ -267,7 +254,7 @@ class Stage(BaseModel, ABC):
         if len(self.crossby) > 0 and len(self._param_ids) == 0:
             try:
                 params = self.dataif.load("parameters.csv", key="output")
-                self._param_ids = tuple(params["param_id"])
+                self._param_ids = unique_tuple(params["param_id"])
             except FileNotFoundError:
                 raise AttributeError(
                     f"Stage '{self.name}' parameter sets have not been created"
@@ -288,7 +275,7 @@ class Stage(BaseModel, ABC):
         )
 
         subsets_df = create_subsets(self.groupby, df)
-        self._subset_ids = tuple(subsets_df["subset_id"])
+        self._subset_ids = unique_tuple(subsets_df["subset_id"])
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
     def get_stage_subset(
@@ -314,7 +301,7 @@ class Stage(BaseModel, ABC):
             )
 
         params_df = create_params(self.crossby, self.config)
-        self._param_ids = tuple(params_df["param_id"])
+        self._param_ids = unique_tuple(params_df["param_id"])
         self.dataif.dump(params_df, "parameters.csv", key="output")
 
     def set_params(self, param_id: int) -> None:

@@ -8,9 +8,10 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, field_validator, validate_call
+from pydantic import BaseModel, validate_call
 
 from onemod.config import Config
+from onemod.dtypes.unique_sequence import UniqueTuple, update_unique_tuple
 from onemod.serialization import serialize
 from onemod.stage import Stage
 from onemod.utils.decorators import computed_property
@@ -44,18 +45,10 @@ class Pipeline(BaseModel):
     name: str
     config: Config
     directory: Path
-    groupby: tuple[str, ...] = tuple()
+    groupby: UniqueTuple[str] = tuple()
     groupby_data: Path | None = None
     id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
-
-    @field_validator("groupby", mode="after")
-    @classmethod
-    def unique_tuple(cls, items: tuple[str, ...]) -> tuple[str, ...]:
-        """Make sure groupby and has unique values."""
-        if len(items) > 0:
-            return tuple(dict.fromkeys(items))
-        return items
 
     @computed_property
     def dependencies(self) -> dict[str, set[str]]:
@@ -283,8 +276,8 @@ class Pipeline(BaseModel):
                 if len(stage.groupby) == 0:
                     stage.groupby = self.groupby
                 else:
-                    stage.groupby = tuple(
-                        dict.fromkeys(self.groupby + stage.groupby)
+                    stage.groupby = update_unique_tuple(
+                        self.groupby, stage.groupby
                     )
             if stage.groupby:
                 if self.groupby_data is None:
