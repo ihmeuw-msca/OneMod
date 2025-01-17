@@ -62,6 +62,7 @@ def evaluate(
     python: Path | str | None = None,
     method: Literal["run", "fit", "predict"] = "run",
     stages: UniqueList[str] | None = None,
+    **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -90,7 +91,9 @@ def evaluate(
     check_input(model, stages)
     resources_dict = get_resources(resources)
     tool = get_tool(model.name, method, cluster, resources_dict)
-    tasks = get_tasks(tool, resources_dict, model, method, python, stages)
+    tasks = get_tasks(
+        tool, resources_dict, model, method, python, stages, **kwargs
+    )
     run_workflow(model.name, method, tool, tasks)
 
 
@@ -152,6 +155,7 @@ def get_tasks(
     method: Literal["run", "fit", "predict"],
     python: Path | str | None,
     stages: list[str] | None,
+    **kwargs,
 ) -> list[Task]:
     """Get Jobmon tasks.
 
@@ -179,9 +183,9 @@ def get_tasks(
     """
     if isinstance(model, Pipeline):
         return get_pipeline_tasks(
-            tool, resources, model, method, python, stages
+            tool, resources, model, method, python, stages, **kwargs
         )
-    return get_stage_tasks(tool, resources, model, method, python)
+    return get_stage_tasks(tool, resources, model, method, python, **kwargs)
 
 
 def get_pipeline_tasks(
@@ -191,6 +195,7 @@ def get_pipeline_tasks(
     method: Literal["run", "fit", "predict"],
     python: Path | str | None,
     stages: list[str] | None,
+    **kwargs,
 ) -> list[Task]:
     """Get pipeline stage tasks.
 
@@ -226,7 +231,7 @@ def get_pipeline_tasks(
                 stage, method, pipeline.stages, task_dict, stages
             )
             task_dict[stage_name] = get_stage_tasks(
-                tool, resources, stage, method, python, upstream_tasks
+                tool, resources, stage, method, python, upstream_tasks, **kwargs
             )
             tasks.extend(task_dict[stage_name])
 
@@ -298,6 +303,7 @@ def get_stage_tasks(
     method: Literal["run", "fit", "predict", "collect"],
     python: Path | str | None,
     upstream_tasks: list[Task] = [],
+    **kwargs,
 ) -> list[Task]:
     """Get stage tasks.
 
@@ -331,7 +337,11 @@ def get_stage_tasks(
     node_args = get_node_args(stage, method)
 
     task_template = get_task_template(
-        tool, resources, stage.name, method, list(node_args.keys())
+        tool,
+        resources,
+        stage.name,
+        method,
+        list(node_args.keys()) + list(kwargs.keys()),
     )
 
     if node_args:
@@ -342,6 +352,7 @@ def get_stage_tasks(
             entrypoint=entrypoint,
             config=config_path,
             **node_args,
+            **kwargs,
         )
     else:
         tasks = [
@@ -351,6 +362,7 @@ def get_stage_tasks(
                 max_attempts=1,
                 entrypoint=entrypoint,
                 config=config_path,
+                **kwargs,
             )
         ]
 

@@ -17,6 +17,7 @@ def evaluate(
     stages: UniqueList[str] | None = None,
     subset_id: int | None = None,
     param_id: int | None = None,
+    **kwargs,
 ) -> None:
     """Evaluate pipeline method locally.
 
@@ -43,9 +44,9 @@ def evaluate(
         for stage_name in model.get_execution_order(stages):
             stage = model.stages[stage_name]
             if method not in stage.skip:
-                _evaluate_stage(stage, method)
+                _evaluate_stage(stage, method, **kwargs)
     else:
-        _evaluate_stage(model, method, subset_id, param_id)
+        _evaluate_stage(model, method, subset_id, param_id, **kwargs)
 
 
 def _evaluate_stage(
@@ -53,6 +54,7 @@ def _evaluate_stage(
     method: Literal["run", "fit", "predict", "collect"] = "run",
     subset_id: int | None = None,
     param_id: int | None = None,
+    **kwargs,
 ) -> None:
     """Evaluate pipeline method locally.
 
@@ -96,11 +98,11 @@ def _evaluate_stage(
                 eval_submodel = True
 
             if eval_submodel:
-                stage_method(subset_id, param_id)
+                stage_method(subset_id, param_id, **kwargs)
             else:
                 for subset_id, param_id in stage.submodel_ids:
-                    stage_method(subset_id, param_id)
+                    stage_method(subset_id, param_id, **kwargs)
                 if method in stage.collect_after:
                     stage.collect()
         else:
-            stage_method()
+            stage_method(**kwargs)
