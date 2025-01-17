@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import validate_call
 
 from onemod.backend.utils import check_input, check_method
+from onemod.dtypes import UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
@@ -13,7 +14,7 @@ from onemod.stage import Stage
 def evaluate(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict", "collect"] = "run",
-    stages: set[str] | None = None,
+    stages: UniqueList[str] | None = None,
     subset_id: int | None = None,
     param_id: int | None = None,
 ) -> None:
@@ -25,7 +26,7 @@ def evaluate(
         Pipeline or stage instance to evaluate.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
-    stages : set of str or None, optional
+    stages : list of str or None, optional
         Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate entire pipeline. Default is None.
     subset_id : int, optional

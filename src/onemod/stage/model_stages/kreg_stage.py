@@ -12,9 +12,9 @@ class KregStage(Stage):
     """Kreg stage."""
 
     config: KregConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = ["offset.parquet", "priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None

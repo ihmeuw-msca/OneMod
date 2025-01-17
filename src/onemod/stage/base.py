@@ -10,12 +10,12 @@ from pathlib import Path
 from typing import Any, Generator, Literal
 
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, Field, validate_call
+from pydantic import BaseModel, ConfigDict, validate_call
 
 import onemod.stage as onemod_stages
 from onemod.config import StageConfig
 from onemod.dtypes import Data
-from onemod.dtypes.unique_sequence import UniqueTuple, unique_tuple
+from onemod.dtypes.unique_sequence import UniqueList
 from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
 from onemod.utils.decorators import computed_property
@@ -45,14 +45,14 @@ class Stage(BaseModel, ABC):
     ----------
     name : str
         Stage name.
-    config : StageConfig
+    config : StageConfig, optional
         Stage configuration.
-    groupby : tuple of str, optional
+    groupby : list of str, optional
         Column names used to create data subsets. Default is an empty
-        tuple.
-    crossby : tuple of str, optional
+        list.
+    crossby : list of str, optional
         Parameter names used to create parameter sets. Default is an
-        empty tuple.
+        empty list.
     input_validation : dict, optional
         Optional specification of input data validation.
     output_validation : dict, optional
@@ -92,21 +92,21 @@ class Stage(BaseModel, ABC):
     model_config = ConfigDict(validate_assignment=True)
 
     name: str
-    config: StageConfig
-    groupby: UniqueTuple[str] = tuple()
-    crossby: UniqueTuple[str] = tuple()
-    input_validation: dict[str, Data] = Field(default_factory=dict)
-    output_validation: dict[str, Data] = Field(default_factory=dict)
+    config: StageConfig = StageConfig()
+    groupby: UniqueList[str] = []
+    crossby: UniqueList[str] = []
+    input_validation: dict[str, Data] = {}
+    output_validation: dict[str, Data] = {}
     _dataif: DataInterface | None = None
     _module: Path | None = None
     _input: Input | None = None
-    _required_input: set[str] = set()
-    _optional_input: set[str] = set()
-    _output: set[str] = set()
-    _skip: set[str] = set()
-    _collect_after: set[str] = set()
-    _subset_ids: tuple[int, ...] = tuple()
-    _param_ids: tuple[int, ...] = tuple()
+    _required_input: list[str] = []
+    _optional_input: list[str] = []
+    _output: list[str] = []
+    _skip: list[str] = []
+    _collect_after: list[str] = []
+    _subset_ids: list[int] = []
+    _param_ids: list[int] = []
 
     @property
     def dataif(self) -> DataInterface:
@@ -115,11 +115,11 @@ class Stage(BaseModel, ABC):
         Examples
         --------
         Load input file:
-        * _requred_input: {"data.parquet"}
+        * _requred_input: ["data.parquet"]
         * data = self.dataif.load(key="data")
 
         Load file from input directory:
-        * _required_input: {"submodels"}
+        * _required_input: ["submodels"]
         * model = self.dataif.load(f"model_{subset_id}.pkl", key="submodels")
 
         Load output file:
@@ -178,11 +178,11 @@ class Stage(BaseModel, ABC):
         return self._module
 
     @property
-    def skip(self) -> set[str]:
+    def skip(self) -> list[str]:
         return self._skip
 
     @property
-    def collect_after(self) -> set[str]:
+    def collect_after(self) -> list[str]:
         return self._collect_after
 
     @computed_property
@@ -208,9 +208,9 @@ class Stage(BaseModel, ABC):
         return Output(stage=self.name, items=output_items)
 
     @property
-    def dependencies(self) -> set[str]:
+    def dependencies(self) -> list[str]:
         if self.input is None:
-            return set()
+            return []
         return self.input.dependencies
 
     @computed_property
@@ -238,11 +238,11 @@ class Stage(BaseModel, ABC):
                 yield (None, param_id)
 
     @property
-    def subset_ids(self) -> tuple[int, ...]:
+    def subset_ids(self) -> list[int]:
         if len(self.groupby) > 0 and len(self._subset_ids) == 0:
             try:
                 subsets = self.dataif.load("subsets.csv", key="output")
-                self._subset_ids = unique_tuple(subsets["subset_id"])
+                self._subset_ids = list(subsets["subset_id"])
             except FileNotFoundError:
                 raise AttributeError(
                     f"Stage '{self.name}' data subsets have not been created"
@@ -250,11 +250,11 @@ class Stage(BaseModel, ABC):
         return self._subset_ids
 
     @property
-    def param_ids(self) -> tuple[int, ...]:
+    def param_ids(self) -> list[int]:
         if len(self.crossby) > 0 and len(self._param_ids) == 0:
             try:
                 params = self.dataif.load("parameters.csv", key="output")
-                self._param_ids = unique_tuple(params["param_id"])
+                self._param_ids = list(params["param_id"])
             except FileNotFoundError:
                 raise AttributeError(
                     f"Stage '{self.name}' parameter sets have not been created"
@@ -275,7 +275,7 @@ class Stage(BaseModel, ABC):
         )
 
         subsets_df = create_subsets(self.groupby, df)
-        self._subset_ids = unique_tuple(subsets_df["subset_id"])
+        self._subset_ids = list(subsets_df["subset_id"])
         self.dataif.dump(subsets_df, "subsets.csv", key="output")
 
     def get_stage_subset(
@@ -301,7 +301,7 @@ class Stage(BaseModel, ABC):
             )
 
         params_df = create_params(self.crossby, self.config)
-        self._param_ids = unique_tuple(params_df["param_id"])
+        self._param_ids = list(params_df["param_id"])
         self.dataif.dump(params_df, "parameters.csv", key="output")
 
     def set_params(self, param_id: int) -> None:

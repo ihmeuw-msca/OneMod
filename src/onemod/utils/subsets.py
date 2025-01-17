@@ -2,16 +2,17 @@
 
 import pandas as pd
 
+from onemod.dtypes.unique_sequence import unique_list
 
-def create_subsets(
-    groupby: tuple[str, ...], data: pd.DataFrame
-) -> pd.DataFrame:
+
+def create_subsets(groupby: list[str], data: pd.DataFrame) -> pd.DataFrame:
     """Create subsets from groupby."""
-    groups = data.groupby(list(groupby))
+    groupby = unique_list(groupby)
+    groups = data.groupby(groupby)
     subsets = pd.DataFrame(
         [subset for subset in groups.groups.keys()], columns=groupby
     )
-    subsets.sort_values(by=list(groupby))
+    subsets.sort_values(by=groupby)
     subsets["subset_id"] = subsets.index
     return subsets[["subset_id", *groupby]]
 

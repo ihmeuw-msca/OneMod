@@ -48,6 +48,7 @@ from jobmon.client.task_template import TaskTemplate
 from pydantic import validate_call
 
 from onemod.backend.utils import check_input, check_method
+from onemod.dtypes import UniqueList
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
@@ -60,7 +61,7 @@ def evaluate(
     resources: Path | str | dict[str, Any],
     python: Path | str | None = None,
     method: Literal["run", "fit", "predict"] = "run",
-    stages: set[str] | None = None,
+    stages: UniqueList[str] | None = None,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -77,7 +78,7 @@ def evaluate(
         Default is None.
     method : str, optional
         Name of method to evalaute. Default is 'run'.
-    stages : set of str or None, optional
+    stages : list of str or None, optional
         Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate entire pipeline. Default is None.
 
@@ -150,7 +151,7 @@ def get_tasks(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict"],
     python: Path | str | None,
-    stages: set[str] | None,
+    stages: list[str] | None,
 ) -> list[Task]:
     """Get Jobmon tasks.
 
@@ -166,7 +167,7 @@ def get_tasks(
         Name of method to evaluate.
     python : Path, str, or None
         Path to Python environment. If None, use sys.executable.
-    stages : set of str or None
+    stages : list of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate entire pipeline.
 
@@ -189,7 +190,7 @@ def get_pipeline_tasks(
     pipeline: Pipeline,
     method: Literal["run", "fit", "predict"],
     python: Path | str | None,
-    stages: set[str] | None,
+    stages: list[str] | None,
 ) -> list[Task]:
     """Get pipeline stage tasks.
 
@@ -205,7 +206,7 @@ def get_pipeline_tasks(
         Name of method to evaluate.
     python : Path, str, or None
         Path to Python environment. If None, use sys.executable.
-    stages : set of str or None
+    stages : list of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate entire pipeline.
 
@@ -237,7 +238,7 @@ def get_upstream_tasks(
     method: Literal["run", "fit", "predict"],
     stage_dict: dict[str, Stage],
     task_dict: dict[str, list[Task]],
-    stages: set[str] | None = None,
+    stages: list[str] | None = None,
 ) -> list[Task]:
     """Get upstream tasks for current stage.
 
@@ -251,7 +252,7 @@ def get_upstream_tasks(
         Dictionary of all pipeline stages.
     task_dict : dict
         Dictionary of all upstream stage tasks.
-    stages : set of str or None, optional
+    stages : list of str or None, optional
         Names of all pipeline stages being evaluated. If None, assume
         all stages are being evaluated.
 

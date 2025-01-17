@@ -11,7 +11,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, validate_call
 
 from onemod.config import Config
-from onemod.dtypes.unique_sequence import UniqueTuple, update_unique_tuple
+from onemod.dtypes.unique_sequence import UniqueList, update_unique_list
 from onemod.serialization import serialize
 from onemod.stage import Stage
 from onemod.utils.decorators import computed_property
@@ -27,13 +27,13 @@ class Pipeline(BaseModel):
     ----------
     name : str
         Pipeline name.
-    config :Config
+    config : Config, optional
         Pipeline configuration.
     directory : Path
         Experiment directory.
-    groupby : tuple of str, optional
+    groupby : list of str, optional
         Column names used to create data subsets. Default is an empty
-        tuple.
+        list.
     groupby_data : Path or None, optional
         Path to the data file used for creating data subsets. Default is
         None. Required when specifying pipeline or stage `groupby`
@@ -43,15 +43,15 @@ class Pipeline(BaseModel):
     """
 
     name: str
-    config: Config
+    config: Config = Config()
     directory: Path
-    groupby: UniqueTuple[str] = tuple()
+    groupby: UniqueList[str] = []
     groupby_data: Path | None = None
     id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
 
     @computed_property
-    def dependencies(self) -> dict[str, set[str]]:
+    def dependencies(self) -> dict[str, list[str]]:
         return {
             stage.name: stage.dependencies for stage in self.stages.values()
         }
@@ -145,7 +145,7 @@ class Pipeline(BaseModel):
         stage.config.add_pipeline_config(self.config)
         self._stages[stage.name] = stage
 
-    def get_execution_order(self, stages: set[str] | None = None) -> list[str]:
+    def get_execution_order(self, stages: list[str] | None = None) -> list[str]:
         """Get stages sorted in execution order.
 
         Use Kahn's algorithm to find the topoligical order of the
@@ -153,7 +153,7 @@ class Pipeline(BaseModel):
 
         Parameters
         ----------
-        stages: set of str, optional
+        stages: list of str, optional
             Name of stages to sort. If None, sort all pipeline stages.
             Default is None.
 
@@ -276,7 +276,7 @@ class Pipeline(BaseModel):
                 if len(stage.groupby) == 0:
                     stage.groupby = self.groupby
                 else:
-                    stage.groupby = update_unique_tuple(
+                    stage.groupby = update_unique_list(
                         self.groupby, stage.groupby
                     )
             if stage.groupby:
@@ -307,7 +307,7 @@ class Pipeline(BaseModel):
     def evaluate(
         self,
         method: Literal["run", "fit", "predict", "collect"] = "run",
-        stages: set[str] | None = None,
+        stages: UniqueList[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         build: bool = True,
         id_subsets: dict[str, list[Any]] | None = None,
@@ -319,7 +319,7 @@ class Pipeline(BaseModel):
         ----------
         method : str, optional
             Name of method to evaluate. Default is 'run'.
-        stages : set of str, optional
+        stages : list of str, optional
             Names of stages to evaluate. Default is None.
             If None, evaluate entire pipeline.
         backend : str, optional

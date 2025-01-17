@@ -31,14 +31,14 @@ class SpxmodStage(Stage):
     """Spxmod stage."""
 
     config: SpxmodConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = [
         "selected_covs.csv",
         "offset.parquet",
         "priors.pkl",
-    }
-    _output: set[str] = {"predictions.parquet"}
-    _collect_after: set[str] = {"run", "predict"}
+    ]
+    _output: list[str] = ["predictions.parquet"]
+    _collect_after: list[str] = ["run", "predict"]
 
     def model_post_init(self, *args, **kwargs) -> None:
         if len(self.groupby) == 0:

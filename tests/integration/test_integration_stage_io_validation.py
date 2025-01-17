@@ -12,10 +12,10 @@ from onemod.stage import Stage
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: set[str] = {"data.parquet", "covariates.csv"}
-    _optional_input: set[str] = {"priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
-    _skip: set[str] = {"fit", "predict"}
+    _required_input: list[str] = ["data.parquet", "covariates.csv"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _skip: list[str] = ["fit", "predict"]
 
     def run(self):
         pass
@@ -163,8 +163,8 @@ def stage_1_model_expected(test_base_dir):
             "data": str(test_base_dir / "stage_0" / "data.parquet"),
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
-        "groupby": (),
-        "crossby": (),
+        "groupby": [],
+        "crossby": [],
     }
 
 
@@ -264,8 +264,8 @@ def stage_2_model_expected(test_base_dir):
             },
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
-        "groupby": (),
-        "crossby": (),
+        "groupby": [],
+        "crossby": [],
     }
 
 
@@ -275,7 +275,7 @@ def test_input_types(test_base_dir, stage_1):
     assert stage_1.input_validation["data"].path == Path("data.parquet")
     assert stage_1.input_validation["data"].format == "parquet"
     assert stage_1.input_validation["data"].shape is None
-    assert stage_1.dependencies == set()
+    assert stage_1.dependencies == []
 
 
 @pytest.mark.integration

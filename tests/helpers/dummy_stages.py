@@ -7,16 +7,16 @@ from onemod.stage import Stage
 class CustomConfig(StageConfig):
     """Custom stage config."""
 
-    custom_param: int | set[int] = 1
-    _crossable_params: set[str] = {"custom_param"}
+    custom_param: int | list[int] = 1
+    _crossable_params: list[str] = ["custom_param"]
 
 
 class DummyCustomStage(Stage):
     """Custom stage."""
 
     config: CustomConfig = CustomConfig()  # type: ignore
-    _required_input: set[str] = {"observations.parquet", "predictions.parquet"}
-    _collect_after: set[str] = {"run", "predict"}
+    _required_input: list[str] = ["observations.parquet", "predictions.parquet"]
+    _collect_after: list[str] = ["run", "predict"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -61,10 +61,10 @@ class DummyKregStage(Stage):
     """Kreg stage."""
 
     config: KregConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {"offset.parquet", "priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
-    _collect_after: set[str] = {"run", "predict"}
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = ["offset.parquet", "priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _collect_after: list[str] = ["run", "predict"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -109,13 +109,13 @@ class DummyPreprocessingStage(Stage):
     """Preprocessing stage."""
 
     config: StageConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _skip: list[str] = ["predict"]
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = [
         "age_metadata.parquet",
         "location_metadata.parquet",
-    }
-    _output: set[str] = {"data.parquet"}
+    ]
+    _output: list[str] = ["data.parquet"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -143,10 +143,10 @@ class DummyRoverStage(Stage):
     """Rover stage."""
 
     config: RoverConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _output: set[str] = {"selected_covs.csv"}
-    _collect_after: set[str] = {"run", "fit"}
+    _skip: list[str] = ["predict"]
+    _required_input: list[str] = ["data.parquet"]
+    _output: list[str] = ["selected_covs.csv"]
+    _collect_after: list[str] = ["run", "fit"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -188,14 +188,14 @@ class DummySpxmodStage(Stage):
     """Spxmod stage."""
 
     config: SpxmodConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = [
         "selected_covs.csv",
         "offset.parquet",
         "priors.pkl",
-    }
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
-    _collect_after: set[str] = {"run", "predict"}
+    ]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _collect_after: list[str] = ["run", "predict"]
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -240,13 +240,13 @@ class MultiplyByTwoStage(Stage):
     """Stage that multiplies the value column by 2."""
 
     config: StageConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {
+    _skip: list[str] = ["predict"]
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = [
         "age_metadata.parquet",
         "location_metadata.parquet",
-    }
-    _output: set[str] = {"data.parquet"}
+    ]
+    _output: list[str] = ["data.parquet"]
 
     def run(self, subset_id: int, *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""

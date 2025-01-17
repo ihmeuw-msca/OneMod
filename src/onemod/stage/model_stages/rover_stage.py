@@ -24,10 +24,10 @@ class RoverStage(Stage):
     """ModRover covariate selection stage."""
 
     config: RoverConfig
-    _skip: set[str] = {"predict"}
-    _required_input: set[str] = {"data.parquet"}
-    _output: set[str] = {"selected_covs.csv", "summaries.csv"}
-    _collect_after: set[str] = {"run", "fit"}
+    _skip: list[str] = ["predict"]
+    _required_input: list[str] = ["data.parquet"]
+    _output: list[str] = ["selected_covs.csv", "summaries.csv"]
+    _collect_after: list[str] = ["run", "fit"]
 
     def model_post_init(self, *args, **kwargs) -> None:
         if len(self.groupby) == 0:

@@ -10,6 +10,7 @@ import fire
 from pydantic import validate_call
 
 import onemod.stage as onemod_stages
+from onemod.dtypes import UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
@@ -128,7 +129,7 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
 def evaluate(
     config: Path | str,
     method: Literal["run", "fit", "predict", "collect"] = "run",
-    stages: str | set[str] | None = None,
+    stages: str | UniqueList[str] | None = None,
     backend: Literal["local", "jobmon"] = "local",
     **kwargs,
 ) -> None:
@@ -140,7 +141,7 @@ def evaluate(
         Path to config file.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
-    stages : str, set of str, or None, optional
+    stages : str, list of str, or None, optional
         Names of stages to evaluate. If None, evaluate entire pipeline.
         Default is None.
     backend : str, optional

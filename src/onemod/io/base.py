@@ -18,15 +18,10 @@ from abc import ABC
 from pathlib import Path
 from typing import Any
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    PrivateAttr,
-    model_serializer,
-    validate_call,
-)
+from pydantic import BaseModel, ConfigDict, model_serializer, validate_call
 
 from onemod.dtypes import Data
+from onemod.dtypes.unique_sequence import UniqueList, unique_list
 
 
 class IO(BaseModel, ABC):
@@ -68,23 +63,27 @@ class IO(BaseModel, ABC):
 class Input(IO):
     """Stage input class."""
 
-    required: set[str] = set()  # name.extension, defined by stage class
-    optional: set[str] = set()  # name.extension, defined by stage class
-    _expected_names: set[str] = PrivateAttr(default_factory=set)
-    _expected_types: dict[str, str] = PrivateAttr(default_factory=dict)
+    required: UniqueList[str] = []  # name.extension, defined by stage class
+    optional: UniqueList[str] = []  # name.extension, defined by stage class
+    _expected_names: list[str] = []
+    _expected_types: dict[str, str] = {}
 
     @property
-    def dependencies(self) -> set[str]:
-        return set(
-            item.stage for item in self.items.values() if isinstance(item, Data)
+    def dependencies(self) -> list[str]:
+        return unique_list(
+            [
+                item.stage
+                for item in self.items.values()
+                if isinstance(item, Data)
+            ]
         )
 
     def model_post_init(self, *args, **kwargs) -> None:
-        self._expected_names = {
-            item.split(".")[0] for item in {*self.required, *self.optional}
-        }
+        self._expected_names = unique_list(
+            [item.split(".")[0] for item in [*self.required, *self.optional]]
+        )
         self._expected_types = {}
-        for item in {*self.required, *self.optional}:
+        for item in [*self.required, *self.optional]:
             item_specs = item.split(".")
             item_name = item_specs[0]
             item_type = "directory" if len(item_specs) == 1 else item_specs[1]
@@ -141,18 +140,18 @@ class Input(IO):
 
     def check_exists(
         self,
-        item_names: set[str] | None = None,
-        upstream_stages: set[str] | None = None,
+        item_names: list[str] | None = None,
+        upstream_stages: list[str] | None = None,
     ) -> None:
         """Check stage input items exist.
 
         Parameters
         ----------
-        item_names : set of str, optional
+        item_names : list of str, optional
             Names of input items to check. If None, check all input
             path items and all input data items in `upstream_stages`.
             Default is None.
-        upstream_stages : set of str, optional
+        upstream_stages : list of str, optional
             Names of upstream stages to check input items from. If None,
             check input items from all upstream stages.
 
@@ -165,7 +164,7 @@ class Input(IO):
 
         """
         if item_names is None:
-            item_names = set(self.items.keys())
+            item_names = list(self.items.keys())
         if upstream_stages is None:
             upstream_stages = self.dependencies
 
@@ -183,7 +182,7 @@ class Input(IO):
 
         if missing_items:
             raise FileNotFoundError(
-                f"Stage {self.stage} input items do not exist: {missing_items}"
+                f"Stage '{self.stage}' input items do not exist: {missing_items}"
             )
 
     def _check_cycles(
@@ -256,6 +255,6 @@ class Output(IO):
     def __getitem__(self, item_name: str) -> Data:
         if item_name not in self.items:
             raise KeyError(
-                f"{self.stage} does not contain output '{item_name}'"
+                f"Stage '{self.stage}' does not contain output '{item_name}'"
             )
         return self.items[item_name]

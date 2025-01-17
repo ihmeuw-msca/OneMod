@@ -25,7 +25,7 @@ def check_method(model: Pipeline | Stage, method: str, backend: str) -> None:
 
 
 def check_input(
-    model: Pipeline | Stage, stages: set[str] | None = None
+    model: Pipeline | Stage, stages: list[str] | None = None
 ) -> None:
     if isinstance(model, Stage):
         model.input.check_exists()

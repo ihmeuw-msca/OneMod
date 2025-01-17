@@ -8,7 +8,7 @@ from pandas import DataFrame
 from onemod.config import StageConfig
 
 
-def create_params(crossby: tuple[str, ...], config: StageConfig) -> DataFrame:
+def create_params(crossby: list[str], config: StageConfig) -> DataFrame:
     """Create parameter sets from crossby."""
     param_dict = {}
     for param_name in crossby:
@@ -23,7 +23,7 @@ def create_params(crossby: tuple[str, ...], config: StageConfig) -> DataFrame:
     params = DataFrame(
         list(product(*param_dict.values())), columns=list(param_dict.keys())
     )
-    params.sort_values(by=list(crossby))
+    params.sort_values(by=crossby)
     params["param_id"] = params.index
 
     return params[["param_id", *crossby]]
