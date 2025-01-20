@@ -20,7 +20,7 @@ class DataLoader:
             "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
         ] = "pandas_dataframe",
         columns: list[str] | None = None,
-        id_subsets: dict[str, list] | None = None,
+        subsets: dict[str, int | list] | None = None,
         **options,
     ) -> pd.DataFrame | pl.DataFrame | pl.LazyFrame:
         """Load data with lazy loading and subset filtering. Polars and
@@ -38,8 +38,9 @@ class DataLoader:
             if columns:
                 pandas_df = pandas_df[columns]
 
-            if id_subsets:
-                for col, values in id_subsets.items():
+            if subsets:
+                for col, values in subsets.items():
+                    values = values if isinstance(values, list) else [values]
                     pandas_df = pandas_df[pandas_df[col].isin(values)]
                     pandas_df.reset_index(drop=True, inplace=True)
 
@@ -50,8 +51,9 @@ class DataLoader:
             if columns:
                 polars_lf = polars_lf.select(columns)
 
-            if id_subsets:
-                for col, values in id_subsets.items():
+            if subsets:
+                for col, values in subsets.items():
+                    values = values if isinstance(values, list) else [values]
                     polars_lf = polars_lf.filter(pl.col(col).is_in(values))
 
             if return_type == "polars_dataframe":

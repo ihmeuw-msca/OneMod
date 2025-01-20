@@ -284,9 +284,8 @@ class Pipeline(BaseModel):
                     raise AttributeError(
                         "groupby_data is required for groupby attribute"
                     )
-                stage.dataif.add_path("groupby_data", self.groupby_data)
                 stage.create_stage_subsets(
-                    data_key="groupby_data", id_subsets=self.id_subsets
+                    self.groupby_data, subsets=self.id_subsets
                 )
 
             # Create parameter sets
