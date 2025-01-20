@@ -33,7 +33,7 @@ def evaluate(
     subsets : dict, optional
         Submodel data subsets if `model` is a `Stage` instance.
         If None, evaluate all data subsets. Default is None.
-    param_id : dict, optional
+    params : dict, optional
         Submodel parameter sets if `model` is a `Stage` instance.
         If None, evaluate all parameter sets. Default is None.
 
@@ -67,10 +67,10 @@ def _evaluate_stage(
         Stage instance to evaluate.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
-    subsets : int, optional
+    subsets : dict, optional
         Submodel data subsets. If None, evaluate all data subsets.
         Default is None.
-    params : int, optional
+    params : dict, optional
         Submodel parameter sets. If None, evaluate all parameter sets.
         Default is None.
 
@@ -80,20 +80,7 @@ def _evaluate_stage(
     else:
         stage_method = stage.__getattribute__(method)
         if stage.has_submodels:
-            if subsets is not None:
-                if len(stage.groupby) == 0:
-                    raise ValueError(
-                        f"Stage '{stage.name}' does not use groupby attribute"
-                    )
-            if params is not None:
-                if len(stage.crossby) == 0:
-                    raise ValueError(
-                        f"Stage '{stage.name}' does not use crossby attribute"
-                    )
-
-            for subset, param_set in stage.submodels(
-                subsets=subsets, params=params
-            ):
+            for subset, param_set in stage.get_submodels(subsets, params):
                 stage_method(subsets=subset, params=param_set, **kwargs)
 
             if (

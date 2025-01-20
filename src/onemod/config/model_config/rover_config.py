@@ -50,6 +50,10 @@ class RoverConfig(StageConfig):
         Names of covariates to explore.
     cov_fixed : list of str, optional
         Fixed covariate names. Default is ['intercept'].
+    cov_groupby : list of str, optional
+        Column names used to create data subsets; covariates are
+        selected separately for each data subset. Default is an empty
+        list.
     strategies : list of str, optional
         Set of strategies to use; either 'full', 'forward', and/or
         'backward'. Default is ['forward'].
@@ -75,6 +79,7 @@ class RoverConfig(StageConfig):
     coef_bounds: dict[str, tuple[float, float]] | None = None
     cov_exploring: UniqueList[str]
     cov_fixed: UniqueList[str] = ["intercept"]
+    cov_groupby: UniqueList[str] = []
     strategies: UniqueList[Literal["full", "forward", "backward"]] = ["forward"]
     top_pct_score: float = Field(ge=0, le=1, default=0.1)
     top_pct_learner: float = Field(ge=0, le=1, default=1.0)

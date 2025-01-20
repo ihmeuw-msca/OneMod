@@ -24,7 +24,6 @@ from xspline import XSpline
 from onemod.config import SpxmodConfig
 from onemod.stage import Stage
 from onemod.utils.residual import ResidualCalculator
-from onemod.utils.subsets import get_subset
 
 
 class SpxmodStage(Stage):
@@ -41,12 +40,12 @@ class SpxmodStage(Stage):
     _collect_after: list[str] = ["run", "predict"]
 
     def model_post_init(self, *args, **kwargs) -> None:
-        if len(self.groupby) == 0:
+        if self.groupby is None:
             raise AttributeError("SPxModStage requires groupby attribute")
-        if len(self.groupby) > 0:
+        if self.crossby is not None:
             raise AttributeError("SPxModStage does not use crossby attribute")
 
-    def run(self, subset_id: int, *args, **kwargs) -> None:
+    def run(self, subset: dict[str, int], *args, **kwargs) -> None:
         """Run spxmod submodel.
 
         Output
@@ -54,21 +53,21 @@ class SpxmodStage(Stage):
         model.pkl
             SpXMod model instance for diagnostics.
         coef.csv
-            Model coefficients for different age groups.
+            Model coefficients.
         predictions.parquet
             Predictions with residual information.
 
         """
         # Load data and filter by subset
-        data, spline_vars, offset = self._get_submodel_data(subset_id)
+        data, spline_vars, offset = self._get_submodel_data(subset)
 
         # Create and fit submodel
-        model = self._fit(subset_id, data, spline_vars, offset)
+        model = self._fit(subset, data, spline_vars, offset)
 
         # Create submodel predictions
-        self._predict(subset_id, data, model)
+        self._predict(subset, data, model)
 
-    def fit(self, subset_id: int, *args, **kwargs) -> None:
+    def fit(self, subset: dict[str, int], *args, **kwargs) -> None:
         """Fit spxmod submodel.
 
         Outputs
@@ -76,19 +75,19 @@ class SpxmodStage(Stage):
         model.pkl
             SpXMod model instance for diagnostics.
         coef.csv
-            Model coefficients for different age groups.
+            Model coefficients.
 
         """
         # Load data and filter by subset
-        logger.info(f"Loading {self.name} data subset {subset_id}")
-        data, spline_vars, offset = self._get_submodel_data(subset_id)
+        logger.info(f"Loading {self.name} data subset {subset}")
+        data, spline_vars, offset = self._get_submodel_data(subset)
 
         # Create and fit submodel
-        _ = self._fit(subset_id, data, spline_vars, offset)
+        _ = self._fit(subset, data, spline_vars, offset)
 
     def _fit(
         self,
-        subset_id: int,
+        subset: dict[str, int],
         data: pd.DataFrame,
         spline_vars: list[str],
         offset: bool,
@@ -97,7 +96,7 @@ class SpxmodStage(Stage):
         # Get covariates from upstream stage
         selected_covs = []
         if "selected_covs" in self.input:
-            selected_covs = self._get_covs(subset_id)
+            selected_covs = self._get_covs(subset)
             logger.info(
                 f"Using covariates from "
                 f"{self.input['selected_covs'].stage}: {selected_covs}"
@@ -112,7 +111,7 @@ class SpxmodStage(Stage):
         )
 
         # Create and fit submodel
-        logger.info(f"Fitting {self.name} submodel {subset_id}")
+        logger.info(f"Fitting {self.name} subset {subset}")
         train = data.query(f"{self.config['observation_column']}.notnull()")
         if (train_column := self.config.get("train_column")) is not None:
             train = train.query(f"{train_column} == 1")
@@ -120,19 +119,19 @@ class SpxmodStage(Stage):
         model.fit(data=train, data_span=data, **self.config.xmodel_fit)
 
         # Save submodel and coefficients
-        logger.info(f"Saving {self.name} submodel {subset_id}")
+        logger.info(f"Saving {self.name} subset {subset}")
         self.dataif.dump(
-            model, f"submodels/{subset_id}/model.pkl", key="output"
+            model, self._get_submodel_dir(subset) + "model.pkl", key="output"
         )
         self.dataif.dump(
             self._get_coef(model),
-            f"submodels/{subset_id}/coef.csv",
+            self._get_submodel_dir(subset) + "coef.csv",
             key="output",
         )
 
         return model
 
-    def predict(self, subset_id: int, *args, **kwargs) -> None:
+    def predict(self, subset: dict[str, int], *args, **kwargs) -> None:
         """Create spxmod submodel predictions.
 
         Outputs
@@ -142,25 +141,23 @@ class SpxmodStage(Stage):
 
         """
         # Load data and filter by subset
-        data, _, _ = self._get_submodel_data(subset_id)
+        data, _, _ = self._get_submodel_data(subset)
 
         # Load submodel
-        logger.info(f"Loading {self.name} submodel {subset_id}")
+        logger.info(f"Loading {self.name} subuset {subset}")
         model = self.dataif.load(
-            f"submodels/{subset_id}/model.pkl", key="output"
+            self._get_submodel_dir(subset) + "model.pkl", key="output"
         )
 
         # Create submodel predictions
-        self._predict(subset_id, data, model)
+        self._predict(subset, data, model)
 
     def _predict(
-        self, subset_id: int, data: pd.DataFrame, model: XModel
+        self, subset: dict[str, int], data: pd.DataFrame, model: XModel
     ) -> None:
         """Create spxmod submodel predictions."""
         # Create prediction, residuals, and coefs
-        logger.info(
-            f"Creating predictions for {self.name} submodel {subset_id}"
-        )
+        logger.info(f"Creating predictions for {self.name} subset {subset}")
         residual_calculator = ResidualCalculator(self.config["model_type"])
         data[self.config["prediction_column"]] = model.predict(data)
         residuals = residual_calculator.get_residual(
@@ -171,13 +168,13 @@ class SpxmodStage(Stage):
         )
 
         # Save results
-        logger.info(f"Saving predictions for {self.name} submodel {subset_id}")
+        logger.info(f"Saving predictions for {self.name} subset {subset}")
         self.dataif.dump(
             pd.concat([data, residuals], axis=1)[
                 list(self.config["id_columns"])
                 + ["residual", "residual_se", self.config["prediction_column"]]
             ],
-            f"submodels/{subset_id}/predictions.parquet",
+            self._get_submodel_dir(subset) + "predictions.parquet",
             key="output",
         )
 
@@ -190,17 +187,19 @@ class SpxmodStage(Stage):
             Predictions with residual information.
 
         """
-        # Collect submodel predictions
         logger.info(f"Collecting {self.name} submodel results")
+
+        # Collect submodel predictions
+        if self.subsets is None:
+            raise AttributeError("SPxModStage requires subsets")
         self.dataif.dump(
             pd.concat(
                 [
                     self.dataif.load(
-                        f"submodels/{subset_id}/predictions.parquet",
+                        self._get_submodel_dir(subset) + "predictions.parquet",
                         key="output",
-                        return_type="pandas_dataframe",
                     )
-                    for subset_id in self.subset_ids
+                    for subset in self.subsets.to_dict(orient="records")
                 ]
             ),
             "predictions.parquet",
@@ -210,12 +209,12 @@ class SpxmodStage(Stage):
         # TODO: Plot coefficients
 
     def _get_submodel_data(
-        self, subset_id: int
+        self, subset: dict[str, int]
     ) -> tuple[pd.DataFrame, list[str], bool]:
         """Load submodel data."""
         # Load data and filter by subset
-        logger.info(f"Loading {self.name} data subset {subset_id}")
-        data = self.get_stage_subset(subset_id)
+        logger.info(f"Loading {self.name} data subset {subset}")
+        data = self.get_subset(self.dataif.load(key="data"), subset)
 
         # Add spline basis to data
         spline_vars = []
@@ -266,22 +265,23 @@ class SpxmodStage(Stage):
         )
         return spline_basis
 
-    def _get_covs(self, subset_id: int) -> list[str]:
+    def _get_covs(self, subset: dict[str, int]) -> list[str]:
         """Get covariates from upstream stage."""
         # Load covariates and filter by subset
         selected_covs = self.dataif.load(key="selected_covs")
-        if pipeline_groupby := self.get_field("groupby"):
-            selected_covs = get_subset(
-                selected_covs,
-                self.dataif.load("subsets.csv", key="output"),
-                subset_id,
-                id_names=pipeline_groupby,
+        cov_groupby = self.get_field(
+            field="config:cov_groupby",
+            stage_name=self.input["selected_covs"].stage,
+        )
+        if len(cov_groupby) > 0:
+            selected_covs = self.get_subset(
+                selected_covs, {key: subset[key] for key in cov_groupby}
             )
         selected_covs = selected_covs["cov"].to_list()
 
         # Get fixed covariates
         fixed_covs = self.get_field(
-            field="config-cov_fixed",
+            field="config:cov_fixed",
             stage_name=self.input["selected_covs"].stage,
         )
         if "intercept" in fixed_covs:
@@ -406,3 +406,11 @@ class SpxmodStage(Stage):
         coef_df = pd.concat(coefs, axis=0, ignore_index=True)
         coef_df["coef"] = model.core.opt_coefs
         return coef_df
+
+    @staticmethod
+    def _get_submodel_dir(subset: dict[str, int]) -> str:
+        return (
+            "submodels/"
+            + "_".join(str(value) for value in subset.values())
+            + "/"
+        )

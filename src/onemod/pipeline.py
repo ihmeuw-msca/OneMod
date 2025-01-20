@@ -31,9 +31,8 @@ class Pipeline(BaseModel):
         Pipeline configuration.
     directory : Path
         Experiment directory.
-    groupby : list of str, optional
-        Column names used to create data subsets. Default is an empty
-        list.
+    groupby : list of str or None, optional
+        Column names used to create data subsets. Default is None.
     groupby_data : Path or None, optional
         Path to the data file used for creating data subsets. Default is
         None. Required when specifying pipeline or stage `groupby`
@@ -45,7 +44,7 @@ class Pipeline(BaseModel):
     name: str
     config: Config = Config()
     directory: Path
-    groupby: UniqueList[str] = []
+    groupby: UniqueList[str] | None = None
     groupby_data: Path | None = None
     id_subsets: dict[str, list[Any]] | None = None
     _stages: dict[str, Stage] = {}  # set by add_stage
@@ -61,7 +60,7 @@ class Pipeline(BaseModel):
         return self._stages
 
     def model_post_init(self, *args, **kwargs) -> None:
-        if len(self.groupby) > 0 and self.groupby_data is None:
+        if self.groupby is not None and self.groupby_data is None:
             raise AttributeError(
                 "groupby_data is required for groupby attribute"
             )
@@ -272,21 +271,19 @@ class Pipeline(BaseModel):
             stage.set_dataif(config_path)
 
             # Create data subsets
-            if len(self.groupby) > 0:
-                if len(stage.groupby) == 0:
+            if self.groupby is not None:
+                if stage.groupby is None:
                     stage.groupby = self.groupby
                 else:
                     stage.groupby = update_unique_list(
                         self.groupby, stage.groupby
                     )
-            if stage.groupby:
+            if stage.groupby is not None:
                 if self.groupby_data is None:
                     raise AttributeError(
                         "groupby_data is required for groupby attribute"
                     )
-                stage.create_stage_subsets(
-                    self.groupby_data, subsets=self.id_subsets
-                )
+                stage.create_subsets(self.groupby_data, subsets=self.id_subsets)
 
             # Create parameter sets
             if len(stage.crossby) > 0:
