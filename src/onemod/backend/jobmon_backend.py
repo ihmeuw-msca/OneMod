@@ -417,10 +417,10 @@ def get_config_path(stage: Stage) -> str:
 def get_node_args(
     stage: Stage, method: Literal["run", "fit", "predict", "collect"]
 ) -> dict[str, Any]:
-    """Get dictionary of subset_id and/or param_id values.
+    """Get dictionary of subsets and/or params values.
 
     If stage has submodels and `method` is not 'collect', additional
-    args for 'subset_id' and/or 'param_id' are included in the command
+    args for 'subsets' and/or 'params' are included in the command
     template.
 
     Parameters
@@ -438,9 +438,13 @@ def get_node_args(
     """
     node_args = {}
     if stage.has_submodels and method != "collect":
-        for node_arg in ["subset_id", "param_id"]:
-            if len(node_vals := getattr(stage, node_arg + "s")) > 0:
-                node_args[node_arg] = node_vals
+        for node_arg in ["subsets", "params"]:
+            node_vals = getattr(stage, node_arg)
+            if (node_vals := getattr(stage, node_arg)) is not None:
+                node_args[node_arg] = [
+                    str(node_val)
+                    for node_val in node_vals.to_dict(orient="records")
+                ]
     return node_args
 
 
@@ -464,7 +468,7 @@ def get_task_template(
     method : str
         Name of method being evaluated.
     node_args : list of str
-        List including 'subset_id' and/or 'param_id'.
+        List including 'subsets' and/or 'params'.
 
     Returns
     -------
@@ -500,7 +504,7 @@ def get_command_template(
 
     All stages methods are called via `onemod.main.evaluate()`. If stage
     has submodels and `method` is not 'collect', additional args for
-    'subset_id' and/or 'param_id' are included in the command template.
+    'subsets' and/or 'params' are included in the command template.
 
     Parameters
     ----------
@@ -509,7 +513,7 @@ def get_command_template(
     method : str
         Name of method being evaluated.
     node_args : list of str
-        List including 'subset_id' and/or 'param_id'.
+        List including 'subsets' and/or 'params'.
 
     Returns
     -------
@@ -523,7 +527,7 @@ def get_command_template(
     )
 
     for node_arg in node_args:
-        # add 'subset_id' and/or 'param_id'
+        # add 'subsets' and/or 'params'
         command_template += f" --{node_arg} {{{node_arg}}}"
 
     return command_template

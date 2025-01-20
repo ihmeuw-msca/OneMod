@@ -1,6 +1,6 @@
 """Functions to run pipelines and stages locally."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import validate_call
 
@@ -15,8 +15,8 @@ def evaluate(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict", "collect"] = "run",
     stages: UniqueList[str] | None = None,
-    subset_id: int | None = None,
-    param_id: int | None = None,
+    subsets: dict[str, int | list[int]] | None = None,
+    params: dict[str, Any | list[Any]] | None = None,
     **kwargs,
 ) -> None:
     """Evaluate pipeline method locally.
@@ -30,11 +30,11 @@ def evaluate(
     stages : list of str or None, optional
         Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate entire pipeline. Default is None.
-    subset_id : int, optional
-        Submodel data subset ID if `model` is a `Stage` instance.
+    subsets : dict, optional
+        Submodel data subsets if `model` is a `Stage` instance.
         If None, evaluate all data subsets. Default is None.
-    param_id : int, optional
-        Submodel parameter set ID if `model` is a `Stage` instance.
+    param_id : dict, optional
+        Submodel parameter sets if `model` is a `Stage` instance.
         If None, evaluate all parameter sets. Default is None.
 
     """
@@ -46,17 +46,20 @@ def evaluate(
             if method not in stage.skip:
                 _evaluate_stage(stage, method, **kwargs)
     else:
-        _evaluate_stage(model, method, subset_id, param_id, **kwargs)
+        _evaluate_stage(model, method, subsets, params, **kwargs)
 
 
 def _evaluate_stage(
     stage: Stage,
     method: Literal["run", "fit", "predict", "collect"] = "run",
-    subset_id: int | None = None,
-    param_id: int | None = None,
+    subsets: dict[str, int | list[int]] | None = None,
+    params: dict[str, Any | list[Any]] | None = None,
     **kwargs,
 ) -> None:
     """Evaluate pipeline method locally.
+
+    If both `subsets` and `params` are None, evaluate all submodels
+    and collect submodel results.
 
     Parameters
     ----------
@@ -64,18 +67,12 @@ def _evaluate_stage(
         Stage instance to evaluate.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
-    subset_id : int, optional
-        Submodel data subset ID. If None, evaluate all data subsets.
-        Default is None
-    param_id : int, optional
-        Submodel parameter set ID. If None, evaluate all parameter sets.
+    subsets : int, optional
+        Submodel data subsets. If None, evaluate all data subsets.
         Default is None.
-
-    Notes
-    -----
-    If stage uses both `groupby` and `crossby`, both `subset_id` and
-    `param_id` must be passed to evaluate in individual submodels,
-    otherwise all submodels will be evaluated.
+    params : int, optional
+        Submodel parameter sets. If None, evaluate all parameter sets.
+        Default is None.
 
     """
     if method == "collect":
@@ -83,26 +80,27 @@ def _evaluate_stage(
     else:
         stage_method = stage.__getattribute__(method)
         if stage.has_submodels:
-            eval_submodel = False
-            if subset_id is not None:
+            if subsets is not None:
                 if len(stage.groupby) == 0:
                     raise ValueError(
                         f"Stage '{stage.name}' does not use groupby attribute"
                     )
-                eval_submodel = True
-            if param_id is not None:
+            if params is not None:
                 if len(stage.crossby) == 0:
                     raise ValueError(
                         f"Stage '{stage.name}' does not use crossby attribute"
                     )
-                eval_submodel = True
 
-            if eval_submodel:
-                stage_method(subset_id, param_id, **kwargs)
-            else:
-                for subset_id, param_id in stage.submodel_ids:
-                    stage_method(subset_id, param_id, **kwargs)
-                if method in stage.collect_after:
-                    stage.collect()
+            for subset, param_set in stage.submodels(
+                subsets=subsets, params=params
+            ):
+                stage_method(subsets=subset, params=param_set, **kwargs)
+
+            if (
+                method in stage.collect_after
+                and subsets is None
+                and params is None
+            ):
+                stage.collect()
         else:
             stage_method(**kwargs)
