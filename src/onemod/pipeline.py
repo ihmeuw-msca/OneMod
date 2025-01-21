@@ -6,12 +6,12 @@ import json
 import logging
 from collections import deque
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, validate_call
 
 from onemod.config import Config
-from onemod.dtypes.unique_sequence import UniqueList, update_unique_list
+from onemod.dtypes.unique_sequence import UniqueList
 from onemod.serialization import serialize
 from onemod.stage import Stage
 from onemod.utils.decorators import computed_property
@@ -27,27 +27,21 @@ class Pipeline(BaseModel):
     ----------
     name : str
         Pipeline name.
-    config : Config, optional
-        Pipeline configuration.
-    directory : Path
+    directory : Path or str
         Experiment directory.
-    groupby : list of str or None, optional
-        Column names used to create data subsets. Default is None.
-    groupby_data : Path or None, optional
-        Path to the data file used for creating data subsets. Default is
-        None. Required when specifying pipeline or stage `groupby`
-        attribute. All columns specified in pipeline or stage `groupby`
-        must be present in `groupby_data`.
+    config : Config or dict, optional
+        Pipeline configuration.
+    groupby_data : Path or str, optional
+        Path to data file used to create stage data subsets. Must
+        contain all columns included in stage `groupby` attributes.
 
     """
 
     name: str
-    config: Config = Config()
     directory: Path
-    groupby: UniqueList[str] | None = None
+    config: Config = Config()
     groupby_data: Path | None = None
-    id_subsets: dict[str, list[Any]] | None = None
-    _stages: dict[str, Stage] = {}  # set by add_stage
+    _stages: dict[str, Stage] = {}
 
     @computed_property
     def dependencies(self) -> dict[str, list[str]]:
@@ -60,10 +54,6 @@ class Pipeline(BaseModel):
         return self._stages
 
     def model_post_init(self, *args, **kwargs) -> None:
-        if self.groupby is not None and self.groupby_data is None:
-            raise AttributeError(
-                "groupby_data is required for groupby attribute"
-            )
         if not self.directory.exists():
             self.directory.mkdir(parents=True)
 
@@ -103,10 +93,10 @@ class Pipeline(BaseModel):
 
         Parameters
         ----------
-        config_path : Path, str, or None, optional
+        config_path : Path or str, optional
             Where to save config file. If None, file is saved at
-            pipeline.directory / (pipeline.name + ".json").
-            Default is None.
+            pipeline.directory / (pipeline.name + ".json"). Default is
+            None.
 
         """
         config_path = config_path or self.directory / (self.name + ".json")
@@ -141,7 +131,6 @@ class Pipeline(BaseModel):
         if stage.name in self.stages:
             raise ValueError(f"Stage '{stage.name}' already exists")
 
-        stage.config.add_pipeline_config(self.config)
         self._stages[stage.name] = stage
 
     def get_execution_order(self, stages: list[str] | None = None) -> list[str]:
@@ -245,17 +234,19 @@ class Pipeline(BaseModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self, id_subsets: dict[str, list[Any]] | None = None) -> None:
-        """Assemble pipeline, perform build-time validation, and save to JSON."""
-        self.id_subsets = id_subsets
-        collector = ValidationErrorCollector()
+    def build(self, config_path: Path | str | None = None) -> None:
+        """Assemble pipeline, perform build-time validation, and save to JSON.
 
-        if self.id_subsets is not None:
-            invalid_keys = set(self.id_subsets) - set(self.groupby or [])
-            if invalid_keys:
-                raise ValueError(
-                    f"id_subsets keys {invalid_keys} do not match groupby columns {self.groupby}"
-                )
+        Parameters
+        ----------
+        config_path : Path or str, optional
+            Where to save config file. If None, file is saved at
+            pipeline.directory / (pipeline.name + ".json"). Default is
+            None.
+
+        """
+        config_path = config_path or self.directory / (self.name + ".json")
+        collector = ValidationErrorCollector()
 
         for stage in self.stages.values():
             stage.validate_build(collector)
@@ -266,27 +257,20 @@ class Pipeline(BaseModel):
             self.save_validation_report(collector)
             collector.raise_errors()
 
-        config_path = self.directory / (self.name + ".json")
         for stage in self.stages.values():
+            stage.config.add_pipeline_config(self.config)
             stage.set_dataif(config_path)
 
             # Create data subsets
-            if self.groupby is not None:
-                if stage.groupby is None:
-                    stage.groupby = self.groupby
-                else:
-                    stage.groupby = update_unique_list(
-                        self.groupby, stage.groupby
-                    )
             if stage.groupby is not None:
                 if self.groupby_data is None:
                     raise AttributeError(
                         "groupby_data is required for groupby attribute"
                     )
-                stage.create_subsets(self.groupby_data, subsets=self.id_subsets)
+                stage.create_subsets(self.groupby_data, self.subset)
 
             # Create parameter sets
-            if len(stage.crossby) > 0:
+            if stage.crossby is not None:
                 stage.create_stage_params()
 
         self.to_json(config_path)
@@ -305,25 +289,19 @@ class Pipeline(BaseModel):
         method: Literal["run", "fit", "predict", "collect"] = "run",
         stages: UniqueList[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
-        build: bool = True,
-        id_subsets: dict[str, list[Any]] | None = None,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method.
 
         Parameters
         ----------
-        method : str, optional
+        method : {'run', 'fit', 'predict', 'collect'}, optional
             Name of method to evaluate. Default is 'run'.
         stages : list of str, optional
-            Names of stages to evaluate. Default is None.
-            If None, evaluate entire pipeline.
-        backend : str, optional
+            Names of stages to evaluate. If None, evaluate entire
+            pipeline. Default is None.
+        backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
-        build : bool, optional
-            Whether to build the pipeline before evaluation.
-            Default is True.
-        id_subsets : dict of str: list of Any, optional
 
         Other Parameters
         ----------------
@@ -334,9 +312,6 @@ class Pipeline(BaseModel):
             Required if `backend` is 'jobmon'.
 
         """
-        if build:
-            self.build(id_subsets=id_subsets)
-
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate
         else:
@@ -346,34 +321,84 @@ class Pipeline(BaseModel):
 
     def run(
         self,
+        stages: list[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
-        build: bool = True,
         **kwargs,
     ) -> None:
-        """Run pipeline."""
-        self.evaluate(method="run", backend=backend, build=build, **kwargs)
+        """Run pipeline.
+
+        Parameters
+        ----------
+        stages : list of str, optional
+            Names of stages to run. If None, run entire pipeline.
+            Default is None.
+        backend : {'local', 'jobmon'}, optional
+            How to evaluate the method. Default is 'local'.
+
+        Other Parameters
+        ----------------
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path, str, or dict, optional
+            Dictionary of compute resources or path to resources file.
+            Required if `backend` is 'jobmon'.
+
+        """
+        self.evaluate("run", stages, backend, **kwargs)
 
     def fit(
         self,
+        stages: list[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
-        build: bool = True,
         **kwargs,
     ) -> None:
-        """Fit pipeline model."""
-        self.evaluate(method="fit", backend=backend, build=build, **kwargs)
+        """Fit pipeline.
+
+        Parameters
+        ----------
+        stages : list of str, optional
+            Names of stages to fit. If None, fit entire pipeline.
+            Default is None.
+        backend : {'local', 'jobmon'}, optional
+            How to evaluate the method. Default is 'local'.
+
+        Other Parameters
+        ----------------
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path, str, or dict, optional
+            Dictionary of compute resources or path to resources file.
+            Required if `backend` is 'jobmon'.
+
+        """
+        self.evaluate("fit", stages, backend, **kwargs)
 
     def predict(
         self,
+        stages: list[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
-        build: bool = True,
         **kwargs,
     ) -> None:
-        """Predict pipeline model."""
-        self.evaluate(method="predict", backend=backend, build=build, **kwargs)
+        """Create pipeline predictions.
 
-    def resume(self) -> None:
-        """Resume pipeline."""
-        raise NotImplementedError()
+        Parameters
+        ----------
+        stages : list of str, optional
+            Names of stages to create predictions for. If None, create
+            predictions for the entire pipeline. Default is None.
+        backend : {'local', 'jobmon'}, optional
+            How to evaluate the method. Default is 'local'.
+
+        Other Parameters
+        ----------------
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path, str, or dict, optional
+            Dictionary of compute resources or path to resources file.
+            Required if `backend` is 'jobmon'.
+
+        """
+        self.evaluate("predict", stages, backend, **kwargs)
 
     def __repr__(self) -> str:
         return (
