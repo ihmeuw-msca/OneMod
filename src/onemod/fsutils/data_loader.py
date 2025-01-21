@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import pandas as pd
 import polars as pl
@@ -20,7 +20,7 @@ class DataLoader:
             "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
         ] = "pandas_dataframe",
         columns: list[str] | None = None,
-        subsets: dict[str, int | list] | None = None,
+        subset: dict[str, Any | list[Any]] | None = None,
         **options,
     ) -> pd.DataFrame | pl.DataFrame | pl.LazyFrame:
         """Load data with lazy loading and subset filtering. Polars and
@@ -38,10 +38,13 @@ class DataLoader:
             if columns:
                 pandas_df = pandas_df[columns]
 
-            if subsets:
-                for col, values in subsets.items():
-                    values = values if isinstance(values, list) else [values]
-                    pandas_df = pandas_df[pandas_df[col].isin(values)]
+            if subset:
+                for col, values in subset.items():
+                    pandas_df = pandas_df[
+                        pandas_df[col].isin(
+                            values if isinstance(values, list) else [values]
+                        )
+                    ]
                     pandas_df.reset_index(drop=True, inplace=True)
 
             return pandas_df
@@ -51,10 +54,13 @@ class DataLoader:
             if columns:
                 polars_lf = polars_lf.select(columns)
 
-            if subsets:
-                for col, values in subsets.items():
-                    values = values if isinstance(values, list) else [values]
-                    polars_lf = polars_lf.filter(pl.col(col).is_in(values))
+            if subset:
+                for col, values in subset.items():
+                    polars_lf = polars_lf.filter(
+                        pl.col(col).is_in(
+                            values if isinstance(values, list) else [values]
+                        )
+                    )
 
             if return_type == "polars_dataframe":
                 return polars_lf.collect()

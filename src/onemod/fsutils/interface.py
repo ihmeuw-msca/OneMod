@@ -25,7 +25,7 @@ class DataInterface(PathManager):
             "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
         ] = "pandas_dataframe",
         columns: list[str] | None = None,
-        id_subsets: dict[str, list] | None = None,
+        subset: dict[str, Any | list[Any]] | None = None,
         **options,
     ) -> Any:
         """Load data or config files based on file type and key.
@@ -36,8 +36,9 @@ class DataInterface(PathManager):
             Return type of loaded data object, applicable only for data files.
         columns : list of str, optional
             Specific columns to load, applicable only for data files.
-        id_subsets : dict, optional
-            Subset of IDs for filtering, applicable only for data files.
+        subset : dict, optional
+            Subset of column values for filtering, applicable only for
+            data files.
         options : dict
             Additional options for loading.
 
@@ -54,7 +55,7 @@ class DataInterface(PathManager):
                 path,
                 return_type=return_type,
                 columns=columns,
-                id_subsets=id_subsets,
+                subset=subset,
                 **options,
             )
         else:
