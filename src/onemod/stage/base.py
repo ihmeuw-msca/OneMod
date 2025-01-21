@@ -47,9 +47,11 @@ class Stage(BaseModel, ABC):
     config : StageConfig, optional
         Stage configuration.
     groupby : list of str or None, optional
-        Column names used to create data subsets. Default is None.
+        Column names used to create submodel data subsets. Default is
+        None.
     crossby : list of str or None, optional
-        Parameter names used to create parameter sets. Default is None.
+        Parameter names used to create submodel parameter sets. Default
+        is None.
     input_validation : dict, optional
         Optional specification of input data validation.
     output_validation : dict, optional
@@ -220,7 +222,7 @@ class Stage(BaseModel, ABC):
 
     def get_submodels(
         self,
-        subsets: dict[str, int | list[int]] | None = None,
+        subsets: dict[str, Any | list[Any]] | None = None,
         params: dict[str, Any | list[Any]] | None = None,
     ) -> list[tuple[dict[str, Any] | None, ...]]:
         """Get stage data subset/parameter set combinations.
@@ -228,16 +230,16 @@ class Stage(BaseModel, ABC):
         Parameters
         ----------
         subsets : dict or None, optional
-            Submodel data subsets to include. If None, include all stage
-            data subsets. Default is None.
+            Submodel data subsets to include. If None, include all
+            submodel data subsets. Default is None.
         params : dict or None, optional
-            Parameter sets to include. If None, include all stage
-            parameter sets. Default is None.
+            Submodel parameter sets to include. If None, include all
+            submodel parameter sets. Default is None.
 
         Returns
         -------
         list of tuple
-            Stage data subset/parameter set combinations.
+            Submodel data subset/parameter set combinations.
 
         """
         if not self.has_submodels:
@@ -282,7 +284,7 @@ class Stage(BaseModel, ABC):
                 self._subsets = self.dataif.load("subsets.csv", key="output")
             except FileNotFoundError:
                 raise AttributeError(
-                    f"Stage '{self.name}' data subsets have not been created"
+                    f"Stage '{self.name}' submodel data subsets have not been created"
                 )
         return self._subsets
 
@@ -293,24 +295,18 @@ class Stage(BaseModel, ABC):
                 self._params = self.dataif.load("parameters.csv", key="output")
             except FileNotFoundError:
                 raise AttributeError(
-                    f"Stage '{self.name}' parameter sets have not been created"
+                    f"Stage '{self.name}' submodel parameter sets have not been created"
                 )
         return self._params
 
-    def create_subsets(
-        self,
-        groupby_data: Path | str,
-        subsets: dict[str, list[Any]] | None = None,
-    ) -> None:
-        """Create stage data subsets from groupby and subsets."""
+    def create_subsets(self, groupby_data: Path | str) -> None:
+        """Create submodel data subsets from groupby."""
         if self.groupby is None:
             raise AttributeError(
                 f"Stage '{self.name}' does not use groupby attribute"
             )
 
-        data = self.dataif.load(
-            str(groupby_data), key="", columns=self.groupby, subsets=subsets
-        )
+        data = self.dataif.load(str(groupby_data), key="", columns=self.groupby)
         groups = data.groupby(self.groupby)
         self._subsets = DataFrame(
             [subset for subset in groups.groups.keys()], columns=self.groupby
@@ -323,12 +319,13 @@ class Stage(BaseModel, ABC):
     ) -> DataFrame:
         """Filter data by subset."""
         for col, values in subset.items():
-            values = values if isinstance(values, list) else [values]
-            data = data[data[col].isin(values)]
+            data = data[
+                data[col].isin(values if isinstance(values, list) else [values])
+            ]
         return data.reset_index(drop=True)
 
     def create_params(self) -> None:
-        """Create stage parameter sets from crossby and config."""
+        """Create submodel parameter sets from crossby."""
         if self.crossby is None:
             raise AttributeError(
                 f"Stage '{self.name}' does not use crossby attribute"
@@ -351,15 +348,19 @@ class Stage(BaseModel, ABC):
         ).sort_values(by=self.crossby)
         self.dataif.dump(self._params, "parameters.csv", key="output")
 
-    def set_params(self, params: dict[str, Any]) -> None:
-        """Set stage parameters."""
+    def set_params(self, param_set: dict[str, Any]) -> None:
+        """Set submodel parameters."""
         if self.crossby is None:
             raise AttributeError(
                 f"Stage '{self.name}' does not use crossby attribute"
             )
 
-        for param_name, param_value in params.items():
-            self.config[param_name] = param_value
+        for param_name in self.crossby:
+            if param_name not in param_set:
+                raise KeyError(
+                    f"Stage '{self.name}' param set missing param: {param_name}"
+                )
+            self.config[param_name] = param_set[param_name]
 
     @classmethod
     def from_json(cls, config_path: Path | str, stage_name: str) -> Stage:
@@ -411,11 +412,10 @@ class Stage(BaseModel, ABC):
 
         Parameters
         ----------
-        method : str, optional
+        method : {'run', 'fit', 'predict', 'collect'}, optional
             Name of method to evaluate. Default is 'run'.
-        backend : str, optional
-            Whether to evaluate the method locally or with Jobmon.
-            Default is 'local'.
+        backend : {'local', 'jobmon'}, optional
+            How to evaluate the method. Default is 'local'.
 
         Other Parameters
         ----------------
@@ -485,14 +485,16 @@ class Stage(BaseModel, ABC):
                         collector,
                     )
 
-    def get_field(self, field: str, stage_name: str | None = None) -> Any:
+    def get_field(
+        self, field: str, stage_name: str | None = None, default: Any = None
+    ) -> Any:
         """Get field from config file.
 
         Parameters
         ----------
         field : str
             Name of field. If field is nested, join keys with ':'.
-            For example, 'config:id_columns`.
+            For example, 'config:param`.
         stage_name : str or None, optional
             Name of stage if field belongs to stage. Default is None.
 
@@ -504,10 +506,10 @@ class Stage(BaseModel, ABC):
         """
         config = self.dataif.load(key="config")
         if stage_name is not None:
-            config = config["stages"][stage_name]
+            config = config.get("stages", {}).get(stage_name, {})
         for key in field.split(":"):
-            config = config[key]
-        return config
+            config = config.get(key, {})
+        return config or default
 
     @abstractmethod
     def run(self, *args, **kwargs) -> None:
