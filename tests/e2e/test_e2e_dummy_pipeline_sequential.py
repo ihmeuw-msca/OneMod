@@ -27,7 +27,6 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
     assert dummy_pipeline_dict["name"] == "dummy_pipeline"
     assert dummy_pipeline_dict["directory"] == str(test_base_dir)
     assert dummy_pipeline_dict["groupby_data"] == str(small_input_data)
-    assert dummy_pipeline_dict["groupby"] == ["sex_id"]
     assert_equal_unordered(
         dummy_pipeline_dict["config"],
         {
@@ -50,7 +49,7 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
     # Run the pipeline with the given method (run, fit, predict)
     dummy_pipeline.evaluate(backend="local", method=method)
 
-    # Check each stage's log output for correct method calls on correct subset/param ids
+    # Check each stage's log output for correct method calls on correct subsets/paramsets
     expected_args = get_expected_args()
 
     for stage in stages:
@@ -58,8 +57,8 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
             assert_stage_logs(
                 stage,
                 expected_args[stage.name]["methods"][method],
-                expected_args[stage.name]["subset_ids"],
-                expected_args[stage.name]["param_ids"],
+                expected_args[stage.name]["subsets"],
+                expected_args[stage.name]["paramsets"],
             )
         else:
             assert False, "Unknown stage name"

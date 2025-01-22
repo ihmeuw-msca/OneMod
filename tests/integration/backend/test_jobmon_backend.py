@@ -30,11 +30,17 @@ def test_parallel_node_args(parallel_pipeline, method):
         if method == "collect":
             assert node_args == {}
         else:
-            for node_arg in ["subset_id", "param_id"]:
-                expected = getattr(stage, node_arg + "s")
+            for attr, node_arg in [
+                ["subsets", "subset"],
+                ["paramsets", "paramset"],
+            ]:
+                expected = getattr(stage, attr)
                 observed = node_args.get(node_arg)
-                if len(expected) > 0:
-                    assert observed == expected
+                if expected is not None:
+                    assert observed == [
+                        str(node_val)
+                        for node_val in expected.to_dict(orient="records")
+                    ]
                 else:
                     assert observed is None
 

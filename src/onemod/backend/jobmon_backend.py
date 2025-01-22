@@ -83,6 +83,11 @@ def evaluate(
         Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate entire pipeline. Default is None.
 
+    Other Parameters
+    ----------------
+    **kwargs
+        Additional keyword arguments passed to stage methods.
+
     """
     # TODO: Optional stage-specific Python environments
     # TODO: User-defined max_attempts
@@ -175,6 +180,11 @@ def get_tasks(
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate entire pipeline.
 
+    Other Parameters
+    ----------------
+    **kwargs
+        Additional keyword arguments passed to stage methods.
+
     Returns
     -------
     list of Task
@@ -214,6 +224,11 @@ def get_pipeline_tasks(
     stages : list of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate entire pipeline.
+
+    Other Parameters
+    ----------------
+    **kwargs
+        Additional keyword arguments passed to stage methods.
 
     Returns
     -------
@@ -302,7 +317,7 @@ def get_stage_tasks(
     stage: Stage,
     method: Literal["run", "fit", "predict", "collect"],
     python: Path | str | None,
-    upstream_tasks: list[Task] = [],
+    upstream_tasks: list[Task] | None = None,
     **kwargs,
 ) -> list[Task]:
     """Get stage tasks.
@@ -323,8 +338,13 @@ def get_stage_tasks(
         Name of method to evaluate.
     python : Path, str, or None
         Path to Python environment. If None, use sys.executable.
-    upstream_tasks : list of Task, optional
-        List of upstream stage tasks. Default is an empty list.
+    upstream_tasks : list of Task or None, optional
+        List of upstream stage tasks. Default is None.
+
+    Other Parameters
+    ----------------
+    **kwargs
+        Additional keyword arguments passed to stage methods.
 
     Returns
     -------
@@ -332,6 +352,9 @@ def get_stage_tasks(
         List of stage tasks.
 
     """
+    if upstream_tasks is None:
+        upstream_tasks = []
+
     entrypoint = get_entrypoint(python)
     config_path = get_config_path(stage)
     node_args = get_node_args(stage, method)
@@ -417,10 +440,10 @@ def get_config_path(stage: Stage) -> str:
 def get_node_args(
     stage: Stage, method: Literal["run", "fit", "predict", "collect"]
 ) -> dict[str, Any]:
-    """Get dictionary of subsets and/or params values.
+    """Get dictionary of subset and/or paramset values.
 
     If stage has submodels and `method` is not 'collect', additional
-    args for 'subsets' and/or 'params' are included in the command
+    args for 'subset' and/or 'paramset' are included in the command
     template.
 
     Parameters
@@ -433,14 +456,16 @@ def get_node_args(
     Returns
     -------
     dict
-        Dictionary of subset_id and/or param_id values.
+        Dictionary of subset and/or paramset values.
 
     """
     node_args = {}
     if stage.has_submodels and method != "collect":
-        for node_arg in ["subsets", "params"]:
-            node_vals = getattr(stage, node_arg)
-            if (node_vals := getattr(stage, node_arg)) is not None:
+        for attr, node_arg in [
+            ["subsets", "subset"],
+            ["paramsets", "paramset"],
+        ]:
+            if (node_vals := getattr(stage, attr)) is not None:
                 node_args[node_arg] = [
                     str(node_val)
                     for node_val in node_vals.to_dict(orient="records")
@@ -468,7 +493,8 @@ def get_task_template(
     method : str
         Name of method being evaluated.
     node_args : list of str
-        List including 'subsets' and/or 'params'.
+        List including 'subset', 'paramset', and/or other keyword
+        arguments passed to stage methods.
 
     Returns
     -------
@@ -504,7 +530,7 @@ def get_command_template(
 
     All stages methods are called via `onemod.main.evaluate()`. If stage
     has submodels and `method` is not 'collect', additional args for
-    'subsets' and/or 'params' are included in the command template.
+    'subset' and/or 'paramset' are included in the command template.
 
     Parameters
     ----------
@@ -513,7 +539,8 @@ def get_command_template(
     method : str
         Name of method being evaluated.
     node_args : list of str
-        List including 'subsets' and/or 'params'.
+        List including 'subset', 'paramset', and/or other keyword
+        arguments passed to stage methods.
 
     Returns
     -------
@@ -527,7 +554,7 @@ def get_command_template(
     )
 
     for node_arg in node_args:
-        # add 'subsets' and/or 'params'
+        # add 'subset', 'paramset' and/or other kwargs
         command_template += f" --{node_arg} {{{node_arg}}}"
 
     return command_template

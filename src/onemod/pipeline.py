@@ -267,11 +267,11 @@ class Pipeline(BaseModel):
                     raise AttributeError(
                         "groupby_data is required for groupby attribute"
                     )
-                stage.create_subsets(self.groupby_data, self.subset)
+                stage.create_subsets(self.groupby_data)
 
             # Create parameter sets
             if stage.crossby is not None:
-                stage.create_stage_params()
+                stage.create_params()
 
         self.to_json(config_path)
 

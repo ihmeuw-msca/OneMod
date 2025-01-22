@@ -64,6 +64,7 @@ def stage_1(test_base_dir, create_dummy_data):
     stage_1 = DummyStage(
         name="stage_1",
         config=StageConfig(),
+        groupby=["age_group_id"],
         input_validation=dict(
             data=Data(
                 stage="data",
@@ -133,6 +134,7 @@ def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
         config=StageConfig(),
+        groupby=["age_group_id"],
         input_validation=dict(
             data=Data(
                 stage="stage_1",
@@ -164,12 +166,11 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
+        directory=test_base_dir,
         config=Config(
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
-        directory=test_base_dir,
         groupby_data=test_base_dir / "data" / "data.parquet",
-        groupby=["age_group_id"],
     )
     pipeline.add_stage(stage_1)
 
@@ -181,12 +182,11 @@ def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
     """A sample pipeline with multiple stages and dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
+        directory=test_base_dir,
         config=Config(
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
-        directory=test_base_dir,
         groupby_data=test_base_dir / "data" / "data.parquet",
-        groupby=["age_group_id"],
     )
     pipeline.add_stages([stage_1, stage_2])
 
@@ -207,7 +207,6 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
         "name": "test_pipeline",
         "directory": str(test_base_dir),
         "groupby_data": str(test_base_dir / "data" / "data.parquet"),
-        "groupby": ["age_group_id"],
         "config": {
             "id_columns": ["age_group_id", "location_id"],
             "model_type": "binomial",
@@ -219,7 +218,6 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "module": __file__,
                 "config": {},
                 "groupby": ["age_group_id"],
-                "crossby": [],
                 "input": {
                     "data": str(test_base_dir / "data" / "data.parquet"),
                     "covariates": str(

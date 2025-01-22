@@ -1,8 +1,8 @@
 """Dummy pipeline and stages to test pipeline orchestration."""
 
 import shutil
-from itertools import product
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -10,7 +10,6 @@ from onemod import Pipeline, load_stage
 from onemod.config import StageConfig
 from onemod.dtypes import Data
 from onemod.stage import Stage
-from onemod.utils.subsets import get_subset
 
 
 class SimpleStage(Stage):
@@ -19,8 +18,8 @@ class SimpleStage(Stage):
     # TODO: Update once method-specific dependencies implemented
 
     config: StageConfig = StageConfig()
-    _required_input: set[str] = {"fit_input.csv", "predict_input.csv"}
-    _output: set[str] = {"fit_output.csv", "predict_output.csv"}
+    _required_input: list[str] = ["fit_input.csv", "predict_input.csv"]
+    _output: list[str] = ["fit_output.csv", "predict_output.csv"]
     _log: list[str] = []
 
     def get_log(self) -> list[str]:
@@ -48,9 +47,9 @@ class SimpleStage(Stage):
 
 
 class SimpleStageFit(SimpleStage):
-    _required_input: set[str] = {"fit_input.csv"}
-    _output: set[str] = {"fit_output.csv"}
-    _skip: set[str] = {"predict"}
+    _required_input: list[str] = ["fit_input.csv"]
+    _output: list[str] = ["fit_output.csv"]
+    _skip: list[str] = ["predict"]
 
     def run(self) -> None:
         self._log.append(f"run: name={self.name}")
@@ -58,21 +57,13 @@ class SimpleStageFit(SimpleStage):
 
 
 class SimpleStagePredict(SimpleStage):
-    _required_input: set[str] = {"predict_input.csv"}
-    _output: set[str] = {"predict_output.csv"}
-    _skip: set[str] = {"fit"}
+    _required_input: list[str] = ["predict_input.csv"]
+    _output: list[str] = ["predict_output.csv"]
+    _skip: list[str] = ["fit"]
 
     def run(self) -> None:
         self._log.append(f"run: name={self.name}")
         self._create_output("predict")
-
-
-class ParallelConfig(StageConfig):
-    # TODO: Remove class once crossby changed
-    # TODO: Change set to list once that gets sorted out
-    _crossable_params: set[str] = {"param"}
-
-    param: int | set[int]
 
 
 class ParallelStage(Stage):
@@ -80,80 +71,84 @@ class ParallelStage(Stage):
 
     # TODO: Update once stage instance can be passed as input
 
-    config: ParallelConfig
-    _required_input: set[str] = {"input1", "input2"}
-    _output: set[str] = {"output.csv"}
-    _collect_after: set[str] = {"run", "fit", "predict"}
+    config: StageConfig = StageConfig()
+    _required_input: list[str] = ["input1", "input2"]
+    _output: list[str] = ["output.csv"]
+    _collect_after: list[str] = ["run", "fit", "predict"]
     _log: list[str] = []
 
     def get_log(self) -> list[str]:
         return self._log
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         self._log.append(
-            f"run: name={self.name}, subset={subset_id}, param={param_id}"
+            f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self._create_output("run", subset_id, param_id)
+        self._create_output("run", subset, paramset)
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         self._log.append(
-            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
+            f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self._create_output("fit", subset_id, param_id)
+        self._create_output("fit", subset, paramset)
 
     def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         self._log.append(
-            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
+            f"predict: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self._create_output("predict", subset_id, param_id)
+        self._create_output("predict", subset, paramset)
 
-    def collect(self, delete_submodel_results: bool = True) -> None:
+    def collect(self) -> None:
         self._log.append(f"collect: name={self.name}")
-
         output = _collect_stage_output(self)
         self.dataif.dump(output, "output.csv", key="output")
-
-        if delete_submodel_results:
-            shutil.rmtree(
-                Path(self.dataif.get_full_path("submodels", key="output"))
-            )
+        shutil.rmtree(
+            Path(self.dataif.get_full_path("submodels", key="output"))
+        )
 
     def _create_output(
-        self, method: str, subset_id: int | None, param_id: int | None
+        self,
+        method: str,
+        subset: dict[str, Any] | None,
+        paramset: dict[str, Any] | None,
     ) -> None:
         data = pd.merge(
-            left=self._load_input("input1", method, subset_id),
-            right=self._load_input("input2", method, subset_id),
-            on=list(self.config["id_columns"]),
+            left=self._load_input("input1", method, subset),
+            right=self._load_input("input2", method, subset),
+            on=list(self.config["ids"]),
         )
 
         stage_name = self.name
-        if subset_id is not None:
-            stage_name += f"__subset_{subset_id}"
-        if param_id is not None:
-            stage_name += f"__param_{param_id}"
+        if subset is not None:
+            stage_name += "__subset_" + self._get_str(subset)
+        if paramset is not None:
+            stage_name += "__paramset_" + self._get_str(paramset)
         data["stage"] = stage_name
         data["method"] = method
 
         self.dataif.dump(
-            data,
-            self._get_output_path(method, subset_id, param_id),
-            key="output",
+            data, self._get_output_path(method, subset, paramset), key="output"
         )
 
     def _load_input(
-        self, input_name: str, method: str, subset_id: int | None
+        self, input_name: str, method: str, subset: dict[str, Any] | None
     ) -> pd.DataFrame:
         # Load input data
         input_path = Path(self.dataif.get_path(input_name))
         if input_path == self.dataif.get_path("directory"):
-            data = self.dataif.load("data.csv", key="directory")
+            data = self.dataif.load("data.csv", key="directory", subset=subset)
         else:
             # input item is upstream stage output directory
             # collect upstream stage results if necessary
@@ -162,37 +157,49 @@ class ParallelStage(Stage):
                 stage_name=input_path.name,
             )
             if method in upstream_stage.collect_after:
-                data = self.dataif.load("output.csv", key=input_name)
+                data = self.dataif.load(
+                    "output.csv", key=input_name, subset=subset
+                )
             else:
                 data = _collect_stage_output(upstream_stage, method)
-
-        # Filter by subset_id if necessary
-        if subset_id is not None:
-            data = get_subset(
-                data, self.dataif.load("subsets.csv", key="output"), subset_id
-            )
+                if subset is not None:
+                    data = self.get_subset(data, subset)
 
         # Rename stage column as input1 or input1
-        return data[list(self.config["id_columns"]) + ["stage"]].rename(
+        return data[self.config["ids"] + ["stage"]].rename(
             columns={"stage": input_name}
         )
 
     def _get_output_path(
-        self, method: str, subset_id: int | None, param_id: int | None
+        self,
+        method: str,
+        subset: dict[str, Any] | None,
+        paramset: dict[str, Any] | None,
     ) -> str:
-        if subset_id is None:
-            return f"submodels/{method}/{param_id}/output.csv"
-        if param_id is None:
-            return f"submodels/{method}/{subset_id}/output.csv"
-        return f"submodels/{method}/{subset_id}_{param_id}/output.csv"
+        output_dir = f"submodels/{method}/"
+        if subset is None:
+            if paramset is None:
+                return output_dir + "output.csv"
+            else:
+                return output_dir + f"{self._get_str(paramset)}/output.csv"
+        if paramset is None:
+            return output_dir + f"{self._get_str(subset)}/output.csv"
+        return (
+            output_dir
+            + f"{self._get_str(subset)}__{self._get_str(paramset)}/output.csv"
+        )
+
+    @staticmethod
+    def _get_str(subset: dict[str, Any]) -> str:
+        return "_".join(str(value) for value in subset.values())
 
 
 class ParallelStageFit(ParallelStage):
-    _collect_after: set[str] = {"run", "fit"}
+    _collect_after: list[str] = ["run", "fit"]
 
 
 class ParallelStagePredict(ParallelStage):
-    _collect_after: set[str] = {"run", "predict"}
+    _collect_after: list[str] = ["run", "predict"]
 
 
 def _collect_stage_output(stage, method: str | None = None) -> pd.DataFrame:
@@ -201,14 +208,12 @@ def _collect_stage_output(stage, method: str | None = None) -> pd.DataFrame:
         method = _get_method_name(stage.name, output_dir)
 
     output = []
-    for subset_id in stage.subset_ids or [None]:
-        for param_id in stage.param_ids or [None]:
-            output.append(
-                stage.dataif.load(
-                    stage._get_output_path(method, subset_id, param_id),
-                    key="output",
-                )
+    for subset, paramset in stage.get_submodels():
+        output.append(
+            stage.dataif.load(
+                stage._get_output_path(method, subset, paramset), key="output"
             )
+        )
 
     return pd.concat(output)
 
@@ -253,9 +258,7 @@ def setup_simple_pipeline(directory: Path) -> Pipeline:
     data_path = create_data(directory)
 
     # Create pipeline
-    pipeline = Pipeline(
-        name="test_simple_pipeline", config={}, directory=directory
-    )
+    pipeline = Pipeline(name="test_simple_pipeline", directory=directory)
 
     # Create stages and add to pipeline
     run_1 = SimpleStage(name="run_1")
@@ -291,16 +294,14 @@ def setup_parallel_pipeline(directory: Path) -> Pipeline:
     data_path = create_data(directory)
 
     # Create pipeline
-    # Note: This doesn't test passing of pipeline groupby to stages
     pipeline = Pipeline(
         name="test_parallel_pipeline",
-        config={"id_columns": ["sex_id", "year_id"]},
         directory=directory,
+        config={"ids": ["sex_id", "year_id"]},
         groupby_data=data_path,
     )
 
     # Create stages and add to pipeline
-    # TODO: Add crossby=param once crossby changed
     run_1 = ParallelStage(
         name="run_1",
         config={"param": [1, 2]},
@@ -360,13 +361,11 @@ def assert_simple_logs(stage: SimpleStage, method: str) -> None:
 
 
 def assert_parallel_logs(stage: ParallelStage, method: str) -> None:
-    """Assert expected methods, subset_ids, and param_ids logged."""
+    """Assert expected methods, subsets, and paramsets logged."""
     log = stage.get_log()
-    for subset_id, param_id in product(
-        stage.subset_ids or [None], stage.param_ids or [None]
-    ):
+    for subset, paramset in stage.get_submodels():
         assert (
-            f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
+            f"{method}: name={stage.name}, subset={subset}, paramset={paramset}"
             in log
         )
     if method in stage._collect_after:
@@ -414,14 +413,13 @@ def assert_parallel_output(stage: ParallelStage, method: str) -> None:
         output = _collect_stage_output(stage, method)
 
     # Check stage column
-    for subset_id in stage.subset_ids or [None]:
-        for param_id in stage.param_ids or [None]:
-            expected_name = stage.name
-            if subset_id is not None:
-                expected_name += f"__subset_{subset_id}"
-            if param_id is not None:
-                expected_name += f"__param_{param_id}"
-            assert expected_name in output["stage"].values
+    for subset, paramset in stage.get_submodels():
+        expected_name = stage.name
+        if subset is not None:
+            expected_name += f"__subset_{stage._get_str(subset)}"
+        if paramset is not None:
+            expected_name += f"__paramset_{stage._get_str(paramset)}"
+        assert expected_name in output["stage"].values
 
     # Check input columns
     for input_name in ["input1", "input2"]:

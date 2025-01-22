@@ -1,3 +1,6 @@
+from typing import Any
+
+from pandas import DataFrame
 from pydantic import Field
 
 from onemod.config import KregConfig, RoverConfig, SpxmodConfig, StageConfig
@@ -8,7 +11,6 @@ class CustomConfig(StageConfig):
     """Custom stage config."""
 
     custom_param: int | list[int] = 1
-    _crossable_params: list[str] = ["custom_param"]
 
 
 class DummyCustomStage(Stage):
@@ -22,29 +24,35 @@ class DummyCustomStage(Stage):
     log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Run custom submodel."""
         self.log.append(
-            f"run: name={self.name}, subset={subset_id}, param={param_id}"
+            f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset_id, param_id)
-        self.predict(subset_id, param_id)
+        self.fit(subset, paramset)
+        self.predict(subset, paramset)
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Fit custom submodel."""
         self.log.append(
-            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
+            f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Create custom submodel predictions."""
         self.log.append(
-            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
+            f"predict: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def collect(self) -> None:
@@ -70,29 +78,35 @@ class DummyKregStage(Stage):
     log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Run kreg submodel."""
         self.log.append(
-            f"run: name={self.name}, subset={subset_id}, param={param_id}"
+            f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset_id, param_id)
-        self.predict(subset_id, param_id)
+        self.fit(subset, paramset)
+        self.predict(subset, paramset)
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Fit kreg submodel."""
         self.log.append(
-            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
+            f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         "Create kreg submodel predictions."
         self.log.append(
-            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
+            f"predict: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def collect(self) -> None:
@@ -121,17 +135,21 @@ class DummyPreprocessingStage(Stage):
     log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Run preprocessing stage."""
         self.log.append(
-            f"run: name={self.name}, subset={subset_id}, param={param_id}"
+            f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
-        self.run(subset_id, param_id)
+        self.run(subset, paramset)
 
     # Dummy-specific methods
     def get_log(self) -> list[str]:
@@ -152,24 +170,32 @@ class DummyRoverStage(Stage):
     log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Run rover submodel."""
         self.log.append(
-            f"run: name={self.name}, subset={subset_id}, param={param_id}"
+            f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset_id, param_id)
+        self.fit(subset, paramset)
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Fit rover submodel."""
+        print(subset)
+        print(self.subsets)
         self.log.append(
-            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
+            f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """predict() is not implemented for RoverStage."""
         pass
@@ -201,29 +227,35 @@ class DummySpxmodStage(Stage):
     log: list[str] = Field(default_factory=list, exclude=True)
 
     def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Run spxmod submodel."""
         self.log.append(
-            f"run: name={self.name}, subset={subset_id}, param={param_id}"
+            f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset_id, param_id)
-        self.predict(subset_id, param_id)
+        self.fit(subset, paramset)
+        self.predict(subset, paramset)
 
     def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         """Fit spxmod submodel."""
         self.log.append(
-            f"fit: name={self.name}, subset={subset_id}, param={param_id}"
+            f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
     ) -> None:
         "Create spxmod submodel predictions."
         self.log.append(
-            f"predict: name={self.name}, subset={subset_id}, param={param_id}"
+            f"predict: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
     def collect(self) -> None:
@@ -248,9 +280,9 @@ class MultiplyByTwoStage(Stage):
     ]
     _output: list[str] = ["data.parquet"]
 
-    def run(self, subset_id: int, *args, **kwargs) -> None:
+    def run(self, subset: dict[str, Any], *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""
-        df = self.get_stage_subset(subset_id)
+        df = self.dataif.load(key="data", subset=subset)
         df["value"] = df["value"] * 2
         self.dataif.dump(df, "data.parquet", key="output")
 
@@ -273,25 +305,29 @@ def assert_stage_logs(
     | DummyRoverStage
     | DummySpxmodStage,
     methods: list[str] | None = None,
-    subset_ids: list[int] | None = None,
-    param_ids: list[int] | None = None,
+    subsets: DataFrame | None = None,
+    paramsets: DataFrame | None = None,
 ):
     """Assert that the expected methods were logged for a given stage."""
     log = stage.get_log()
     if methods:
         for method in methods:
-            if subset_ids:
-                for subset_id in subset_ids:
-                    if param_ids:
-                        for param_id in param_ids:
+            if subsets is not None:
+                for subset in subsets.to_dict(orient="records"):
+                    if paramsets is not None:
+                        for paramset in paramsets.to_dict(orient="records"):
                             assert (
-                                f"{method}: name={stage.name}, subset={subset_id}, param={param_id}"
+                                f"{method}: name={stage.name}, subset={subset}, paramset={paramset}"
                                 in log
                             )
                     else:
                         assert (
-                            f"{method}: name={stage.name}, subset={subset_id}, param=None"
+                            f"{method}: name={stage.name}, subset={subset}, paramset=None"
                             in log
                         )
+                else:
+                    assert f"{method}: name={stage.name}, subset=None, paramset=None"
+            else:
+                assert f"{method}: name={stage.name}"
             if method in stage._collect_after:
                 assert f"collect: name={stage.name}" in log

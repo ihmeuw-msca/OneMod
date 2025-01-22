@@ -70,7 +70,7 @@ class Stage(BaseModel, ABC):
         `Stage.__call__()`.
       * `_subsets`: Data subsets. Created in
         `Stage.create_stage_subsets().
-      * `_params`: Parameter sets. Created in
+      * `_paramsets`: Parameter sets. Created in
         `Stage.create_stage_params()`.
     * Private attributes that must be defined by class:
       * `_required_input`, `_optional_input`, `_output`: Strings with
@@ -105,7 +105,7 @@ class Stage(BaseModel, ABC):
     _skip: list[str] = []
     _collect_after: list[str] = []
     _subsets: DataFrame | None = None
-    _params: DataFrame | None = None
+    _paramsets: DataFrame | None = None
 
     @property
     def dataif(self) -> DataInterface:
@@ -223,7 +223,7 @@ class Stage(BaseModel, ABC):
     def get_submodels(
         self,
         subsets: dict[str, Any | list[Any]] | None = None,
-        params: dict[str, Any | list[Any]] | None = None,
+        paramsets: dict[str, Any | list[Any]] | None = None,
     ) -> list[tuple[dict[str, Any] | None, ...]]:
         """Get stage data subset/parameter set combinations.
 
@@ -232,7 +232,7 @@ class Stage(BaseModel, ABC):
         subsets : dict or None, optional
             Submodel data subsets to include. If None, include all
             submodel data subsets. Default is None.
-        params : dict or None, optional
+        paramsets : dict or None, optional
             Submodel parameter sets to include. If None, include all
             submodel parameter sets. Default is None.
 
@@ -248,7 +248,7 @@ class Stage(BaseModel, ABC):
             raise AttributeError(
                 f"Stage '{self.name}' does not use groupby attribute"
             )
-        if params is not None and self.params is None:
+        if paramsets is not None and self.paramsets is None:
             raise AttributeError(
                 f"Stage '{self.name}' does not use crossby attribute"
             )
@@ -259,10 +259,10 @@ class Stage(BaseModel, ABC):
             if subsets is None
             else self.get_subset(self.subsets, subsets)
         )
-        filtered_params = (
-            self.params
-            if params is None
-            else self.get_subset(self.params, params)
+        filtered_paramsets = (
+            self.paramsets
+            if paramsets is None
+            else self.get_subset(self.paramsets, paramsets)
         )
 
         # Generate all data subset/parameter set combinations
@@ -272,8 +272,8 @@ class Stage(BaseModel, ABC):
                 if filtered_subsets is None
                 else filtered_subsets.to_dict(orient="records"),
                 [None]
-                if filtered_params is None
-                else filtered_params.to_dict(orient="records"),
+                if filtered_paramsets is None
+                else filtered_paramsets.to_dict(orient="records"),
             )
         )
 
@@ -289,15 +289,17 @@ class Stage(BaseModel, ABC):
         return self._subsets
 
     @property
-    def params(self) -> DataFrame | None:
-        if self.crossby is not None and self._params is None:
+    def paramsets(self) -> DataFrame | None:
+        if self.crossby is not None and self._paramsets is None:
             try:
-                self._params = self.dataif.load("parameters.csv", key="output")
+                self._paramsets = self.dataif.load(
+                    "paramsets.csv", key="output"
+                )
             except FileNotFoundError:
                 raise AttributeError(
                     f"Stage '{self.name}' submodel parameter sets have not been created"
                 )
-        return self._params
+        return self._paramsets
 
     def create_subsets(self, groupby_data: Path | str) -> None:
         """Create submodel data subsets from groupby."""
@@ -306,7 +308,9 @@ class Stage(BaseModel, ABC):
                 f"Stage '{self.name}' does not use groupby attribute"
             )
 
-        data = self.dataif.load(str(groupby_data), key="", columns=self.groupby)
+        data = self.dataif.load(
+            str(groupby_data), key="", columns=self.groupby
+        ).drop_duplicates()
         groups = data.groupby(self.groupby)
         self._subsets = DataFrame(
             [subset for subset in groups.groups.keys()], columns=self.groupby
@@ -343,12 +347,12 @@ class Stage(BaseModel, ABC):
                 )
 
         # Create parameter sets
-        self._params = DataFrame(
+        self._paramsets = DataFrame(
             list(product(*param_dict.values())), columns=list(param_dict.keys())
         ).sort_values(by=self.crossby)
-        self.dataif.dump(self._params, "parameters.csv", key="output")
+        self.dataif.dump(self._paramsets, "paramsets.csv", key="output")
 
-    def set_params(self, param_set: dict[str, Any]) -> None:
+    def set_params(self, paramset: dict[str, Any]) -> None:
         """Set submodel parameters."""
         if self.crossby is None:
             raise AttributeError(
@@ -356,11 +360,11 @@ class Stage(BaseModel, ABC):
             )
 
         for param_name in self.crossby:
-            if param_name not in param_set:
+            if param_name not in paramset:
                 raise KeyError(
                     f"Stage '{self.name}' param set missing param: {param_name}"
                 )
-            self.config[param_name] = param_set[param_name]
+            self.config[param_name] = paramset[param_name]
 
     @classmethod
     def from_json(cls, config_path: Path | str, stage_name: str) -> Stage:
@@ -422,7 +426,7 @@ class Stage(BaseModel, ABC):
         subsets : dict, optional
             Submodel data subsets. Ignored if `backend` is 'jobmon' or
             `method` is 'collect'.
-        params : dict, optional
+        paramsets : dict, optional
             Submodel parameter sets. Ignored if `backend` is 'jobmon'
             or `method` is 'collect'.
         cluster : str, optional
@@ -513,17 +517,17 @@ class Stage(BaseModel, ABC):
 
     @abstractmethod
     def run(self, *args, **kwargs) -> None:
-        """Run stage."""
+        """Run stage submodel."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def fit(self, *args, **kwargs) -> None:
-        """Fit stage."""
+        """Fit stage submodel."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped"
         )
 
     def predict(self, *args, **kwargs) -> None:
-        """Create stage predictions."""
+        """Create stage submodel predictions."""
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped"
         )
