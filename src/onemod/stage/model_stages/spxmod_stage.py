@@ -22,6 +22,7 @@ from spxmod.model import XModel
 from xspline import XSpline
 
 from onemod.config import SpxmodConfig
+from onemod.dtypes import Data
 from onemod.stage import Stage
 from onemod.utils.residual import ResidualCalculator
 
@@ -97,10 +98,7 @@ class SpxmodStage(Stage):
         selected_covs = []
         if "selected_covs" in self.input:
             selected_covs = self._get_covs(subset)
-            logger.info(
-                f"Using covariates from "
-                f"{self.input['selected_covs'].stage}: {selected_covs}"
-            )
+            logger.info(f"Using covariates: {selected_covs}")
 
         # Create model parameters
         xmodel_args = self._build_xmodel_args(
@@ -214,7 +212,7 @@ class SpxmodStage(Stage):
         """Load submodel data."""
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset}")
-        data = self.get_subset(self.dataif.load(key="data"), subset)
+        data = self.dataif.load(key="data", subset=subset)
 
         # Add spline basis to data
         spline_vars = []
@@ -229,13 +227,12 @@ class SpxmodStage(Stage):
         # Add offset to data
         offset = False
         if "offset" in self.input:
-            logger.info(f"Adding offset from {self.input['offset'].stage}")
+            logger.info("Adding offset")
             data = data.merge(
                 right=self.dataif.load(
                     columns=list(self.config["id_columns"])
                     + [self.config["prediction_column"]],
                     key="offset",
-                    return_type="pandas_dataframe",
                 ).rename(columns={self.config["prediction_column"]: "offset"}),
                 on=list(self.config["id_columns"]),
                 how="left",
@@ -259,7 +256,7 @@ class SpxmodStage(Stage):
             spline.design_mat(column),
             index=column.index,
             columns=[
-                f"spline_{ii+idx_start}"
+                f"spline_{ii + idx_start}"
                 for ii in range(spline.num_spline_bases)
             ],
         )
@@ -267,25 +264,34 @@ class SpxmodStage(Stage):
 
     def _get_covs(self, subset: dict[str, int]) -> list[str]:
         """Get covariates from upstream stage."""
+        if isinstance(self.input["selected_covs"], Data):
+            upstream_config = self.get_field(
+                field="config",
+                stage_name=self.input["selected_covs"].stage,
+                default={},
+            )
+        else:
+            upstream_config = {}
+
         # Load covariates and filter by subset
         selected_covs = self.dataif.load(key="selected_covs")
-        cov_groupby = self.get_field(
-            field="config:cov_groupby",
-            stage_name=self.input["selected_covs"].stage,
-        )
+        cov_groupby = upstream_config.get("cov_groupby", [])
         if len(cov_groupby) > 0:
-            selected_covs = self.get_subset(
-                selected_covs, {key: subset[key] for key in cov_groupby}
-            )
+            try:
+                cov_subset = {key: subset[key] for key in cov_groupby}
+            except KeyError:
+                raise KeyError(
+                    "Stage '{self.name}' groupby attribute must contain"
+                    " all columns in cov_groupby: {cov_groupby}"
+                )
+            selected_covs = self.get_subset(selected_covs, cov_subset)
         selected_covs = selected_covs["cov"].to_list()
 
-        # Get fixed covariates
-        fixed_covs = self.get_field(
-            field="config:cov_fixed",
-            stage_name=self.input["selected_covs"].stage,
-        )
+        # Get fixed covs
+        fixed_covs = upstream_config.get("cov_fixed", [])
         if "intercept" in fixed_covs:
             fixed_covs.remove("intercept")
+
         return selected_covs + fixed_covs
 
     def _build_xmodel_args(

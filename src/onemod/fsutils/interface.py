@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 import pandas as pd
 import polars as pl
@@ -25,7 +25,7 @@ class DataInterface(PathManager):
             "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
         ] = "pandas_dataframe",
         columns: list[str] | None = None,
-        subset: dict[str, Any | list[Any]] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
         **options,
     ) -> Any:
         """Load data or config files based on file type and key.

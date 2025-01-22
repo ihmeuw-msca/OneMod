@@ -55,7 +55,7 @@ class RoverStage(Stage):
         """
         # Load data and filter by subset
         logger.info(f"Loading {self.name} data subset {subset}")
-        train = self.get_subset(self.dataif.load(key="data"), subset).query(
+        train = self.dataif.load(key="data", subset=subset).query(
             f"{self.config['observation_column']}.notnull()"
         )
         if (train_column := self.config.get("train_column")) is not None:
@@ -146,10 +146,7 @@ class RoverStage(Stage):
                 warnings.warn(f"Rover subset {subset} missing summary.csv")
         summaries_df = pd.concat(summaries)
 
-        # Merge with subsets and add t-statistic
-        summaries_df = summaries_df.merge(
-            self.subsets, on=self.groupby, how="left"
-        )
+        # Add t-statistic
         summaries_df["abs_t_stat"] = (
             summaries_df["coef"].abs() / summaries_df["coef_sd"]
         )
@@ -159,7 +156,7 @@ class RoverStage(Stage):
         """Select rover covariates."""
         selected_covs = []
 
-        if (cov_groupby := self.config["cov_groupby"]) is not None:
+        if len(cov_groupby := self.config["cov_groupby"]) > 0:
             for subset, subset_summaries in summaries.groupby(cov_groupby):
                 subset_selected_covs = self._get_subset_selected_covs(
                     subset_summaries, cov_groupby

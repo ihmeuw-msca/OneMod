@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 import pandas as pd
 import polars as pl
@@ -20,7 +20,7 @@ class DataLoader:
             "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
         ] = "pandas_dataframe",
         columns: list[str] | None = None,
-        subset: dict[str, Any | list[Any]] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
         **options,
     ) -> pd.DataFrame | pl.DataFrame | pl.LazyFrame:
         """Load data with lazy loading and subset filtering. Polars and
