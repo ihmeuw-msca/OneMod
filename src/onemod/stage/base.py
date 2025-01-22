@@ -514,24 +514,24 @@ class Stage(BaseModel, ABC):
     @abstractmethod
     def run(self, *args, **kwargs) -> None:
         """Run stage."""
-        raise NotImplementedError("Subclasses must implement this method.")
+        raise NotImplementedError("Subclasses must implement this method")
 
     def fit(self, *args, **kwargs) -> None:
         """Fit stage."""
         raise NotImplementedError(
-            "Subclasses must implement this method if not skipped."
+            "Subclasses must implement this method if not skipped"
         )
 
     def predict(self, *args, **kwargs) -> None:
-        """Predict stage submodel."""
+        """Create stage predictions."""
         raise NotImplementedError(
-            "Subclasses must implemented this method if not skipped."
+            "Subclasses must implement this method if not skipped"
         )
 
     def collect(self) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError(
-            "Subclasses must implement this method if collect_after not empty."
+            "Subclasses must implement this method if collect_after not empty"
         )
 
     @validate_call
