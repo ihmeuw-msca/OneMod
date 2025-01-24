@@ -76,7 +76,7 @@ def evaluate(
     cluster : str
         Cluster name.
     resources : dict, Path, or str
-        Dictionary of compute resources or path to resources file.
+        Path to resources file or dictionary of compute resources.
     python : Path or str, optional
         Path to Python environment. If None, use sys.executable.
         Default is None.
@@ -136,7 +136,7 @@ def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
     Parameters
     ----------
     resources : Path, str, or dict
-        Dictionary of compute resources or path to resources file.
+        Path to resources file or dictionary of compute resources.
 
     Returns
     -------
@@ -450,7 +450,13 @@ def get_stage_tasks(
             # get task for collect method
             tasks.extend(
                 get_stage_tasks(
-                    tool, resources, stage, "collect", entrypoint, tasks
+                    stage,
+                    tool,
+                    resources,
+                    python,
+                    "collect",
+                    method_args,
+                    upstream_tasks=tasks,
                 )
             )
 
