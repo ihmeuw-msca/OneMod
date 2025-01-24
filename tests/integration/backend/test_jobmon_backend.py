@@ -16,26 +16,31 @@ def test_config_path(simple_pipeline):
 
 @pytest.mark.integration
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
-def test_simple_node_args(simple_pipeline, method):
+def test_simple_submodel_args(simple_pipeline, method):
     for stage in simple_pipeline.stages.values():
-        node_args = jb.get_node_args(stage, method)
-        assert node_args == {}
+        submodel_args = jb.get_submodel_args(
+            stage, method, subsets={}, paramsets={}
+        )
+        assert submodel_args == {}
 
 
+# TODO: Add tests for subsets/paramsets
 @pytest.mark.integration
 @pytest.mark.parametrize("method", ["run", "fit", "predict", "collect"])
-def test_parallel_node_args(parallel_pipeline, method):
+def test_parallel_submodel_args(parallel_pipeline, method):
     for stage in parallel_pipeline.stages.values():
-        node_args = jb.get_node_args(stage, method)
+        submodel_args = jb.get_submodel_args(
+            stage, method, subsets={}, paramsets={}
+        )
         if method == "collect":
-            assert node_args == {}
+            assert submodel_args == {}
         else:
-            for attr, node_arg in [
+            for attr, submodel_arg in [
                 ["subsets", "subset"],
                 ["paramsets", "paramset"],
             ]:
                 expected = getattr(stage, attr)
-                observed = node_args.get(node_arg)
+                observed = submodel_args.get(submodel_arg)
                 if expected is not None:
                     assert observed == [
                         str(node_val)
@@ -45,6 +50,7 @@ def test_parallel_node_args(parallel_pipeline, method):
                     assert observed is None
 
 
+# TODO: Add tests for method_args, submodel_args
 @pytest.mark.integration
 @pytest.mark.parametrize("stage_cluster", ["cluster", "dummy"])
 def test_task_template(stage_cluster):
@@ -55,7 +61,9 @@ def test_task_template(stage_cluster):
         },
     }
     tool = jb.get_tool("pipeline", "method", "cluster", resources)
-    task_template = jb.get_task_template(tool, resources, "stage", "method", [])
+    task_template = jb.get_task_template(
+        "stage", tool, resources, "method", method_args=[], submodel_args=[]
+    )
     default_cluster = task_template.default_cluster_name
     default_resources = task_template.default_compute_resources_set
     assert task_template.template_name == "stage_method"
@@ -67,6 +75,7 @@ def test_task_template(stage_cluster):
         assert default_resources == {}
 
 
+# TODO: Add tests for stages
 @pytest.mark.integration
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_simple_upstream(simple_pipeline, method):
@@ -76,7 +85,7 @@ def test_simple_upstream(simple_pipeline, method):
         stage = simple_pipeline.stages[stage_name]
         if method not in stage.skip:
             upstream_tasks = jb.get_upstream_tasks(
-                stage, method, simple_pipeline.stages, task_dict
+                stage, method, simple_pipeline.stages, task_dict, stages=None
             )
 
             if stage_name == "run_1":
@@ -89,6 +98,7 @@ def test_simple_upstream(simple_pipeline, method):
             task_dict[stage_name] = [f"{stage_name}__{method}"]
 
 
+# TODO: Add tests for stages
 @pytest.mark.integration
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_parallel_upstream(parallel_pipeline, method):
@@ -96,7 +106,7 @@ def test_parallel_upstream(parallel_pipeline, method):
     for stage_name in parallel_pipeline.get_execution_order():
         stage = parallel_pipeline.stages[stage_name]
         upstream_tasks = jb.get_upstream_tasks(
-            stage, method, parallel_pipeline.stages, task_dict
+            stage, method, parallel_pipeline.stages, task_dict, stages=None
         )
 
         if stage_name == "run_1":
@@ -106,25 +116,23 @@ def test_parallel_upstream(parallel_pipeline, method):
         elif stage_name == "predict_3":
             assert upstream_tasks == ["run_1__collect"]
         elif stage_name == "run_4":
-            # Need to use sets because stage.dependencies is a set,
-            # so order of upstream_tasks can vary
             if method == "run":
-                assert set(upstream_tasks) == {
+                assert upstream_tasks == [
                     "fit_2__collect",
                     "predict_3__collect",
-                }
+                ]
             elif method == "fit":
-                assert set(upstream_tasks) == {
+                assert upstream_tasks == [
                     "fit_2__collect",
                     "predict_3__fit__submodel_1",
                     "predict_3__fit__submodel_2",
-                }
+                ]
             elif method == "predict":
-                assert set(upstream_tasks) == {
+                assert upstream_tasks == [
                     "fit_2__predict__submodel_1",
                     "fit_2__predict__submodel_2",
                     "predict_3__collect",
-                }
+                ]
 
         task_dict[stage_name] = [
             f"{stage_name}__{method}__submodel_1",

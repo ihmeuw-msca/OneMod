@@ -90,19 +90,23 @@ def test_no_cluster_resources():
     assert task_resources == {}
 
 
+# TODO: Add tests for method_args
 @pytest.mark.unit
 def test_command_template():
-    node_args = []
+    submodel_args = []
     expected_template = (
         "{entrypoint} --config {config}"
         " --method dummy_method --stages dummy_stage"
     )
-    for node_arg in ["", "subset_id", "param_id"]:
-        if node_arg:
-            node_args.append(node_arg)
-            expected_template += f" --{node_arg} {{{node_arg}}}"
+    for submodel_arg in ["", "subset", "paramset"]:
+        if submodel_arg:
+            submodel_args.append(submodel_arg)
+            expected_template += f" --{submodel_arg} {{{submodel_arg}}}"
         command_template = jb.get_command_template(
-            "dummy_stage", "dummy_method", node_args=node_args
+            "dummy_stage",
+            "dummy_method",
+            method_args=[],
+            submodel_args=submodel_args,
         )
         assert command_template == expected_template
 
