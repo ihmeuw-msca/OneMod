@@ -23,7 +23,7 @@ class DummyCustomStage(Stage):
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
 
-    def run(
+    def _run(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -32,10 +32,10 @@ class DummyCustomStage(Stage):
         self.log.append(
             f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset, paramset)
-        self.predict(subset, paramset)
+        self._fit(subset, paramset)
+        self._predict(subset, paramset)
 
-    def fit(
+    def _fit(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -45,7 +45,7 @@ class DummyCustomStage(Stage):
             f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
-    def predict(
+    def _predict(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -77,7 +77,7 @@ class DummyKregStage(Stage):
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
 
-    def run(
+    def _run(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -86,10 +86,10 @@ class DummyKregStage(Stage):
         self.log.append(
             f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset, paramset)
-        self.predict(subset, paramset)
+        self._fit(subset, paramset)
+        self._predict(subset, paramset)
 
-    def fit(
+    def _fit(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -99,7 +99,7 @@ class DummyKregStage(Stage):
             f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
-    def predict(
+    def _predict(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -134,7 +134,7 @@ class DummyPreprocessingStage(Stage):
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
 
-    def run(
+    def _run(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -144,12 +144,12 @@ class DummyPreprocessingStage(Stage):
             f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
-    def fit(
+    def _fit(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
     ) -> None:
-        self.run(subset, paramset)
+        self._run(subset, paramset)
 
     # Dummy-specific methods
     def get_log(self) -> list[str]:
@@ -169,7 +169,7 @@ class DummyRoverStage(Stage):
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
 
-    def run(
+    def _run(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -178,21 +178,19 @@ class DummyRoverStage(Stage):
         self.log.append(
             f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset, paramset)
+        self._fit(subset, paramset)
 
-    def fit(
+    def _fit(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
     ) -> None:
         """Fit rover submodel."""
-        print(subset)
-        print(self.subsets)
         self.log.append(
             f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
-    def predict(
+    def _predict(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -226,7 +224,7 @@ class DummySpxmodStage(Stage):
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
 
-    def run(
+    def _run(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -235,10 +233,10 @@ class DummySpxmodStage(Stage):
         self.log.append(
             f"run: name={self.name}, subset={subset}, paramset={paramset}"
         )
-        self.fit(subset, paramset)
-        self.predict(subset, paramset)
+        self._fit(subset, paramset)
+        self._predict(subset, paramset)
 
-    def fit(
+    def _fit(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -248,7 +246,7 @@ class DummySpxmodStage(Stage):
             f"fit: name={self.name}, subset={subset}, paramset={paramset}"
         )
 
-    def predict(
+    def _predict(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -280,17 +278,17 @@ class MultiplyByTwoStage(Stage):
     ]
     _output: list[str] = ["data.parquet"]
 
-    def run(self, subset: dict[str, Any], *args, **kwargs) -> None:
+    def _run(self, subset: dict[str, Any], *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""
         df = self.dataif.load(key="data", subset=subset)
         df["value"] = df["value"] * 2
         self.dataif.dump(df, "data.parquet", key="output")
 
-    def fit(self) -> None:
+    def _fit(self) -> None:
         """Fit MultiplyByTwoStage."""
         pass
 
-    def predict(self) -> None:
+    def _predict(self) -> None:
         """Predict MultiplyByTwoStage."""
         pass
 

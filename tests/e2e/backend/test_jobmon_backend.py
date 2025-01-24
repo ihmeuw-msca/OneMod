@@ -4,7 +4,7 @@ Since dummy cluster doesn't actually evaluate tasks, these tests just
 make sure the workflows finishes successfully.
 
 """
-# TODO: Write tests for id_subsets
+# TODO: Write tests for subsets/paramsets
 
 import pytest
 

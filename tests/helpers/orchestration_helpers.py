@@ -25,16 +25,16 @@ class SimpleStage(Stage):
     def get_log(self) -> list[str]:
         return self._log
 
-    def run(self) -> None:
+    def _run(self) -> None:
         self._log.append(f"run: name={self.name}")
         self._create_output("fit")
         self._create_output("predict")
 
-    def fit(self) -> None:
+    def _fit(self) -> None:
         self._log.append(f"fit: name={self.name}")
         self._create_output("fit")
 
-    def predict(self) -> None:
+    def _predict(self) -> None:
         self._log.append(f"predict: name={self.name}")
         self._create_output("predict")
 
@@ -51,7 +51,7 @@ class SimpleStageFit(SimpleStage):
     _output: list[str] = ["fit_output.csv"]
     _skip: list[str] = ["predict"]
 
-    def run(self) -> None:
+    def _run(self) -> None:
         self._log.append(f"run: name={self.name}")
         self._create_output("fit")
 
@@ -61,7 +61,7 @@ class SimpleStagePredict(SimpleStage):
     _output: list[str] = ["predict_output.csv"]
     _skip: list[str] = ["fit"]
 
-    def run(self) -> None:
+    def _run(self) -> None:
         self._log.append(f"run: name={self.name}")
         self._create_output("predict")
 
@@ -80,7 +80,7 @@ class ParallelStage(Stage):
     def get_log(self) -> list[str]:
         return self._log
 
-    def run(
+    def _run(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -90,7 +90,7 @@ class ParallelStage(Stage):
         )
         self._create_output("run", subset, paramset)
 
-    def fit(
+    def _fit(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,
@@ -100,7 +100,7 @@ class ParallelStage(Stage):
         )
         self._create_output("fit", subset, paramset)
 
-    def predict(
+    def _predict(
         self,
         subset: dict[str, Any] | None = None,
         paramset: dict[str, Any] | None = None,

@@ -5,8 +5,6 @@ from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
 
-# FIXME: WRONG DATA SET
-
 
 @pytest.fixture
 def sample_data():
@@ -42,7 +40,9 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
     with pytest.raises(
         ValueError, match="Stage 'invalid_stage_name' not found"
     ):
-        dummy_pipeline.evaluate(method=method, stages=["invalid_stage_name"])
+        dummy_pipeline.evaluate(
+            method=method, stages=["invalid_stage_name"], backend="local"
+        )
 
     with pytest.raises(
         ValueError, match="Stage 'invalid_stage_name' not found"
@@ -54,6 +54,7 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
                 "invalid_stage_name",
                 "covariate_selection",
             ],
+            backend="local",
         )
 
 
@@ -75,7 +76,9 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
     create_dummy_preprocessing_output_file(test_base_dir, stages)
 
     try:
-        dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+        dummy_pipeline.evaluate(
+            method=method, stages=subset_stage_names, backend="local"
+        )
     except Exception as e:
         pytest.fail(f"evaluate() raised an unexpected exception: {e}")
 
@@ -114,7 +117,9 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
         FileNotFoundError,
         match=f"Stage 'covariate_selection' input items do not exist: {{'data': '{test_base_dir}/preprocessing/data.parquet'}}",
     ):
-        dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+        dummy_pipeline.evaluate(
+            method=method, stages=subset_stage_names, backend="local"
+        )
 
 
 @pytest.mark.integration
@@ -128,7 +133,9 @@ def test_duplicate_stage_names(small_input_data, test_base_dir, method):
 
     subset_stage_names = ["preprocessing", "preprocessing"]
 
-    dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+    dummy_pipeline.evaluate(
+        method=method, stages=subset_stage_names, backend="local"
+    )
 
     # Check that preprocessing was evaluated only once
     assert (
@@ -156,7 +163,7 @@ def test_duplicate_stage_names(small_input_data, test_base_dir, method):
 def test_evaluate_with_jobmon_subset_call(
     dummy_resources, small_input_data, test_base_dir, method
 ):
-    """Test that evaluate_with_jobmon is called with the correct subset."""
+    """Test that jobmon_backend.evaluate is called with the correct subset."""
     assert dummy_resources.exists()
 
     dummy_pipeline, stages = setup_dummy_pipeline(
@@ -166,7 +173,7 @@ def test_evaluate_with_jobmon_subset_call(
     subset_stage_names = {"preprocessing", "covariate_selection"}
 
     with patch(
-        "onemod.backend.evaluate_with_jobmon"
+        "onemod.backend.jobmon_backend.evaluate"
     ) as mock_evaluate_with_jobmon:
         dummy_pipeline.evaluate(
             backend="jobmon",

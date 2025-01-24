@@ -47,7 +47,7 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
     )
 
     # Run the pipeline with the given method (run, fit, predict)
-    dummy_pipeline.evaluate(backend="local", method=method)
+    dummy_pipeline.evaluate(method=method, stages=None, backend="local")
 
     # Check each stage's log output for correct method calls on correct subsets/paramsets
     expected_args = get_expected_args()

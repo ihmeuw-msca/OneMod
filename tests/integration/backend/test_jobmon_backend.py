@@ -62,7 +62,7 @@ def test_task_template(stage_cluster):
     }
     tool = jb.get_tool("pipeline", "method", "cluster", resources)
     task_template = jb.get_task_template(
-        "stage", tool, resources, "method", method_args=[], submodel_args=[]
+        "stage", "method", tool, resources, method_args=[], submodel_args=[]
     )
     default_cluster = task_template.default_cluster_name
     default_resources = task_template.default_compute_resources_set
