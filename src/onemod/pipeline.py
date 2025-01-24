@@ -64,7 +64,7 @@ class Pipeline(BaseModel):
         Parameters
         ----------
         config_path : Path or str
-            Path to config file.
+            Path to pipeline config file.
 
         Returns
         -------
@@ -155,12 +155,11 @@ class Pipeline(BaseModel):
         ValueError
             If cycle detected in DAG.
 
-        TODO: What if stages have a gap? For example, pipeline has
-        Rover -> SPxMod -> KReg, but `stages` only includes Rover and
-        Kreg. KReg will be run on outdated SPxMod results (if they
-        exist).
-
         """
+        # TODO: What if stages have a gap? For example, pipeline has
+        # Rover -> SPxMod -> KReg, but `stages` only includes Rover and
+        # Kreg. KReg will be run on outdated SPxMod results (if they
+        # exist).
         reverse_graph: dict[str, list[str]] = {
             stage: [] for stage in self.dependencies
         }
@@ -257,6 +256,7 @@ class Pipeline(BaseModel):
             self.save_validation_report(collector)
             collector.raise_errors()
 
+        # TODO: Simplify with stage.build()
         for stage in self.stages.values():
             stage.config.add_pipeline_config(self.config)
             stage.set_dataif(config_path)
@@ -283,48 +283,25 @@ class Pipeline(BaseModel):
         report_path = validation_dir / "validation_report.json"
         serialize(collector.errors, report_path)  # type: ignore[arg-type]
 
-    @validate_call
     def evaluate(
         self,
-        method: Literal["run", "fit", "predict", "collect"] = "run",
-        stages: UniqueList[str] | None = None,
-        backend: Literal["local", "jobmon"] = "local",
+        method: Literal["run", "fit", "predict", "collect"],
+        stages: list[str] | None,
+        backend: Literal["local", "jobmon"],
         **kwargs,
     ) -> None:
-        """Evaluate pipeline method.
-
-        Parameters
-        ----------
-        method : {'run', 'fit', 'predict', 'collect'}, optional
-            Name of method to evaluate. Default is 'run'.
-        stages : list of str, optional
-            Names of stages to evaluate. If None, evaluate entire
-            pipeline. Default is None.
-        backend : {'local', 'jobmon'}, optional
-            How to evaluate the method. Default is 'local'.
-
-        Other Parameters
-        ----------------
-        method_args : dict, optional
-            Additional keyword arguments passed to stage methods. Use
-            format `{stage_name: {arg_name: arg_value}}`.
-        cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
-        resources : Path, str, or dict, optional
-            Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
-
-        """
+        """Evaluate pipeline method."""
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate
         else:
-            from onemod.backend.local_backend import evaluate
+            from onemod.backend.local_backend import evaluate  # type: ignore
 
         evaluate(model=self, method=method, stages=stages, **kwargs)
 
+    @validate_call
     def run(
         self,
-        stages: list[str] | None = None,
+        stages: UniqueList[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         **kwargs,
     ) -> None:
@@ -352,9 +329,10 @@ class Pipeline(BaseModel):
         """
         self.evaluate("run", stages, backend, **kwargs)
 
+    @validate_call
     def fit(
         self,
-        stages: list[str] | None = None,
+        stages: UniqueList[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         **kwargs,
     ) -> None:
@@ -382,9 +360,10 @@ class Pipeline(BaseModel):
         """
         self.evaluate("fit", stages, backend, **kwargs)
 
+    @validate_call
     def predict(
         self,
-        stages: list[str] | None = None,
+        stages: UniqueList[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
         **kwargs,
     ) -> None:

@@ -138,7 +138,7 @@ def evaluate(
     Parameters
     ----------
     config : Path or str
-        Path to config file.
+        Path to pipeline config file.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     stages : str, list of str, or None, optional
@@ -152,9 +152,7 @@ def evaluate(
     ----------------
     method_args : dict, optional
         Additional keyword arguments passed to stage methods. When
-        evaluating a pipeline, use format
-        `{stage_name: {arg_name: arg_value}}`. When evaluating a single
-        stage, use formag `{arg_name: arg_value}`.
+        evaluating a pipeline, use format `{stage_name: {arg_name: arg_value}}`.
     subsets : dict, optional
         Submodel data subsets to include when evaluating a single stage.
         If None, evaluate all data subsets. Default is None.

@@ -12,11 +12,17 @@ def check_method(model: Pipeline | Stage, method: str) -> None:
                 "Method 'collect' cannot be called on a pipeline instance"
             )
     else:
-        if method == "collect" and not model.has_submodels:
-            raise ValueError(
-                "Method 'collect' cannot be called on a stage without submodels"
-            )
-        if method in model.skip:
+        if method == "collect":
+            if model.has_submodels:
+                if len(model.collect_after) == 0:
+                    raise ValueError(
+                        "Method 'collect' cannot be called on stage with empty collect_after"
+                    )
+            else:
+                raise ValueError(
+                    "Method 'collect' cannot be called on a stage without submodels"
+                )
+        elif method in model.skip:
             raise ValueError(
                 f"Stage '{model.name}' skips the '{method}' method"
             )

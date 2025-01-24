@@ -15,6 +15,8 @@ TODO: Implement priors input
 
 """
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -46,7 +48,7 @@ class SpxmodStage(Stage):
         if self.crossby is not None:
             raise AttributeError("SPxModStage does not use crossby attribute")
 
-    def run(self, subset: dict[str, int], *args, **kwargs) -> None:
+    def _run(self, subset: dict[str, Any], *args, **kwargs) -> None:
         """Run spxmod submodel.
 
         Output
@@ -63,12 +65,12 @@ class SpxmodStage(Stage):
         data, spline_vars, offset = self._get_submodel_data(subset)
 
         # Create and fit submodel
-        model = self._fit(subset, data, spline_vars, offset)
+        model = self._fit_submodel(subset, data, spline_vars, offset)
 
         # Create submodel predictions
-        self._predict(subset, data, model)
+        self._predict_submodel(subset, data, model)
 
-    def fit(self, subset: dict[str, int], *args, **kwargs) -> None:
+    def _fit(self, subset: dict[str, Any], *args, **kwargs) -> None:
         """Fit spxmod submodel.
 
         Outputs
@@ -84,9 +86,9 @@ class SpxmodStage(Stage):
         data, spline_vars, offset = self._get_submodel_data(subset)
 
         # Create and fit submodel
-        _ = self._fit(subset, data, spline_vars, offset)
+        _ = self._fit_submodel(subset, data, spline_vars, offset)
 
-    def _fit(
+    def _fit_submodel(
         self,
         subset: dict[str, int],
         data: pd.DataFrame,
@@ -129,7 +131,7 @@ class SpxmodStage(Stage):
 
         return model
 
-    def predict(self, subset: dict[str, int], *args, **kwargs) -> None:
+    def _predict(self, subset: dict[str, int], *args, **kwargs) -> None:
         """Create spxmod submodel predictions.
 
         Outputs
@@ -148,9 +150,9 @@ class SpxmodStage(Stage):
         )
 
         # Create submodel predictions
-        self._predict(subset, data, model)
+        self._predict_submodel(subset, data, model)
 
-    def _predict(
+    def _predict_submodel(
         self, subset: dict[str, int], data: pd.DataFrame, model: XModel
     ) -> None:
         """Create spxmod submodel predictions."""

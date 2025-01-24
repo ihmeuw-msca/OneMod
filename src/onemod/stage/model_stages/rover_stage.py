@@ -36,11 +36,11 @@ class RoverStage(Stage):
         if self.crossby is not None:
             raise AttributeError("RoverStage does not use crossby attribute")
 
-    def run(self, subset: dict[str, int], *args, **kwargs) -> None:
+    def _run(self, subset: dict[str, int], *args, **kwargs) -> None:
         """Run rover submodel."""
-        self.fit(subset)
+        self._fit(subset)
 
-    def fit(self, subset: dict[str, int], *args, **kwargs) -> None:
+    def _fit(self, subset: dict[str, int], *args, **kwargs) -> None:
         """Fit rover submodel.
 
         Outputs

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from abc import ABC, abstractmethod
+from abc import ABC
 from functools import cached_property
 from inspect import getfile
 from itertools import product
@@ -326,6 +326,10 @@ class Stage(BaseModel, ABC):
             data = data[
                 data[col].isin(values if isinstance(values, list) else [values])
             ]
+
+        if len(data) == 0:
+            raise ValueError(f"Empty subset or paramset: {subset}")
+
         return data.reset_index(drop=True)
 
     def create_params(self) -> None:
@@ -402,49 +406,17 @@ class Stage(BaseModel, ABC):
         stage.set_dataif(config_path)
         return stage
 
-    @validate_call
     def evaluate(
         self,
-        method: Literal["run", "fit", "predict", "collect"] = "run",
-        backend: Literal["local", "jobmon"] = "local",
+        method: Literal["run", "fit", "predict", "collect"],
+        backend: Literal["local", "jobmon"],
         **kwargs,
     ) -> None:
-        """Evaluate stage method.
-
-        Parameters
-        ----------
-        method : {'run', 'fit', 'predict', 'collect'}, optional
-            Name of method to evaluate. Default is 'run'.
-        backend : {'local', 'jobmon'}, optional
-            How to evaluate the method. Default is 'local'.
-
-        Other Parameters
-        ----------------
-        method_args : dict, optional
-            Additional keyword arguments passed to stage methods. Use
-            format `{arg_name: arg_value}`.
-        subsets : dict, optional
-            Submodel data subsets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        paramsets : dict, optional
-            Submodel parameter sets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        collect : bool, optional
-            Collect submodel results if `subsets` and `paramsets` are
-            not both None. Default is False. If `subsets` and
-            `paramsets` are not both None, this parameter is ignored and
-            submodel results are always collected.
-        cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
-        resources : Path, str, or dict, optional
-            Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
-
-        """
+        """Evaluate stage method."""
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate
         else:
-            from onemod.backend.local_backend import evaluate
+            from onemod.backend.local_backend import evaluate  # type: ignore
 
         evaluate(model=self, method=method, **kwargs)
 
@@ -520,27 +492,214 @@ class Stage(BaseModel, ABC):
             config = config.get(key, {})
         return config or default
 
-    @abstractmethod
-    def run(self, *args, **kwargs) -> None:
-        """Run stage submodel."""
+    @validate_call
+    def run(
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        subsets: dict[str, Any | list[Any]] | None = None,
+        paramsets: dict[str, Any | list[Any]] | None = None,
+        collect: bool = False,
+        **kwargs,
+    ) -> None:
+        """Run stage.
+
+        Parameters
+        ----------
+        backend : {'local', 'jobmon'}, optional
+            How to evaluate the method. Default is 'local'.
+        subsets : dict, optional
+            Submodel data subsets to evaluate. If None, evaluate all
+            data subsets. Default is None.
+        paramsets : dict, optional
+            Submodel parameter sets to evaluate. If None, evaluate all
+            data subsets. Default is None.
+        collect : bool, optional
+            Collect submodel results if `subsets` and `paramsets` are
+            not both None. Default is False. If `subsets` and
+            `paramsets` are not both None, this parameter is ignored and
+            submodel results are always collected.
+
+        Other Parameters
+        ----------------
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods.
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path, str, or dict, optional
+            Path to resources file or dictionary of compute resources.
+            Required if `backend` is 'jobmon'.
+
+        """
+        self.evaluate(
+            "run",
+            backend,
+            subsets=subsets,
+            paramsets=paramsets,
+            collect=collect,
+            **kwargs,
+        )
+
+    def _run(self, *args, **kwargs) -> None:
+        """Run stage submodel.
+
+        Parameters
+        ----------
+        subset : dict[str, Any]
+            If stage uses `groupby` attribute, add `subset` arg when
+            implementing `_run`.
+        paramset : dict[str, Any]
+            If stage uses `crossby` attribute, add `paramset` arg when
+            implementing `_run`.
+        **kwargs
+            Additional keyword arguments can be passed directly to
+            `_run` method, but must be passed via `method_args`
+            dictionary to command line or `run` method.
+
+        """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def fit(self, *args, **kwargs) -> None:
-        """Fit stage submodel."""
+    @validate_call
+    def fit(
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        subsets: dict[str, Any | list[Any]] | None = None,
+        paramsets: dict[str, Any | list[Any]] | None = None,
+        collect: bool = False,
+        **kwargs,
+    ) -> None:
+        """Fit stage.
+
+        Parameters
+        ----------
+        backend : {'local', 'jobmon'}, optional
+            How to evaluate the method. Default is 'local'.
+        subsets : dict, optional
+            Submodel data subsets to evaluate. If None, evaluate all
+            data subsets. Default is None.
+        paramsets : dict, optional
+            Submodel parameter sets to evaluate. If None, evaluate all
+            data subsets. Default is None.
+        collect : bool, optional
+            Collect submodel results if `subsets` and `paramsets` are
+            not both None. Default is False. If `subsets` and
+            `paramsets` are not both None, this parameter is ignored and
+            submodel results are always collected.
+
+        Other Parameters
+        ----------------
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods.
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path, str, or dict, optional
+            Path to resources file or dictionary of compute resources.
+            Required if `backend` is 'jobmon'.
+
+        """
+        self.evaluate(
+            "fit",
+            backend,
+            subsets=subsets,
+            paramsets=paramsets,
+            collect=collect,
+            **kwargs,
+        )
+
+    def _fit(self, *args, **kwargs) -> None:
+        """Fit stage submodel.
+
+        Parameters
+        ----------
+        subset : dict[str, Any]
+            If stage uses `groupby` attribute, add `subset` arg when
+            implementing `_fit`.
+        paramset : dict[str, Any]
+            If stage uses `crossby` attribute, add `paramset` arg when
+            implementing `_fit`.
+        **kwargs
+            Additional keyword arguments can be passed directly to
+            `_fit` method, but must be passed via `method_args`
+            dictionary to command line or `fit` method.
+
+        """
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped"
         )
 
-    def predict(self, *args, **kwargs) -> None:
-        """Create stage submodel predictions."""
+    @validate_call
+    def predict(
+        self,
+        backend: Literal["local", "jobmon"] = "local",
+        subsets: dict[str, Any | list[Any]] | None = None,
+        paramsets: dict[str, Any | list[Any]] | None = None,
+        collect: bool = False,
+        **kwargs,
+    ) -> None:
+        """Create stage predictions.
+
+        Parameters
+        ----------
+        backend : {'local', 'jobmon'}, optional
+            How to evaluate the method. Default is 'local'.
+        subsets : dict, optional
+            Submodel data subsets to evaluate. If None, evaluate all
+            data subsets. Default is None.
+        paramsets : dict, optional
+            Submodel parameter sets to evaluate. If None, evaluate all
+            data subsets. Default is None.
+        collect : bool, optional
+            Collect submodel results if `subsets` and `paramsets` are
+            not both None. Default is False. If `subsets` and
+            `paramsets` are not both None, this parameter is ignored and
+            submodel results are always collected.
+
+        Other Parameters
+        ----------------
+        cluster : str, optional
+            Cluster name. Required if `backend` is 'jobmon'.
+        resources : Path, str, or dict, optional
+            Path to resources file or dictionary of compute resources.
+            Required if `backend` is 'jobmon'.
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods.
+
+        """
+        self.evaluate(
+            "fit",
+            backend,
+            subsets=subsets,
+            paramsets=paramsets,
+            collect=collect,
+            **kwargs,
+        )
+
+    def _predict(self, *args, **kwargs) -> None:
+        """Create stage submodel predictions.
+
+        Parameters
+        ----------
+        subset : dict[str, Any]
+            If stage uses `groupby` attribute, add `subset` arg when
+            implementing `_predict`.
+        paramset : dict[str, Any]
+            If stage uses `crossby` attribute, add `paramset` arg when
+            implementing `_predict`.
+        **kwargs
+            Additional keyword arguments can be passed directly to
+            `_predict` method, but must be passed via `method_args`
+            dictionary to command line or `predict` method.
+
+        """
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped"
         )
 
+    @validate_call
     def collect(self) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError(
-            "Subclasses must implement this method if collect_after not empty"
+            "Subclasses must implement this method if using submodels"
+            " and collect_after not empty"
         )
 
     @validate_call

@@ -45,24 +45,21 @@ from typing import Any, Literal
 from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
-from pydantic import validate_call
 
 from onemod.backend.utils import check_input_exists, check_method
-from onemod.dtypes import UniqueList
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
-@validate_call
 def evaluate(
     model: Pipeline | Stage,
+    method: Literal["run", "fit", "predict", "collect"],
     cluster: str,
     resources: dict[str, Any] | Path | str,
     python: Path | str | None = None,
-    method: Literal["run", "fit", "predict", "collect"] = "run",
     method_args: dict[str, Any | dict[str, Any]] | None = None,
-    stages: UniqueList[str] | None = None,
+    stages: list[str] | None = None,
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool = False,
@@ -73,6 +70,8 @@ def evaluate(
     ----------
     model : Pipeline or Stage
         Pipeline or stage instance.
+    method : {'run', 'fit', 'predict', 'collect'}
+        Name of method to evalaute.
     cluster : str
         Cluster name.
     resources : dict, Path, or str
@@ -80,8 +79,6 @@ def evaluate(
     python : Path or str, optional
         Path to Python environment. If None, use sys.executable.
         Default is None.
-    method : {'run', 'fit', 'predict', 'collect'}, optional
-        Name of method to evalaute. Default is 'run'.
     method_args : dict, optional
         Additional keyword arguments passed to stage methods. If `model`
         is a `Pipeline` instance, use format
@@ -108,19 +105,19 @@ def evaluate(
     # TODO: Could dependencies be method specific?
     check_method(model, method)
     check_input_exists(model, stages)
-    if method_args is None:
-        method_args = {}
     if python is None:
         python = str(sys.executable)
+    if method_args is None:
+        method_args = {}
 
     resources_dict = get_resources(resources)
     tool = get_tool(model.name, method, cluster, resources_dict)
     tasks = get_tasks(
         model,
+        method,
         tool,
         resources_dict,
         python,
-        method,
         method_args,
         stages,
         subsets,
@@ -183,10 +180,10 @@ def get_tool(
 
 def get_tasks(
     model: Pipeline | Stage,
+    method: str,
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
-    method: str,
     method_args: dict[str, Any | dict[str, Any]],
     stages: list[str] | None,
     subsets: dict[str, Any | list[Any]] | None,
@@ -199,14 +196,14 @@ def get_tasks(
     ----------
     model : Pipeline or Stage
         Pipeline or stage instance.
+    method : str
+        Name of method to evaluate.
     tool : Tool
         Jobmon tool.
     resources : dict
         Dictionary of compute resources.
     python : Path or str
         Path to Python environment.
-    method : str
-        Name of method to evaluate.
     method_args : dict
         Additional keyword arguments passed to stage methods.
     stages : list of str or None
@@ -230,14 +227,14 @@ def get_tasks(
     """
     if isinstance(model, Pipeline):
         return get_pipeline_tasks(
-            model, tool, resources, python, method, method_args, stages
+            model, method, tool, resources, python, method_args, stages
         )
     return get_stage_tasks(
         model,
+        method,
         tool,
         resources,
         python,
-        method,
         method_args,
         subsets,
         paramsets,
@@ -247,10 +244,10 @@ def get_tasks(
 
 def get_pipeline_tasks(
     pipeline: Pipeline,
+    method: str,
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
-    method: str,
     method_args: dict[str, dict[str, Any]],
     stages: list[str] | None,
 ) -> list[Task]:
@@ -260,14 +257,14 @@ def get_pipeline_tasks(
     ----------
     pipeline : Pipeline
         Pipeline instance.
+    method : str
+        Name of method to evaluate.
     tool : Tool
         Jobmon tool.
     resources : dict
         Dictionary of compute resources.
     python : Path or str
         Path to Python environment.
-    method : str
-        Name of method to evaluate.
     method_args : dict
         Additional keyword arguments passed to stage methods.
     stages : list of str or None
@@ -291,10 +288,10 @@ def get_pipeline_tasks(
             )
             task_dict[stage_name] = get_stage_tasks(
                 stage,
+                method,
                 tool,
                 resources,
                 python,
-                method,
                 method_args.get(stage_name, {}),
                 upstream_tasks=upstream_tasks,
             )
@@ -363,10 +360,10 @@ def get_upstream_tasks(
 
 def get_stage_tasks(
     stage: Stage,
+    method: str,
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
-    method: str,
     method_args: dict[str, Any],
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
@@ -379,14 +376,14 @@ def get_stage_tasks(
     ----------
     stage : Stage
         Stage instance.
+    method : str
+        Name of method to evaluate.
     tool : Tool
         Jobmon tool.
     resources : dict
         Dictionary of compute resources.
     python : Path or str
         Path to Python environment.
-    method : str
-        Name of method to evaluate.
     method_args : dict
         Additional keyword arguments passed to stage method.
     subsets : dict, optional
@@ -416,9 +413,9 @@ def get_stage_tasks(
 
     task_template = get_task_template(
         stage.name,
+        method,
         tool,
         resources,
-        method,
         list(method_args.keys()),
         list(submodel_args.keys()),
     )
@@ -451,10 +448,10 @@ def get_stage_tasks(
             tasks.extend(
                 get_stage_tasks(
                     stage,
+                    "collect",
                     tool,
                     resources,
                     python,
-                    "collect",
                     method_args,
                     upstream_tasks=tasks,
                 )
@@ -557,9 +554,9 @@ def get_submodel_args(
 
 def get_task_template(
     stage_name: str,
+    method: str,
     tool: Tool,
     resources: dict[str, Any],
-    method: str,
     method_args: list[str],
     submodel_args: list[str],
 ) -> TaskTemplate:
@@ -569,12 +566,12 @@ def get_task_template(
     ----------
     stage_name : str
         Stage name.
+    method : str
+        Name of method being evaluated.
     tool : Tool
         Jobmon tool.
     resources : dict
         Dictionary of compute resources.
-    method : str
-        Name of method being evaluated.
     method_args : list of str
         Additional keyword arguments passed to stage method.
     submodel_args : list of str

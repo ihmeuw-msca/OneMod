@@ -2,18 +2,15 @@
 
 from typing import Any, Literal
 
-from pydantic import validate_call
-
 from onemod.backend.utils import check_input_exists, check_method
 from onemod.dtypes import UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
-@validate_call
 def evaluate(
     model: Pipeline | Stage,
-    method: Literal["run", "fit", "predict", "collect"] = "run",
+    method: Literal["run", "fit", "predict", "collect"],
     method_args: dict[str, Any | dict[str, Any]] | None = None,
     stages: UniqueList[str] | None = None,
     subsets: dict[str, Any | list[Any]] | None = None,
@@ -26,13 +23,11 @@ def evaluate(
     ----------
     model : Pipeline or Stage
         Pipeline or stage instance.
-    method : {'run', 'fit', 'predict', 'collect}, optional
-        Name of method to evaluate. Default is 'run'.
+    method : {'run', 'fit', 'predict', 'collect}
+        Name of method to evaluate.
     method_args : dict, optional
         Additional keyword arguments passed to stage methods. If `model`
-        is a `Pipeline` instance, use format
-        `{stage_name: {arg_name: arg_value}}`. If `model` is a `Stage`
-        instance, use format `{arg_name: arg_value}`.
+        is a `Pipeline` instance, use format `{stage_name: {arg_name: arg_value}}`.
     stages : list of str, optional
         Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate all pipeline stages. Default is None.
@@ -66,22 +61,7 @@ def _evaluate_pipeline(
     method_args: dict[str, dict[str, Any]],
     stages: list[str] | None,
 ) -> None:
-    """Evaluate pipeline method locally.
-
-
-    Parameters
-    ----------
-    model : Pipeline
-        Pipeline instance.
-    method : str
-        Name of method to evaluate.
-    method_args : dict
-        Additional keyword arguments passed to stage methods.
-    stages : list of str or None
-        Names of stages to evaluate. If None, evaluate all pipeline
-        stages.
-
-    """
+    """Evaluate pipeline method locally."""
     for stage_name in pipeline.get_execution_order(stages):
         stage = pipeline.stages[stage_name]
         if method not in stage.skip:
@@ -96,31 +76,11 @@ def _evaluate_stage(
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool = False,
 ) -> None:
-    """Evaluate stage method locally.
-
-    Parameters
-    ----------
-    stage : Stage
-        Stage instance.
-    method : str
-        Name of method to evaluate.
-    method_args : dict
-        Additional keyword arguments passed to stage method.
-    subsets : dict, optional
-        Submodel data subsets to evaluate. If None, evaluate all data
-        subsets. Default is None.
-    paramsets : dict, optional
-        Submodel parameter sets to evaluate. If None, evaluate all
-        parameter sets. Default is None.
-    collect : bool, optional
-        Collect submodel results if `subsets` and `params` are not both
-        None. Default is False.
-
-    """
+    """Evaluate stage method locally."""
     if method == "collect":
         stage.collect()
     else:
-        stage_method = stage.__getattribute__(method)
+        stage_method = stage.__getattribute__(f"_{method}")
         if stage.has_submodels:
             for subset, paramset in stage.get_submodels(subsets, paramsets):
                 stage_method(subset=subset, paramset=paramset, **method_args)
