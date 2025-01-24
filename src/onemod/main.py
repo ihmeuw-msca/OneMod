@@ -142,22 +142,29 @@ def evaluate(
     method : str, optional
         Name of method to evaluate. Default is 'run'.
     stages : str, list of str, or None, optional
-        Names of stages to evaluate. If None, evaluate entire pipeline.
-        Default is None.
+        Names of stages to evaluate. If None, evaluate all pipeline
+        stages. Default is None.
     backend : str, optional
         Whether to evaluate the method locally or with Jobmon.
         Default is 'local'.
 
     Other Parameters
     ----------------
+    method_args : dict, optional
+        Additional keyword arguments passed to stage methods. When
+        evaluating a pipeline, use format
+        `{stage_name: {arg_name: arg_value}}`. When evaluating a single
+        stage, use formag `{arg_name: arg_value}`.
     subsets : dict, optional
-        Submodel data subsets. Only used when evaluating a single stage.
+        Submodel data subsets to include when evaluating a single stage.
+        If None, evaluate all data subsets. Default is None.
     paramsets : dict, optional
-        Submodel parameter sets. Only used when evaluating a single stage.
+        Submodel parameter sets to include when evaluating a single
+        stage. If None, evaluate all parameter sets. Default is None.
     cluster : str, optional
         Cluster name. Required if `backend` is 'jobmon'.
     resources : Path or str, optional
-        Path to resources yaml file. Required if `backend` is 'jobmon'.
+        Path to resources file. Required if `backend` is 'jobmon'.
 
     """
     model: Pipeline | Stage

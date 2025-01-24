@@ -411,9 +411,6 @@ class Stage(BaseModel, ABC):
     ) -> None:
         """Evaluate stage method.
 
-        If both `subsets` and `params` are None, evaluate all submodels
-        and collect submodel results.
-
         Parameters
         ----------
         method : {'run', 'fit', 'predict', 'collect'}, optional
@@ -423,16 +420,24 @@ class Stage(BaseModel, ABC):
 
         Other Parameters
         ----------------
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods. Use
+            format `{arg_name: arg_value}`.
         subsets : dict, optional
-            Submodel data subsets. Ignored if `backend` is 'jobmon' or
-            `method` is 'collect'.
+            Submodel data subsets to evaluate. If None, evaluate all
+            data subsets. Default is None.
         paramsets : dict, optional
-            Submodel parameter sets. Ignored if `backend` is 'jobmon'
-            or `method` is 'collect'.
+            Submodel parameter sets to evaluate. If None, evaluate all
+            data subsets. Default is None.
+        collect : bool, optional
+            Collect submodel results if `subsets` and `paramsets` are
+            not both None. Default is False. If `subsets` and
+            `paramsets` are not both None, this parameter is ignored and
+            submodel results are always collected.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
-            Dictionary of compute resources or path to resources file.
+            Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
 
         """

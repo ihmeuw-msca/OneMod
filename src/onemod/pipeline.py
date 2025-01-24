@@ -305,10 +305,13 @@ class Pipeline(BaseModel):
 
         Other Parameters
         ----------------
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods. Use
+            format `{stage_name: {arg_name: arg_value}}`.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
-            Dictionary of compute resources or path to resources file.
+            Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
 
         """
@@ -330,17 +333,20 @@ class Pipeline(BaseModel):
         Parameters
         ----------
         stages : list of str, optional
-            Names of stages to run. If None, run entire pipeline.
+            Names of stages to run. If None, run all pipeline stages.
             Default is None.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
 
         Other Parameters
         ----------------
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods. Use
+            format `{stage_name: {arg_name: arg_value}}`.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
-            Dictionary of compute resources or path to resources file.
+            Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
 
         """
@@ -364,10 +370,13 @@ class Pipeline(BaseModel):
 
         Other Parameters
         ----------------
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods. Use
+            format `{stage_name: {arg_name: arg_value}}`.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
-            Dictionary of compute resources or path to resources file.
+            Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
 
         """
@@ -391,10 +400,13 @@ class Pipeline(BaseModel):
 
         Other Parameters
         ----------------
+        method_args : dict, optional
+            Additional keyword arguments passed to stage methods. Use
+            format `{stage_name: {arg_name: arg_value}}`.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
-            Dictionary of compute resources or path to resources file.
+            Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
 
         """
