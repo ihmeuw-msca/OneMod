@@ -505,7 +505,7 @@ def get_submodel_args(
     """Get dictionary of subset and/or paramset values.
 
     If stage has submodels and `method` is not 'collect', additional
-    args for 'subset' and/or 'paramset' are included in the command
+    args for 'subsets' and/or 'paramsets' are included in the command
     template.
 
     Parameters
@@ -533,7 +533,7 @@ def get_submodel_args(
         if (filtered_subsets := stage.subsets) is not None:
             if subsets is not None:
                 filtered_subsets = stage.get_subset(filtered_subsets, subsets)
-            node_args["subset"] = [
+            node_args["subsets"] = [
                 str(subset)
                 for subset in filtered_subsets.to_dict(orient="records")
             ]
@@ -544,7 +544,7 @@ def get_submodel_args(
                 filtered_paramsets = stage.get_subset(
                     filtered_paramsets, paramsets
                 )
-            node_args["paramset"] = [
+            node_args["paramsets"] = [
                 str(paramset)
                 for paramset in filtered_paramsets.to_dict(orient="records")
             ]
@@ -575,7 +575,7 @@ def get_task_template(
     method_args : list of str
         Additional keyword arguments passed to stage method.
     submodel_args : list of str
-        List including 'subset' and/or 'paramset'.
+        List including 'subsets' and/or 'paramsets'.
 
     Returns
     -------
@@ -614,7 +614,7 @@ def get_command_template(
 
     All stages methods are called via `onemod.main.evaluate()`. If stage
     has submodels and `method` is not 'collect', additional args for
-    'subset' and/or 'paramset' are included in the command template.
+    'subsets' and/or 'paramsets' are included in the command template.
 
     Parameters
     ----------
@@ -625,7 +625,7 @@ def get_command_template(
     method_args : list of str
         List of additional keyword arguments passed to stage method.
     submodel_args : list of str
-        List including 'subset' and/or 'paramset'.
+        List including 'subsets' and/or 'paramsets'.
 
     Returns
     -------
@@ -639,8 +639,8 @@ def get_command_template(
     )
 
     for arg in method_args + submodel_args:
-        # add 'subset', 'paramset', and/or other kwargs
-        command_template += f" --{arg} {{{arg}}}"
+        # add 'subsets', 'paramsets', and/or other kwargs
+        command_template += f" --{arg} '{{{arg}}}'"
 
     return command_template
 
