@@ -47,3 +47,25 @@ def check_input_exists(
             )
     else:
         model.input.check_exists()
+
+
+def collect_results(
+    stage: Stage,
+    method: str,
+    subsets: dict | None,
+    paramsets: dict | None,
+    collect: bool | None,
+) -> bool:
+    """Determine whether to collect stage submodel results."""
+    if stage.has_submodels:
+        if method == "collect":
+            return False
+        if method in stage.collect_after:
+            if collect is None:
+                if subsets is None and paramsets is None:
+                    return True
+                return False
+            else:
+                return collect
+        return False
+    return False

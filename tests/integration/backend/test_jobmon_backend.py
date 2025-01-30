@@ -30,16 +30,13 @@ def test_simple_submodel_args(simple_pipeline, method):
 def test_parallel_submodel_args(parallel_pipeline, method):
     for stage in parallel_pipeline.stages.values():
         submodel_args = jb.get_submodel_args(
-            stage, method, subsets={}, paramsets={}
+            stage, method, subsets=None, paramsets=None
         )
         if method == "collect":
             assert submodel_args == {}
         else:
-            for attr, submodel_arg in [
-                ["subsets", "subset"],
-                ["paramsets", "paramset"],
-            ]:
-                expected = getattr(stage, attr)
+            for submodel_arg in ["subsets", "paramsets"]:
+                expected = getattr(stage, submodel_arg)
                 observed = submodel_args.get(submodel_arg)
                 if expected is not None:
                     assert observed == [
@@ -50,7 +47,7 @@ def test_parallel_submodel_args(parallel_pipeline, method):
                     assert observed is None
 
 
-# TODO: Add tests for method_args, submodel_args
+# TODO: Add tests for kwargs, submodel_args
 @pytest.mark.integration
 @pytest.mark.parametrize("stage_cluster", ["cluster", "dummy"])
 def test_task_template(stage_cluster):

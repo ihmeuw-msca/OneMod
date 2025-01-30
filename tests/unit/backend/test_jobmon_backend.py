@@ -90,25 +90,30 @@ def test_no_cluster_resources():
     assert task_resources == {}
 
 
-# TODO: Add tests for method_args
 @pytest.mark.unit
-def test_command_template():
+@pytest.mark.parametrize(
+    "submodel_args", [[], ["subsets"], ["paramsets"], ["subsets", "paramsets"]]
+)
+@pytest.mark.parametrize(
+    "kwargs", [{}, {"key1": "dummy", "key2": {"key3": "dummy"}}]
+)
+def test_command_template(submodel_args, kwargs):
     submodel_args = []
     expected_template = (
         "{entrypoint} --config {config}"
         " --method dummy_method --stages dummy_stage"
     )
-    for submodel_arg in ["", "subsets", "paramsets"]:
-        if submodel_arg:
-            submodel_args.append(submodel_arg)
-            expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
-        command_template = jb.get_command_template(
-            "dummy_stage",
-            "dummy_method",
-            method_args=[],
-            submodel_args=submodel_args,
-        )
-        assert command_template == expected_template
+    for submodel_arg in submodel_args:
+        expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
+    for key, value in kwargs.items():
+        if isinstance(value, dict):
+            expected_template += f" --{key} '{value}'"
+        else:
+            expected_template += f" --{key} {value}"
+    command_template = jb.get_command_template(
+        "dummy_stage", "dummy_method", submodel_args, **kwargs
+    )
+    assert command_template == expected_template
 
 
 @pytest.mark.unit

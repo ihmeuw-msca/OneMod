@@ -5,6 +5,13 @@ from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
 
+KWARGS = {
+    "backend": "local",
+    "cluster": None,
+    "resources": None,
+    "python": None,
+}
+
 
 @pytest.fixture
 def sample_data():
@@ -41,7 +48,7 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
         ValueError, match="Stage 'invalid_stage_name' not found"
     ):
         dummy_pipeline.evaluate(
-            method=method, stages=["invalid_stage_name"], backend="local"
+            method=method, stages=["invalid_stage_name"], **KWARGS
         )
 
     with pytest.raises(
@@ -54,7 +61,7 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
                 "invalid_stage_name",
                 "covariate_selection",
             ],
-            backend="local",
+            **KWARGS,
         )
 
 
@@ -77,7 +84,7 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
 
     try:
         dummy_pipeline.evaluate(
-            method=method, stages=subset_stage_names, backend="local"
+            method=method, stages=subset_stage_names, **KWARGS
         )
     except Exception as e:
         pytest.fail(f"evaluate() raised an unexpected exception: {e}")
@@ -118,7 +125,7 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
         match=f"Stage 'covariate_selection' input items do not exist: {{'data': '{test_base_dir}/preprocessing/data.parquet'}}",
     ):
         dummy_pipeline.evaluate(
-            method=method, stages=subset_stage_names, backend="local"
+            method=method, stages=subset_stage_names, **KWARGS
         )
 
 
@@ -133,9 +140,7 @@ def test_duplicate_stage_names(small_input_data, test_base_dir, method):
 
     subset_stage_names = ["preprocessing", "preprocessing"]
 
-    dummy_pipeline.evaluate(
-        method=method, stages=subset_stage_names, backend="local"
-    )
+    dummy_pipeline.evaluate(method=method, stages=subset_stage_names, **KWARGS)
 
     # Check that preprocessing was evaluated only once
     assert (

@@ -4,13 +4,11 @@ import json
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import fire
-from pydantic import validate_call
 
 import onemod.stage as onemod_stages
-from onemod.dtypes import UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
@@ -125,12 +123,17 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
     return getattr(loaded_module, stage_type)
 
 
-@validate_call
 def evaluate(
     config: Path | str,
     method: Literal["run", "fit", "predict", "collect"] = "run",
-    stages: str | UniqueList[str] | None = None,
+    stages: str | list[str] | None = None,
+    subsets: dict[str, Any | list[Any]] | None = None,
+    paramsets: dict[str, Any | list[Any]] | None = None,
+    collect: bool | None = None,
     backend: Literal["local", "jobmon"] = "local",
+    cluster: str | None = None,
+    resources: Path | str | dict[str, Any] | None = None,
+    python: Path | str | None = None,
     **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method.
@@ -147,32 +150,55 @@ def evaluate(
     backend : str, optional
         Whether to evaluate the method locally or with Jobmon.
         Default is 'local'.
-
-    Other Parameters
-    ----------------
-    method_args : dict, optional
+    **kwargs
         Additional keyword arguments passed to stage methods. When
-        evaluating a pipeline, use format `{stage_name: {arg_name: arg_value}}`.
+        evaluating a pipeline, use format`stage={arg_name: arg_value}`.
+
+    Stage Parameters
+    ----------------
     subsets : dict, optional
         Submodel data subsets to include when evaluating a single stage.
         If None, evaluate all data subsets. Default is None.
     paramsets : dict, optional
         Submodel parameter sets to include when evaluating a single
         stage. If None, evaluate all parameter sets. Default is None.
+    collect : bool, optional
+        Whether to collect submodel results when evaluating a single
+        stage. If `subsets` and `paramsets` are both None, default is
+        True, otherwise default is False.
+
+    Jobmon Parameters
+    -----------------
     cluster : str, optional
         Cluster name. Required if `backend` is 'jobmon'.
-    resources : Path or str, optional
-        Path to resources file. Required if `backend` is 'jobmon'.
+    resources : Path, str, or dict, optional
+        Path to resources file or dictionary of compute resources.
+        Required if `backend` is 'jobmon'.
+    python : Path or str, optional
+        Path to Python environment if `backend` is 'jobmon'. If None,
+        use sys.executable. Default is None.
 
     """
     model: Pipeline | Stage
 
     if isinstance(stages, str):
         model = load_stage(config, stages)
-        model.evaluate(method, backend, **kwargs)
+        model.evaluate(
+            method,
+            subsets,
+            paramsets,
+            collect,
+            backend,
+            cluster,
+            resources,
+            python,
+            **kwargs,
+        )
     else:
         model = load_pipeline(config)
-        model.evaluate(method, stages, backend, **kwargs)
+        model.evaluate(
+            method, stages, backend, cluster, resources, python, **kwargs
+        )
 
 
 def main():

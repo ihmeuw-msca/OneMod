@@ -327,5 +327,5 @@ def assert_stage_logs(
                     assert f"{method}: name={stage.name}, subset=None, paramset=None"
             else:
                 assert f"{method}: name={stage.name}"
-            if method in stage._collect_after:
+            if method in stage.collect_after:
                 assert f"collect: name={stage.name}" in log

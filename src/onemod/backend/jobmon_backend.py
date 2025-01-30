@@ -45,24 +45,30 @@ from typing import Any, Literal
 from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
+from pydantic import validate_call
 
-from onemod.backend.utils import check_input_exists, check_method
+from onemod.backend.utils import (
+    check_input_exists,
+    check_method,
+    collect_results,
+)
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
-def evaluate(
+@validate_call
+def evaluate_with_jobmon(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict", "collect"],
     cluster: str,
-    resources: dict[str, Any] | Path | str,
+    resources: Path | str | dict[str, Any],
     python: Path | str | None = None,
-    method_args: dict[str, Any | dict[str, Any]] | None = None,
     stages: list[str] | None = None,
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
-    collect: bool = False,
+    collect: bool | None = None,
+    **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
 
@@ -79,14 +85,18 @@ def evaluate(
     python : Path or str, optional
         Path to Python environment. If None, use sys.executable.
         Default is None.
-    method_args : dict, optional
+    **kwargs
         Additional keyword arguments passed to stage methods. If `model`
-        is a `Pipeline` instance, use format
-        `{stage_name: {arg_name: arg_value}}`. If `model` is a `Stage`
-        instance, use format `{arg_name: arg_value}`.
+        is a `Pipeline` instance, use format`stage={arg_name: arg_value}`.
+
+    Pipeline Parameters
+    -------------------
     stages : list of str, optional
         Names of stages to evaluate if `model` is a `Pipeline` instance.
         If None, evaluate pipeline stages. Default is None.
+
+    Stage Parameters
+    ----------------
     subsets : dict, optional
         Submodel data subsets to evaluate if `model` is a `Stage`
         instance. If None, evaluate all data subsets. Default is None.
@@ -94,10 +104,9 @@ def evaluate(
         Submodel parameter sets to evaluate if `model` is a `Stage`
         instance. If None, evaluate all parameter sets. Default is None.
     collect : bool, optional
-        Collect submodel results if `model` is a `Stage` instance and
-        `subsets` and `params` are not both None. Default is False.
-        If `subsets` and `paramsets` are both None, this parameter is
-        ignored and submodel results are always collected.
+        Whether to collect submodel results if `model` is a `Stage`
+        instance. If `subsets` and `paramsets` are both None, default is
+        True, otherwise default is False.
 
     """
     # TODO: Optional stage-specific Python environments
@@ -107,8 +116,6 @@ def evaluate(
     check_input_exists(model, stages)
     if python is None:
         python = str(sys.executable)
-    if method_args is None:
-        method_args = {}
 
     resources_dict = get_resources(resources)
     tool = get_tool(model.name, method, cluster, resources_dict)
@@ -118,11 +125,11 @@ def evaluate(
         tool,
         resources_dict,
         python,
-        method_args,
         stages,
         subsets,
         paramsets,
         collect,
+        **kwargs,
     )
     run_workflow(model.name, method, tool, tasks)
 
@@ -184,11 +191,11 @@ def get_tasks(
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
-    method_args: dict[str, Any | dict[str, Any]],
     stages: list[str] | None,
     subsets: dict[str, Any | list[Any]] | None,
     paramsets: dict[str, Any | list[Any]] | None,
-    collect: bool,
+    collect: bool | None,
+    **kwargs,
 ) -> list[Task]:
     """Get Jobmon tasks.
 
@@ -204,20 +211,26 @@ def get_tasks(
         Dictionary of compute resources.
     python : Path or str
         Path to Python environment.
-    method_args : dict
+    **kwargs
         Additional keyword arguments passed to stage methods.
+
+    Pipeline Parameters
+    -------------------
     stages : list of str or None
         Name of stages to evaluate if `model` is a pipeline instance. If
         None, evaluate all pipeline stages.
-    subsets : dict
+
+    Stage Parameters
+    ----------------
+    subsets : dict or None
         Submodel data subsets to evaluate if `model` is a `Stage`
         instance. If None, evaluate all data subsets.
-    paramsets : dict
+    paramsets : dict or None
         Submodel parameter sets to evaluate if `model` is a `Stage`
         instance. If None, evaluate all parameter sets.
-    collect : bool
-        Collect submodel results if `model` is a `Stage` instance and
-        `subsets` and `params` are not both None.
+    collect : bool or None
+        Whether to collect submodel results if `model` is a `Stage`
+        instance.
 
     Returns
     -------
@@ -227,7 +240,7 @@ def get_tasks(
     """
     if isinstance(model, Pipeline):
         return get_pipeline_tasks(
-            model, method, tool, resources, python, method_args, stages
+            model, method, tool, resources, python, stages, **kwargs
         )
     return get_stage_tasks(
         model,
@@ -235,10 +248,10 @@ def get_tasks(
         tool,
         resources,
         python,
-        method_args,
         subsets,
         paramsets,
         collect,
+        **kwargs,
     )
 
 
@@ -248,8 +261,8 @@ def get_pipeline_tasks(
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
-    method_args: dict[str, dict[str, Any]],
     stages: list[str] | None,
+    **kwargs,
 ) -> list[Task]:
     """Get pipeline stage tasks.
 
@@ -265,11 +278,11 @@ def get_pipeline_tasks(
         Dictionary of compute resources.
     python : Path or str
         Path to Python environment.
-    method_args : dict
-        Additional keyword arguments passed to stage methods.
     stages : list of str or None
         Name of stages to evaluate. If None, evaluate all pipeline
         stages.
+    **kwargs
+        Additional keyword arguments passed to stage methods.
 
     Returns
     -------
@@ -292,8 +305,8 @@ def get_pipeline_tasks(
                 tool,
                 resources,
                 python,
-                method_args.get(stage_name, {}),
                 upstream_tasks=upstream_tasks,
+                **kwargs,
             )
             tasks.extend(task_dict[stage_name])
 
@@ -364,11 +377,11 @@ def get_stage_tasks(
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
-    method_args: dict[str, Any],
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
-    collect: bool = False,
+    collect: bool | None = None,
     upstream_tasks: list[Task] | None = None,
+    **kwargs,
 ) -> list[Task]:
     """Get stage tasks.
 
@@ -384,8 +397,6 @@ def get_stage_tasks(
         Dictionary of compute resources.
     python : Path or str
         Path to Python environment.
-    method_args : dict
-        Additional keyword arguments passed to stage method.
     subsets : dict, optional
         Submodel data subsets to evaluate. If None, evaluate all data
         subsets. Default is None.
@@ -393,10 +404,13 @@ def get_stage_tasks(
         Submodel parameter sets to evaluate. If None, evaluate all
         parameter sets. Default is None.
     collect : bool, optional
-        Collect submodel results if `subsets` and `params` are not both
-        None. Default is False.
+        Whether to collect submodel results if `model` is a `Stage`
+        instance. If `subsets` and `paramsets` are both None, default is
+        True, otherwise default is False.
     upstream_tasks : list of Task or None, optional
         List of upstream stage tasks. Default is None.
+    **kwargs
+        Additional keyword arguments passed to stage method.
 
     Returns
     -------
@@ -416,8 +430,8 @@ def get_stage_tasks(
         method,
         tool,
         resources,
-        list(method_args.keys()),
         list(submodel_args.keys()),
+        **kwargs,
     )
 
     if submodel_args:
@@ -427,7 +441,6 @@ def get_stage_tasks(
             max_attempts=1,
             entrypoint=entrypoint,
             config=config_path,
-            **method_args,
             **submodel_args,
         )
     else:
@@ -438,24 +451,15 @@ def get_stage_tasks(
                 max_attempts=1,
                 entrypoint=entrypoint,
                 config=config_path,
-                **method_args,
             )
         ]
 
-    if stage.has_submodels and method in stage.collect_after:
-        if collect or (subsets is None and paramsets is None):
-            # get task for collect method
-            tasks.extend(
-                get_stage_tasks(
-                    stage,
-                    "collect",
-                    tool,
-                    resources,
-                    python,
-                    method_args,
-                    upstream_tasks=tasks,
-                )
+    if collect_results(stage, method, subsets, paramsets, collect):
+        tasks.extend(
+            get_stage_tasks(
+                stage, "collect", tool, resources, python, upstream_tasks=tasks
             )
+        )
 
     return tasks
 
@@ -501,7 +505,7 @@ def get_submodel_args(
     method: str,
     subsets: dict[str, Any | list[Any]] | None,
     paramsets: dict[str, Any | list[Any]] | None,
-) -> dict[str, Any]:
+) -> dict[str, list[Any]]:
     """Get dictionary of subset and/or paramset values.
 
     If stage has submodels and `method` is not 'collect', additional
@@ -527,13 +531,13 @@ def get_submodel_args(
         Dictionary of subset and/or paramset values.
 
     """
-    node_args = {}
+    submodel_args = {}
     if stage.has_submodels and method != "collect":
         # Get data subsets
         if (filtered_subsets := stage.subsets) is not None:
             if subsets is not None:
                 filtered_subsets = stage.get_subset(filtered_subsets, subsets)
-            node_args["subsets"] = [
+            submodel_args["subsets"] = [
                 str(subset)
                 for subset in filtered_subsets.to_dict(orient="records")
             ]
@@ -544,12 +548,12 @@ def get_submodel_args(
                 filtered_paramsets = stage.get_subset(
                     filtered_paramsets, paramsets
                 )
-            node_args["paramsets"] = [
+            submodel_args["paramsets"] = [
                 str(paramset)
                 for paramset in filtered_paramsets.to_dict(orient="records")
             ]
 
-    return node_args
+    return submodel_args
 
 
 def get_task_template(
@@ -557,8 +561,8 @@ def get_task_template(
     method: str,
     tool: Tool,
     resources: dict[str, Any],
-    method_args: list[str],
     submodel_args: list[str],
+    **kwargs,
 ) -> TaskTemplate:
     """Get stage task template.
 
@@ -572,10 +576,10 @@ def get_task_template(
         Jobmon tool.
     resources : dict
         Dictionary of compute resources.
-    method_args : list of str
-        Additional keyword arguments passed to stage method.
     submodel_args : list of str
         List including 'subsets' and/or 'paramsets'.
+    **kwargs
+        Additional keyword arguments passed to stage method.
 
     Returns
     -------
@@ -586,11 +590,11 @@ def get_task_template(
     task_template = tool.get_task_template(
         template_name=f"{stage_name}_{method}",
         command_template=get_command_template(
-            stage_name, method, method_args, submodel_args
+            stage_name, method, submodel_args, **kwargs
         ),
         op_args=["entrypoint"],
         task_args=["config"],
-        node_args=method_args + submodel_args,
+        node_args=submodel_args,
     )
 
     task_resources = get_task_resources(
@@ -605,10 +609,7 @@ def get_task_template(
 
 
 def get_command_template(
-    stage_name: str,
-    method: str,
-    method_args: list[str],
-    submodel_args: list[str],
+    stage_name: str, method: str, submodel_args: list[str], **kwargs
 ) -> str:
     """Get stage command template.
 
@@ -622,10 +623,10 @@ def get_command_template(
         Stage name.
     method : str
         Name of method being evaluated.
-    method_args : list of str
-        List of additional keyword arguments passed to stage method.
     submodel_args : list of str
         List including 'subsets' and/or 'paramsets'.
+    **kwargs
+        Additional keyword arguments passed to stage method.
 
     Returns
     -------
@@ -638,9 +639,15 @@ def get_command_template(
         f" --method {method} --stages {stage_name}"
     )
 
-    for arg in method_args + submodel_args:
-        # add 'subsets', 'paramsets', and/or other kwargs
-        command_template += f" --{arg} '{{{arg}}}'"
+    if method != "collect":
+        for arg in submodel_args:
+            command_template += f" --{arg} '{{{arg}}}'"
+
+        for key, value in kwargs.items():
+            if isinstance(value, (dict, list, set, tuple)):
+                command_template += f" --{key} '{value}'"
+            else:
+                command_template += f" --{key} {value}"
 
     return command_template
 

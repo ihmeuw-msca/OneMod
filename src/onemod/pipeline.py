@@ -6,12 +6,11 @@ import json
 import logging
 from collections import deque
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, validate_call
+from pydantic import BaseModel
 
 from onemod.config import Config
-from onemod.dtypes.unique_sequence import UniqueList
 from onemod.serialization import serialize
 from onemod.stage import Stage
 from onemod.utils.decorators import computed_property
@@ -288,21 +287,41 @@ class Pipeline(BaseModel):
         method: Literal["run", "fit", "predict", "collect"],
         stages: list[str] | None,
         backend: Literal["local", "jobmon"],
+        cluster: str | None,
+        resources: Path | str | dict[str, Any] | None,
+        python: Path | str | None,
         **kwargs,
     ) -> None:
         """Evaluate pipeline method."""
         if backend == "jobmon":
-            from onemod.backend.jobmon_backend import evaluate
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
+
+            if cluster is None:
+                raise ValueError("Jobmon backend requires cluster name")
+            if resources is None:
+                raise ValueError("Jobmon backend requires compute resources")
+
+            evaluate_with_jobmon(
+                model=self,
+                method=method,
+                stages=stages,
+                cluster=cluster,
+                resources=resources,
+                python=python,
+                **kwargs,
+            )
         else:
-            from onemod.backend.local_backend import evaluate  # type: ignore
+            from onemod.backend.local_backend import evaluate_locally
 
-        evaluate(model=self, method=method, stages=stages, **kwargs)
+            evaluate_locally(model=self, method=method, stages=stages, **kwargs)
 
-    @validate_call
     def run(
         self,
-        stages: UniqueList[str] | None = None,
+        stages: list[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
+        cluster: str | None = None,
+        resources: Path | str | dict[str, Any] | None = None,
+        python: Path | str | None = None,
         **kwargs,
     ) -> None:
         """Run pipeline.
@@ -314,26 +333,33 @@ class Pipeline(BaseModel):
             Default is None.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
+        **kwargs
+            Additional keyword arguments passed to stage methods. Use
+            format `stage={arg_name: arg_value}`.
 
         Other Parameters
         ----------------
-        method_args : dict, optional
-            Additional keyword arguments passed to stage methods. Use
-            format `{stage_name: {arg_name: arg_value}}`.
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
+        python : Path, or str, optional
+            Path to Python environment if `backend` is 'jobmon'. If
+            None, use sys.executable. Default is None.
 
         """
-        self.evaluate("run", stages, backend, **kwargs)
+        self.evaluate(
+            "run", stages, backend, cluster, resources, python, **kwargs
+        )
 
-    @validate_call
     def fit(
         self,
-        stages: UniqueList[str] | None = None,
+        stages: list[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
+        cluster: str | None = None,
+        resources: Path | str | dict[str, Any] | None = None,
+        python: Path | str | None = None,
         **kwargs,
     ) -> None:
         """Fit pipeline.
@@ -345,26 +371,33 @@ class Pipeline(BaseModel):
             Default is None.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
-
-        Other Parameters
-        ----------------
-        method_args : dict, optional
+        **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `{stage_name: {arg_name: arg_value}}`.
+            format `stage={arg_name: arg_value}`.
+
+        Jobmon Parameters
+        -----------------
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
+        python : Path, or str, optional
+            Path to Python environment if `backend` is 'jobmon'. If
+            None, use sys.executable. Default is None.
 
         """
-        self.evaluate("fit", stages, backend, **kwargs)
+        self.evaluate(
+            "fit", stages, backend, cluster, resources, python, **kwargs
+        )
 
-    @validate_call
     def predict(
         self,
-        stages: UniqueList[str] | None = None,
+        stages: list[str] | None = None,
         backend: Literal["local", "jobmon"] = "local",
+        cluster: str | None = None,
+        resources: Path | str | dict[str, Any] | None = None,
+        python: Path | str | None = None,
         **kwargs,
     ) -> None:
         """Create pipeline predictions.
@@ -376,20 +409,25 @@ class Pipeline(BaseModel):
             predictions for the entire pipeline. Default is None.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
-
-        Other Parameters
-        ----------------
-        method_args : dict, optional
+        **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `{stage_name: {arg_name: arg_value}}`.
+            format `stage={arg_name: arg_value}`.
+
+        Jobmon Parameters
+        -----------------
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
+        python : Path, or str, optional
+            Path to Python environment if `backend` is 'jobmon'. If
+            None, use sys.executable. Default is None.
 
         """
-        self.evaluate("predict", stages, backend, **kwargs)
+        self.evaluate(
+            "predict", stages, backend, cluster, resources, python, **kwargs
+        )
 
     def __repr__(self) -> str:
         return (

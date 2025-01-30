@@ -409,16 +409,46 @@ class Stage(BaseModel, ABC):
     def evaluate(
         self,
         method: Literal["run", "fit", "predict", "collect"],
+        subsets: dict[str, Any | list[Any]] | None,
+        paramsets: dict[str, Any | list[Any]] | None,
+        collect: bool | None,
         backend: Literal["local", "jobmon"],
+        cluster: str | None,
+        resources: Path | str | dict[str, Any] | None,
+        python: Path | str | None,
         **kwargs,
     ) -> None:
         """Evaluate stage method."""
         if backend == "jobmon":
-            from onemod.backend.jobmon_backend import evaluate
-        else:
-            from onemod.backend.local_backend import evaluate  # type: ignore
+            from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
-        evaluate(model=self, method=method, **kwargs)
+            if cluster is None:
+                raise ValueError("Jobmon backend requires cluster name")
+            if resources is None:
+                raise ValueError("Jobmon backend requires compute resources")
+
+            evaluate_with_jobmon(
+                model=self,
+                method=method,
+                subsets=subsets,
+                paramsets=paramsets,
+                collect=collect,
+                cluster=cluster,
+                resources=resources,
+                python=python,
+                **kwargs,
+            )
+        else:
+            from onemod.backend.local_backend import evaluate_locally
+
+            evaluate_locally(
+                model=self,
+                method=method,
+                subsets=subsets,
+                paramsets=paramsets,
+                collect=collect,
+                **kwargs,
+            )
 
     def validate_build(self, collector: ValidationErrorCollector) -> None:
         """Perfom build-time validation."""
@@ -492,50 +522,57 @@ class Stage(BaseModel, ABC):
             config = config.get(key, {})
         return config or default
 
-    @validate_call
     def run(
         self,
-        backend: Literal["local", "jobmon"] = "local",
         subsets: dict[str, Any | list[Any]] | None = None,
         paramsets: dict[str, Any | list[Any]] | None = None,
-        collect: bool = False,
+        collect: bool | None = None,
+        backend: Literal["local", "jobmon"] = "local",
+        cluster: str | None = None,
+        resources: Path | str | dict[str, Any] | None = None,
+        python: Path | str | None = None,
         **kwargs,
     ) -> None:
         """Run stage.
 
         Parameters
         ----------
+        subsets : dict, optional
+            Submodel data subsets to run. If None, run all data subsets.
+            Default is None.
+        paramsets : dict, optional
+            Submodel parameter sets to run. If None, run all parameter
+            sets. Default is None.
+        collect : bool, optional
+            Whether to collect submodel results. If `subsets` and
+            `paramsets` are both None, default is True, otherwise
+            default is False.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
-        subsets : dict, optional
-            Submodel data subsets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        paramsets : dict, optional
-            Submodel parameter sets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        collect : bool, optional
-            Collect submodel results if `subsets` and `paramsets` are
-            not both None. Default is False. If `subsets` and
-            `paramsets` are not both None, this parameter is ignored and
-            submodel results are always collected.
+        **kwargs
+            Additional keyword arguments passed to stage method.
 
-        Other Parameters
-        ----------------
-        method_args : dict, optional
-            Additional keyword arguments passed to stage methods.
+        Jobmon Parameters
+        -----------------
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
+        Python : Path or str, optional
+            Path to Python environment if `backend` is 'jobmon'. If
+            None, use sys.executable. Default is None.
 
         """
         self.evaluate(
             "run",
+            subsets,
+            paramsets,
+            collect,
             backend,
-            subsets=subsets,
-            paramsets=paramsets,
-            collect=collect,
+            cluster,
+            resources,
+            python,
             **kwargs,
         )
 
@@ -550,58 +587,61 @@ class Stage(BaseModel, ABC):
         paramset : dict[str, Any]
             If stage uses `crossby` attribute, add `paramset` arg when
             implementing `_run`.
-        **kwargs
-            Additional keyword arguments can be passed directly to
-            `_run` method, but must be passed via `method_args`
-            dictionary to command line or `run` method.
 
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    @validate_call
     def fit(
         self,
-        backend: Literal["local", "jobmon"] = "local",
         subsets: dict[str, Any | list[Any]] | None = None,
         paramsets: dict[str, Any | list[Any]] | None = None,
-        collect: bool = False,
+        collect: bool | None = None,
+        backend: Literal["local", "jobmon"] = "local",
+        cluster: str | None = None,
+        resources: Path | str | dict[str, Any] | None = None,
+        python: Path | str | None = None,
         **kwargs,
     ) -> None:
         """Fit stage.
 
         Parameters
         ----------
+        subsets : dict, optional
+            Submodel data subsets to fit. If None, fit all data subsets.
+            Default is None.
+        paramsets : dict, optional
+            Submodel parameter sets to fit. If None, fit all parameter
+            sets. Default is None.
+        collect : bool, optional
+            Whether to collect submodel results. If `subsets` and
+            `paramsets` are both None, default is True, otherwise
+            default is False.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
-        subsets : dict, optional
-            Submodel data subsets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        paramsets : dict, optional
-            Submodel parameter sets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        collect : bool, optional
-            Collect submodel results if `subsets` and `paramsets` are
-            not both None. Default is False. If `subsets` and
-            `paramsets` are not both None, this parameter is ignored and
-            submodel results are always collected.
+        **kwargs
+            Additional keyword arguments passed to stage method.
 
-        Other Parameters
-        ----------------
-        method_args : dict, optional
-            Additional keyword arguments passed to stage methods.
+        Jobmon Parameters
+        -----------------
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
+        python : Path or str, optional
+            Path to Python environment if `backend` is 'jobmon'. If
+            None, use sys.executable. Default is None.
 
         """
         self.evaluate(
             "fit",
+            subsets,
+            paramsets,
+            collect,
             backend,
-            subsets=subsets,
-            paramsets=paramsets,
-            collect=collect,
+            cluster,
+            resources,
+            python,
             **kwargs,
         )
 
@@ -616,60 +656,63 @@ class Stage(BaseModel, ABC):
         paramset : dict[str, Any]
             If stage uses `crossby` attribute, add `paramset` arg when
             implementing `_fit`.
-        **kwargs
-            Additional keyword arguments can be passed directly to
-            `_fit` method, but must be passed via `method_args`
-            dictionary to command line or `fit` method.
 
         """
         raise NotImplementedError(
             "Subclasses must implement this method if not skipped"
         )
 
-    @validate_call
     def predict(
         self,
-        backend: Literal["local", "jobmon"] = "local",
         subsets: dict[str, Any | list[Any]] | None = None,
         paramsets: dict[str, Any | list[Any]] | None = None,
-        collect: bool = False,
+        collect: bool | None = None,
+        backend: Literal["local", "jobmon"] = "local",
+        cluster: str | None = None,
+        resources: Path | str | dict[str, Any] | None = None,
+        python: Path | str | None = None,
         **kwargs,
     ) -> None:
         """Create stage predictions.
 
         Parameters
         ----------
+        subsets : dict, optional
+            Submodel data subsets to create predictions for. If None,
+            create predictions for all data subsets. Default is None.
+        paramsets : dict, optional
+            Submodel parameter sets to create predictions for. If None,
+            create predictions for all parameter sets. Default is None.
+        collect : bool, optional
+            Whether to collect submodel results. If `subsets` and
+            `paramsets` are both None, default is True, otherwise
+            default is False.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
-        subsets : dict, optional
-            Submodel data subsets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        paramsets : dict, optional
-            Submodel parameter sets to evaluate. If None, evaluate all
-            data subsets. Default is None.
-        collect : bool, optional
-            Collect submodel results if `subsets` and `paramsets` are
-            not both None. Default is False. If `subsets` and
-            `paramsets` are not both None, this parameter is ignored and
-            submodel results are always collected.
+        **kwargs
+            Additional keyword arguments passed to stage method.
 
-        Other Parameters
-        ----------------
+        Jobmon Parameters
+        -----------------
         cluster : str, optional
             Cluster name. Required if `backend` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
             Required if `backend` is 'jobmon'.
-        method_args : dict, optional
-            Additional keyword arguments passed to stage methods.
+        python : Path or str, optional
+            Path to Python environment if `backend` is 'jobmon'. If
+            None, use sys.executable. Default is None.
 
         """
         self.evaluate(
             "fit",
+            subsets,
+            paramsets,
+            collect,
             backend,
-            subsets=subsets,
-            paramsets=paramsets,
-            collect=collect,
+            cluster,
+            resources,
+            python,
             **kwargs,
         )
 
@@ -684,10 +727,6 @@ class Stage(BaseModel, ABC):
         paramset : dict[str, Any]
             If stage uses `crossby` attribute, add `paramset` arg when
             implementing `_predict`.
-        **kwargs
-            Additional keyword arguments can be passed directly to
-            `_predict` method, but must be passed via `method_args`
-            dictionary to command line or `predict` method.
 
         """
         raise NotImplementedError(

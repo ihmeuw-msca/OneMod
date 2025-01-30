@@ -5,6 +5,16 @@ from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
 
+KWARGS = {
+    "backend": "local",
+    "cluster": None,
+    "resources": None,
+    "python": None,
+    "subsets": None,
+    "paramsets": None,
+    "collect": None,
+}
+
 
 @pytest.mark.e2e
 @pytest.mark.requires_data
@@ -47,7 +57,14 @@ def test_dummy_pipeline(small_input_data, test_base_dir, method):
     )
 
     # Run the pipeline with the given method (run, fit, predict)
-    dummy_pipeline.evaluate(method=method, stages=None, backend="local")
+    dummy_pipeline.evaluate(
+        method=method,
+        stages=None,
+        backend="local",
+        cluster=None,
+        resources=None,
+        python=None,
+    )
 
     # Check each stage's log output for correct method calls on correct subsets/paramsets
     expected_args = get_expected_args()
