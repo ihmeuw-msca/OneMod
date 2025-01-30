@@ -39,7 +39,7 @@ def evaluate(
         instance. If None, evaluate all parameter sets. Default is None.
     collect : bool, optional
         Collect submodel results if `model` is a `Stage` instance and
-        `subsets` and `params` are not both None. Default is False.
+        `subsets` and `paramsets` are not both None. Default is False.
         If `subsets` and `paramsets` are both None, this parameter is
         ignored and submodel results are always collected.
 

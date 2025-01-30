@@ -98,7 +98,7 @@ def test_command_template():
         "{entrypoint} --config {config}"
         " --method dummy_method --stages dummy_stage"
     )
-    for submodel_arg in ["", "subset", "paramset"]:
+    for submodel_arg in ["", "subsets", "paramsets"]:
         if submodel_arg:
             submodel_args.append(submodel_arg)
             expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
