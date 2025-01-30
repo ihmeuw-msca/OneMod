@@ -101,7 +101,7 @@ def test_command_template():
     for submodel_arg in ["", "subset", "paramset"]:
         if submodel_arg:
             submodel_args.append(submodel_arg)
-            expected_template += f" --{submodel_arg} {{{submodel_arg}}}"
+            expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
         command_template = jb.get_command_template(
             "dummy_stage",
             "dummy_method",
