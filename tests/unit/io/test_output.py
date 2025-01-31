@@ -53,7 +53,8 @@ def test_getitem():
     with pytest.raises(KeyError) as error:
         OUTPUT["dummy"]
     assert (
-        str(error.value).strip('"') == "stage does not contain output 'dummy'"
+        str(error.value).strip('"')
+        == "Stage 'stage' does not contain output 'dummy'"
     )
 
 

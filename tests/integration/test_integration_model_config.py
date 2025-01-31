@@ -16,10 +16,10 @@ CONFIG_ITEMS = {
 
 REQUIRED_ITEMS = {
     "rover": [
-        "holdout_columns",
         "model_type",
         "observation_column",
         "weights_column",
+        "holdout_columns",
     ],
     "spxmod": [
         "id_columns",
@@ -31,7 +31,7 @@ REQUIRED_ITEMS = {
 }
 
 STAGE_DICT = {
-    "rover": RoverConfig(cov_exploring={"cov1", "cov2"}),
+    "rover": RoverConfig(cov_exploring=["cov1", "cov2"]),
     "spxmod": SpxmodConfig(xmodel=SpxmodModelConfig(variables=[])),
 }
 

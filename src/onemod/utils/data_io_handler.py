@@ -13,7 +13,7 @@ class DataIOHandler:
     * TODO: expanding this vs. using DataInterface
     """
 
-    supported_formats: set[str] = {"parquet"}
+    supported_formats: list[str] = ["parquet"]
 
     @staticmethod
     def read_data(path: Path) -> DataFrame:

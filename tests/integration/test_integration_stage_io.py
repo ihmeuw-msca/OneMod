@@ -12,10 +12,10 @@ from onemod.stage import Stage
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: set[str] = {"data.parquet", "covariates.csv"}
-    _optional_input: set[str] = {"priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
-    _skip: set[str] = {"fit", "predict"}
+    _required_input: list[str] = ["data.parquet", "covariates.csv"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _skip: list[str] = ["fit", "predict"]
 
     def run(self):
         pass
@@ -48,7 +48,7 @@ def test_input(stage_1):
         required=stage_1._required_input,
         optional=stage_1._optional_input,
     )
-    assert stage_1.dependencies == set()
+    assert stage_1.dependencies == []
 
 
 @pytest.mark.integration
@@ -90,7 +90,7 @@ def test_input_with_dependency(stage_1, stage_2):
         required=stage_1._required_input,
         optional=stage_1._optional_input,
     )
-    assert stage_2.dependencies == {"stage_1"}
+    assert stage_2.dependencies == ["stage_1"]
 
 
 @pytest.mark.unit
@@ -110,13 +110,13 @@ def test_input_with_missing():
 @pytest.mark.unit
 def test_dependencies(stage_1, stage_2):
     stage_3 = DummyStage(name="stage_3", config={})
-    assert stage_3.dependencies == set()
+    assert stage_3.dependencies == []
     stage_3(
         data=stage_1.output["predictions"],
         covariates="/path/to/covariates.csv",
         priors=stage_2.output["model"],
     )
-    assert stage_3.dependencies == {"stage_1", "stage_2"}
+    assert stage_3.dependencies == ["stage_1", "stage_2"]
 
 
 @pytest.mark.unit
@@ -134,8 +134,8 @@ def test_stage_model(stage_1, stage_2):
             "data": "/path/to/data.parquet",
             "covariates": "/path/to/covariates.csv",
         },
-        "groupby": (),
-        "crossby": (),
+        "groupby": None,
+        "crossby": None,
     }
 
     assert stage_1_model_actual == stage_1_model_expected
@@ -159,8 +159,8 @@ def test_stage_model(stage_1, stage_2):
             },
             "covariates": "/path/to/covariates.csv",
         },
-        "groupby": (),
-        "crossby": (),
+        "groupby": None,
+        "crossby": None,
     }
 
     assert stage_2_model_actual == stage_2_model_expected

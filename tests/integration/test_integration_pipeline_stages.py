@@ -7,9 +7,9 @@ from onemod.stage import Stage
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: set[str] = {"data.parquet"}
-    _optional_input: set[str] = {"priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
 
     def run(self) -> None:
         pass
@@ -56,7 +56,7 @@ def test_add_stage_without_dependencies(test_base_dir):
     stage = DummyStage(name="stage_1", config={})
     pipeline.add_stage(stage)
     assert "stage_1" in pipeline.stages
-    assert pipeline.dependencies["stage_1"] == set()
+    assert pipeline.dependencies["stage_1"] == []
 
 
 @pytest.mark.integration
@@ -71,7 +71,7 @@ def test_add_stages_with_dependencies(test_base_dir, stage_1, stage_2):
 
     assert "stage_1" in pipeline.stages
     assert "stage_2" in pipeline.stages
-    assert pipeline.dependencies["stage_2"] == {"stage_1"}
+    assert pipeline.dependencies["stage_2"] == ["stage_1"]
 
 
 @pytest.mark.integration
@@ -184,6 +184,17 @@ def test_pipeline_with_undefined_dependencies(test_base_dir):
         AttributeError, match="Stage 'stage_1' directory has not been set"
     ):
         stage_2(data=stage_1.output["predictions"])
+
+
+@pytest.mark.integration
+def test_stage_with_duplicate_groupby(test_base_dir):
+    stage = DummyStage(
+        name="duplicate_groupby_stage",
+        config={},
+        groupby=["age_group_id", "age_group_id", "location_id"],
+    )
+
+    assert stage.groupby == ["age_group_id", "location_id"]
 
 
 @pytest.mark.integration

@@ -6,6 +6,7 @@ import yaml
 from pydantic import BaseModel
 from tests.helpers.utils import assert_equal_unordered
 
+from onemod.dtypes import UniqueList
 from onemod.serialization import deserialize, serialize
 
 
@@ -24,7 +25,7 @@ class ExampleModel(BaseModel):
     ids: list[int]
     shape: tuple
     config: dict
-    groupby: set[str]
+    groupby: UniqueList[str]
     items: dict[str, Path]
 
 
@@ -46,7 +47,7 @@ def test_model() -> ExampleModel:
         ids=[1, 2, 3],
         shape=(5, 10),
         config={"key": "value"},
-        groupby={"a", "b", "c"},
+        groupby=["a", "b", "c"],
         items={"path1": Path("data1.parquet"), "path2": Path("data2.csv")},
     )
 

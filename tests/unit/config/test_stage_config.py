@@ -139,5 +139,5 @@ def test_setitem_pipeline(stage_config, pipeline_config, key):
 def test_repr(stage_config):
     assert (
         repr(stage_config)
-        == "StageConfig(pipeline_key='pipeline_value', shared_key='stage_shared_value', stage_key='stage_value')"
+        == "StageConfig(stage_key='stage_value', shared_key='stage_shared_value', pipeline_key='pipeline_value')"
     )
