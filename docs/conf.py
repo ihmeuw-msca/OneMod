@@ -14,8 +14,12 @@
 # import sys
 # sys.path.insert(0, os.path.abspath("."))
 import datetime
+import sys
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 with open("../pyproject.toml", "rb") as f:
     about = tomllib.load(f)["project"]
@@ -68,7 +72,6 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 html_theme = "furo"
 
 # Add any paths that contain custom static files (such as style sheets) here,

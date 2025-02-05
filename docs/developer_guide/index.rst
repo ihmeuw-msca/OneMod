@@ -1,22 +1,30 @@
+.. _developer_guide:
+
+===============
 Developer Guide
 ===============
 
-Welcome to the `OneMod` developer guide! This section provides instructions and tips for contributing to the package, including setting up your development environment, running tests, and updating the documentation.
+The **OneMod** developer guide provides instructions for contributing to the package, including setting up your development environment, running tests, and updating the documentation.
+
+Included in this Guide
+======================
+
+- :ref:`Setting Up Your Development Environment <setup>` - Instructions for setting up your local development environment.
+- :ref:`Running Tests <running_tests>` - Instructions and guidelines for testing your changes before submitting.
+- :ref:`Contributing Code <contributing_code>` - How to contribute to the OneMod codebase, including coding standards.
+- :ref:`Contributing to Documentation <contributing_docs>` - Instructions for improving OneMod’s documentation.
+
+Table of Contents
+=================
 
 .. toctree::
-   :hidden:
+   :maxdepth: 2
 
    setup
    testing
    contributing_code
    contributing_docs
 
-.. note::
+----
 
-   For getting started and local environment setup, see :ref:`Setup <setup>`.
-
-   For testing instructions, see :ref:`Running Tests <running_tests>`.
-
-   For details on contributing to the codebase, see :ref:`Contributing Code <contributing_code>`.
-
-   For documentation contributions, see :ref:`Contributing Docs <contributing_docs>`.
+For general package usage, see the :ref:`User Guide <user_guide>`.
