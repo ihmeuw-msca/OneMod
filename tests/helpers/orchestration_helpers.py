@@ -241,8 +241,13 @@ def _get_method_name(stage_name: str, output_dir: Path) -> str:
 
 def create_data(directory: Path) -> Path:
     data = pd.DataFrame(
-        [[sex_id, year_id] for sex_id in [1, 2] for year_id in [1, 2]],
-        columns=["sex_id", "year_id"],
+        [
+            [sex_id, age_group_id, year_id]
+            for sex_id in [1, 2]
+            for age_group_id in [1, 2, 3]
+            for year_id in [1, 2]
+        ],
+        columns=["sex_id", "age_group_id", "year_id"],
     )
     data["stage"] = "pipeline_input"
 
@@ -297,16 +302,16 @@ def setup_parallel_pipeline(directory: Path) -> Pipeline:
     pipeline = Pipeline(
         name="test_parallel_pipeline",
         directory=directory,
-        config={"ids": ["sex_id", "year_id"]},
+        config={"ids": ["sex_id", "age_group_id", "year_id"]},
         groupby_data=data_path,
     )
 
     # Create stages and add to pipeline
     run_1 = ParallelStage(
         name="run_1",
-        config={"param": [1, 2]},
-        groupby=["sex_id"],
-        crossby=["param"],
+        config={"param1": [1, 2], "param2": [1, 2, 3]},
+        groupby=["sex_id", "age_group_id"],
+        crossby=["param1", "param2"],
     )
     fit_2 = ParallelStageFit(
         name="fit_2", config={"param": 1}, groupby=["sex_id"]
