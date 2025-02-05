@@ -37,6 +37,10 @@ level:
 See Jobmon documentation for additional resources and default values.
 
 """
+# TODO: Optional stage-specific Python environments
+# TODO: User-defined max_attempts
+# TODO: Could dependencies be method specific?
+# TODO: should we check resources format, minimum resources, cluster?
 
 import sys
 from pathlib import Path
@@ -109,9 +113,6 @@ def evaluate_with_jobmon(
         True, otherwise default is False.
 
     """
-    # TODO: Optional stage-specific Python environments
-    # TODO: User-defined max_attempts
-    # TODO: Could dependencies be method specific?
     check_method(model, method)
     check_input_exists(model, stages)
     if python is None:
@@ -148,7 +149,6 @@ def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
         Dictionary of compute resources.
 
     """
-    # TODO: should we check format, minimum resources, cluster?
     if isinstance(resources, (Path, str)):
         config_loader = ConfigLoader()
         return config_loader.load(Path(resources))
@@ -421,8 +421,8 @@ def get_stage_tasks(
     if upstream_tasks is None:
         upstream_tasks = []
 
-    entrypoint = get_entrypoint(python)
-    config_path = get_config_path(stage)
+    entrypoint = str(Path(python).parent / "onemod")
+    config_path = str(stage.dataif.get_path("config"))
     submodel_args = get_submodel_args(stage, method, subsets, paramsets)
 
     task_template = get_task_template(
@@ -462,42 +462,6 @@ def get_stage_tasks(
         )
 
     return tasks
-
-
-def get_entrypoint(python: Path | str) -> str:
-    """Get path to python entrypoint.
-
-    All stages methods are called via `onemod.main.evaluate()`.
-
-    Parameters
-    ----------
-    python : Path or str
-        Path to python environment.
-
-    Returns
-    -------
-    str
-        Path to python entrypoint.
-
-    """
-    return str(Path(python).parent / "onemod")
-
-
-def get_config_path(stage: Stage) -> str:
-    """Get path to pipeline config file.
-
-    Parameters
-    ----------
-    stage : Stage
-        Stage instance.
-
-    Returns
-    -------
-    str
-        Path to pipeline config file.
-
-    """
-    return str(stage.dataif.get_path("config"))
 
 
 def get_submodel_args(

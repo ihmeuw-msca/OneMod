@@ -1,8 +1,4 @@
 """Unit tests for Jobmon-related functions."""
-# TODO: Test resource errors if missing required cluster resources
-
-import sys
-from pathlib import Path
 
 import pytest
 
@@ -37,12 +33,43 @@ def test_resources_path_to_dict(resource_dir, extension):
 
 
 @pytest.mark.unit
-def get_entrypoint():
-    python_path = "/path/to/python/env"
-    entrypoint = "/path/to/python/onemod"
-    assert jb.get_entrypoint(Path(python_path)) == entrypoint
-    assert jb.get_entrypoint(python_path) == entrypoint
-    assert jb.get_entrypoint() == str(Path(sys.executable).parent / "onemod")
+def test_tool():
+    tool = jb.get_tool(
+        "pipeline",
+        "method",
+        "cluster",
+        {"tool_resources": {"cluster": {"queue": "null.q"}}},
+    )
+    assert tool.name == "pipeline_method"
+    assert tool.default_cluster_name == "cluster"
+    assert tool.default_compute_resources_set == {
+        "cluster": {"queue": "null.q"}
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "submodel_args", [[], ["subsets"], ["paramsets"], ["subsets", "paramsets"]]
+)
+@pytest.mark.parametrize(
+    "kwargs", [{}, {"key1": "dummy", "key2": {"key3": "dummy"}}]
+)
+def test_command_template(submodel_args, kwargs):
+    expected_template = (
+        "{entrypoint} --config {config}"
+        " --method dummy_method --stages dummy_stage"
+    )
+    for submodel_arg in submodel_args:
+        expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
+    for key, value in kwargs.items():
+        if isinstance(value, dict):
+            expected_template += f" --{key} '{value}'"
+        else:
+            expected_template += f" --{key} {value}"
+    command_template = jb.get_command_template(
+        "dummy_stage", "dummy_method", submodel_args, **kwargs
+    )
+    assert command_template == expected_template
 
 
 @pytest.mark.unit
@@ -88,44 +115,3 @@ def test_no_cluster_resources():
         TASK_RESOURCES, "dummy", "stage1", "method"
     )
     assert task_resources == {}
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "submodel_args", [[], ["subsets"], ["paramsets"], ["subsets", "paramsets"]]
-)
-@pytest.mark.parametrize(
-    "kwargs", [{}, {"key1": "dummy", "key2": {"key3": "dummy"}}]
-)
-def test_command_template(submodel_args, kwargs):
-    submodel_args = []
-    expected_template = (
-        "{entrypoint} --config {config}"
-        " --method dummy_method --stages dummy_stage"
-    )
-    for submodel_arg in submodel_args:
-        expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
-    for key, value in kwargs.items():
-        if isinstance(value, dict):
-            expected_template += f" --{key} '{value}'"
-        else:
-            expected_template += f" --{key} {value}"
-    command_template = jb.get_command_template(
-        "dummy_stage", "dummy_method", submodel_args, **kwargs
-    )
-    assert command_template == expected_template
-
-
-@pytest.mark.unit
-def test_tool():
-    tool = jb.get_tool(
-        "pipeline",
-        "method",
-        "cluster",
-        {"tool_resources": {"cluster": {"queue": "null.q"}}},
-    )
-    assert tool.name == "pipeline_method"
-    assert tool.default_cluster_name == "cluster"
-    assert tool.default_compute_resources_set == {
-        "cluster": {"queue": "null.q"}
-    }
