@@ -62,9 +62,7 @@ def collect_results(
             return False
         if method in stage.collect_after:
             if collect is None:
-                if subsets is None and paramsets is None:
-                    return True
-                return False
+                return subsets is None and paramsets is None
             else:
                 return collect
         return False
