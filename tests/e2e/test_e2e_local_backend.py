@@ -75,7 +75,6 @@ def test_simple_stage_method(simple_pipeline, method):
 
 
 @pytest.mark.e2e
-@pytest.mark.requires_jobmon
 @pytest.mark.parametrize(
     "kwargs", [{}, {"key1": "dummy", "key2": {"key3": "dummy"}}]
 )
