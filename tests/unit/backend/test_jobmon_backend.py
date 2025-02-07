@@ -25,6 +25,7 @@ TASK_RESOURCES = {
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("extension", ["json", "pkl", "toml", "yaml"])
 def test_resources_path_to_dict(resource_dir, extension):
     file_path = resource_dir / f"resources.{extension}"
@@ -33,6 +34,7 @@ def test_resources_path_to_dict(resource_dir, extension):
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 def test_tool():
     tool = jb.get_tool(
         "pipeline",
@@ -48,6 +50,7 @@ def test_tool():
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize(
     "submodel_args", [[], ["subsets"], ["paramsets"], ["subsets", "paramsets"]]
 )
@@ -70,6 +73,7 @@ def test_command_template(submodel_args, kwargs):
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 def test_stage_and_method_task_resources():
     task_resources = jb.get_task_resources(
         TASK_RESOURCES, "cluster", "stage1", "method"
@@ -83,6 +87,7 @@ def test_stage_and_method_task_resources():
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 def test_stage_task_resources_only():
     task_resources = jb.get_task_resources(
         TASK_RESOURCES, "cluster", "stage2", "method"
@@ -91,6 +96,7 @@ def test_stage_task_resources_only():
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 def test_method_task_resources_only():
     task_resources = jb.get_task_resources(
         TASK_RESOURCES, "cluster", "stage3", "method"
@@ -99,6 +105,7 @@ def test_method_task_resources_only():
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 def test_no_task_resources():
     task_resources = jb.get_task_resources(
         TASK_RESOURCES, "cluster", "stage4", "method"
@@ -107,6 +114,7 @@ def test_no_task_resources():
 
 
 @pytest.mark.unit
+@pytest.mark.requires_jobmon
 def test_no_cluster_resources():
     task_resources = jb.get_task_resources(
         TASK_RESOURCES, "dummy", "stage1", "method"

@@ -6,6 +6,7 @@ from tests.helpers.orchestration_helpers import ParallelStage
 import onemod.backend.utils as utils
 
 
+@pytest.mark.unit
 def test_check_method_pipeline(parallel_pipeline):
     with pytest.raises(
         ValueError,
@@ -14,6 +15,7 @@ def test_check_method_pipeline(parallel_pipeline):
         utils.check_method(parallel_pipeline, "collect")
 
 
+@pytest.mark.unit
 def test_check_method_stage_collect_simple(simple_pipeline):
     with pytest.raises(
         ValueError,
@@ -22,6 +24,7 @@ def test_check_method_stage_collect_simple(simple_pipeline):
         utils.check_method(simple_pipeline.stages["run_1"], "collect")
 
 
+@pytest.mark.unit
 def test_check_method_stage_collect_parallel_empty_collect_after():
     class DummyStage(ParallelStage):
         _collect_after = []
@@ -35,6 +38,7 @@ def test_check_method_stage_collect_parallel_empty_collect_after():
         utils.check_method(dummy_stage, "collect")
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("args", [["fit_2", "predict"], ["predict_3", "fit"]])
 def test_check_method_stage_skip(simple_pipeline, args):
     with pytest.raises(
@@ -43,21 +47,25 @@ def test_check_method_stage_skip(simple_pipeline, args):
         utils.check_method(simple_pipeline.stages[args[0]], args[1])
 
 
+@pytest.mark.unit
 def test_check_input_stage(simple_pipeline):
     with pytest.raises(FileNotFoundError):
         utils.check_input_exists(simple_pipeline.stages["fit_2"])
 
 
+@pytest.mark.unit
 def test_check_input_with_invalid_stage(simple_pipeline):
     with pytest.raises(ValueError):
         utils.check_input_exists(simple_pipeline, ["dummy_stage"])
 
 
+@pytest.mark.unit
 def test_check_input_pipeline_stages(simple_pipeline):
     with pytest.raises(FileNotFoundError):
         utils.check_input_exists(simple_pipeline, ["predict_3"])
 
 
+@pytest.mark.unit
 def test_collect_results_no_submodels(simple_pipeline):
     collect_results = utils.collect_results(
         simple_pipeline.stages["run_1"], "run", None, None, None
@@ -65,6 +73,7 @@ def test_collect_results_no_submodels(simple_pipeline):
     assert not collect_results
 
 
+@pytest.mark.unit
 def test_collect_results_collect_method(parallel_pipeline):
     collect_results = utils.collect_results(
         parallel_pipeline.stages["run_1"], "collect", None, None, None
@@ -72,6 +81,7 @@ def test_collect_results_collect_method(parallel_pipeline):
     assert not collect_results
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("args", [["fit_2", "predict"], ["predict_3", "fit"]])
 def test_collect_results_not_in_collect_after(parallel_pipeline, args):
     collect_results = utils.collect_results(
@@ -80,6 +90,7 @@ def test_collect_results_not_in_collect_after(parallel_pipeline, args):
     assert not collect_results
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("collect", [True, False])
 def test_collect_results_collect_arg(parallel_pipeline, collect):
     collect_results = utils.collect_results(
@@ -88,6 +99,7 @@ def test_collect_results_collect_arg(parallel_pipeline, collect):
     assert collect_results == collect
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("subsets", [None, {}])
 @pytest.mark.parametrize("paramsets", [None, {}])
 def test_collect_results_submodel_args(parallel_pipeline, subsets, paramsets):

@@ -9,6 +9,7 @@ from onemod.backend import jobmon_backend as jb
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 def test_simple_submodel_args(simple_pipeline):
     stage = simple_pipeline.stages["run_1"]
     method = "run"
@@ -24,6 +25,7 @@ def test_simple_submodel_args(simple_pipeline):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize(
     "subsets",
     [
@@ -57,6 +59,7 @@ def test_parallel_submodel_args(parallel_pipeline, subsets, paramsets):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 def test_parallel_submodel_args_subsets_only(parallel_pipeline):
     stage = parallel_pipeline.stages["fit_2"]
     submodel_args = jb.get_submodel_args(
@@ -69,6 +72,7 @@ def test_parallel_submodel_args_subsets_only(parallel_pipeline):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 def test_parallel_submodel_args_paramsets_only(parallel_pipeline):
     stage = parallel_pipeline.stages["predict_3"]
     submodel_args = jb.get_submodel_args(
@@ -81,6 +85,7 @@ def test_parallel_submodel_args_paramsets_only(parallel_pipeline):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 def test_parallel_submodel_args_collect(parallel_pipeline):
     stage = parallel_pipeline.stages["run_1"]
     assert (
@@ -96,6 +101,7 @@ def test_parallel_submodel_args_collect(parallel_pipeline):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("stage_cluster", ["cluster", "dummy"])
 def test_task_template(stage_cluster):
     resources = {
@@ -120,6 +126,7 @@ def test_task_template(stage_cluster):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 @pytest.mark.parametrize("stages", [None, ["fit_2", "predict_3"]])
 def test_simple_upstream(simple_pipeline, method, stages):
@@ -141,6 +148,7 @@ def test_simple_upstream(simple_pipeline, method, stages):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 @pytest.mark.parametrize("stages", [None, ["fit_2", "predict_3"]])
 def test_parallel_upstream(parallel_pipeline, method, stages):
@@ -186,6 +194,7 @@ def test_parallel_upstream(parallel_pipeline, method, stages):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 @pytest.mark.parametrize("stages", [None, ["run_1", "fit_2"]])
 def test_simple_pipeline_tasks(simple_pipeline, method, stages):
@@ -217,6 +226,7 @@ def test_simple_pipeline_tasks(simple_pipeline, method, stages):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 @pytest.mark.parametrize("stages", [None, ["run_1", "fit_2", "predict_3"]])
 def test_parallel_pipeline_tasks(parallel_pipeline, method, stages):
@@ -275,6 +285,7 @@ def test_parallel_pipeline_tasks(parallel_pipeline, method, stages):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 def test_stage_tasks_basic(simple_pipeline):
     stage = simple_pipeline.stages["run_1"]
     method = "run"
@@ -309,6 +320,7 @@ def test_stage_tasks_basic(simple_pipeline):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize(
     "kwargs", [{}, {"key1": "dummy", "key2": {"key3": "dummy"}}]
 )
@@ -342,6 +354,8 @@ def test_stage_tasks_kwargs(simple_pipeline, kwargs):
     }
 
 
+@pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize(
     "submodel",
     [
@@ -391,6 +405,7 @@ def test_stage_tasks_submodels(parallel_pipeline, submodel, collect):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_stage_tasks_collect_after(parallel_pipeline, method):
     stage = parallel_pipeline.stages["fit_2"]
