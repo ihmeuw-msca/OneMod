@@ -441,7 +441,10 @@ def get_stage_tasks(
             max_attempts=1,
             entrypoint=entrypoint,
             config=config_path,
+            method=method,
+            stages=stage.name,
             **submodel_args,
+            **kwargs,
         )
     else:
         tasks = [
@@ -451,6 +454,9 @@ def get_stage_tasks(
                 max_attempts=1,
                 entrypoint=entrypoint,
                 config=config_path,
+                method=method,
+                stages=stage.name,
+                **kwargs,
             )
         ]
 
@@ -553,11 +559,9 @@ def get_task_template(
     """
     task_template = tool.get_task_template(
         template_name=f"{stage_name}_{method}",
-        command_template=get_command_template(
-            stage_name, method, submodel_args, **kwargs
-        ),
+        command_template=get_command_template(method, submodel_args, **kwargs),
         op_args=["entrypoint"],
-        task_args=["config"],
+        task_args=["config", "method", "stages"] + list(kwargs.keys()),
         node_args=submodel_args,
     )
 
@@ -573,7 +577,7 @@ def get_task_template(
 
 
 def get_command_template(
-    stage_name: str, method: str, submodel_args: list[str], **kwargs
+    method: str, submodel_args: list[str], **kwargs
 ) -> str:
     """Get stage command template.
 
@@ -583,8 +587,6 @@ def get_command_template(
 
     Parameters
     ----------
-    stage_name : str
-        Stage name.
     method : str
         Name of method being evaluated.
     submodel_args : list of str
@@ -597,21 +599,22 @@ def get_command_template(
     str
         Stage command template.
 
+    # TODO: collapse into one list
+
     """
     command_template = (
-        "{entrypoint} --config {config}"
-        f" --method {method} --stages {stage_name}"
+        "{entrypoint} --config {config} --method {method} --stages {stages}"
     )
 
     if method != "collect":
-        for arg in submodel_args:
-            command_template += f" --{arg} '{{{arg}}}'"
-
         for key, value in kwargs.items():
             if isinstance(value, (dict, list, set, tuple)):
-                command_template += f" --{key} '{value}'"
+                command_template += f" --{key} '{{{key}}}'"
             else:
-                command_template += f" --{key} {value}"
+                command_template += f" --{key} {{{key}}}"
+
+        for arg in submodel_args:
+            command_template += f" --{arg} '{{{arg}}}'"
 
     return command_template
 

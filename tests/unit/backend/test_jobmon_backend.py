@@ -56,19 +56,16 @@ def test_tool():
 )
 def test_command_template(submodel_args, kwargs):
     expected_template = (
-        "{entrypoint} --config {config}"
-        " --method dummy_method --stages dummy_stage"
+        "{entrypoint} --config {config} --method {method} --stages {stages}"
     )
-    for submodel_arg in submodel_args:
-        expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
     for key, value in kwargs.items():
         if isinstance(value, dict):
-            expected_template += f" --{key} '{value}'"
+            expected_template += f" --{key} '{{{key}}}'"
         else:
-            expected_template += f" --{key} {value}"
-    command_template = jb.get_command_template(
-        "dummy_stage", "dummy_method", submodel_args, **kwargs
-    )
+            expected_template += f" --{key} {{{key}}}"
+    for submodel_arg in submodel_args:
+        expected_template += f" --{submodel_arg} '{{{submodel_arg}}}'"
+    command_template = jb.get_command_template("run", submodel_args, **kwargs)
     assert command_template == expected_template
 
 
