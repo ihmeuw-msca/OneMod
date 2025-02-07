@@ -443,8 +443,7 @@ def get_stage_tasks(
             config=config_path,
             method=method,
             stages=stage.name,
-            **submodel_args,
-            **kwargs,
+            **{**submodel_args, **kwargs},
         )
     else:
         tasks = [
@@ -475,7 +474,7 @@ def get_submodel_args(
     method: str,
     subsets: dict[str, Any | list[Any]] | None,
     paramsets: dict[str, Any | list[Any]] | None,
-) -> dict[str, list[Any]]:
+) -> dict[str, list[str]]:
     """Get dictionary of subset and/or paramset values.
 
     If stage has submodels and `method` is not 'collect', additional
@@ -498,7 +497,7 @@ def get_submodel_args(
     Returns
     -------
     dict
-        Dictionary of subset and/or paramset values.
+        Dictionary of subset and/or paramset values as strings.
 
     """
     submodel_args = {}

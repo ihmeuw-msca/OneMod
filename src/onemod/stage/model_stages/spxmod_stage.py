@@ -188,22 +188,20 @@ class SpxmodStage(Stage):
 
         """
         logger.info(f"Collecting {self.name} submodel results")
-
-        # Collect submodel predictions
         if self.subsets is None:
             raise AttributeError("SPxModStage requires subsets")
+
+        # Collect submodel predictions
+        submodel_predictions = []
+        for subset in self.subsets.to_dict(orient="records"):
+            submodel_predictions.append(
+                self.dataif.load(
+                    self._get_submodel_dir(subset) + "predictions.parquet",  # type: ignore
+                    key="output",
+                )
+            )
         self.dataif.dump(
-            pd.concat(
-                [
-                    self.dataif.load(
-                        self._get_submodel_dir(subset) + "predictions.parquet",
-                        key="output",
-                    )
-                    for subset in self.subsets.to_dict(orient="records")
-                ]
-            ),
-            "predictions.parquet",
-            key="output",
+            pd.concat(submodel_predictions), "predictions.parquet", key="output"
         )
 
         # TODO: Plot coefficients

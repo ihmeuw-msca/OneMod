@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from onemod.backend import jobmon_backend as jb
+try:
+    from onemod.backend import jobmon_backend as jb
+except ImportError:
+    pass
 
 
 @pytest.mark.integration

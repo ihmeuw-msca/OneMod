@@ -254,16 +254,12 @@ class Stage(BaseModel, ABC):
             )
 
         # Filter data subsets and parameter sets
-        filtered_subsets = (
-            self.subsets
-            if subsets is None
-            else self.get_subset(self.subsets, subsets)
-        )
-        filtered_paramsets = (
-            self.paramsets
-            if paramsets is None
-            else self.get_subset(self.paramsets, paramsets)
-        )
+        filtered_subsets = self.subsets
+        if filtered_subsets is not None and subsets is not None:
+            filtered_subsets = self.get_subset(filtered_subsets, subsets)
+        filtered_paramsets = self.paramsets
+        if filtered_paramsets is not None and paramsets is not None:
+            filtered_paramsets = self.get_subset(filtered_paramsets, paramsets)
 
         # Generate all data subset/parameter set combinations
         return list(
@@ -274,7 +270,7 @@ class Stage(BaseModel, ABC):
                 [None]
                 if filtered_paramsets is None
                 else filtered_paramsets.to_dict(orient="records"),
-            )
+            )  # type: ignore
         )
 
     @property

@@ -310,26 +310,30 @@ def setup_parallel_pipeline(directory: Path) -> Pipeline:
     pipeline = Pipeline(
         name="test_parallel_pipeline",
         directory=directory,
-        config={"ids": ["sex_id", "age_group_id", "year_id"]},
+        config={"ids": ["sex_id", "age_group_id", "year_id"]},  # type: ignore
         groupby_data=data_path,
     )
 
     # Create stages and add to pipeline
     run_1 = ParallelStage(
         name="run_1",
-        config={"param1": [1, 2], "param2": [1, 2, 3]},
+        config={"param1": [1, 2], "param2": [1, 2, 3]},  # type: ignore
         groupby=["sex_id", "age_group_id"],
         crossby=["param1", "param2"],
     )
     fit_2 = ParallelStageFit(
-        name="fit_2", config={"param": 1}, groupby=["sex_id"]
+        name="fit_2",
+        config={"param": 1},  # type: ignore
+        groupby=["sex_id"],
     )
     predict_3 = ParallelStagePredict(
-        name="predict_3", config={"param": [1, 2]}, crossby=["param"]
+        name="predict_3",
+        config={"param": [1, 2]},  # type: ignore
+        crossby=["param"],
     )
     run_4 = ParallelStage(
         name="run_4",
-        config={"param": [1, 2]},
+        config={"param": [1, 2]},  # type: ignore
         groupby=["sex_id"],
         crossby=["param"],
     )

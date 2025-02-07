@@ -2,7 +2,10 @@
 
 import pytest
 
-from onemod.backend import jobmon_backend as jb
+try:
+    from onemod.backend import jobmon_backend as jb
+except ImportError:
+    pass
 
 TASK_RESOURCES = {
     "task_template_resources": {

@@ -11,7 +11,7 @@ class DummyStage(Stage):
     _optional_input: list[str] = ["priors.pkl"]
     _output: list[str] = ["predictions.parquet", "model.pkl"]
 
-    def run(self) -> None:
+    def _run(self) -> None:
         pass
 
 

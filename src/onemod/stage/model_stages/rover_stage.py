@@ -137,7 +137,8 @@ class RoverStage(Stage):
         for subset in self.subsets.to_dict(orient="records"):
             try:
                 summary = self.dataif.load(
-                    self._get_submodel_dir(subset) + "summary.csv", key="output"
+                    self._get_submodel_dir(subset) + "summary.csv",  # type: ignore
+                    key="output",
                 )
                 for key, value in subset.items():
                     summary[key] = value
