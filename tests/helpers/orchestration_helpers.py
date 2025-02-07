@@ -25,10 +25,10 @@ class SimpleStage(Stage):
     def get_log(self) -> list[str]:
         return self._log
 
-    def _run(self) -> None:
+    def _run(self, **kwargs) -> None:
         self._log.append(f"run: name={self.name}")
-        self._create_output("fit")
-        self._create_output("predict")
+        self._create_output("fit", **kwargs)
+        self._create_output("predict", **kwargs)
 
     def _fit(self) -> None:
         self._log.append(f"fit: name={self.name}")
@@ -38,11 +38,15 @@ class SimpleStage(Stage):
         self._log.append(f"predict: name={self.name}")
         self._create_output("predict")
 
-    def _create_output(self, method: str) -> None:
+    def _create_output(self, method: str, **kwargs) -> None:
         data = self.dataif.load(key=f"{method}_input")
         data["input"] = data["stage"]
         data["stage"] = self.name
         data["method"] = method
+
+        for key, value in kwargs.items():
+            data[key] = value
+
         self.dataif.dump(data, f"{method}_output.csv", key="output")
 
 
@@ -51,9 +55,9 @@ class SimpleStageFit(SimpleStage):
     _output: list[str] = ["fit_output.csv"]
     _skip: list[str] = ["predict"]
 
-    def _run(self) -> None:
+    def _run(self, **kwargs) -> None:
         self._log.append(f"run: name={self.name}")
-        self._create_output("fit")
+        self._create_output("fit", **kwargs)
 
 
 class SimpleStagePredict(SimpleStage):
@@ -61,9 +65,9 @@ class SimpleStagePredict(SimpleStage):
     _output: list[str] = ["predict_output.csv"]
     _skip: list[str] = ["fit"]
 
-    def _run(self) -> None:
+    def _run(self, **kwargs) -> None:
         self._log.append(f"run: name={self.name}")
-        self._create_output("predict")
+        self._create_output("predict", **kwargs)
 
 
 class ParallelStage(Stage):
@@ -209,11 +213,15 @@ def _collect_stage_output(stage, method: str | None = None) -> pd.DataFrame:
 
     output = []
     for subset, paramset in stage.get_submodels():
-        output.append(
-            stage.dataif.load(
-                stage._get_output_path(method, subset, paramset), key="output"
+        try:
+            output.append(
+                stage.dataif.load(
+                    stage._get_output_path(method, subset, paramset),
+                    key="output",
+                )
             )
-        )
+        except FileNotFoundError:
+            pass
 
     return pd.concat(output)
 
@@ -365,19 +373,29 @@ def assert_simple_logs(stage: SimpleStage, method: str) -> None:
     assert f"{method}: name={stage.name}" in log
 
 
-def assert_parallel_logs(stage: ParallelStage, method: str) -> None:
+def assert_parallel_logs(
+    stage: ParallelStage,
+    method: str,
+    subsets: dict | None = None,
+    paramsets: dict | None = None,
+    collect: bool | None = None,
+) -> None:
     """Assert expected methods, subsets, and paramsets logged."""
     log = stage.get_log()
-    for subset, paramset in stage.get_submodels():
+    for subset, paramset in stage.get_submodels(subsets, paramsets):
         assert (
             f"{method}: name={stage.name}, subset={subset}, paramset={paramset}"
             in log
         )
     if method in stage._collect_after:
-        assert f"collect: name={stage.name}" in log
+        if collect is None:
+            if subsets is None and paramsets is None:
+                assert f"collect: name={stage.name}" in log
+        elif collect:
+            assert f"collect: name={stage.name}" in log
 
 
-def assert_simple_output(stage: SimpleStage, method: str) -> None:
+def assert_simple_output(stage: SimpleStage, method: str, **kwargs) -> None:
     """Assert expected columns are in stage output."""
     if method in stage.skip:
         return
@@ -409,16 +427,30 @@ def _assert_simple_output(stage: SimpleStage, method: str) -> None:
     assert method_column[0] == method
 
 
-def assert_parallel_output(stage: ParallelStage, method: str) -> None:
+def assert_parallel_output(
+    stage: ParallelStage,
+    method: str,
+    subsets: dict | None = None,
+    paramsets: dict | None = None,
+    collect: bool | None = None,
+) -> None:
     """Assert expected columns in stage output."""
     # Load stage output
     if method in stage.collect_after:
-        output = stage.dataif.load("output.csv", key="output")
+        if collect is None:
+            if subsets is None and paramsets is None:
+                output = stage.dataif.load("output.csv", key="output")
+            else:
+                output = _collect_stage_output(stage, method)
+        elif collect:
+            output = stage.dataif.load("output.csv", key="output")
+        else:
+            output = _collect_stage_output(stage, method)
     else:
         output = _collect_stage_output(stage, method)
 
     # Check stage column
-    for subset, paramset in stage.get_submodels():
+    for subset, paramset in stage.get_submodels(subsets, paramsets):
         expected_name = stage.name
         if subset is not None:
             expected_name += f"__subset_{stage._get_str(subset)}"
