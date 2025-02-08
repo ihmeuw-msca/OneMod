@@ -70,7 +70,7 @@ Within **OneMod**, we make use of the following custom markers:
 - **integration**: Marks integration tests.
 - **e2e**: Marks end-to-end tests.
 - **requires_data**: Marks tests that require specific data files to be present which are not included in version control. These tests are generally meant for testing the data loading and processing functionality of **OneMod**.
-- **requires_jobmon**: Marks tests that require the jobmon package to be installed and are meant to be run specifically using jobmon. These tests are generally meant for testing the jobmon integration and are not included in the GitHub Actions CI workflow.
+- **requires_jobmon**: Marks tests that require the jobmon package to be installed and are meant to be run specifically using jobmon. These tests are generally meant for testing the jobmon integration.
 
 .. admonition:: Tip
 
