@@ -1,5 +1,6 @@
 .. _contributing_docs:
 
+=============================
 Contributing to Documentation
 =============================
 
@@ -23,10 +24,16 @@ To contribute to the documentation:
 
    Open ``docs/_build/index.html`` in your browser to view the docs.
 
+   *Note*: If you need to clean up the build artifacts, you can run:
+
+   .. code-block:: bash
+
+       rm -rf docs/_build
+
 3. **Update the relevant `.rst` files**:
 
    Make your edits in the ``docs/`` folder.
 
 4. **Submit your changes**:
 
-   Follow the general contribution workflow to open a pull request with your documentation updates.
+   Follow the :ref:`general contribution workflow <contributing_code>` to open a pull request with your documentation updates.

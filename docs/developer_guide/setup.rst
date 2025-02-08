@@ -1,5 +1,6 @@
 .. _setup:
 
+=======================================
 Setting Up Your Development Environment
 =======================================
 
@@ -13,7 +14,7 @@ Before starting, ensure you have:
 1. Clone the Repository
 ------------------------
 
-First, clone the ``OneMod`` repository and navigate to the project directory:
+First, clone the **OneMod** repository and navigate to the project directory:
 
 .. code-block:: bash
 
@@ -23,13 +24,13 @@ First, clone the ``OneMod`` repository and navigate to the project directory:
 2. Check Required Python Versions
 ----------------------------------
 
-``OneMod`` requires a specific Python version to ensure compatibility. Refer to the ``pyproject.toml`` file for supported versions:
+**OneMod** requires a specific Python version to ensure compatibility. Refer to the ``pyproject.toml`` file for supported versions:
 
 .. code-block:: toml
 
-    [project]
-    name = "onemod"
-    requires-python = ">=3.10, <3.13"
+   [project]
+   name = "onemod"
+   requires-python = ">=3.10, <3.13"
 
 Ensure you have a compatible Python version installed, or use ``conda`` to set up a new environment with the required version:
 
@@ -42,7 +43,9 @@ Ensure you have a compatible Python version installed, or use ``conda`` to set u
 
 You can choose between a **virtual environment (venv)** or a **Conda environment** to set up your development environment.
 
-You may specify the Python version and environment type as arguments to the ``make setup`` command, or specify them as environment variables. See ``.env.example`` for an example ``.env`` file.
+.. admonition:: Tip
+
+   You may specify the Python version and environment type as arguments to the ``make setup`` command, or specify them as environment variables. See ``.env.example`` for an example ``.env`` file.
 
 **Option 1: Using Virtual Environment (venv)**
 
@@ -94,10 +97,10 @@ To confirm that ``pre-commit`` hooks and tools (e.g., ``mypy``, ``ruff``) are wo
    pre-commit run --all-files
 
 
-5. Start Developing!
---------------------
+5. Start Developing
+-------------------
 
-Congratulations! You’re ready to start contributing to ``OneMod``.
+You should be ready to start contributing to **OneMod**!
 
 To manually run development tools, first ensure your environment is activated, for example:
 
@@ -131,18 +134,19 @@ Then, you can run the following commands as needed:
 
 For details on testing, contributing, or other development workflows, see the corresponding sections in the documentation:
 
-- **Testing**: :ref:`Running Tests <running_tests>`
-- **Contributing to the Codebase**: :ref:`Contributing Code <contributing_code>`
-- **Contributing Documentation**: :ref:`Contributing Docs <contributing_docs>`
+- :ref:`Running Tests <running_tests>`
+- :ref:`Contributing Code <contributing_code>`
+- :ref:`Contributing to Documentation <contributing_docs>`
 
 
-6. Notes for Contributors
--------------------------
+Notes for Contributors
+----------------------
 
 - **Python Versions**: Ensure you are using the correct Python version (see ``pyproject.toml``).
-- **Dependencies**: Dependencies are managed in ``pyproject.toml``. Use ``pip install -e ".[dev]"`` for manual installation if needed.
-- **Makefile**: Use the ``Makefile`` for consistent setup and tooling.
+- **Dependencies**: Dependencies are managed in ``pyproject.toml``. Use ``pip install -e ".[dev]"`` for manual installation if needed. Please update the ``pyproject.toml`` file if you add new dependencies.
+- **Makefile**: Use the ``Makefile`` for consistent setup and tooling. Be sure to update it if changing setup processes.
 - **Pre-commit Hooks**: Pre-commit hooks (e.g., ``mypy``, ``ruff``) ensure code quality. They are automatically installed during setup.
 
+In addition, please see :ref:`Contributing Code <contributing_code>` for guidelines on contributing to the codebase.
 
-That’s it! If you encounter any issues during setup, please refer to the project's ``CONTRIBUTING.md`` or reach out for help.
+That’s it! If you encounter any issues during setup, please refer to :ref:`OneMod Support <onemod_support>` or reach out for help.
