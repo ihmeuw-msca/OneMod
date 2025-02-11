@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel, ValidationError, validate_call
 
-from onemod.dtypes.unique_list import UniqueList, unique_list
+from onemod.dtypes.unique_sequence import UniqueList, unique_list
 
 
 # Sub-class of BaseModel with a UniqueList[int] field

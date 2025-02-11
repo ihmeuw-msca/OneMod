@@ -6,15 +6,16 @@ import pytest
 
 from onemod.config import StageConfig
 from onemod.constraints import Constraint
-from onemod.dtypes import ColumnSpec, Data, UniqueList
+from onemod.dtypes import ColumnSpec, Data
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: UniqueList[str] = ["data.parquet", "covariates.csv"]
-    _optional_input: UniqueList[str] = ["priors.pkl"]
-    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
+    _required_input: list[str] = ["data.parquet", "covariates.csv"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _skip: list[str] = ["fit", "predict"]
 
     def run(self):
         pass
@@ -162,6 +163,8 @@ def stage_1_model_expected(test_base_dir):
             "data": str(test_base_dir / "stage_0" / "data.parquet"),
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
+        "groupby": None,
+        "crossby": None,
     }
 
 
@@ -261,6 +264,8 @@ def stage_2_model_expected(test_base_dir):
             },
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
+        "groupby": None,
+        "crossby": None,
     }
 
 

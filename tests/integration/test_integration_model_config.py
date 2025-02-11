@@ -16,10 +16,10 @@ CONFIG_ITEMS = {
 
 REQUIRED_ITEMS = {
     "rover": [
-        "holdout_columns",
         "model_type",
         "observation_column",
         "weights_column",
+        "holdout_columns",
     ],
     "spxmod": [
         "id_columns",

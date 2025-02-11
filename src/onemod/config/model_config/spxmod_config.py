@@ -230,7 +230,7 @@ class SpxmodConfig(StageConfig):
 
     Attributes
     ----------
-    id_columns : UniqueList[str], optional
+    id_columns : list of str, optional
         ID column names, e.g., 'age_group_id', 'location_id', 'sex_id',
         or 'year_id'. ID columns should contain nonnegative integers.
         Default is None.
@@ -269,7 +269,7 @@ class SpxmodConfig(StageConfig):
     xmodel: SpxmodModelConfig
     xmodel_fit: dict[str, Any] = {}
     _pipeline_config: Config = Config()
-    _required: UniqueList[str] = [
+    _required: list[str] = [
         "id_columns",
         "model_type",
         "observation_column",

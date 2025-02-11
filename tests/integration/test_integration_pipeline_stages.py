@@ -1,18 +1,17 @@
 import pytest
 
 from onemod.config import StageConfig
-from onemod.dtypes import UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: UniqueList[str] = ["data.parquet"]
-    _optional_input: UniqueList[str] = ["priors.pkl"]
-    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
 
-    def run(self) -> None:
+    def _run(self) -> None:
         pass
 
 
@@ -188,16 +187,14 @@ def test_pipeline_with_undefined_dependencies(test_base_dir):
 
 
 @pytest.mark.integration
-def test_pipeline_with_duplicate_groupby(test_base_dir):
-    pipeline_dir = test_base_dir / "duplicate_groupby_pipeline"
-    pipeline = Pipeline(
-        name="duplicate_groupby_pipeline",
-        config={"id_columns": [], "model_type": "binomial"},
-        directory=pipeline_dir,
+def test_stage_with_duplicate_groupby(test_base_dir):
+    stage = DummyStage(
+        name="duplicate_groupby_stage",
+        config={},
         groupby=["age_group_id", "age_group_id", "location_id"],
     )
 
-    assert pipeline.groupby == ["age_group_id", "location_id"]
+    assert stage.groupby == ["age_group_id", "location_id"]
 
 
 @pytest.mark.integration

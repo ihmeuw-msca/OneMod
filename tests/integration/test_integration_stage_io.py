@@ -5,16 +5,17 @@ from pathlib import Path
 import pytest
 
 from onemod.config import StageConfig
-from onemod.dtypes import Data, UniqueList
+from onemod.dtypes import Data
 from onemod.io import Input, Output
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: UniqueList[str] = ["data.parquet", "covariates.csv"]
-    _optional_input: UniqueList[str] = ["priors.pkl"]
-    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
+    _required_input: list[str] = ["data.parquet", "covariates.csv"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _skip: list[str] = ["fit", "predict"]
 
     def run(self):
         pass
@@ -133,6 +134,8 @@ def test_stage_model(stage_1, stage_2):
             "data": "/path/to/data.parquet",
             "covariates": "/path/to/covariates.csv",
         },
+        "groupby": None,
+        "crossby": None,
     }
 
     assert stage_1_model_actual == stage_1_model_expected
@@ -156,6 +159,8 @@ def test_stage_model(stage_1, stage_2):
             },
             "covariates": "/path/to/covariates.csv",
         },
+        "groupby": None,
+        "crossby": None,
     }
 
     assert stage_2_model_actual == stage_2_model_expected

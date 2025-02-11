@@ -1,25 +1,21 @@
 """Example custom stage."""
 
 from onemod.config import StageConfig
-from onemod.dtypes import UniqueList
-from onemod.stage import ModelStage
+from onemod.stage import Stage
 
 
 class CustomConfig(StageConfig):
     """Custom stage config."""
 
     custom_param: int | set[int] = 1
-    _crossable_params: UniqueList[str] = ["custom_param"]
+    _crossable_params: list[str] = ["custom_param"]
 
 
-class CustomStage(ModelStage):
+class CustomStage(Stage):
     """Custom stage."""
 
     config: CustomConfig = CustomConfig()
-    _required_input: UniqueList[str] = [
-        "observations.parquet",
-        "predictions.parquet",
-    ]
+    _required_input: list[str] = ["observations.parquet", "predictions.parquet"]
 
     def run(
         self, subset_id: int | None = None, param_id: int | None = None

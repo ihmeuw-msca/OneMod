@@ -4,43 +4,56 @@ TODO: Implement stage
 
 """
 
+from typing import Any
+
 from onemod.config import KregConfig
-from onemod.dtypes import UniqueList
-from onemod.stage import ModelStage
+from onemod.stage import Stage
 
 
-class KregStage(ModelStage):
+class KregStage(Stage):
     """Kreg stage."""
 
     config: KregConfig
-    _required_input: UniqueList[str] = ["data.parquet"]
-    _optional_input: UniqueList[str] = ["offset.parquet", "priors.pkl"]
-    _output: UniqueList[str] = ["predictions.parquet", "model.pkl"]
+    _required_input: list[str] = ["data.parquet"]
+    _optional_input: list[str] = ["offset.parquet", "priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
 
-    def run(
-        self, subset_id: int | None = None, param_id: int | None = None
+    def _run(
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         """Run kreg submodel."""
         print(
-            f"running {self.name} submodel: subset {subset_id}, param set {param_id}"
+            f"running {self.name} submodel: subset {subset}, paramset {paramset}"
         )
-        self.fit(subset_id, param_id)
-        self.predict(subset_id, param_id)
+        self._fit(subset, paramset)
+        self._predict(subset, paramset)
 
-    def fit(
-        self, subset_id: int | None = None, param_id: int | None = None
+    def _fit(
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         """Fit kreg submodel."""
         print(
-            f"fitting {self.name} submodel: subset {subset_id}, param set {param_id}"
+            f"fitting {self.name} submodel: subset {subset}, paramset {paramset}"
         )
 
-    def predict(
-        self, subset_id: int | None = None, param_id: int | None = None
+    def _predict(
+        self,
+        subset: dict[str, Any] | None = None,
+        paramset: dict[str, Any] | None = None,
+        *args,
+        **kwargs,
     ) -> None:
         "Create kreg submodel predictions."
         print(
-            f"predicting for {self.name} submodel: subset {subset_id}, param set {param_id}"
+            f"predicting for {self.name} submodel: subset {subset}, paramset {paramset}"
         )
 
     def collect(self) -> None:

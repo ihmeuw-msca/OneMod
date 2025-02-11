@@ -52,7 +52,7 @@ def get_input(items: dict[str, Path | Data] = {}) -> Input:
 
 @pytest.mark.unit
 def test_expected_names():
-    assert get_input()._expected_names == {"data", "covariates", "priors"}
+    assert get_input()._expected_names == ["data", "covariates", "priors"]
 
 
 @pytest.mark.unit
@@ -252,10 +252,7 @@ def test_missing_self():
         test_input.check_missing()
     observed = str(error.value).strip('"')
     expected = f"Stage '{test_input.stage}' missing required input: "
-    assert (
-        observed == expected + "['data', 'covariates']"
-        or observed == expected + "['covariates', 'data']"
-    )
+    assert observed == expected + "['data', 'covariates']"
 
 
 @pytest.mark.unit
@@ -271,10 +268,7 @@ def test_missing_items():
         )
     observed = str(error.value).strip('"')
     expected = f"Stage '{test_input.stage}' missing required input: "
-    assert (
-        observed == expected + "['data', 'covariates']"
-        or observed == expected + "['covariates', 'data']"
-    )
+    assert observed == expected + "['data', 'covariates']"
 
 
 # TODO: Write tests for input.check_exists()

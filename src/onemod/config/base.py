@@ -1,10 +1,10 @@
 """Configuration classes."""
 
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from onemod.dtypes.unique_list import UniqueList, unique_list
+from onemod.dtypes.unique_sequence import unique_list
 
 
 class Config(BaseModel):
@@ -41,10 +41,9 @@ class Config(BaseModel):
         arg_list = []
         for key in self._get_fields():
             arg_list.append(f"{key}={getattr(self, key)!r}")
-        arg_list.sort()
         return f"{type(self).__name__}({', '.join(arg_list)})"
 
-    def _get_fields(self) -> List[str]:
+    def _get_fields(self) -> list[str]:
         return list(self.model_dump(exclude_none=True))
 
 
@@ -62,12 +61,7 @@ class StageConfig(Config):
     )
 
     _pipeline_config: Config = Config()
-    _required: UniqueList[str] = list()
-    _crossable_params: UniqueList[str] = list()
-
-    @property
-    def crossable_params(self) -> List[str]:
-        return unique_list(self._crossable_params)
+    _required: list[str] = []
 
     def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):
@@ -78,7 +72,6 @@ class StageConfig(Config):
             if not self.stage_contains(item) and item not in pipeline_config:
                 missing.append(item)
         if missing:
-            missing.sort()  # for consistent ordering, remove once unique list
             raise AttributeError(f"Missing required config items: {missing}")
 
         self._pipeline_config = pipeline_config
@@ -110,20 +103,19 @@ class StageConfig(Config):
     def pipeline_contains(self, key: str) -> bool:
         return key in self._pipeline_config
 
-    def _get_fields(self) -> List[str]:
+    def _get_fields(self) -> list[str]:
         return unique_list(
             self._get_stage_fields() + self._get_pipeline_fields()
         )
 
-    def _get_stage_fields(self) -> List[str]:
+    def _get_stage_fields(self) -> list[str]:
         return list(self.model_dump(exclude_none=True))
 
-    def _get_pipeline_fields(self) -> List[str]:
+    def _get_pipeline_fields(self) -> list[str]:
         return self._pipeline_config._get_fields()
 
     def __repr__(self) -> str:
         arg_list = []
         for key in self._get_fields():
             arg_list.append(f"{key}={self.get(key)!r}")
-        arg_list.sort()
         return f"{type(self).__name__}({', '.join(arg_list)})"

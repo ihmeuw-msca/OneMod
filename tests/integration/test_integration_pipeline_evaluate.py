@@ -1,14 +1,16 @@
-import re
 from unittest.mock import patch
 
-import pandas as pd
 import pytest
 from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
-from tests.helpers.dummy_stages import MultiplyByTwoStage, assert_stage_logs
+from tests.helpers.dummy_stages import assert_stage_logs
 from tests.helpers.utils import assert_equal_unordered
 
-from onemod.config import Config, StageConfig
-from onemod.pipeline import Pipeline
+KWARGS = {
+    "backend": "local",
+    "cluster": None,
+    "resources": None,
+    "python": None,
+}
 
 
 @pytest.fixture
@@ -45,7 +47,9 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
     with pytest.raises(
         ValueError, match="Stage 'invalid_stage_name' not found"
     ):
-        dummy_pipeline.evaluate(method=method, stages=["invalid_stage_name"])
+        dummy_pipeline.evaluate(
+            method=method, stages=["invalid_stage_name"], **KWARGS
+        )
 
     with pytest.raises(
         ValueError, match="Stage 'invalid_stage_name' not found"
@@ -57,6 +61,7 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
                 "invalid_stage_name",
                 "covariate_selection",
             ],
+            **KWARGS,
         )
 
 
@@ -78,7 +83,9 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
     create_dummy_preprocessing_output_file(test_base_dir, stages)
 
     try:
-        dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+        dummy_pipeline.evaluate(
+            method=method, stages=subset_stage_names, **KWARGS
+        )
     except Exception as e:
         pytest.fail(f"evaluate() raised an unexpected exception: {e}")
 
@@ -86,17 +93,12 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
     expected_args = get_expected_args()
 
     for stage in subset_stages:
-        if stage.name == "preprocessing":
-            if method in ["run", "fit"]:
-                assert stage.get_log() == [f"run: name={stage.name}"]
-            else:
-                assert stage.get_log() == []
-        elif stage.name in expected_args:
+        if stage.name in expected_args:
             assert_stage_logs(
                 stage,
                 expected_args[stage.name]["methods"][method],
-                expected_args[stage.name]["subset_ids"],
-                expected_args[stage.name]["param_ids"],
+                expected_args[stage.name]["subsets"],
+                expected_args[stage.name]["paramsets"],
             )
         else:
             assert False, "Unknown stage name"
@@ -120,9 +122,11 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 
     with pytest.raises(
         FileNotFoundError,
-        match=f"Stage covariate_selection input items do not exist: {{'data': '{test_base_dir}/preprocessing/data.parquet'}}",
+        match=f"Stage 'covariate_selection' input items do not exist: {{'data': '{test_base_dir}/preprocessing/data.parquet'}}",
     ):
-        dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+        dummy_pipeline.evaluate(
+            method=method, stages=subset_stage_names, **KWARGS
+        )
 
 
 @pytest.mark.integration
@@ -136,7 +140,7 @@ def test_duplicate_stage_names(small_input_data, test_base_dir, method):
 
     subset_stage_names = ["preprocessing", "preprocessing"]
 
-    dummy_pipeline.evaluate(method=method, stages=subset_stage_names)
+    dummy_pipeline.evaluate(method=method, stages=subset_stage_names, **KWARGS)
 
     # Check that preprocessing was evaluated only once
     assert (
@@ -145,71 +149,13 @@ def test_duplicate_stage_names(small_input_data, test_base_dir, method):
     for stage in stages:
         if stage.name == "preprocessing":
             if method in ["run", "fit"]:
-                assert stage.get_log() == [f"run: name={stage.name}"]
+                assert stage.get_log() == [
+                    f"run: name={stage.name}, subset=None, paramset=None"
+                ]
             else:
                 assert stage.get_log() == []
         else:
             assert stage.get_log() == []
-
-
-@pytest.mark.integration
-@pytest.mark.requires_data
-@pytest.mark.parametrize("method", ["run", "fit", "predict"])
-def test_invalid_id_subsets_keys(small_input_data, test_base_dir, method):
-    """Test that Pipeline.evaluate() raises an error when an invalid id_subsets key is provided."""
-    dummy_pipeline, stages = setup_dummy_pipeline(
-        small_input_data, test_base_dir
-    )
-
-    subset_stage_names = ["preprocessing"]
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            "id_subsets keys {'invalid_id_col_name'} do not match groupby columns ['sex_id']"
-        ),
-    ):
-        dummy_pipeline.evaluate(
-            method=method,
-            stages=subset_stage_names,
-            id_subsets={"invalid_id_col_name": [1, 2, 3]},
-        )
-
-
-@pytest.mark.integration
-def test_evaluate_with_id_subsets(test_base_dir, sample_data):
-    """Test that Pipeline.evaluate() correctly evaluates single stage with id_subsets."""
-    sample_input_data = test_base_dir / "test_input_data.parquet"
-    df = pd.DataFrame(sample_data)
-    df.to_parquet(sample_input_data)
-
-    test_pipeline = Pipeline(
-        name="dummy_pipeline",
-        config=Config(
-            id_columns=["age_group_id", "location_id", "sex_id"],
-            model_type="binomial",
-        ),
-        directory=test_base_dir,
-        groupby_data=sample_input_data,
-        groupby={"age_group_id"},
-    )
-    test_stage = MultiplyByTwoStage(
-        name="multiply_by_two", config=StageConfig()
-    )
-    test_pipeline.add_stages([test_stage])
-    test_stage(data=test_pipeline.groupby_data)
-
-    # Ensure input data is as expected for the test
-    assert sample_input_data.exists()
-    input_df = pd.read_parquet(sample_input_data)
-    assert input_df.shape == (4, 4)
-
-    test_pipeline.evaluate(method="run", id_subsets={"age_group_id": [1]})
-
-    # Verify that output only contains rows with specified subset(s) for age_group_id
-    output_df = test_stage.dataif.load("data.parquet", key="output")
-    assert output_df["age_group_id"].nunique() == 1
-    assert output_df.shape == (1, 4)
 
 
 @pytest.mark.skip(
@@ -222,7 +168,7 @@ def test_evaluate_with_id_subsets(test_base_dir, sample_data):
 def test_evaluate_with_jobmon_subset_call(
     dummy_resources, small_input_data, test_base_dir, method
 ):
-    """Test that evaluate_with_jobmon is called with the correct subset."""
+    """Test that jobmon_backend.evaluate is called with the correct subset."""
     assert dummy_resources.exists()
 
     dummy_pipeline, stages = setup_dummy_pipeline(
@@ -232,7 +178,7 @@ def test_evaluate_with_jobmon_subset_call(
     subset_stage_names = {"preprocessing", "covariate_selection"}
 
     with patch(
-        "onemod.backend.evaluate_with_jobmon"
+        "onemod.backend.jobmon_backend.evaluate"
     ) as mock_evaluate_with_jobmon:
         dummy_pipeline.evaluate(
             backend="jobmon",

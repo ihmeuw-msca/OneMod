@@ -4,20 +4,13 @@ import json
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmodulename
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import fire
-from pydantic import validate_call
 
 import onemod.stage as onemod_stages
-from onemod.dtypes import UniqueList
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
-
-
-def init(directory: Path | str) -> None:
-    """Initialize project directory."""
-    raise NotImplementedError()
 
 
 def load_pipeline(config: Path | str) -> Pipeline:
@@ -130,12 +123,17 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
     return getattr(loaded_module, stage_type)
 
 
-@validate_call
 def evaluate(
     config: Path | str,
     method: Literal["run", "fit", "predict", "collect"] = "run",
-    stages: str | UniqueList[str] | None = None,
+    stages: str | list[str] | None = None,
+    subsets: dict[str, Any | list[Any]] | None = None,
+    paramsets: dict[str, Any | list[Any]] | None = None,
+    collect: bool | None = None,
     backend: Literal["local", "jobmon"] = "local",
+    cluster: str | None = None,
+    resources: Path | str | dict[str, Any] | None = None,
+    python: Path | str | None = None,
     **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method.
@@ -143,51 +141,68 @@ def evaluate(
     Parameters
     ----------
     config : Path or str
-        Path to config file.
+        Path to pipeline config file.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
-    stages : str, UniqueList of str, or None, optional
-        Names of stages to evaluate. If None, evaluate entire pipeline.
-        Default is None.
+    stages : str, list of str, or None, optional
+        Names of stages to evaluate. If None, evaluate all pipeline
+        stages. Default is None.
     backend : str, optional
         Whether to evaluate the method locally or with Jobmon.
         Default is 'local'.
+    **kwargs
+        Additional keyword arguments passed to stage methods. When
+        evaluating a pipeline, use format`stage={arg_name: arg_value}`.
 
-    Other Parameters
+    Stage Parameters
     ----------------
-    subset_id : int, optional
-        Submodel data subset ID. Only used for model stages.
-    param_id : int, optional
-        Submodel parameter set ID. Only used for model stages.
+    subsets : dict, optional
+        Submodel data subsets to include when evaluating a single stage.
+        If None, evaluate all data subsets. Default is None.
+    paramsets : dict, optional
+        Submodel parameter sets to include when evaluating a single
+        stage. If None, evaluate all parameter sets. Default is None.
+    collect : bool, optional
+        Whether to collect submodel results when evaluating a single
+        stage. If `subsets` and `paramsets` are both None, default is
+        True, otherwise default is False.
+
+    Jobmon Parameters
+    -----------------
     cluster : str, optional
         Cluster name. Required if `backend` is 'jobmon'.
-    resources : Path or str, optional
-        Path to resources yaml file. Required if `backend` is 'jobmon'.
+    resources : Path, str, or dict, optional
+        Path to resources file or dictionary of compute resources.
+        Required if `backend` is 'jobmon'.
+    python : Path or str, optional
+        Path to Python environment if `backend` is 'jobmon'. If None,
+        use sys.executable. Default is None.
 
     """
     model: Pipeline | Stage
 
     if isinstance(stages, str):
         model = load_stage(config, stages)
-        model.evaluate(method, backend, **kwargs)
+        model.evaluate(
+            method,
+            subsets,
+            paramsets,
+            collect,
+            backend,
+            cluster,
+            resources,
+            python,
+            **kwargs,
+        )
     else:
         model = load_pipeline(config)
-        model.evaluate(method, stages, backend, **kwargs)
-
-
-def call_function(
-    method: Literal["init", "run", "fit", "predict", "collect"], **kwargs
-):
-    if method == "init":
-        init(**kwargs)
-    elif method in ["run", "fit", "predict", "collect"]:
-        evaluate(method=method, **kwargs)
-    else:
-        raise ValueError(f"Invalid function name: {method}")
+        model.evaluate(
+            method, stages, backend, cluster, resources, python, **kwargs
+        )
 
 
 def main():
-    fire.Fire(call_function)
+    fire.Fire(evaluate)
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ class RoverConfig(StageConfig):
         values 1 (train) or 0 (test). If no train column is provided,
         all non-null observations will be included in training. Default
         is None.
-    holdout_columns : UniqueList[str] or None, optional
+    holdout_columns : list of str or None, optional
         Holdout column names. The holdout columns should contain values
         1 (holdout), 0 (train), or NaN (missing observations). Holdout
         sets are used to evaluate stage model out-of-sample performance.
@@ -46,13 +46,17 @@ class RoverConfig(StageConfig):
     coef_bounds : dict, optional
         Dictionary of coefficient bounds with entries
         cov_name: (lower, upper). Default is None.
-    cov_exploring : UniqueList[str]
+    cov_exploring : list of str
         Names of covariates to explore.
-    cov_fixed : UniqueList[str], optional
-        Fixed covariate names. Default is {'intercept'}.
-    strategies : UniqueList[str], optional
+    cov_fixed : list of str, optional
+        Fixed covariate names. Default is ['intercept'].
+    cov_groupby : list of str, optional
+        Column names used to create data subsets; covariates are
+        selected separately for each data subset. Default is an empty
+        list.
+    strategies : list of str, optional
         Set of strategies to use; either 'full', 'forward', and/or
-        'backward'. Default is {'forward'}.
+        'backward'. Default is ['forward'].
     top_pct_score : float in [0, 1], optional
         Percentage of learners with top scores to consider.
         Default is 0.1.
@@ -75,6 +79,7 @@ class RoverConfig(StageConfig):
     coef_bounds: dict[str, tuple[float, float]] | None = None
     cov_exploring: UniqueList[str]
     cov_fixed: UniqueList[str] = ["intercept"]
+    cov_groupby: UniqueList[str] = []
     strategies: UniqueList[Literal["full", "forward", "backward"]] = ["forward"]
     top_pct_score: float = Field(ge=0, le=1, default=0.1)
     top_pct_learner: float = Field(ge=0, le=1, default=1.0)
@@ -82,7 +87,7 @@ class RoverConfig(StageConfig):
     min_covs: NonNegativeInt | None = None
     max_covs: NonNegativeInt | None = None
     _pipeline_config: Config = Config()
-    _required: UniqueList[str] = [
+    _required: list[str] = [
         "model_type",
         "observation_column",
         "weights_column",
