@@ -311,9 +311,9 @@ class Pipeline(BaseModel):
                 **kwargs,
             )
         else:
-            from onemod.backend.local_backend import evaluate_locally
+            from onemod.backend.local_backend import evaluate_local
 
-            evaluate_locally(model=self, method=method, stages=stages, **kwargs)
+            evaluate_local(model=self, method=method, stages=stages, **kwargs)
 
     def run(
         self,

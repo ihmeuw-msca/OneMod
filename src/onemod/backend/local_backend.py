@@ -15,7 +15,7 @@ from onemod.stage import Stage
 
 
 @validate_call
-def evaluate_locally(
+def evaluate_local(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict", "collect"],
     stages: UniqueList[str] | None = None,

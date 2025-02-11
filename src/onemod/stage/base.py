@@ -435,9 +435,9 @@ class Stage(BaseModel, ABC):
                 **kwargs,
             )
         else:
-            from onemod.backend.local_backend import evaluate_locally
+            from onemod.backend.local_backend import evaluate_local
 
-            evaluate_locally(
+            evaluate_local(
                 model=self,
                 method=method,
                 subsets=subsets,
