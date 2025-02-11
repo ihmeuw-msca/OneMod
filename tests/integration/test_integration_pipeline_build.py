@@ -4,7 +4,7 @@ import pytest
 from polars import DataFrame
 from tests.helpers.utils import assert_equal_unordered
 
-from onemod.config import PipelineConfig, StageConfig
+from onemod.config import Config, StageConfig
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
 from onemod.pipeline import Pipeline
@@ -13,11 +13,12 @@ from onemod.stage import Stage
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: set[str] = {"data.parquet", "covariates.parquet"}
-    _optional_input: set[str] = {"priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _required_input: list[str] = ["data.parquet", "covariates.parquet"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _skip: list[str] = ["fit", "predict"]
 
-    def run(self):
+    def run(self, *args, **kwargs):
         pass
 
 
@@ -31,7 +32,15 @@ def create_dummy_data(test_base_dir):
     stage_1_dir.mkdir(parents=True, exist_ok=True)
     stage_2_dir.mkdir(parents=True, exist_ok=True)
 
-    data_df = DataFrame({"id_col": [1], "bounded_col": [0.5], "str_col": ["a"]})
+    data_df = DataFrame(
+        {
+            "id_col": [1],
+            "age_group_id": [1],
+            "location_id": [1],
+            "bounded_col": [0.5],
+            "str_col": ["a"],
+        }
+    )
     data_parquet_path = data_dir / "data.parquet"
     data_df.write_parquet(data_parquet_path)
 
@@ -55,6 +64,7 @@ def stage_1(test_base_dir, create_dummy_data):
     stage_1 = DummyStage(
         name="stage_1",
         config=StageConfig(),
+        groupby=["age_group_id"],
         input_validation=dict(
             data=Data(
                 stage="data",
@@ -124,6 +134,7 @@ def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
         config=StageConfig(),
+        groupby=["age_group_id"],
         input_validation=dict(
             data=Data(
                 stage="stage_1",
@@ -155,12 +166,11 @@ def pipeline_with_single_stage(test_base_dir, stage_1):
     """A sample pipeline with a single stage and no dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
-        config=PipelineConfig(
+        directory=test_base_dir,
+        config=Config(
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
-        directory=test_base_dir,
         groupby_data=test_base_dir / "data" / "data.parquet",
-        groupby=["age_group_id"],
     )
     pipeline.add_stage(stage_1)
 
@@ -172,12 +182,11 @@ def pipeline_with_multiple_stages(test_base_dir, stage_1, stage_2):
     """A sample pipeline with multiple stages and dependencies."""
     pipeline = Pipeline(
         name="test_pipeline",
-        config=PipelineConfig(
+        directory=test_base_dir,
+        config=Config(
             id_columns=["age_group_id", "location_id"], model_type="binomial"
         ),
-        directory=test_base_dir,
         groupby_data=test_base_dir / "data" / "data.parquet",
-        groupby=["age_group_id"],
     )
     pipeline.add_stages([stage_1, stage_2])
 
@@ -198,13 +207,8 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
         "name": "test_pipeline",
         "directory": str(test_base_dir),
         "groupby_data": str(test_base_dir / "data" / "data.parquet"),
-        "groupby": ["age_group_id"],
         "config": {
             "id_columns": ["age_group_id", "location_id"],
-            "observation_column": "obs",
-            "prediction_column": "pred",
-            "weights_column": "weights",
-            "test_column": "test",
             "model_type": "binomial",
         },
         "stages": {
@@ -213,6 +217,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "type": "DummyStage",
                 "module": __file__,
                 "config": {},
+                "groupby": ["age_group_id"],
                 "input": {
                     "data": str(test_base_dir / "data" / "data.parquet"),
                     "covariates": str(

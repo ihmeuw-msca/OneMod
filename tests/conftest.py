@@ -5,9 +5,14 @@ from typing import Generator
 import pytest
 from dotenv import load_dotenv
 
+from onemod.fsutils.config_loader import ConfigLoader
 from onemod.validation.error_handling import (
     ValidationErrorCollector,
     validation_context,
+)
+from tests.helpers.orchestration_helpers import (
+    setup_parallel_pipeline,
+    setup_simple_pipeline,
 )
 
 load_dotenv()
@@ -59,3 +64,29 @@ def validation_collector() -> Generator[ValidationErrorCollector, None, None]:
     """Fixture that manages the validation context for tests."""
     with validation_context() as collector:
         yield collector
+
+
+@pytest.fixture(scope="function")
+def simple_pipeline(tmp_path_factory):
+    directory = tmp_path_factory.mktemp("jobmon_test_dir")
+    pipeline = setup_simple_pipeline(directory)
+    return pipeline
+
+
+@pytest.fixture(scope="function")
+def parallel_pipeline(tmp_path_factory):
+    directory = tmp_path_factory.mktemp("jobmon_test_dir")
+    pipeline = setup_parallel_pipeline(directory)
+    return pipeline
+
+
+@pytest.fixture(scope="module")
+def resource_dir(tmp_path_factory):
+    directory = tmp_path_factory.mktemp("resources_test_dir")
+    config_loader = ConfigLoader()
+    for extension in ["json", "pkl", "toml", "yaml"]:
+        config_loader.dump(
+            {"tool_resources": {"dummy": {"queue": "null.q"}}},
+            directory / f"resources.{extension}",
+        )
+    return directory

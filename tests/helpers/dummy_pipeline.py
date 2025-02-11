@@ -1,3 +1,4 @@
+import pandas as pd
 from tests.helpers.dummy_stages import (
     CustomConfig,
     DummyCustomStage,
@@ -9,8 +10,8 @@ from tests.helpers.dummy_stages import (
 
 from onemod import Pipeline
 from onemod.config import (
+    Config,
     KregConfig,
-    PipelineConfig,
     RoverConfig,
     SpxmodConfig,
     StageConfig,
@@ -43,25 +44,45 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
     covariate_selection = DummyRoverStage(
         name="covariate_selection",
-        config=RoverConfig(cov_exploring=["cov1", "cov2", "cov3"]),
-        groupby={"age_group_id"},
+        config=RoverConfig(
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            weights_column="fake_weights_column",
+            holdout_columns=["holdout1", "holdout2", "holdout3"],
+            cov_exploring=["cov1", "cov2", "cov3"],
+            cov_groupby=["sex_id"],
+        ),
+        groupby=["sex_id", "age_group_id"],
     )
     global_model = DummySpxmodStage(
         name="global_model",
         config=SpxmodConfig(
-            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]}
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
+            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
         ),
+        groupby=["sex_id"],
     )
     location_model = DummySpxmodStage(
         name="location_model",
         config=SpxmodConfig(
-            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]}
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
+            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
         ),
-        groupby={"location_id"},
+        groupby=["sex_id", "location_id"],
     )
     smoothing = DummyKregStage(
         name="smoothing",
         config=KregConfig(
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
             kreg_model={
                 "age_scale": 1,
                 "gamma_age": 1,
@@ -78,24 +99,24 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
                 "nystroem_rank": 1,
             },
         ),
-        groupby={"region_id"},
+        groupby=["sex_id", "region_id"],
     )
     custom_stage = DummyCustomStage(
         name="custom_stage",
         config=CustomConfig(custom_param=[1, 2]),
-        groupby={"super_region_id"},
+        groupby=["sex_id", "super_region_id"],
+        crossby=["custom_param"],
     )
 
     # Create pipeline
     dummy_pipeline = Pipeline(
         name="dummy_pipeline",
-        config=PipelineConfig(
+        config=Config(
             id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
             model_type="binomial",
         ),
         directory=test_base_dir,
         groupby_data=test_input_data,
-        groupby={"sex_id"},
     )
 
     # Add stages
@@ -130,6 +151,8 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
         predictions=smoothing.output["predictions"],
     )
 
+    dummy_pipeline.build()
+
     return dummy_pipeline, [
         preprocessing,
         covariate_selection,
@@ -143,10 +166,17 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
 def get_expected_args() -> dict:
     """Dictionary of the expected arguments for each stage."""
     return {
+        "preprocessing": {
+            "methods": {"run": ["run"], "fit": ["run"], "predict": None},
+            "subsets": None,
+            "paramsets": None,
+        },
         "covariate_selection": {
             "methods": {"run": ["run", "fit"], "fit": ["fit"], "predict": None},
-            "subset_ids": range(3),
-            "param_ids": None,
+            "subsets": pd.DataFrame(
+                {"sex_id": [1, 1, 2, 2], "age_group_id": [2, 3, 2, 3]}
+            ),
+            "paramsets": None,
         },
         "global_model": {
             "methods": {
@@ -154,8 +184,8 @@ def get_expected_args() -> dict:
                 "fit": ["fit"],
                 "predict": ["predict"],
             },
-            "subset_ids": range(2),
-            "param_ids": None,
+            "subsets": pd.DataFrame({"sex_id": [1, 2]}),
+            "paramsets": None,
         },
         "location_model": {
             "methods": {
@@ -163,8 +193,10 @@ def get_expected_args() -> dict:
                 "fit": ["fit"],
                 "predict": ["predict"],
             },
-            "subset_ids": range(4),
-            "param_ids": None,
+            "subsets": pd.DataFrame(
+                {"sex_id": [1, 1, 2, 2], "location_id": [6, 33, 6, 33]}
+            ),
+            "paramsets": None,
         },
         "smoothing": {
             "methods": {
@@ -172,8 +204,10 @@ def get_expected_args() -> dict:
                 "fit": ["fit"],
                 "predict": ["predict"],
             },
-            "subset_ids": range(4),
-            "param_ids": None,
+            "subsets": pd.DataFrame(
+                {"sex_id": [1, 1, 2, 2], "region_id": [5.0, 32.0, 5.0, 32.0]}
+            ),
+            "paramsets": None,
         },
         "custom_stage": {
             "methods": {
@@ -181,7 +215,12 @@ def get_expected_args() -> dict:
                 "fit": ["fit"],
                 "predict": ["predict"],
             },
-            "subset_ids": range(4),
-            "param_ids": range(2),
+            "subsets": pd.DataFrame(
+                {
+                    "sex_id": [1, 1, 2, 2],
+                    "super_region_id": [4.0, 31.0, 4.0, 31.0],
+                }
+            ),
+            "paramsets": pd.DataFrame({"custom_param": [1, 2]}),
         },
     }

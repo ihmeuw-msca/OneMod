@@ -12,9 +12,10 @@ from onemod.stage import Stage
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: set[str] = {"data.parquet", "covariates.csv"}
-    _optional_input: set[str] = {"priors.pkl"}
-    _output: set[str] = {"predictions.parquet", "model.pkl"}
+    _required_input: list[str] = ["data.parquet", "covariates.csv"]
+    _optional_input: list[str] = ["priors.pkl"]
+    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _skip: list[str] = ["fit", "predict"]
 
     def run(self):
         pass
@@ -96,16 +97,7 @@ def stage_1_model_expected(test_base_dir):
         "name": "stage_1",
         "type": "DummyStage",
         "module": Path(__file__),
-        "config": {
-            "coef_bounds": None,
-            "holdout_columns": None,
-            "id_columns": None,
-            "model_type": None,
-            "observation_column": None,
-            "prediction_column": None,
-            "test_column": None,
-            "weights_column": None,
-        },
+        "config": {},
         "input_validation": {
             "covariates": {
                 "stage": "stage_0",
@@ -171,6 +163,8 @@ def stage_1_model_expected(test_base_dir):
             "data": str(test_base_dir / "stage_0" / "data.parquet"),
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
+        "groupby": None,
+        "crossby": None,
     }
 
 
@@ -224,16 +218,7 @@ def stage_2_model_expected(test_base_dir):
     return {
         "name": "stage_2",
         "type": "DummyStage",
-        "config": {
-            "coef_bounds": None,
-            "holdout_columns": None,
-            "id_columns": None,
-            "model_type": None,
-            "observation_column": None,
-            "prediction_column": None,
-            "test_column": None,
-            "weights_column": None,
-        },
+        "config": {},
         "module": Path(__file__),
         "input_validation": {
             "data": {
@@ -279,6 +264,8 @@ def stage_2_model_expected(test_base_dir):
             },
             "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
         },
+        "groupby": None,
+        "crossby": None,
     }
 
 
@@ -288,7 +275,7 @@ def test_input_types(test_base_dir, stage_1):
     assert stage_1.input_validation["data"].path == Path("data.parquet")
     assert stage_1.input_validation["data"].format == "parquet"
     assert stage_1.input_validation["data"].shape is None
-    assert stage_1.dependencies == set()
+    assert stage_1.dependencies == []
 
 
 @pytest.mark.integration

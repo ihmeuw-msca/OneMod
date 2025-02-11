@@ -166,17 +166,17 @@ def test_load_with_columns(data_files, tmp_path, extension):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("extension", ["csv", "parquet"])
-def test_load_with_id_subsets(data_files, tmp_path, extension):
-    """Test loading with id_subsets for row filtering."""
+def test_load_with_subset(data_files, tmp_path, extension):
+    """Test loading with subset for row filtering."""
     dataif = DataInterface(tmp=tmp_path)
     data_path = data_files[extension]
 
-    id_subsets = {"location_id": [20], "sex_id": [1]}
+    subset = {"location_id": 20, "sex_id": [1]}
 
-    # Load with id_subsets filtering
-    loaded_data = dataif.load(data_path.name, key="tmp", id_subsets=id_subsets)
+    # Load with subset filtering
+    loaded_data = dataif.load(data_path.name, key="tmp", subset=subset)
 
-    # Verify that only rows matching the id_subsets criteria are loaded
+    # Verify that only rows matching the subset criteria are loaded
     assert loaded_data.shape == (1, 4)
     assert loaded_data["age_group_id"][0] == 2
     assert loaded_data["location_id"][0] == 20
@@ -186,20 +186,20 @@ def test_load_with_id_subsets(data_files, tmp_path, extension):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("extension", ["csv", "parquet"])
-def test_load_with_columns_and_id_subsets(data_files, tmp_path, extension):
-    """Test loading with both columns selection and id_subsets filtering."""
+def test_load_with_columns_and_subset(data_files, tmp_path, extension):
+    """Test loading with both columns selection and subset filtering."""
     dataif = DataInterface(tmp=tmp_path)
     data_path = data_files[extension]
 
     columns = ["age_group_id", "location_id", "value"]
-    id_subsets = {"location_id": [20]}
+    subset = {"location_id": [20]}
 
-    # Load with both columns and id_subsets filters
+    # Load with both columns and subset filters
     loaded_data = dataif.load(
-        data_path.name, key="tmp", columns=columns, id_subsets=id_subsets
+        data_path.name, key="tmp", columns=columns, subset=subset
     )
 
-    # Verify that data is filtered by both columns and id_subsets
+    # Verify that data is filtered by both columns and subset
     assert loaded_data.shape == (2, 3)
     assert "age_group_id" in loaded_data.columns
     assert "value" in loaded_data.columns
