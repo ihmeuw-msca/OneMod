@@ -87,3 +87,27 @@ can create custom configuration classes. Stage
 :py:attr:`~onemod.stage.base.Stage.config` attributes have access to
 the settings within their corresponding pipeline's
 :py:attr:`~onemod.pipeline.Pipeline.config` attribute.
+
+Dataflow
+--------
+After adding stages to your pipeline, you need to define the "dataflow",
+i.e., how data is passed from one stage to another, using the
+:py:meth:`~onemod.stage.base.Stage.__call__` method. This section of
+code defines the stage dependencies that are used to create the
+pipeline's directed acyclic graph (DAG) of tasks:
+
+.. code-block:: python
+
+   preprocessing_output = preprocessing_stage(raw_data="/path/to/raw_data.parquet")
+   modeling_output = modeling_stage(observations=preprocessing_output["modeling_data"])
+   plotting_output = plotting_stage(
+      observations=preprocessing_output["plotting_data"],
+      predictions=modeling_output["predictions"],
+   )
+
+When defining the dataflow, information about output is passed from
+stage to stage (e.g., paths to where output will be saved), but the
+output is not created until the stages'
+:py:meth:`~onemod.stage.base.Stage.run`,
+:py:meth:`~onemod.stage.base.Stage.fit`, or
+:py:meth:`~onemod.stage.base.Stage.predict` methods are evaluated.
