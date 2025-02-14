@@ -1,4 +1,4 @@
-"""Run pipeline or stage."""
+"""Methods to load and evaluate pipeline and stage objects."""
 
 import json
 from importlib.util import module_from_spec, spec_from_file_location
@@ -19,7 +19,7 @@ def load_pipeline(config: Path | str) -> Pipeline:
     Parameters
     ----------
     config : Path or str
-        Path to config file.
+        Path to pipeline config file.
 
     Returns
     -------
@@ -36,7 +36,7 @@ def load_stage(config: Path | str, stage_name: str) -> Stage:
     Parameters
     ----------
     config : Path or str
-        Path to config file.
+        Path to pipeline config file.
     stage_name : str
         Stage name.
 
@@ -138,13 +138,16 @@ def evaluate(
 ) -> None:
     """Evaluate pipeline or stage method.
 
+    When evaluating a pipeline method, all stage submodels are evaluated
+    and submodel results are collected.
+
     Parameters
     ----------
     config : Path or str
         Path to pipeline config file.
     method : str, optional
         Name of method to evaluate. Default is 'run'.
-    stages : str, list of str, or None, optional
+    stages : str, list of str, optional
         Names of stages to evaluate. If None, evaluate all pipeline
         stages. Default is None.
     backend : str, optional
@@ -152,7 +155,7 @@ def evaluate(
         Default is 'local'.
     **kwargs
         Additional keyword arguments passed to stage methods. When
-        evaluating a pipeline, use format`stage={arg_name: arg_value}`.
+        evaluating a pipeline, use format ``stage={arg_name: arg_value}``.
 
     Stage Parameters
     ----------------
@@ -164,19 +167,39 @@ def evaluate(
         stage. If None, evaluate all parameter sets. Default is None.
     collect : bool, optional
         Whether to collect submodel results when evaluating a single
-        stage. If `subsets` and `paramsets` are both None, default is
-        True, otherwise default is False.
+        stage. If ``subsets`` and ``paramsets`` are both None, default
+        is True, otherwise default is False.
 
     Jobmon Parameters
     -----------------
     cluster : str, optional
-        Cluster name. Required if `backend` is 'jobmon'.
+        Cluster name. Required if ``backend`` is 'jobmon'.
     resources : Path, str, or dict, optional
         Path to resources file or dictionary of compute resources.
-        Required if `backend` is 'jobmon'.
+        Required if ``backend`` is 'jobmon'.
     python : Path or str, optional
-        Path to Python environment if `backend` is 'jobmon'. If None,
+        Path to Python environment if ``backend`` is 'jobmon'. If None,
         use sys.executable. Default is None.
+
+    Examples
+    --------
+    This method is the entrypoint when calling onemod from the command
+    line:
+
+    .. code:: bash
+
+       onemod --config pipeline_config.json --method run
+
+    To make sure arguments such as lists or dictionaries are parsed
+    correctly, omit spaces or use quotes:
+
+    .. code:: bash
+
+       onemod --config pipeline_config.json --stages [stage1,stage2]
+       onemod --config pipeline_config.json --stages stage1 --subsets "{'age_group_id': 1}"
+
+    See the `Python Fire Guide <https://google.github.io/python-fire/guide/#argument-parsing>`_
+    for more details.
 
     """
     model: Pipeline | Stage

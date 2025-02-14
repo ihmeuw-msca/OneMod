@@ -51,13 +51,22 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
 ]
-autodoc_typehints = "description"
+# show stage parameters incorrectly: description, both
+# show too many things in signature: signature, both
+# don't show parameter types: none
+autodoc_typehints = "none"
 autodoc_member_order = "bysource"
 autodoc_type_aliases = {
     "ArrayLike": "ArrayLike",
     "NDArray": "NDArray",
     "DataFrame": "DataFrame",
 }
+
+napoleon_custom_sections = [
+    ("Pipeline Parameters", "params_style"),
+    ("Stage Parameters", "params_style"),
+    ("Jobmon Parameters", "params_style"),
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

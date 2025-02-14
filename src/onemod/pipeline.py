@@ -32,7 +32,7 @@ class Pipeline(BaseModel):
         Pipeline configuration.
     groupby_data : Path or str, optional
         Path to data file used to create stage data subsets. Must
-        contain all columns included in stage `groupby` attributes.
+        contain all columns included in stage ``groupby`` attributes.
 
     """
 
@@ -44,10 +44,12 @@ class Pipeline(BaseModel):
 
     @computed_property
     def stages(self) -> dict[str, Stage]:
+        """Pipeline stages."""
         return self._stages
 
     @computed_property
     def dependencies(self) -> dict[str, list[str]]:
+        """Stage dependencies."""
         return {
             stage.name: stage.dependencies for stage in self.stages.values()
         }
@@ -300,7 +302,9 @@ class Pipeline(BaseModel):
         python: Path | str | None = None,
         **kwargs,
     ) -> None:
-        """Run pipeline.
+        """Run pipeline stages.
+
+        All stage submodels are run and submodel results are collected.
 
         Parameters
         ----------
@@ -311,17 +315,17 @@ class Pipeline(BaseModel):
             How to evaluate the method. Default is 'local'.
         **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `stage={arg_name: arg_value}`.
+            format ``stage={arg_name: arg_value}``.
 
         Other Parameters
         ----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path, or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
@@ -338,7 +342,9 @@ class Pipeline(BaseModel):
         python: Path | str | None = None,
         **kwargs,
     ) -> None:
-        """Fit pipeline.
+        """Fit pipeline stages.
+
+        All stage submodels are fit and submodel results are collected.
 
         Parameters
         ----------
@@ -349,17 +355,17 @@ class Pipeline(BaseModel):
             How to evaluate the method. Default is 'local'.
         **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `stage={arg_name: arg_value}`.
+            format ``stage={arg_name: arg_value}``.
 
         Jobmon Parameters
         -----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path, or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
@@ -376,7 +382,10 @@ class Pipeline(BaseModel):
         python: Path | str | None = None,
         **kwargs,
     ) -> None:
-        """Create pipeline predictions.
+        """Create predictions for pipeline stages.
+
+        Predictions are made for all stage submodels and submodel
+        results are collected.
 
         Parameters
         ----------
@@ -387,17 +396,17 @@ class Pipeline(BaseModel):
             How to evaluate the method. Default is 'local'.
         **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `stage={arg_name: arg_value}`.
+            format ``stage={arg_name: arg_value}``.
 
         Jobmon Parameters
         -----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path, or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
