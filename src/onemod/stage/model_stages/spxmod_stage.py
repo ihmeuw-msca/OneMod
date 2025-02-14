@@ -33,14 +33,16 @@ class SpxmodStage(Stage):
     """Spxmod stage."""
 
     config: SpxmodConfig
-    _required_input: list[str] = ["data.parquet"]
-    _optional_input: list[str] = [
-        "selected_covs.csv",
-        "offset.parquet",
-        "priors.pkl",
-    ]
-    _output: list[str] = ["predictions.parquet"]
     _collect_after: list[str] = ["run", "predict"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _optional_input: dict[str, dict[str, Any]] = {
+        "selected_covs": {"format": "csv"},
+        "offset": {"format": "parquet"},
+        "priors": {"format": "pkl"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {
+        "predictions": {"format": "parquet"}
+    }
 
     def model_post_init(self, *args, **kwargs) -> None:
         if self.groupby is None:

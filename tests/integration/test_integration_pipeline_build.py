@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 import pytest
 from polars import DataFrame
@@ -12,11 +13,16 @@ from onemod.stage import Stage
 
 
 class DummyStage(Stage):
-    config: StageConfig
-    _required_input: list[str] = ["data.parquet", "covariates.parquet"]
-    _optional_input: list[str] = ["priors.pkl"]
-    _output: list[str] = ["predictions.parquet", "model.pkl"]
     _skip: list[str] = ["fit", "predict"]
+    _required_input: dict[str, dict[str, Any]] = {
+        "data": {"format": "parquet"},
+        "covariates": {"format": "parquet"},
+    }
+    _optional_input: dict[str, dict[str, Any]] = {"priors": {"format": "pkl"}}
+    _output_items: dict[str, dict[str, Any]] = {
+        "predictions": {"format": "parquet"},
+        "model": {"format": "pkl"},
+    }
 
     def run(self, *args, **kwargs):
         pass
@@ -64,6 +70,7 @@ def stage_1(test_base_dir, create_dummy_data):
     stage_1 = DummyStage(
         name="stage_1",
         config=StageConfig(),
+        config_path=test_base_dir / "test_pipeline.json",
         groupby=["age_group_id"],
         input_validation=dict(
             data=Data(
@@ -134,6 +141,7 @@ def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
         config=StageConfig(),
+        config_path=test_base_dir / "test_pipeline.json",
         groupby=["age_group_id"],
         input_validation=dict(
             data=Data(
@@ -219,16 +227,30 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "config": {},
                 "groupby": ["age_group_id"],
                 "input": {
-                    "data": str(test_base_dir / "data" / "data.parquet"),
-                    "covariates": str(
-                        test_base_dir / "data" / "covariates.parquet"
-                    ),
+                    "data": {
+                        "stage": None,
+                        "methods": None,
+                        "format": "parquet",
+                        "path": str(test_base_dir / "data" / "data.parquet"),
+                        "shape": None,
+                        "columns": None,
+                    },
+                    "covariates": {
+                        "stage": None,
+                        "methods": None,
+                        "format": "parquet",
+                        "path": str(
+                            test_base_dir / "data" / "covariates.parquet"
+                        ),
+                        "shape": None,
+                        "columns": None,
+                    },
                 },
                 "input_validation": {
                     "data": {
                         "stage": "data",
-                        "path": str(test_base_dir / "data" / "data.parquet"),
                         "format": "parquet",
+                        "path": str(test_base_dir / "data" / "data.parquet"),
                         "shape": [1, 2],
                         "columns": {
                             "id_col": {"type": "int"},
@@ -254,10 +276,10 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                     },
                     "covariates": {
                         "stage": "data",
+                        "format": "parquet",
                         "path": str(
                             test_base_dir / "data" / "covariates.parquet"
                         ),
-                        "format": "parquet",
                         "columns": {
                             "id_col": {"type": "int"},
                             "str_col": {
@@ -277,10 +299,10 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "output_validation": {
                     "predictions": {
                         "stage": "stage_1",
+                        "format": "parquet",
                         "path": str(
                             test_base_dir / "stage_1" / "predictions.parquet"
                         ),
-                        "format": "parquet",
                         "columns": {
                             "id_col": {"type": "int"},
                             "prediction_col": {

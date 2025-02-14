@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from onemod.config import StageConfig
@@ -7,9 +9,12 @@ from onemod.stage import Stage
 
 class DummyStage(Stage):
     config: StageConfig
-    _required_input: list[str] = ["data.parquet"]
-    _optional_input: list[str] = ["priors.pkl"]
-    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _optional_input: dict[str, dict[str, Any]] = {"priors": {"format": "pkl"}}
+    _output_items: dict[str, dict[str, Any]] = {
+        "predictions": {"format": "parquet"},
+        "model": {"format": "pkl"},
+    }
 
     def _run(self) -> None:
         pass
@@ -17,7 +22,9 @@ class DummyStage(Stage):
 
 @pytest.fixture
 def stage_1(test_base_dir):
-    stage_1 = DummyStage(name="stage_1", config={})
+    stage_1 = DummyStage(
+        name="stage_1", config_path=test_base_dir / "test_pipeline.json"
+    )
     stage_1(
         data=test_base_dir / "stage_1" / "data.parquet",
         covariates=test_base_dir / "stage_1" / "covariates.csv",
@@ -27,7 +34,9 @@ def stage_1(test_base_dir):
 
 @pytest.fixture
 def stage_2(stage_1):
-    stage_2 = DummyStage(name="stage_2", config={})
+    stage_2 = DummyStage(
+        name="stage_2", config_path=stage_1.dataif.get_path("config")
+    )
     stage_2(
         data=stage_1.output["predictions"], covariates="/path/to/covariates.csv"
     )

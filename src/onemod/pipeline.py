@@ -27,7 +27,7 @@ class Pipeline(BaseModel):
     name : str
         Pipeline name.
     directory : Path or str
-        Experiment directory.
+        Path to pipeline directory.
     config : Config or dict, optional
         Pipeline configuration.
     groupby_data : Path or str, optional
@@ -43,18 +43,14 @@ class Pipeline(BaseModel):
     _stages: dict[str, Stage] = {}
 
     @computed_property
+    def stages(self) -> dict[str, Stage]:
+        return self._stages
+
+    @computed_property
     def dependencies(self) -> dict[str, list[str]]:
         return {
             stage.name: stage.dependencies for stage in self.stages.values()
         }
-
-    @computed_property
-    def stages(self) -> dict[str, Stage]:
-        return self._stages
-
-    def model_post_init(self, *args, **kwargs) -> None:
-        if not self.directory.exists():
-            self.directory.mkdir(parents=True)
 
     @classmethod
     def from_json(cls, config_path: Path | str) -> Pipeline:
@@ -129,6 +125,10 @@ class Pipeline(BaseModel):
         """
         if stage.name in self.stages:
             raise ValueError(f"Stage '{stage.name}' already exists")
+
+        stage.config.add_pipeline_config(self.config)
+        stage.set_dataif(self.directory / (self.name + ".json"))
+        stage.set_output()
 
         self._stages[stage.name] = stage
 
@@ -232,22 +232,15 @@ class Pipeline(BaseModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self, config_path: Path | str | None = None) -> None:
-        """Assemble pipeline, perform build-time validation, and save to JSON.
-
-        Parameters
-        ----------
-        config_path : Path or str, optional
-            Where to save config file. If None, file is saved at
-            pipeline.directory / (pipeline.name + ".json"). Default is
-            None.
-
-        """
-        config_path = config_path or self.directory / (self.name + ".json")
+    def build(self) -> None:
+        """Assemble pipeline, perform build-time validation, and save to JSON."""
         collector = ValidationErrorCollector()
 
+        if not self.directory.exists():
+            self.directory.mkdir(parents=True)
+
         for stage in self.stages.values():
-            stage.validate_build(collector)
+            stage.build(collector, self.groupby_data)
 
         self.validate_dag(collector)
 
@@ -255,24 +248,7 @@ class Pipeline(BaseModel):
             self.save_validation_report(collector)
             collector.raise_errors()
 
-        # TODO: Simplify with stage.build()
-        for stage in self.stages.values():
-            stage.config.add_pipeline_config(self.config)
-            stage.set_dataif(config_path)
-
-            # Create data subsets
-            if stage.groupby is not None:
-                if self.groupby_data is None:
-                    raise AttributeError(
-                        "groupby_data is required for groupby attribute"
-                    )
-                stage.create_subsets(self.groupby_data)
-
-            # Create parameter sets
-            if stage.crossby is not None:
-                stage.create_params()
-
-        self.to_json(config_path)
+        self.to_json(self.directory / (self.name + ".json"))
 
     def save_validation_report(
         self, collector: ValidationErrorCollector

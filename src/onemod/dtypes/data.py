@@ -2,23 +2,23 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from polars import Boolean, DataFrame, Float64, Int64, String
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel
 
 from onemod.constraints import Constraint
 from onemod.dtypes.column_spec import ColumnSpec
-from onemod.utils import DataIOHandler
+from onemod.fsutils.data_loader import DataLoader
+from onemod.fsutils.io import configio_dict, dataio_dict
 from onemod.validation.error_handling import (
     ValidationErrorCollector,
     handle_error,
 )
 
-# FIXME: Update for new DataInterface class
-
 
 class Data(BaseModel):
-    stage: str
-    path: Path
-    format: str = "parquet"
+    stage: str | None = None
+    methods: list[str] | None = None
+    format: str | None = None
+    path: Path | None = None
     shape: tuple[int, int] | None = None
     columns: dict[str, ColumnSpec] | None = None
     type_mapping: ClassVar[dict[type, Any]] = {
@@ -28,15 +28,22 @@ class Data(BaseModel):
         str: String,
     }
 
-    @field_serializer("path")
-    def serialize_path(self, path, info):
-        return str(path) if path else None
+    def model_post_init(self, *args, **kwargs) -> None:
+        if self.format is None and self.path is None:
+            raise ValueError("Data format and path cannot both be None")
+        if self.path is not None:
+            expected_format = self.path.suffix[1:] or "directory"
+            if self.format is None:
+                self.format = expected_format
+            else:
+                if self.format != expected_format:
+                    raise ValueError("Data format and path do not match")
 
     def validate_metadata(
         self, kind: str, collector: ValidationErrorCollector | None = None
     ) -> None:
         """One-time validation for instance metadata."""
-        if not self.path:
+        if self.path is None:
             handle_error(
                 self.stage,
                 "Data validation",
@@ -44,25 +51,17 @@ class Data(BaseModel):
                 "File path is required.",
                 collector,
             )
-        # else:
-        #     FIXME: Path won't exist until stage has been run
-        #     if kind == "input" and not self.path.exists():
-        #         handle_error(
-        #             self.stage,
-        #             "Data validation",
-        #             FileNotFoundError,
-        #             f"File {self.path} does not exist.",
-        #             collector,
-        #         )
-        #     FIXME: Update for new DataInterface class
-        #     if self.format not in DataIOHandler.supported_formats:
-        #         handle_error(
-        #             self.stage,
-        #             "Data validation",
-        #             ValueError,
-        #             f"Unsupported file format {self.format}.",
-        #             collector,
-        #         )
+
+        if self.format is not None:
+            fextn = "." + self.format
+            if fextn not in dataio_dict and fextn not in configio_dict:
+                handle_error(
+                    self.stage,
+                    "Data validation",
+                    ValueError,
+                    f"Unsupported file format {self.format}.",
+                    collector,
+                )
 
         if self.shape:
             if not isinstance(self.shape, tuple) or len(self.shape) != 2:
@@ -117,9 +116,9 @@ class Data(BaseModel):
         collector: ValidationErrorCollector | None = None,
     ) -> None:
         """Validate the columns and shape of the data."""
-        if data is None:
+        if data is None and self.path is not None:
             try:
-                data = DataIOHandler.read_data(self.path)
+                data = DataLoader().load(self.path)
             except Exception as e:
                 handle_error(
                     self.stage,

@@ -14,9 +14,15 @@ class KregStage(Stage):
     """Kreg stage."""
 
     config: KregConfig
-    _required_input: list[str] = ["data.parquet"]
-    _optional_input: list[str] = ["offset.parquet", "priors.pkl"]
-    _output: list[str] = ["predictions.parquet", "model.pkl"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _optional_input: dict[str, dict[str, Any]] = {
+        "offset": {"format": "parquet"},
+        "priors": {"format": "pkl"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {
+        "predictions": {"format": "parquet"},
+        "model": {"format": "pkl"},
+    }
 
     def _run(
         self,
