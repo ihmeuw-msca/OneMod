@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 from polars import DataFrame
@@ -129,8 +130,9 @@ def test_data_model_no_constraints():
 
     expected = {
         "stage": "test",
-        "path": "test.parquet",
+        "methods": None,
         "format": "parquet",
+        "path": Path("test.parquet"),
         "shape": None,
         "columns": {
             "age_group_id": {"type": "int", "constraints": None},
@@ -168,8 +170,9 @@ def test_data_model_with_constraints():
 
     expected = {
         "stage": "test",
-        "path": "test.parquet",
+        "methods": None,
         "format": "parquet",
+        "path": Path("test.parquet"),
         "shape": None,
         "columns": {
             "age_group_id": {

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 
 class ValidationErrorReport(BaseModel):
-    stage: str
+    stage: str | None
     error_category: str
     message: str
     details: dict[str, Any] | None = None
@@ -16,7 +16,7 @@ class ValidationErrorCollector(BaseModel):
 
     def add_error(
         self,
-        stage: str,
+        stage: str | None,
         error_category: str,
         message: str,
         details: dict | None = None,
@@ -64,7 +64,7 @@ def validation_context() -> Generator[ValidationErrorCollector, None, None]:
 
 
 def handle_error(
-    stage: str,
+    stage: str | None,
     error_category: str,
     error_type: type[Exception],
     message: str,

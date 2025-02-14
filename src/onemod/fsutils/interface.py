@@ -20,7 +20,7 @@ class DataInterface(PathManager):
     def load(
         self,
         *fparts: str,
-        key: str,
+        key: str | None = None,
         return_type: Literal[
             "pandas_dataframe", "polars_dataframe", "polars_lazyframe"
         ] = "pandas_dataframe",
@@ -61,7 +61,9 @@ class DataInterface(PathManager):
         else:
             raise ValueError(f"Unsupported file format for '{path.suffix}'")
 
-    def dump(self, obj: Any, *fparts: str, key: str, **options) -> None:
+    def dump(
+        self, obj: Any, *fparts: str, key: str | None = None, **options
+    ) -> None:
         """Dump data or config files based on object type and key."""
         path = self.get_full_path(*fparts, key=key)
         if isinstance(obj, (pd.DataFrame, pl.DataFrame, pl.LazyFrame)):

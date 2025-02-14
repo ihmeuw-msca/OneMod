@@ -8,40 +8,43 @@ from pydantic import ValidationError
 from onemod.dtypes import Data
 from onemod.io import Input
 
-REQUIRED_INPUT = ["data.parquet", "covariates.csv"]
-OPTIONAL_INPUT = ["priors.pkl"]
+REQUIRED_INPUT = {
+    "data": {"format": "parquet"},
+    "covariates": {"format": "csv"},
+}
+OPTIONAL_INPUT = {"priors": {"format": "pkl"}}
 VALID_ITEMS = {
     "data": "/path/to/predictions.parquet",
-    "covariates": Data(
-        stage="first_stage", path=Path("/path/to/selected_covs.csv")
-    ),
-    "priors": Data(stage="second_stage", path=Path("/path/to/model.pkl")),
+    "covariates": Data(stage="first_stage", path="/path/to/selected_covs.csv"),
+    "priors": Data(stage="second_stage", path="/path/to/model.pkl"),
 }
 ITEMS_WITH_CYCLES = {
     "data": "/path/to/predictions.parquet",
-    "covariates": Data(
-        stage="test_stage", path=Path("/path/to/selected_covs.csv")
-    ),
-    "priors": Data(stage="test_stage", path=Path("/path/to/model.pkl")),
+    "covariates": Data(stage="test_stage", path="/path/to/selected_covs.csv"),
+    "priors": Data(stage="test_stage", path="/path/to/model.pkl"),
 }
 ITEMS_WITH_INVALID_TYPES = {
     "data": "/path/to/predictions.csv",
     "covariates": Data(
-        stage="first_stage", path=Path("/path/to/selected_covs.parquet")
+        stage="first_stage", path="/path/to/selected_covs.parquet"
     ),
-    "priors": Data(stage="second_stage", path=Path("/path/to/model.zip")),
+    "priors": Data(stage="second_stage", path="/path/to/model.zip"),
 }
 ITEMS_WITH_EXTRAS = {"dummy": "/path/to/dummy.parquet", **VALID_ITEMS}
 ITEMS_WITH_SHARED_DEPENDENCY = {
     "data": "/path/to/predictions.parquet",
-    "covariates": Data(
-        stage="first_stage", path=Path("/path/to/selected_covs.csv")
-    ),
-    "priors": Data(stage="first_stage", path=Path("/path/to/model.pkl")),
+    "covariates": Data(stage="first_stage", path="/path/to/selected_covs.csv"),
+    "priors": Data(stage="first_stage", path="/path/to/model.pkl"),
 }
 
 
-def get_input(items: dict[str, Path | Data] = {}) -> Input:
+def get_input(items: dict[str, Data | Path | str] = {}) -> Input:
+    if items:
+        items = items.copy()
+        for item_name in items:
+            if isinstance(item_value := items[item_name], (Path, str)):
+                items[item_name] = Input.path_to_data(item_value)
+
     return Input(
         stage="test_stage",
         required=REQUIRED_INPUT,
@@ -51,21 +54,7 @@ def get_input(items: dict[str, Path | Data] = {}) -> Input:
 
 
 @pytest.mark.unit
-def test_expected_names():
-    assert get_input()._expected_names == ["data", "covariates", "priors"]
-
-
-@pytest.mark.unit
-def test_expected_types():
-    assert get_input()._expected_types == {
-        "data": "parquet",
-        "covariates": "csv",
-        "priors": "pkl",
-    }
-
-
-@pytest.mark.unit
-def test_cycles_detected_by_init():
+def test_cycle_detected_by_init():
     with pytest.raises(ValueError):
         get_input(ITEMS_WITH_CYCLES)
 
@@ -83,7 +72,7 @@ def test_cycle_detected_by_setitem():
 
 
 @pytest.mark.unit
-def test_cycles_detected_by_update():
+def test_cycle_detected_by_update():
     test_input = get_input()
     with pytest.raises(ValueError) as error:
         test_input.update(ITEMS_WITH_CYCLES)
@@ -129,8 +118,8 @@ def test_invalid_types_detected_by_update():
 def test_items_from_init():
     test_input = get_input(VALID_ITEMS)
     for item_name, item_value in VALID_ITEMS.items():
-        if isinstance(item_value, str):
-            item_value = Path(item_value)
+        if isinstance(item_value, (Path, str)):
+            item_value = Input.path_to_data(item_value)
         assert test_input[item_name] == item_value
 
 
@@ -140,8 +129,8 @@ def test_item_from_setitem(item_name):
     test_input = get_input()
     test_input[item_name] = (item_value := VALID_ITEMS[item_name])
     assert item_name in test_input
-    if isinstance(item_value, str):
-        assert test_input[item_name] == Path(item_value)
+    if isinstance(item_value, (Path, str)):
+        assert test_input[item_name] == Input.path_to_data(item_value)
     else:
         assert test_input[item_name] == item_value
 
@@ -151,8 +140,8 @@ def test_items_from_update():
     test_input = get_input()
     test_input.update(VALID_ITEMS)
     for item_name, item_value in VALID_ITEMS.items():
-        if isinstance(item_value, str):
-            item_value = Path(item_value)
+        if isinstance(item_value, (Path, str)):
+            item_value = Input.path_to_data(item_value)
         assert test_input[item_name] == item_value
 
 
@@ -283,18 +272,27 @@ def test_missing_items():
 def test_serialize():
     test_input = get_input(VALID_ITEMS)
     assert test_input.model_dump() == {
-        "data": "/path/to/predictions.parquet",
+        "data": {
+            "stage": None,
+            "methods": None,
+            "format": "parquet",
+            "path": Path("/path/to/predictions.parquet"),
+            "shape": None,
+            "columns": None,
+        },
         "covariates": {
             "stage": "first_stage",
-            "path": "/path/to/selected_covs.csv",
-            "format": "parquet",
+            "methods": None,
+            "format": "csv",
+            "path": Path("/path/to/selected_covs.csv"),
             "shape": None,
             "columns": None,
         },
         "priors": {
             "stage": "second_stage",
-            "path": "/path/to/model.pkl",
-            "format": "parquet",
+            "methods": None,
+            "format": "pkl",
+            "path": Path("/path/to/model.pkl"),
             "shape": None,
             "columns": None,
         },
@@ -321,25 +319,3 @@ def test_clear():
 def test_frozen():
     with pytest.raises(ValidationError):
         get_input().items = VALID_ITEMS
-
-
-@pytest.mark.unit
-def test_input_model():
-    test_input = get_input(VALID_ITEMS)
-    assert test_input.model_dump() == {
-        "data": "/path/to/predictions.parquet",
-        "covariates": {
-            "stage": "first_stage",
-            "path": "/path/to/selected_covs.csv",
-            "format": "parquet",
-            "shape": None,
-            "columns": None,
-        },
-        "priors": {
-            "stage": "second_stage",
-            "path": "/path/to/model.pkl",
-            "format": "parquet",
-            "shape": None,
-            "columns": None,
-        },
-    }

@@ -7,7 +7,6 @@ from typing import Any
 import pandas as pd
 
 from onemod import Pipeline, load_stage
-from onemod.config import StageConfig
 from onemod.dtypes import Data
 from onemod.stage import Stage
 
@@ -17,9 +16,14 @@ class SimpleStage(Stage):
 
     # TODO: Update once method-specific dependencies implemented
 
-    config: StageConfig = StageConfig()
-    _required_input: list[str] = ["fit_input.csv", "predict_input.csv"]
-    _output: list[str] = ["fit_output.csv", "predict_output.csv"]
+    _required_input: dict[str, dict[str, Any]] = {
+        "fit_input": {"methods": ["run", "fit"], "format": "csv"},
+        "predict_input": {"methods": ["run", "predict"], "format": "csv"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {
+        "fit_output": {"methods": ["run", "fit"], "format": "csv"},
+        "predict_output": {"methods": ["run", "predict"], "format": "csv"},
+    }
     _log: list[str] = []
 
     def get_log(self) -> list[str]:
@@ -51,9 +55,13 @@ class SimpleStage(Stage):
 
 
 class SimpleStageFit(SimpleStage):
-    _required_input: list[str] = ["fit_input.csv"]
-    _output: list[str] = ["fit_output.csv"]
     _skip: list[str] = ["predict"]
+    _required_input: dict[str, dict[str, Any]] = {
+        "fit_input": {"methods": ["run", "fit"], "format": "csv"}
+    }
+    _output_items: dict[str, dict[str, Any]] = {
+        "fit_output": {"methods": ["run", "fit"], "format": "csv"}
+    }
 
     def _run(self, **kwargs) -> None:
         self._log.append(f"run: name={self.name}")
@@ -61,9 +69,13 @@ class SimpleStageFit(SimpleStage):
 
 
 class SimpleStagePredict(SimpleStage):
-    _required_input: list[str] = ["predict_input.csv"]
-    _output: list[str] = ["predict_output.csv"]
     _skip: list[str] = ["fit"]
+    _required_input: dict[str, dict[str, Any]] = {
+        "predict_input": {"methods": ["run", "fit"], "format": "csv"}
+    }
+    _output_items: dict[str, dict[str, Any]] = {
+        "predict_output": {"methods": ["run", "fit"], "format": "csv"}
+    }
 
     def _run(self, **kwargs) -> None:
         self._log.append(f"run: name={self.name}")
@@ -75,9 +87,11 @@ class ParallelStage(Stage):
 
     # TODO: Update once stage instance can be passed as input
 
-    config: StageConfig = StageConfig()
-    _required_input: list[str] = ["input1", "input2"]
-    _output: list[str] = ["output.csv"]
+    _required_input: dict[str, dict[str, Any]] = {
+        "input1": {"format": "directory"},
+        "input2": {"format": "directory"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {"output": {"format": "csv"}}
     _collect_after: list[str] = ["run", "fit", "predict"]
     _log: list[str] = []
 
@@ -421,10 +435,10 @@ def _assert_simple_output(stage: SimpleStage, method: str) -> None:
 
     # Check input columns
     assert len(input_column := output["input"].unique()) == 1
-    if isinstance(stage_input := stage.input[f"{method}_input"], Path):
+    if (upstream_stage := stage.input[f"{method}_input"].stage) is None:
         assert input_column[0] == "pipeline_input"
     else:
-        assert input_column[0] == stage_input.stage
+        assert input_column[0] == upstream_stage
 
     # Check method column
     assert len(method_column := output["method"].unique()) == 1
@@ -464,14 +478,10 @@ def assert_parallel_output(
 
     # Check input columns
     for input_name in ["input1", "input2"]:
-        input_column = output[input_name].unique()
-        input_item = stage.input[input_name]
-
-        if isinstance(input_item, Path):
-            assert len(input_column) == 1
+        if (upstream_stage := stage.input[input_name].stage) is None:
+            assert len(input_column := output[input_name].unique()) == 1
             assert input_column[0] == "pipeline_input"
         else:
-            upstream_stage = input_item.stage
             for _, row in output.iterrows():
                 row_stage = row["stage"]
                 row_input = row[input_name]

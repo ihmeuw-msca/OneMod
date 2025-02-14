@@ -25,7 +25,7 @@ def test_check_method_stage_collect_simple(simple_pipeline):
 
 
 @pytest.mark.unit
-def test_check_method_stage_collect_parallel_empty_collect_after():
+def test_check_method_stage_collect_parallel_empty_collect_after(tmp_path):
     class DummyStage(ParallelStage):
         _collect_after = []
 
