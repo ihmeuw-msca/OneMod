@@ -1,11 +1,8 @@
 API Reference
 =============
 
-TODO: Briefly describe the organization of the API reference
-
-TODO: Add more subpackages / modules
-
 .. toctree::
+   :maxdepth: 2
    :glob:
 
    onemod.main
