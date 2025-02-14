@@ -8,7 +8,8 @@ Notes
 * No need to create stage-specific subclasses
 
 """
-# TODO: Use collector with check_cycle and check_types?
+# TODO: Use collector with check_cycles and check_types?
+# TODO: Error messages weird for check_cycles/check_types?
 
 from abc import ABC
 from pathlib import Path
@@ -222,7 +223,7 @@ class Input(IO):
             return
 
         if item_value.format != expected.format:
-            raise TypeError(f"{item_name}={item_value.format}")
+            raise TypeError(f"Invalid type for {self.stage} input: {item_name}")
 
     @staticmethod
     def path_to_data(path: Path | str) -> Data:

@@ -169,8 +169,8 @@ def test_extras_ignored_by_update():
 def test_get():
     test_input = get_input(VALID_ITEMS)
     for input_name, input_value in VALID_ITEMS.items():
-        if isinstance(input_value, str):
-            input_value = Path(input_value)
+        if isinstance(input_value, (Path, str)):
+            input_value = Input.path_to_data(input_value)
         assert test_input.get(input_name) == input_value
     assert test_input.get("dummy") is None
     assert test_input.get("dummy", "default") == "default"
@@ -180,8 +180,8 @@ def test_get():
 def test_getitem():
     test_input = get_input(VALID_ITEMS)
     for input_name, input_value in VALID_ITEMS.items():
-        if isinstance(input_value, str):
-            input_value = Path(input_value)
+        if isinstance(input_value, (Path, str)):
+            input_value = Input.path_to_data(input_value)
         assert test_input[input_name] == input_value
 
 
