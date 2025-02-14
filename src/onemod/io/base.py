@@ -71,6 +71,7 @@ class Input(IO):
         if len(set(self.required).intersection(self.optional)):
             raise ValueError("Required and optional input cannot share keys")
         if self.items:
+            # Note: silently removes anything not in required or optional
             for item_name in list(self.items):
                 if item_name not in list(self.required) + list(self.optional):
                     del self.items[item_name]
@@ -78,21 +79,24 @@ class Input(IO):
             self._check_types()
 
     def update(self, items: dict[str, Data | Path | str]) -> None:
+        # Note: silently ignores anything not in required or optional
         data_items = {}
         for item_name, item_value in items.items():
-            if isinstance(item_value, Data):
-                data_items[item_name] = item_value
-            elif isinstance(item_value, (Path, str)):
-                data_items[item_name] = Input.path_to_data(item_value)
-            else:
-                raise TypeError(f"Invalid input item: {item_name}={item_value}")
+            if item_name in list(self.required) + list(self.optional):
+                if isinstance(item_value, Data):
+                    data_items[item_name] = item_value
+                elif isinstance(item_value, (Path, str)):
+                    data_items[item_name] = Input.path_to_data(item_value)
+                else:
+                    raise TypeError(
+                        f"Invalid input item: {item_name}={item_value}"
+                    )
 
         self._check_cycles(data_items)
         self._check_types(data_items)
 
         for item_name, item_value in data_items.items():
-            if item_name in list(self.required) + list(self.optional):
-                self.items[item_name] = item_value
+            self.items[item_name] = item_value
 
     def remove(self, item: str) -> None:
         if item in self.items:

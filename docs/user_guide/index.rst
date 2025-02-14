@@ -9,12 +9,16 @@ User Guide
    core_concepts
    advanced_usage
 
-TODO: Instructions for how to read the user guide
+.. Add stages/index after core_concepts
+
+This user guide introduces and explains some key concepts of the **OneMod**
+package.
 
 .. note::
 
-   For explanations of key OneMod terms, please check out :ref:`Core Concepts`.
+   * For explanations of key **OneMod** terms, please check out
+     :ref:`Core Concepts`.
+   * For instructions on creating custom stages, please check out
+     :ref:`Advanced Usage`.
 
-.. For information on the stages available in OneMod, please check out :ref:`Stages`.
-
-   For instructions on creating custom stages, please check out :ref:`Advanced Usage`.
+.. * For information on the modeling stages available in OneMod, please check out :ref:`Stages`.
