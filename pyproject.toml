@@ -29,6 +29,7 @@ dependencies = [
     "pyarrow",
     "pydantic",
     "dill",
+    "tomli",
 ]
 
 [project.optional-dependencies]
