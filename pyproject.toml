@@ -30,6 +30,7 @@ dependencies = [
     "pydantic",
     "dill",
     "tomli",
+    "tomli_w",
 ]
 
 [project.optional-dependencies]
