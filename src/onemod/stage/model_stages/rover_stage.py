@@ -12,6 +12,7 @@ Notes
 """
 
 import warnings
+from typing import Any
 
 import pandas as pd
 from loguru import logger
@@ -26,9 +27,12 @@ class RoverStage(Stage):
 
     config: RoverConfig
     _skip: list[str] = ["predict"]
-    _required_input: list[str] = ["data.parquet"]
-    _output: list[str] = ["selected_covs.csv", "summaries.csv"]
     _collect_after: list[str] = ["run", "fit"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _output_items: dict[str, dict[str, Any]] = {
+        "selected_covs": {"format": "csv"},
+        "summaries": {"format": "csv"},
+    }
 
     def model_post_init(self, *args, **kwargs) -> None:
         if self.groupby is None:

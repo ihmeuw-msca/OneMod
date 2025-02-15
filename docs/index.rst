@@ -1,37 +1,37 @@
-OneMod
-######
-
-.. image:: ../pipeline.png
-
-
-In many applications in epidemiology, we need to estimate a single quantity (e.g., incidence or prevalence) by leveraging covariates and correlations across multiple dimensions (e.g., age, location, or year).
-This pipeline package estimates quantities using the following approach:
-
-#. Statistical modeling with covariates
-
-   * Create generalized linear models with `RegMod <https://github.com/ihmeuw-msca/regmod>`_
-
-   * Explore covariate combinations with `ModRover <https://github.com/ihmeuw-msca/modrover>`_
-
-#. Coefficient smoothing with `SPxMod <https://github.com/ihmeuw-msca/spxmod>`_
-#. Smoothing across dimensions
-
-   * Smooth predictions using weighted averages with `WeAve <https://github.com/ihmeuw-msca/weighted-average>`_
-
-   * Smooth predictions using mixed-effects models (i.e., `MR-BRT <https://github.com/ihmeuw-msca/mrtool>`_ with `SWiMR <https://hub.ihme.washington.edu/display/MSCA/Similarity-Weighted+Meta-Regression+%28SWiMR%29+models>`_)
-
-#. Ensemble smoothed predictions
-
-#######################
-Table of Contents
-#######################
+Welcome to OneMod!
+==================
 
 .. toctree::
-    :maxdepth: 2
-    :caption: Contents:
+   :hidden:
 
-    installation
-    usage
-    stages/index
-    example/index
-    developer_guide
+   getting_started/index
+   user_guide/index
+   api_reference/index
+   developer_guide/index
+
+**OneMod** is an orchestration package that allows users to build pipelines of
+various models created by `IHME Math Sciences <https://github.com/ihmeuw-msca>`_.
+Core features of **OneMod** include an intuitive syntax for defining the
+dataflow between pipeline stages, the ability to easily parallelize over
+different data subsets and/or parameter sets, and options for data validation.
+Advanced users can also define their own custom stages.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 50 50
+
+   * - :ref:`Getting Started`
+     - :ref:`User Guide`
+
+   * - If you are new to OneMod, this is where you should go. It contains common use cases and examples to help you get started.
+     - The user guide provides in-depth information on key concepts with useful background information and explanations.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 50 50
+
+   * - :ref:`API Reference`
+     - :ref:`Developer Guide`
+
+   * - If you are looking for information on a specific module, function, class, or method, this part of the documentation is for you.
+     - Want to improve the existing functionalities or documentation? The contributing guidelines will guide you through the process.

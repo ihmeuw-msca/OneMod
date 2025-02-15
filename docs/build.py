@@ -1,8 +1,12 @@
 import functools
 import subprocess
+import sys
 from typing import TextIO
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 run = functools.partial(subprocess.run, shell=True)
 

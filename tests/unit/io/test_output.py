@@ -11,23 +11,17 @@ from onemod.io import Output
 ITEMS = {
     "predictions": {
         "stage": "stage",
-        "path": "/path/to/predictions.parquet",
+        "methods": ["run", "fit"],
         "format": "parquet",
+        "path": Path("/path/to/stage/output/predictions.parquet"),
         "shape": None,
         "columns": None,
     }
 }
 OUTPUT = Output(
     stage="stage",
-    items={
-        "predictions": Data(
-            stage="stage",
-            path=Path("/path/to/predictions.parquet"),
-            format="parquet",
-            shape=None,
-            columns=None,
-        )
-    },
+    directory="/path/to/stage/output",
+    items={"predictions": Data(format="parquet", methods=["run", "fit"])},
 )
 
 
@@ -38,18 +32,14 @@ def test_serialize():
 
 @pytest.mark.unit
 def test_get():
-    assert OUTPUT.get("predictions") == Data(
-        stage="stage", path=Path("/path/to/predictions.parquet")
-    )
+    assert OUTPUT.get("predictions") == Data(**ITEMS["predictions"])
     assert OUTPUT.get("dummy") is None
     assert OUTPUT.get("dummy", "default") == "default"
 
 
 @pytest.mark.unit
 def test_getitem():
-    assert OUTPUT["predictions"] == Data(
-        stage="stage", path=Path("/path/to/predictions.parquet")
-    )
+    assert OUTPUT["predictions"] == Data(**ITEMS["predictions"])
     with pytest.raises(KeyError) as error:
         OUTPUT["dummy"]
     assert (
@@ -74,8 +64,3 @@ def test_frozen():
 def test_no_setitem():
     with pytest.raises(TypeError):
         OUTPUT["item_name"] = "item_value"
-
-
-@pytest.mark.unit
-def test_to_dict():
-    assert OUTPUT.model_dump() == ITEMS

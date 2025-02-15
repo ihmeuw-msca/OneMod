@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 from abc import ABC
-from functools import cached_property
 from inspect import getfile
 from itertools import product
 from pathlib import Path
 from typing import Any, Literal, Mapping
 
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, validate_call
+from pydantic import BaseModel, ConfigDict
 
 import onemod.stage as onemod_stages
 from onemod.config import StageConfig
@@ -26,255 +25,153 @@ from onemod.validation import ValidationErrorCollector, handle_error
 class Stage(BaseModel, ABC):
     """Stage base class.
 
-    Stages can be run separately for data subsets using the `groupby`
-    attribute. For example, a single stage can have separate models for
-    each sex_id - age_group_id pair.
-
-    Stages can also be run for different parameter combinations using
-    the `crossby` attribute. For example, a single stage can be run for
-    various hyperparameter values, and then the results can be combined
-    into an ensemble.
-
-    When a stage using `groupby` and/or `crossby` is evaluated, all
-    submodels are evaluated, and then, if `method` is in
-    `collect_after`, the submodel results are collected using the
-    `collect` method.
-
     Parameters
     ----------
     name : str
         Stage name.
     config : StageConfig, optional
         Stage configuration.
-    groupby : list of str or None, optional
-        Column names used to create submodel data subsets. Default is
-        None.
-    crossby : list of str or None, optional
-        Parameter names used to create submodel parameter sets. Default
-        is None.
-    input_validation : dict, optional
+    groupby : list of str, optional
+        Column names used to create submodel data subsets.
+    crossby : list of str, optional
+        Parameter names used to create submodel parameter sets.
+    input_validation : dict of str: Data, optional
         Optional specification of input data validation.
-    output_validation : dict, optional
+    output_validation : dict of str: Data, optional
         Optional specification of output data validation.
-
-    Notes
-    -----
-    * Private attributes that are defined automatically:
-      * `_dataif : `DataInterface` object for loading/dumping input,
-        created in `Stage.set_dataif()` and called by `Pipeline.build()`
-        or `Stage.from_json()`.
-      * `_module`: Path to custom stage definition, created in
-        `Stage.module` or `Stage.from_json()`.
-      * `_input`: `Input` object that organizes `Stage` input, created
-        in `Stage.input` or `Stage.from_json()`, modified by
-        `Stage.__call__()`.
-      * `_subsets`: Data subsets. Created in
-        `Stage.create_stage_subsets().
-      * `_paramsets`: Parameter sets. Created in
-        `Stage.create_stage_params()`.
-    * Private attributes that must be defined by class:
-      * `_required_input`, `_optional_input`, `_output`: Strings with
-        syntax "f{name}.{extension}". For example, "data.parquet". If
-        input/output is a directory instead of a file, exclude the
-        extension. For example, "submodels".
-      * `_skip`: Methods that the stage does not implement (e.g., 'fit'
-        or 'predict').
-      * `_collect_after`: Methods that create submodel results (e.g.,
-        data subsets or parameter sets) that must be collected. For
-        example, collect submodel results for parameter sets to select
-        best parameter values after the 'fit' method, or collect
-        submodel results for data subsets after the 'predict' method. Do
-        not put 'collect' in `_collect_after`!
 
     """
 
     model_config = ConfigDict(validate_assignment=True)
 
     name: str
-    config: StageConfig = StageConfig()
-    groupby: UniqueList[str] | None = None
-    crossby: UniqueList[str] | None = None
-    input_validation: dict[str, Data] = {}
-    output_validation: dict[str, Data] = {}
-    _dataif: DataInterface | None = None
+    config: StageConfig
+    groupby: UniqueList[str] | None
+    crossby: UniqueList[str] | None
+    input_validation: dict[str, Data] | None
+    output_validation: dict[str, Data] | None
     _module: Path | None = None
-    _input: Input | None = None
-    _required_input: list[str] = []
-    _optional_input: list[str] = []
-    _output: list[str] = []
-    _skip: list[str] = []
-    _collect_after: list[str] = []
+    _input: Input
+    _output: Output
+    _dataif: DataInterface
     _subsets: DataFrame | None = None
     _paramsets: DataFrame | None = None
+    _skip: list[str] = []
+    _collect_after: list[str] = []
+    _required_input: dict[str, dict[str, Any]] = {}
+    _optional_input: dict[str, dict[str, Any]] = {}
+    _output_items: dict[str, dict[str, Any]] = {}
 
-    @property
-    def dataif(self) -> DataInterface:
-        """Stage data interface.
-
-        Examples
-        --------
-        Load input file:
-        * _requred_input: ["data.parquet"]
-        * data = self.dataif.load(key="data")
-
-        Load file from input directory:
-        * _required_input: ["submodels"]
-        * model = self.dataif.load("model_0.pkl", key="submodels")
-
-        Load output file:
-        * subsets = self.dataif.load("subsets.csv", key="output")
-
-        Dump output file:
-        * self.dataif.dump("submodels/model_0.pkl", key="output")
-
-        """
-        if self._dataif is None:
-            raise AttributeError(f"Stage '{self.name}' dataif has not been set")
-        return self._dataif
-
-    def set_dataif(self, config_path: Path | str) -> None:
-        """Set stage data interface.
-
-        Parameters
-        ----------
-        config_path : Path or str
-            Path to config file.
-
-        Notes
-        -----
-        * This method is called in Pipeline.build.
-        * This method assumes the pipeline's data flow has already been
-          defined (i.e., if the stage's input is changed after pipeline
-          is built, the data interface will not contain the new input).
-
-        """
-        directory = Path(config_path).parent
-        self._dataif = DataInterface(
-            directory=directory,
-            config=config_path,
-            output=directory / self.name,
+    def __init__(
+        self,
+        name: str,
+        config: StageConfig = StageConfig(),
+        groupby: list[str] | None = None,
+        crossby: list[str] | None = None,
+        input_validation: dict[str, Data | dict] | None = None,
+        output_validation: dict[str, Data | dict] | None = None,
+        module: Path | str | None = None,
+        input: Input | dict = {},
+        config_path: Path | str | None = None,
+    ) -> None:
+        """Create stage instance."""
+        super().__init__(
+            name=name,
+            config=config,
+            groupby=groupby,
+            crossby=crossby,
+            input_validation=input_validation,
+            output_validation=output_validation,
         )
-        for item_name, item_value in self.input.items.items():
-            if isinstance(item_value, Path):
-                self._dataif.add_path(item_name, item_value)
-            elif isinstance(item_value, Data):
-                item_value.path = directory / item_value.stage / item_value.path
-                self._dataif.add_path(item_name, item_value.path)
-        for item_name, item_value in self.output.items.items():
-            item_value.path = directory / self.name / item_value.path
-        if not (directory / self.name).exists():
-            (directory / self.name).mkdir()
 
-    @computed_property
-    def module(self) -> Path | None:
-        if self._module is None and not hasattr(
-            onemod_stages, self.type
-        ):  # custom stage
-            try:
-                return Path(getfile(self.__class__))
-            except TypeError:
-                raise TypeError(f"Could not find module for {self.name} stage")
-        return self._module
-
-    @property
-    def skip(self) -> list[str]:
-        return self._skip
-
-    @property
-    def collect_after(self) -> list[str]:
-        return self._collect_after
-
-    @computed_property
-    def input(self) -> Input | None:
-        if self._input is None:
-            self._input = Input(
-                stage=self.name,
-                required=self._required_input,
-                optional=self._optional_input,
-            )
-        return self._input
-
-    @cached_property
-    def output(self) -> Output:
-        output_items = {}
-        for item in self._output:
-            item_specs = item.split(".")
-            item_name = item_specs[0]
-            item_type = "directory" if len(item_specs) == 1 else item_specs[1]
-            output_items[item_name] = Data(
-                stage=self.name, path=Path(item), format=item_type
-            )
-        return Output(stage=self.name, items=output_items)
-
-    @property
-    def dependencies(self) -> list[str]:
-        if self.input is None:
-            return []
-        return self.input.dependencies
+        self.set_module(module)
+        self.set_input(input)
+        if config_path is not None:
+            self.set_dataif(config_path)
+            self.set_output()
 
     @computed_property
     def type(self) -> str:
+        """Stage type."""
         return type(self).__name__
 
-    @property
-    def has_submodels(self) -> bool:
-        return self.groupby is not None or self.crossby is not None
+    @computed_property
+    def module(self) -> Path | None:
+        """Path to module containing custom stage definition."""
+        return self._module
 
-    def get_submodels(
-        self,
-        subsets: dict[str, Any | list[Any]] | None = None,
-        paramsets: dict[str, Any | list[Any]] | None = None,
-    ) -> list[tuple[dict[str, Any] | None, ...]]:
-        """Get stage data subset/parameter set combinations.
+    def set_module(self, module: Path | str | None) -> None:
+        if isinstance(module, (Path, str)):
+            self._module = Path(module)
+        else:
+            if not hasattr(onemod_stages, self.type):
+                try:
+                    self._module = Path(getfile(self.__class__))
+                except TypeError:
+                    raise TypeError(
+                        f"Could not find module for custom stage '{self.name}'"
+                    )
 
-        Parameters
-        ----------
-        subsets : dict or None, optional
-            Submodel data subsets to include. If None, include all
-            submodel data subsets. Default is None.
-        paramsets : dict or None, optional
-            Submodel parameter sets to include. If None, include all
-            submodel parameter sets. Default is None.
+    @computed_property
+    def input(self) -> Input:
+        """Stage input metadata."""
+        # TODO: Could add more description, like keys, Data
+        return self._input
 
-        Returns
-        -------
-        list of tuple
-            Submodel data subset/parameter set combinations.
-
-        """
-        if not self.has_submodels:
-            raise AttributeError(f"Stage '{self.name}' does not have submodels")
-        if subsets is not None and self.subsets is None:
-            raise AttributeError(
-                f"Stage '{self.name}' does not use groupby attribute"
-            )
-        if paramsets is not None and self.paramsets is None:
-            raise AttributeError(
-                f"Stage '{self.name}' does not use crossby attribute"
-            )
-
-        # Filter data subsets and parameter sets
-        filtered_subsets = self.subsets
-        if filtered_subsets is not None and subsets is not None:
-            filtered_subsets = self.get_subset(filtered_subsets, subsets)
-        filtered_paramsets = self.paramsets
-        if filtered_paramsets is not None and paramsets is not None:
-            filtered_paramsets = self.get_subset(filtered_paramsets, paramsets)
-
-        # Generate all data subset/parameter set combinations
-        return list(
-            product(
-                [None]
-                if filtered_subsets is None
-                else filtered_subsets.to_dict(orient="records"),
-                [None]
-                if filtered_paramsets is None
-                else filtered_paramsets.to_dict(orient="records"),
-            )  # type: ignore
+    def set_input(self, input: Data | dict) -> None:
+        self._input = Input(
+            stage=self.name,
+            required=self._required_input,
+            optional=self._optional_input,
+            items=input,
         )
 
     @property
+    def output(self) -> Output:
+        """Stage output metadata."""
+        # TODO: Could add more description, like keys, Data
+        return self._output
+
+    def set_output(self) -> None:
+        self._output = Output(
+            stage=self.name,
+            directory=self.dataif.get_path("output"),
+            items=self._output_items,
+        )
+
+    @property
+    def dependencies(self) -> list[str]:
+        """Stage dependencies."""
+        return self.input.dependencies
+
+    @property
+    def dataif(self) -> DataInterface:
+        """Stage data interface."""
+        # TODO: Add more detailed description and examples
+        return self._dataif
+
+    def set_dataif(self, config_path: Path | str) -> None:
+        # Create data interface
+        directory = Path(config_path).parent
+        self._dataif = DataInterface(
+            config=config_path,
+            directory=directory,
+            output=directory / self.name,
+        )
+
+        # Add input items
+        for item_name, item_value in self.input.items.items():
+            if item_value.path is not None:
+                self._dataif.add_path(item_name, item_value.path)
+
+    @property
+    def skip(self) -> list[str]:
+        """Names of methods skipped by the stage."""
+        return self._skip
+
+    @property
     def subsets(self) -> DataFrame | None:
+        """Stage data subsets."""
         if self.groupby is not None and self._subsets is None:
             try:
                 self._subsets = self.dataif.load("subsets.csv", key="output")
@@ -284,19 +181,6 @@ class Stage(BaseModel, ABC):
                 )
         return self._subsets
 
-    @property
-    def paramsets(self) -> DataFrame | None:
-        if self.crossby is not None and self._paramsets is None:
-            try:
-                self._paramsets = self.dataif.load(
-                    "paramsets.csv", key="output"
-                )
-            except FileNotFoundError:
-                raise AttributeError(
-                    f"Stage '{self.name}' submodel parameter sets have not been created"
-                )
-        return self._paramsets
-
     def create_subsets(self, groupby_data: Path | str) -> None:
         """Create submodel data subsets from groupby."""
         if self.groupby is None:
@@ -305,7 +189,7 @@ class Stage(BaseModel, ABC):
             )
 
         data = self.dataif.load(
-            str(groupby_data), key="", columns=self.groupby
+            str(groupby_data), columns=self.groupby
         ).drop_duplicates()
         groups = data.groupby(self.groupby)
         self._subsets = DataFrame(
@@ -327,6 +211,20 @@ class Stage(BaseModel, ABC):
             raise ValueError(f"Empty subset or paramset: {subset}")
 
         return data.reset_index(drop=True)
+
+    @property
+    def paramsets(self) -> DataFrame | None:
+        """Stage parameter sets."""
+        if self.crossby is not None and self._paramsets is None:
+            try:
+                self._paramsets = self.dataif.load(
+                    "paramsets.csv", key="output"
+                )
+            except FileNotFoundError:
+                raise AttributeError(
+                    f"Stage '{self.name}' submodel parameter sets have not been created"
+                )
+        return self._paramsets
 
     def create_params(self) -> None:
         """Create submodel parameter sets from crossby."""
@@ -366,6 +264,99 @@ class Stage(BaseModel, ABC):
                 )
             self.config[param_name] = paramset[param_name]
 
+    @property
+    def has_submodels(self) -> bool:
+        """Whether the stage has submodels."""
+        return self.groupby is not None or self.crossby is not None
+
+    def get_submodels(
+        self,
+        subsets: dict[str, Any | list[Any]] | None = None,
+        paramsets: dict[str, Any | list[Any]] | None = None,
+    ) -> list[tuple[dict[str, Any] | None, ...]]:
+        """Get stage submodels.
+
+        A stage submodel consists of a single ``subset`` / ``paramset``
+        combination.
+
+        Parameters
+        ----------
+        subsets : dict, optional
+            Submodel data subsets to include. If None, include all
+            submodel data subsets. Default is None.
+        paramsets : dict, optional
+            Submodel parameter sets to include. If None, include all
+            submodel parameter sets. Default is None.
+
+        Returns
+        -------
+        list of tuple
+            Stage submodels.
+
+        """
+        # TODO: Add examples?
+        if not self.has_submodels:
+            raise AttributeError(f"Stage '{self.name}' does not have submodels")
+        if subsets is not None and self.subsets is None:
+            raise AttributeError(
+                f"Stage '{self.name}' does not use groupby attribute"
+            )
+        if paramsets is not None and self.paramsets is None:
+            raise AttributeError(
+                f"Stage '{self.name}' does not use crossby attribute"
+            )
+
+        # Filter data subsets and parameter sets
+        filtered_subsets = self.subsets
+        if filtered_subsets is not None and subsets is not None:
+            filtered_subsets = self.get_subset(filtered_subsets, subsets)
+        filtered_paramsets = self.paramsets
+        if filtered_paramsets is not None and paramsets is not None:
+            filtered_paramsets = self.get_subset(filtered_paramsets, paramsets)
+
+        # Generate all data subset/parameter set combinations
+        return list(
+            product(
+                [None]
+                if filtered_subsets is None
+                else filtered_subsets.to_dict(orient="records"),
+                [None]
+                if filtered_paramsets is None
+                else filtered_paramsets.to_dict(orient="records"),
+            )  # type: ignore
+        )
+
+    @property
+    def collect_after(self) -> list[str]:
+        """Names of methods that collect submodel results."""
+        return self._collect_after
+
+    def get_field(
+        self, field: str, stage_name: str | None = None, default: Any = None
+    ) -> Any:
+        """Get field from config file.
+
+        Parameters
+        ----------
+        field : str
+            Name of field. If field is nested, join keys with ':'.
+            For example, 'config:param`.
+        stage_name : str or None, optional
+            Name of stage if field belongs to stage. Default is None.
+
+        Returns
+        -------
+        Any
+            Field item.
+
+        """
+        config = self.dataif.load(key="config")
+        if stage_name is not None:
+            config = config.get("stages", {}).get(stage_name, {})
+        for key in field.split(":"):
+            config = config.get(key, {})
+        return config or default
+
     @classmethod
     def from_json(cls, config_path: Path | str, stage_name: str) -> Stage:
         """Load stage from JSON file.
@@ -373,7 +364,7 @@ class Stage(BaseModel, ABC):
         Parameters
         ----------
         config_path : Path or str
-            Path to config file.
+            Path to pipeline config file.
         stage_name : str
             Stage name.
 
@@ -387,20 +378,99 @@ class Stage(BaseModel, ABC):
             pipeline_config = json.load(file)
         try:
             stage_config = pipeline_config["stages"][stage_name]
+            del stage_config["type"]
         except KeyError:
             raise AttributeError(
                 f"{pipeline_config['name']} does not contain a stage named '{stage_name}'"
             )
-        stage = cls(**stage_config)
+
+        stage = cls(config_path=config_path, **stage_config)
         stage.config.add_pipeline_config(pipeline_config["config"])
-        if "module" in stage_config:
-            stage._module = stage_config["module"]
-        if hasattr(stage, "apply_stage_specific_config"):
-            stage.apply_stage_specific_config(stage_config)
-        if (input := stage_config.get("input")) is not None:
-            stage(**input)
-        stage.set_dataif(config_path)
         return stage
+
+    def build(
+        self,
+        collector: ValidationErrorCollector,
+        groupby_data: Path | str | None = None,
+    ) -> None:
+        """Perform build-time validation and create submodels."""
+        self.validate_build(collector)
+        if collector.has_errors():
+            return
+
+        if not (output := self.dataif.get_path(key="output")).exists():
+            output.mkdir()
+
+        # Create data subsets
+        if self.groupby is not None:
+            if groupby_data is None:
+                raise ValueError(
+                    "groupby_data is required for groupby attribute"
+                )
+            self.create_subsets(groupby_data)
+
+        # Create parameter sets
+        if self.crossby is not None:
+            self.create_params()
+
+    def validate_build(
+        self, collector: ValidationErrorCollector | None = None
+    ) -> None:
+        """Perfom build-time validation."""
+        self.input.check_missing(collector=collector)
+
+        if self.input_validation:
+            for schema in self.input_validation.values():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="input", collector=collector)
+
+        if self.output_validation:
+            for schema in self.output_validation.values():
+                if isinstance(schema, Data):
+                    schema.validate_metadata(kind="output", collector=collector)
+
+    def validate_run(
+        self, collector: ValidationErrorCollector | None = None
+    ) -> None:
+        """Perfom run-time validation."""
+        # TODO: add method arg
+        self.input.check_exists(collector=collector)
+
+        if self.input_validation:
+            for item_name, schema in self.input_validation.items():
+                data_path = self.input.get(item_name)
+                if data_path:
+                    schema.path = Path(data_path)
+                    schema.validate_data(None, collector)
+                else:
+                    handle_error(
+                        self.name,
+                        "Input validation",
+                        ValueError,
+                        f"Input data path for '{item_name}' not found in stage inputs.",
+                        collector,
+                    )
+
+    def validate_outputs(
+        self, collector: ValidationErrorCollector | None = None
+    ) -> None:
+        """Perform post-run validation of outputs."""
+        self.output.check_exists(collector=collector)
+
+        if self.output_validation:
+            for item_name, data_spec in self.output_validation.items():
+                data_output = self.output.get(item_name)
+                if data_output:
+                    data_spec.path = Path(data_output.path)
+                    data_spec.validate_data(None, collector)
+                else:
+                    handle_error(
+                        self.name,
+                        "Output Validation",
+                        KeyError,
+                        f"Output data '{item_name}' not found after stage execution.",
+                        collector,
+                    )
 
     def evaluate(
         self,
@@ -412,9 +482,12 @@ class Stage(BaseModel, ABC):
         cluster: str | None,
         resources: Path | str | dict[str, Any] | None,
         python: Path | str | None,
+        collector: ValidationErrorCollector | None = None,
         **kwargs,
     ) -> None:
         """Evaluate stage method."""
+        self.validate_run(collector=collector)
+
         if backend == "jobmon":
             from onemod.backend.jobmon_backend import evaluate_with_jobmon
 
@@ -446,77 +519,8 @@ class Stage(BaseModel, ABC):
                 **kwargs,
             )
 
-    def validate_build(self, collector: ValidationErrorCollector) -> None:
-        """Perfom build-time validation."""
-        if self.input_validation:
-            for item_name, schema in self.input_validation.items():
-                if isinstance(schema, Data):
-                    schema.validate_metadata(kind="input", collector=collector)
-
-        if self.output_validation:
-            for item_name, schema in self.output_validation.items():
-                if isinstance(schema, Data):
-                    schema.validate_metadata(kind="output", collector=collector)
-
-    def validate_run(self, collector: ValidationErrorCollector) -> None:
-        """Perfom run-time validation."""
-        if self.input_validation:
-            for item_name, schema in self.input_validation.items():
-                data_path = self.input.get(item_name)
-                if data_path:
-                    schema.path = Path(data_path)
-                    schema.validate_data(None, collector)
-                else:
-                    handle_error(
-                        self.name,
-                        "Input validation",
-                        ValueError,
-                        f"Input data path for '{item_name}' not found in stage inputs.",
-                        collector,
-                    )
-
-    def validate_outputs(self, collector: ValidationErrorCollector) -> None:
-        """Perform post-run validation of outputs."""
-        if self.output_validation:
-            for item_name, data_spec in self.output_validation.items():
-                data_output = self.output.get(item_name)
-                if data_output:
-                    data_spec.path = Path(data_output.path)
-                    data_spec.validate_data(None, collector)
-                else:
-                    handle_error(
-                        self.name,
-                        "Output Validation",
-                        KeyError,
-                        f"Output data '{item_name}' not found after stage execution.",
-                        collector,
-                    )
-
-    def get_field(
-        self, field: str, stage_name: str | None = None, default: Any = None
-    ) -> Any:
-        """Get field from config file.
-
-        Parameters
-        ----------
-        field : str
-            Name of field. If field is nested, join keys with ':'.
-            For example, 'config:param`.
-        stage_name : str or None, optional
-            Name of stage if field belongs to stage. Default is None.
-
-        Returns
-        -------
-        Any
-            Field item.
-
-        """
-        config = self.dataif.load(key="config")
-        if stage_name is not None:
-            config = config.get("stages", {}).get(stage_name, {})
-        for key in field.split(":"):
-            config = config.get(key, {})
-        return config or default
+        # FIXME: only validate outputs created by method
+        # self.validate_outputs(method, collector)
 
     def run(
         self,
@@ -540,8 +544,8 @@ class Stage(BaseModel, ABC):
             Submodel parameter sets to run. If None, run all parameter
             sets. Default is None.
         collect : bool, optional
-            Whether to collect submodel results. If `subsets` and
-            `paramsets` are both None, default is True, otherwise
+            Whether to collect submodel results. If ``subsets`` and
+            ``paramsets`` are both None, default is True, otherwise
             default is False.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
@@ -551,12 +555,12 @@ class Stage(BaseModel, ABC):
         Jobmon Parameters
         -----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         Python : Path or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
@@ -609,8 +613,8 @@ class Stage(BaseModel, ABC):
             Submodel parameter sets to fit. If None, fit all parameter
             sets. Default is None.
         collect : bool, optional
-            Whether to collect submodel results. If `subsets` and
-            `paramsets` are both None, default is True, otherwise
+            Whether to collect submodel results. If ``subsets`` and
+            ``paramsets`` are both None, default is True, otherwise
             default is False.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
@@ -620,12 +624,12 @@ class Stage(BaseModel, ABC):
         Jobmon Parameters
         -----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
@@ -680,8 +684,8 @@ class Stage(BaseModel, ABC):
             Submodel parameter sets to create predictions for. If None,
             create predictions for all parameter sets. Default is None.
         collect : bool, optional
-            Whether to collect submodel results. If `subsets` and
-            `paramsets` are both None, default is True, otherwise
+            Whether to collect submodel results. If ``subsets`` and
+            ``paramsets`` are both None, default is True, otherwise
             default is False.
         backend : {'local', 'jobmon'}, optional
             How to evaluate the method. Default is 'local'.
@@ -691,12 +695,12 @@ class Stage(BaseModel, ABC):
         Jobmon Parameters
         -----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
@@ -729,7 +733,6 @@ class Stage(BaseModel, ABC):
             "Subclasses must implement this method if not skipped"
         )
 
-    @validate_call
     def collect(self) -> None:
         """Collect stage submodel results."""
         raise NotImplementedError(
@@ -737,12 +740,26 @@ class Stage(BaseModel, ABC):
             " and collect_after not empty"
         )
 
-    @validate_call
-    def __call__(self, **input: Data | Path) -> Output:
-        """Define stage dependencies."""
-        # FIXME: Update data interface if it exists?
-        self.input.check_missing({**self.input.items, **input})
+    def __call__(self, **input: Data | Path | str) -> Output:
+        """Define stage dependencies.
+
+        Parameters
+        ----------
+        **input: Data, Path, or str
+            Stage input items.
+
+        Returns
+        -------
+        Output
+            Stage output metadata.
+
+        """
+        # TODO: Could add more description, like dataif, input keys
         self.input.update(input)
+
+        for item_name, item_value in self.input.items.items():
+            self.dataif.add_path(item_name, item_value.path, exist_ok=True)
+
         return self.output
 
     def __repr__(self) -> str:

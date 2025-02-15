@@ -1,21 +1,26 @@
 """Test stage input/output."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from onemod.config import StageConfig
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
-    config: StageConfig
-    _required_input: list[str] = ["data.parquet", "covariates.csv"]
-    _optional_input: list[str] = ["priors.pkl"]
-    _output: list[str] = ["predictions.parquet", "model.pkl"]
     _skip: list[str] = ["fit", "predict"]
+    _required_input: dict[str, dict[str, Any]] = {
+        "data": {"format": "parquet"},
+        "covariates": {"format": "csv"},
+    }
+    _optional_input: dict[str, dict[str, Any]] = {"priors": {"format": "pkl"}}
+    _output_items: dict[str, dict[str, Any]] = {
+        "predictions": {"format": "parquet"},
+        "model": {"format": "pkl"},
+    }
 
     def run(self):
         pass
@@ -25,11 +30,9 @@ class DummyStage(Stage):
 def stage_1(test_base_dir):
     stage_1 = DummyStage(
         name="stage_1",
-        config={},
+        config_path=test_base_dir / "pipeline.json",
         input_validation=dict(
             data=Data(
-                stage="stage_0",
-                path="data.parquet",
                 format="parquet",
                 columns=dict(
                     id_col=ColumnSpec(type=int),
@@ -50,8 +53,6 @@ def stage_1(test_base_dir):
                 ),
             ),
             covariates=Data(
-                stage="stage_0",
-                path="covariates.csv",
                 format="csv",
                 columns=dict(
                     id_col=ColumnSpec(type=int),
@@ -70,8 +71,8 @@ def stage_1(test_base_dir):
         output_validation=dict(
             predictions=Data(
                 stage="stage_1",
-                path="predictions.parquet",
                 format="parquet",
+                path=test_base_dir / "stage_1" / "predictions.parquet",
                 columns=dict(
                     id_col=ColumnSpec(type=int),
                     prediction_col=ColumnSpec(
@@ -95,14 +96,15 @@ def stage_1(test_base_dir):
 def stage_1_model_expected(test_base_dir):
     return {
         "name": "stage_1",
+        "config": {},
         "type": "DummyStage",
         "module": Path(__file__),
-        "config": {},
         "input_validation": {
             "covariates": {
-                "stage": "stage_0",
-                "path": "covariates.csv",
+                "stage": None,
+                "methods": None,
                 "format": "csv",
+                "path": None,
                 "shape": None,
                 "columns": {
                     "id_col": {"type": "int", "constraints": None},
@@ -118,9 +120,10 @@ def stage_1_model_expected(test_base_dir):
                 },
             },
             "data": {
-                "stage": "stage_0",
-                "path": "data.parquet",
+                "stage": None,
+                "methods": None,
                 "format": "parquet",
+                "path": None,
                 "shape": None,
                 "columns": {
                     "id_col": {"type": "int", "constraints": None},
@@ -145,8 +148,9 @@ def stage_1_model_expected(test_base_dir):
         "output_validation": {
             "predictions": {
                 "stage": "stage_1",
-                "path": "predictions.parquet",
+                "methods": None,
                 "format": "parquet",
+                "path": test_base_dir / "stage_1" / "predictions.parquet",
                 "shape": None,
                 "columns": {
                     "id_col": {"type": "int", "constraints": None},
@@ -160,8 +164,22 @@ def stage_1_model_expected(test_base_dir):
             }
         },
         "input": {
-            "data": str(test_base_dir / "stage_0" / "data.parquet"),
-            "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
+            "data": {
+                "stage": None,
+                "methods": None,
+                "format": "parquet",
+                "path": test_base_dir / "stage_0" / "data.parquet",
+                "shape": None,
+                "columns": None,
+            },
+            "covariates": {
+                "stage": None,
+                "methods": None,
+                "format": "csv",
+                "path": test_base_dir / "stage_0" / "covariates.csv",
+                "shape": None,
+                "columns": None,
+            },
         },
         "groupby": None,
         "crossby": None,
@@ -172,11 +190,9 @@ def stage_1_model_expected(test_base_dir):
 def stage_2(test_base_dir, stage_1):
     stage_2 = DummyStage(
         name="stage_2",
-        config={},
+        config_path=test_base_dir / "pipeline.json",
         input_validation=dict(
             data=Data(
-                stage="stage_1",
-                path=stage_1.output["predictions"].path,
                 format="parquet",
                 columns=dict(
                     id_col=ColumnSpec(type=int),
@@ -192,7 +208,7 @@ def stage_2(test_base_dir, stage_1):
         output_validation=dict(
             data=Data(
                 stage="stage_2",
-                path="predictions.parquet",
+                path=test_base_dir / "stage_2" / "predictions.parquet",
                 format="parquet",
                 columns=dict(
                     id_col=ColumnSpec(type=int),
@@ -217,14 +233,15 @@ def stage_2(test_base_dir, stage_1):
 def stage_2_model_expected(test_base_dir):
     return {
         "name": "stage_2",
-        "type": "DummyStage",
         "config": {},
+        "type": "DummyStage",
         "module": Path(__file__),
         "input_validation": {
             "data": {
-                "stage": "stage_1",
-                "path": "predictions.parquet",
+                "stage": None,
+                "methods": None,
                 "format": "parquet",
+                "path": None,
                 "shape": None,
                 "columns": {
                     "id_col": {"type": "int", "constraints": None},
@@ -240,8 +257,9 @@ def stage_2_model_expected(test_base_dir):
         "output_validation": {
             "data": {
                 "stage": "stage_2",
-                "path": "predictions.parquet",
+                "methods": None,
                 "format": "parquet",
+                "path": test_base_dir / "stage_2" / "predictions.parquet",
                 "shape": None,
                 "columns": {
                     "id_col": {"type": "int", "constraints": None},
@@ -257,12 +275,20 @@ def stage_2_model_expected(test_base_dir):
         "input": {
             "data": {
                 "stage": "stage_1",
-                "path": "predictions.parquet",
+                "methods": None,
                 "format": "parquet",
+                "path": test_base_dir / "stage_1" / "predictions.parquet",
                 "shape": None,
                 "columns": None,
             },
-            "covariates": str(test_base_dir / "stage_0" / "covariates.csv"),
+            "covariates": {
+                "stage": None,
+                "methods": None,
+                "format": "csv",
+                "path": test_base_dir / "stage_0" / "covariates.csv",
+                "shape": None,
+                "columns": None,
+            },
         },
         "groupby": None,
         "crossby": None,
@@ -272,7 +298,7 @@ def stage_2_model_expected(test_base_dir):
 @pytest.mark.integration
 def test_input_types(test_base_dir, stage_1):
     assert "data" in stage_1.input_validation
-    assert stage_1.input_validation["data"].path == Path("data.parquet")
+    assert stage_1.input_validation["data"].path is None
     assert stage_1.input_validation["data"].format == "parquet"
     assert stage_1.input_validation["data"].shape is None
     assert stage_1.dependencies == []
@@ -281,8 +307,9 @@ def test_input_types(test_base_dir, stage_1):
 @pytest.mark.integration
 def test_output_types(stage_1):
     assert "predictions" in stage_1.output_validation
-    assert stage_1.output_validation["predictions"].path == Path(
-        "predictions.parquet"
+    assert (
+        stage_1.output_validation["predictions"].path
+        == stage_1.dataif.get_path("output") / "predictions.parquet"
     )
     assert stage_1.output_validation["predictions"].format == "parquet"
     assert stage_1.output_validation["predictions"].shape is None

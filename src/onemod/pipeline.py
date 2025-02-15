@@ -27,12 +27,12 @@ class Pipeline(BaseModel):
     name : str
         Pipeline name.
     directory : Path or str
-        Experiment directory.
+        Path to pipeline directory.
     config : Config or dict, optional
         Pipeline configuration.
     groupby_data : Path or str, optional
         Path to data file used to create stage data subsets. Must
-        contain all columns included in stage `groupby` attributes.
+        contain all columns included in stage ``groupby`` attributes.
 
     """
 
@@ -43,18 +43,16 @@ class Pipeline(BaseModel):
     _stages: dict[str, Stage] = {}
 
     @computed_property
+    def stages(self) -> dict[str, Stage]:
+        """Pipeline stages."""
+        return self._stages
+
+    @computed_property
     def dependencies(self) -> dict[str, list[str]]:
+        """Stage dependencies."""
         return {
             stage.name: stage.dependencies for stage in self.stages.values()
         }
-
-    @computed_property
-    def stages(self) -> dict[str, Stage]:
-        return self._stages
-
-    def model_post_init(self, *args, **kwargs) -> None:
-        if not self.directory.exists():
-            self.directory.mkdir(parents=True)
 
     @classmethod
     def from_json(cls, config_path: Path | str) -> Pipeline:
@@ -129,6 +127,10 @@ class Pipeline(BaseModel):
         """
         if stage.name in self.stages:
             raise ValueError(f"Stage '{stage.name}' already exists")
+
+        stage.config.add_pipeline_config(self.config)
+        stage.set_dataif(self.directory / (self.name + ".json"))
+        stage.set_output()
 
         self._stages[stage.name] = stage
 
@@ -232,22 +234,15 @@ class Pipeline(BaseModel):
                 "Pipeline", "DAG validation", ValueError, str(e), collector
             )
 
-    def build(self, config_path: Path | str | None = None) -> None:
-        """Assemble pipeline, perform build-time validation, and save to JSON.
-
-        Parameters
-        ----------
-        config_path : Path or str, optional
-            Where to save config file. If None, file is saved at
-            pipeline.directory / (pipeline.name + ".json"). Default is
-            None.
-
-        """
-        config_path = config_path or self.directory / (self.name + ".json")
+    def build(self) -> None:
+        """Assemble pipeline, perform build-time validation, and save to JSON."""
         collector = ValidationErrorCollector()
 
+        if not self.directory.exists():
+            self.directory.mkdir(parents=True)
+
         for stage in self.stages.values():
-            stage.validate_build(collector)
+            stage.build(collector, self.groupby_data)
 
         self.validate_dag(collector)
 
@@ -255,24 +250,7 @@ class Pipeline(BaseModel):
             self.save_validation_report(collector)
             collector.raise_errors()
 
-        # TODO: Simplify with stage.build()
-        for stage in self.stages.values():
-            stage.config.add_pipeline_config(self.config)
-            stage.set_dataif(config_path)
-
-            # Create data subsets
-            if stage.groupby is not None:
-                if self.groupby_data is None:
-                    raise AttributeError(
-                        "groupby_data is required for groupby attribute"
-                    )
-                stage.create_subsets(self.groupby_data)
-
-            # Create parameter sets
-            if stage.crossby is not None:
-                stage.create_params()
-
-        self.to_json(config_path)
+        self.to_json(self.directory / (self.name + ".json"))
 
     def save_validation_report(
         self, collector: ValidationErrorCollector
@@ -324,7 +302,9 @@ class Pipeline(BaseModel):
         python: Path | str | None = None,
         **kwargs,
     ) -> None:
-        """Run pipeline.
+        """Run pipeline stages.
+
+        All stage submodels are run and submodel results are collected.
 
         Parameters
         ----------
@@ -335,17 +315,17 @@ class Pipeline(BaseModel):
             How to evaluate the method. Default is 'local'.
         **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `stage={arg_name: arg_value}`.
+            format ``stage={arg_name: arg_value}``.
 
-        Other Parameters
+        Jobmon Parameters
         ----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path, or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
@@ -362,7 +342,9 @@ class Pipeline(BaseModel):
         python: Path | str | None = None,
         **kwargs,
     ) -> None:
-        """Fit pipeline.
+        """Fit pipeline stages.
+
+        All stage submodels are fit and submodel results are collected.
 
         Parameters
         ----------
@@ -373,17 +355,17 @@ class Pipeline(BaseModel):
             How to evaluate the method. Default is 'local'.
         **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `stage={arg_name: arg_value}`.
+            format ``stage={arg_name: arg_value}``.
 
         Jobmon Parameters
         -----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path, or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """
@@ -400,7 +382,10 @@ class Pipeline(BaseModel):
         python: Path | str | None = None,
         **kwargs,
     ) -> None:
-        """Create pipeline predictions.
+        """Create predictions for pipeline stages.
+
+        Predictions are made for all stage submodels and submodel
+        results are collected.
 
         Parameters
         ----------
@@ -411,17 +396,17 @@ class Pipeline(BaseModel):
             How to evaluate the method. Default is 'local'.
         **kwargs
             Additional keyword arguments passed to stage methods. Use
-            format `stage={arg_name: arg_value}`.
+            format ``stage={arg_name: arg_value}``.
 
         Jobmon Parameters
         -----------------
         cluster : str, optional
-            Cluster name. Required if `backend` is 'jobmon'.
+            Cluster name. Required if ``backend`` is 'jobmon'.
         resources : Path, str, or dict, optional
             Path to resources file or dictionary of compute resources.
-            Required if `backend` is 'jobmon'.
+            Required if ``backend`` is 'jobmon'.
         python : Path, or str, optional
-            Path to Python environment if `backend` is 'jobmon'. If
+            Path to Python environment if ``backend`` is 'jobmon'. If
             None, use sys.executable. Default is None.
 
         """

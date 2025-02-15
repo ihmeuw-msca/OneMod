@@ -17,8 +17,11 @@ class DummyCustomStage(Stage):
     """Custom stage."""
 
     config: CustomConfig = CustomConfig()  # type: ignore
-    _required_input: list[str] = ["observations.parquet", "predictions.parquet"]
     _collect_after: list[str] = ["run", "predict"]
+    _required_input: dict[str, dict[str, Any]] = {
+        "observations": {"format": "parquet"},
+        "predictions": {"format": "parquet"},
+    }
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -69,10 +72,16 @@ class DummyKregStage(Stage):
     """Kreg stage."""
 
     config: KregConfig
-    _required_input: list[str] = ["data.parquet"]
-    _optional_input: list[str] = ["offset.parquet", "priors.pkl"]
-    _output: list[str] = ["predictions.parquet", "model.pkl"]
     _collect_after: list[str] = ["run", "predict"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _optional_input: dict[str, dict[str, Any]] = {
+        "offset": {"format": "parquet"},
+        "priors": {"format": "pkl"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {
+        "predictions": {"format": "parquet"},
+        "model": {"format": "pkl"},
+    }
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -124,12 +133,12 @@ class DummyPreprocessingStage(Stage):
 
     config: StageConfig
     _skip: list[str] = ["predict"]
-    _required_input: list[str] = ["data.parquet"]
-    _optional_input: list[str] = [
-        "age_metadata.parquet",
-        "location_metadata.parquet",
-    ]
-    _output: list[str] = ["data.parquet"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _optional_input: dict[str, dict[str, Any]] = {
+        "age_metadata": {"format": "parquet"},
+        "location_metadata": {"format": "parquet"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -162,9 +171,11 @@ class DummyRoverStage(Stage):
 
     config: RoverConfig
     _skip: list[str] = ["predict"]
-    _required_input: list[str] = ["data.parquet"]
-    _output: list[str] = ["selected_covs.csv"]
     _collect_after: list[str] = ["run", "fit"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _output_items: dict[str, dict[str, Any]] = {
+        "selected_covs": {"format": "csv"}
+    }
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -212,14 +223,17 @@ class DummySpxmodStage(Stage):
     """Spxmod stage."""
 
     config: SpxmodConfig
-    _required_input: list[str] = ["data.parquet"]
-    _optional_input: list[str] = [
-        "selected_covs.csv",
-        "offset.parquet",
-        "priors.pkl",
-    ]
-    _output: list[str] = ["predictions.parquet", "model.pkl"]
     _collect_after: list[str] = ["run", "predict"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _optional_input: dict[str, dict[str, Any]] = {
+        "selected_covs": {"format": "csv"},
+        "offset": {"format": "parquet"},
+        "priors": {"format": "pkl"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {
+        "predictions": {"format": "parquet"},
+        "model": {"format": "pkl"},
+    }
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -271,12 +285,12 @@ class MultiplyByTwoStage(Stage):
 
     config: StageConfig
     _skip: list[str] = ["predict"]
-    _required_input: list[str] = ["data.parquet"]
-    _optional_input: list[str] = [
-        "age_metadata.parquet",
-        "location_metadata.parquet",
-    ]
-    _output: list[str] = ["data.parquet"]
+    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _optional_input: dict[str, dict[str, Any]] = {
+        "age_metadata": {"format": "parquet"},
+        "location_metadata": {"format": "parquet"},
+    }
+    _output_items: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
 
     def _run(self, subset: dict[str, Any], *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""

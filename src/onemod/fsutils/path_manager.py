@@ -27,9 +27,9 @@ class PathManager:
             raise ValueError(f"Path for '{key}' not found.")
         del self.paths[key]
 
-    def get_full_path(self, *fparts: str, key: str = "") -> Path:
+    def get_full_path(self, *fparts: str, key: str | None = None) -> Path:
         """Retrieve the full path based on key and sub-paths."""
-        base_dir = self.get_path(key) if key else Path("")
+        base_dir = Path("") if key is None else self.get_path(key)
         return base_dir / "/".join(map(str, fparts))
 
     def __repr__(self) -> str:
