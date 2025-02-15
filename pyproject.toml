@@ -28,6 +28,7 @@ dependencies = [
     "polars",
     "pyarrow",
     "pydantic",
+    "dill",
 ]
 
 [project.optional-dependencies]
