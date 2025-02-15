@@ -1,128 +1,232 @@
-"""Run onemod pipeline."""
+"""Methods to load and evaluate pipeline and stage objects."""
 
-from __future__ import annotations
-
+import json
+from importlib.util import module_from_spec, spec_from_file_location
+from inspect import getmodulename
 from pathlib import Path
+from typing import Any, Literal
 
 import fire
 
-try:
-    from jobmon.client.status_commands import resume_workflow_from_id
-except ImportError:
-    pass
+import onemod.stage as onemod_stages
+from onemod.pipeline import Pipeline
+from onemod.stage import Stage
 
 
-from onemod.scheduler.scheduler import Scheduler
-from onemod.scheduler.scheduling_utils import SchedulerType
-from onemod.utils import format_input, get_handle
-
-
-def run_pipeline(
-    directory: str,
-    stages: list[str] | None = None,
-    cluster_name: str = "slurm",
-    run_local: bool = False,
-    jobmon: bool = False,
-) -> None:
-    """Run onemod pipeline.
+def load_pipeline(config: Path | str) -> Pipeline:
+    """Load pipeline instance from JSON file.
 
     Parameters
     ----------
-    directory : str
-        The experiment directory. It must contain config/settings.yml.
-    stages : list of str, optional
-        The pipeline stages to run. Default is ['rover_covsel', 'spxmod', 'weave', 'ensemble'].
-    cluster_name : str, optional
-        Name of the cluster to run the pipeline on. Default is 'slurm'.
-        For testing, use 'dummy'. Otherwise the directory must contain
-        config/resources.yml.
-    run_local : bool, optional
-        If true run the jobs sequentially without Jobmon. Default is False.
-    jobmon : bool, optional
-        If True use Jobmon. Default is True.
+    config : Path or str
+        Path to pipeline config file.
+
+    Returns
+    -------
+    Pipeline
+        Pipeline instance.
 
     """
-    if run_local and jobmon:
-        raise ValueError("Exactly one of run_local and jobmon can be True")
+    return Pipeline.from_json(config)
 
-    # If both false then use jobmon because it means they did not specify anything on the command line
-    if not run_local and not jobmon:
-        jobmon = True
 
-    scheduler_type: SchedulerType = (
-        SchedulerType.jobmon if jobmon else SchedulerType.run_local
+def load_stage(config: Path | str, stage_name: str) -> Stage:
+    """Load stage instance from JSON file.
+
+    Parameters
+    ----------
+    config : Path or str
+        Path to pipeline config file.
+    stage_name : str
+        Stage name.
+
+    Returns
+    -------
+    Stage
+        Stage instance.
+
+    """
+    stage_class = _get_stage(config, stage_name)
+    stage = stage_class.from_json(config, stage_name)
+    return stage
+
+
+def _get_stage(config: Path | str, stage_name: str) -> Stage:
+    """Get stage class from JSON file.
+
+    Parameters
+    ----------
+    config : Path or str
+        Path to config file.
+    stage_name : str
+        Stage name.
+
+    Returns
+    -------
+    Stage
+        Stage class.
+
+    Notes
+    -----
+    When a custom stage class has the same name as a built-in OneMod
+    stage class, this function returns the custom stage class.
+
+    """
+    with open(config, "r") as f:
+        config_dict = json.load(f)
+    if stage_name not in config_dict["stages"]:
+        raise KeyError(f"Config does not contain a stage named '{stage_name}'")
+    config_dict = config_dict["stages"][stage_name]
+    stage_type = config_dict["type"]
+
+    if "module" in config_dict:
+        return _get_custom_stage(stage_type, config_dict["module"])
+    if hasattr(onemod_stages, stage_type):
+        return getattr(onemod_stages, stage_type)
+    raise KeyError(
+        f"Config does not contain a module for custom stage '{stage_name}'"
     )
-    _run_pipeline(directory, stages, cluster_name, scheduler_type)
 
 
-def _run_pipeline(
-    directory: str,
-    stages: list[str] | None = None,
-    cluster_name: str = "slurm",
-    scheduler_type: SchedulerType = SchedulerType.jobmon,
+def _get_custom_stage(stage_type: str, module: str) -> Stage:
+    """Get custom stage class from file.
+
+    Parameters
+    ----------
+    stage_type : str
+        Name of custom stage class.
+    module : str
+        Path to Python module containing custom stage class definition.
+
+    Returns
+    -------
+    Stage
+        Custom stage class.
+
+    """
+    module_path = Path(module)
+
+    module_name = getmodulename(module_path)
+    if module_name is None:
+        raise ValueError(f"Could not determine module name from {module_path}")
+
+    spec = spec_from_file_location(module_name, module_path)
+    if spec is None:
+        raise ImportError(f"Could not load spec for module {module_path}")
+
+    if spec.loader is None:
+        raise ImportError(f"Module spec for {module_path} has no loader")
+
+    loaded_module = module_from_spec(spec)
+    spec.loader.exec_module(loaded_module)
+
+    return getattr(loaded_module, stage_type)
+
+
+def evaluate(
+    config: Path | str,
+    method: Literal["run", "fit", "predict", "collect"] = "run",
+    stages: str | list[str] | None = None,
+    subsets: dict[str, Any | list[Any]] | None = None,
+    paramsets: dict[str, Any | list[Any]] | None = None,
+    collect: bool | None = None,
+    backend: Literal["local", "jobmon"] = "local",
+    cluster: str | None = None,
+    resources: Path | str | dict[str, Any] | None = None,
+    python: Path | str | None = None,
+    **kwargs,
 ) -> None:
+    """Evaluate pipeline or stage method.
+
+    When evaluating a pipeline method, all stage submodels are evaluated
+    and submodel results are collected.
+
+    Parameters
+    ----------
+    config : Path or str
+        Path to pipeline config file.
+    method : str, optional
+        Name of method to evaluate. Default is 'run'.
+    stages : str, list of str, optional
+        Names of stages to evaluate. If None, evaluate all pipeline
+        stages. Default is None.
+    backend : str, optional
+        Whether to evaluate the method locally or with Jobmon.
+        Default is 'local'.
+    **kwargs
+        Additional keyword arguments passed to stage methods. When
+        evaluating a pipeline, use format ``stage={arg_name: arg_value}``.
+
+    Stage Parameters
+    ----------------
+    subsets : dict, optional
+        Submodel data subsets to include when evaluating a single stage.
+        If None, evaluate all data subsets. Default is None.
+    paramsets : dict, optional
+        Submodel parameter sets to include when evaluating a single
+        stage. If None, evaluate all parameter sets. Default is None.
+    collect : bool, optional
+        Whether to collect submodel results when evaluating a single
+        stage. If ``subsets`` and ``paramsets`` are both None, default
+        is True, otherwise default is False.
+
+    Jobmon Parameters
+    -----------------
+    cluster : str, optional
+        Cluster name. Required if ``backend`` is 'jobmon'.
+    resources : Path, str, or dict, optional
+        Path to resources file or dictionary of compute resources.
+        Required if ``backend`` is 'jobmon'.
+    python : Path or str, optional
+        Path to Python environment if ``backend`` is 'jobmon'. If None,
+        use sys.executable. Default is None.
+
+    Examples
+    --------
+    This method is the entrypoint when calling onemod from the command
+    line:
+
+    .. code:: bash
+
+       onemod --config pipeline_config.json --method run
+
+    To make sure arguments such as lists or dictionaries are parsed
+    correctly, omit spaces or use quotes:
+
+    .. code:: bash
+
+       onemod --config pipeline_config.json --stages [stage1,stage2]
+       onemod --config pipeline_config.json --stages stage1 --subsets "{'age_group_id': 1}"
+
+    See the `Python Fire Guide <https://google.github.io/python-fire/guide/#argument-parsing>`_
+    for more details.
+
     """
-    Internal function that uses an enum for the scheduler type for clarity.
-    Fire cannot handle enums.
-    """
+    model: Pipeline | Stage
 
-    all_stages = ["rover_covsel", "spxmod", "weave", "ensemble"]
-    if stages is None:
-        stages = all_stages
-    for stage in stages:
-        if stage not in all_stages:
-            raise ValueError(f"Invalid stage: {stage}")
-
-    # Load and validate the configuration file
-    dataif, config = get_handle(directory)
-
-    # Filter input data by ID subsets
-    # Used for task creation so must happen outside of workflow
-    if "rover_covsel" in stages or not dataif.data.exists():
-        format_input(directory)
-
-    # Configure Jobmon resources
-    directory = Path(directory)
-    if scheduler_type == SchedulerType.jobmon and cluster_name != "dummy":
-        resources_yaml = str(directory / "config" / "resources.yml")
+    if isinstance(stages, str):
+        model = load_stage(config, stages)
+        model.evaluate(
+            method,
+            subsets,
+            paramsets,
+            collect,
+            backend,
+            cluster,
+            resources,
+            python,
+            **kwargs,
+        )
     else:
-        resources_yaml = ""
-
-    # Create the scheduler and run it
-    scheduler = Scheduler(
-        directory=directory,
-        config=config,
-        stages=stages,
-        default_cluster_name=cluster_name,
-        resources_yaml=resources_yaml,
-    )
-    scheduler.run(scheduler_type=scheduler_type)
+        model = load_pipeline(config)
+        model.evaluate(
+            method, stages, backend, cluster, resources, python, **kwargs
+        )
 
 
-def resume_pipeline(workflow_id: int, cluster_name: str = "slurm") -> None:
-    """Resume onemod pipeline from last point of failure.
-
-    Parameters
-    ----------
-    workflow_id : int
-        ID of the workflow to resume.
-    cluster_name : str, optional
-        Name of cluster to run pipeline on. Default is 'slurm'.
-
-    """
-    resume_workflow_from_id(
-        workflow_id=workflow_id, cluster_name=cluster_name, log=True
-    )
+def main():
+    fire.Fire(evaluate)
 
 
-def main() -> None:
-    """Entry point for running onemod pipeline using command-line interface.
-
-    This function is intended to be executed using the 'fire.Fire' method to enable
-    command-line execution of the 'run_pipeline' and 'resume_pipeline' functions.
-
-    """
-    # Only expose the run_pipeline and resume_pipeline functions
-    fire.Fire(
-        {"run_pipeline": run_pipeline, "resume_pipeline": resume_pipeline}
-    )
+if __name__ == "__main__":
+    main()

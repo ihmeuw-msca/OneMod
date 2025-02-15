@@ -1,0 +1,226 @@
+import pandas as pd
+from tests.helpers.dummy_stages import (
+    CustomConfig,
+    DummyCustomStage,
+    DummyKregStage,
+    DummyPreprocessingStage,
+    DummyRoverStage,
+    DummySpxmodStage,
+)
+
+from onemod import Pipeline
+from onemod.config import (
+    Config,
+    KregConfig,
+    RoverConfig,
+    SpxmodConfig,
+    StageConfig,
+)
+from onemod.constraints import Constraint
+from onemod.dtypes import ColumnSpec, Data
+
+
+def setup_dummy_pipeline(test_input_data, test_base_dir):
+    """Set up a dummy pipeline, including specific dummy stages."""
+    preprocessing = DummyPreprocessingStage(
+        name="preprocessing",
+        config=StageConfig(),
+        input_validation={
+            "data": Data(
+                stage="input_data",
+                path=test_input_data,
+                format="parquet",
+                shape=(5, 52),
+                columns={
+                    "adult_hiv_death_rate": ColumnSpec(
+                        type="float",
+                        constraints=[
+                            Constraint(name="bounds", args={"ge": 0, "le": 1})
+                        ],
+                    )
+                },
+            )
+        },
+    )
+    covariate_selection = DummyRoverStage(
+        name="covariate_selection",
+        config=RoverConfig(
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            weights_column="fake_weights_column",
+            holdout_columns=["holdout1", "holdout2", "holdout3"],
+            cov_exploring=["cov1", "cov2", "cov3"],
+            cov_groupby=["sex_id"],
+        ),
+        groupby=["sex_id", "age_group_id"],
+    )
+    global_model = DummySpxmodStage(
+        name="global_model",
+        config=SpxmodConfig(
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
+            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
+        ),
+        groupby=["sex_id"],
+    )
+    location_model = DummySpxmodStage(
+        name="location_model",
+        config=SpxmodConfig(
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+            observation_column="fake_observation_column",
+            prediction_column="fake_prediction_column",
+            weights_column="fake_weights_column",
+            xmodel={"variables": [{"name": "var1"}, {"name": "var2"}]},
+        ),
+        groupby=["sex_id", "location_id"],
+    )
+    smoothing = DummyKregStage(
+        name="smoothing",
+        config=KregConfig(
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+            kreg_model={
+                "age_scale": 1,
+                "gamma_age": 1,
+                "gamma_year": 1,
+                "exp_location": 1,
+                "lam": 1,
+                "nugget": 1,
+            },
+            kreg_fit={
+                "gtol": 1,
+                "max_iter": 1,
+                "cg_maxiter": 1,
+                "cg_maxiter_increment": 1,
+                "nystroem_rank": 1,
+            },
+        ),
+        groupby=["sex_id", "region_id"],
+    )
+    custom_stage = DummyCustomStage(
+        name="custom_stage",
+        config=CustomConfig(custom_param=[1, 2]),
+        groupby=["sex_id", "super_region_id"],
+        crossby=["custom_param"],
+    )
+
+    # Create pipeline
+    dummy_pipeline = Pipeline(
+        name="dummy_pipeline",
+        config=Config(
+            id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
+            model_type="binomial",
+        ),
+        directory=test_base_dir,
+        groupby_data=test_input_data,
+    )
+
+    # Add stages
+    dummy_pipeline.add_stages(
+        [
+            preprocessing,
+            covariate_selection,
+            global_model,
+            location_model,
+            smoothing,
+            custom_stage,
+        ]
+    )
+
+    # Define dependencies
+    preprocessing(data=dummy_pipeline.groupby_data)
+    covariate_selection(data=preprocessing.output["data"])
+    global_model(
+        data=preprocessing.output["data"],
+        selected_covs=covariate_selection.output["selected_covs"],
+    )
+    location_model(
+        data=preprocessing.output["data"],
+        offset=global_model.output["predictions"],
+    )
+    smoothing(
+        data=preprocessing.output["data"],
+        offset=location_model.output["predictions"],
+    )
+    custom_stage(
+        observations=preprocessing.output["data"],
+        predictions=smoothing.output["predictions"],
+    )
+
+    dummy_pipeline.build()
+
+    return dummy_pipeline, [
+        preprocessing,
+        covariate_selection,
+        global_model,
+        location_model,
+        smoothing,
+        custom_stage,
+    ]
+
+
+def get_expected_args() -> dict:
+    """Dictionary of the expected arguments for each stage."""
+    return {
+        "preprocessing": {
+            "methods": {"run": ["run"], "fit": ["run"], "predict": None},
+            "subsets": None,
+            "paramsets": None,
+        },
+        "covariate_selection": {
+            "methods": {"run": ["run", "fit"], "fit": ["fit"], "predict": None},
+            "subsets": pd.DataFrame(
+                {"sex_id": [1, 1, 2, 2], "age_group_id": [2, 3, 2, 3]}
+            ),
+            "paramsets": None,
+        },
+        "global_model": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subsets": pd.DataFrame({"sex_id": [1, 2]}),
+            "paramsets": None,
+        },
+        "location_model": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subsets": pd.DataFrame(
+                {"sex_id": [1, 1, 2, 2], "location_id": [6, 33, 6, 33]}
+            ),
+            "paramsets": None,
+        },
+        "smoothing": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subsets": pd.DataFrame(
+                {"sex_id": [1, 1, 2, 2], "region_id": [5.0, 32.0, 5.0, 32.0]}
+            ),
+            "paramsets": None,
+        },
+        "custom_stage": {
+            "methods": {
+                "run": ["run", "fit", "predict"],
+                "fit": ["fit"],
+                "predict": ["predict"],
+            },
+            "subsets": pd.DataFrame(
+                {
+                    "sex_id": [1, 1, 2, 2],
+                    "super_region_id": [4.0, 31.0, 4.0, 31.0],
+                }
+            ),
+            "paramsets": pd.DataFrame({"custom_param": [1, 2]}),
+        },
+    }
