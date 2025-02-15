@@ -317,7 +317,7 @@ class Pipeline(BaseModel):
             Additional keyword arguments passed to stage methods. Use
             format ``stage={arg_name: arg_value}``.
 
-        Other Parameters
+        Jobmon Parameters
         ----------------
         cluster : str, optional
             Cluster name. Required if ``backend`` is 'jobmon'.
