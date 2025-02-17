@@ -17,7 +17,7 @@ jobs:
     - name: Install dependencies
       run: python -m pip install .[dev] --upgrade pip
     - name: Test with pytest
-      run: pytest --cov=src --cov-report=xml tests/ -m "not (requires_data or requires_jobmon)"
+      run: pytest --cov=src --cov-report=xml tests/ -m "not (requires_data or requires_jobmon or requires_models)"
     - name: Upload Coverage Report
       uses: actions/upload-artifact@v4
       with:
