@@ -46,10 +46,14 @@ import sys
 from pathlib import Path
 from typing import Any, Literal
 
-from jobmon.client.api import Tool
-from jobmon.client.task import Task
-from jobmon.client.task_template import TaskTemplate
 from pydantic import validate_call
+
+try:
+    from jobmon.client.api import Tool
+    from jobmon.client.task import Task
+    from jobmon.client.task_template import TaskTemplate
+except ImportError:
+    raise ImportError("Missing optional dependency 'jobmon'")
 
 from onemod.backend.utils import (
     check_input_exists,

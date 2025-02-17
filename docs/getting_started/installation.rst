@@ -27,6 +27,5 @@ For a list of required dependencies, see
 
      pip install onemod[jobmon]
 
-  Current options include ``dev``, ``docs``, and ``test``, and ``jobmon``
-  (optional backend, see
-  `Jobmon Documentation <https://jobmon.readthedocs.io/en/latest/index.html>`_).
+  For a list of optional dependencies, see
+  `project.toml <https://github.com/ihmeuw-msca/OneMod/blob/main/pyproject.toml>`_.

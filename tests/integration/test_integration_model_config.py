@@ -2,8 +2,12 @@
 
 import pytest
 
-from onemod.config import Config, RoverConfig, SpxmodConfig
-from onemod.config.model_config.spxmod_config import SpxmodModelConfig
+from onemod.config import Config
+from onemod.config.model_config.rover_config import RoverConfig
+from onemod.config.model_config.spxmod_config import (
+    SpxmodConfig,
+    SpxmodModelConfig,
+)
 
 CONFIG_ITEMS = {
     "id_columns": ["sex_id", "year_id"],
@@ -36,6 +40,8 @@ STAGE_DICT = {
 }
 
 
+@pytest.mark.integration
+@pytest.mark.requires_models
 @pytest.mark.parametrize("stage", ["rover", "spxmod"])
 @pytest.mark.parametrize("is_none", [True, False])
 def test_config_forward(stage, is_none):
@@ -57,6 +63,8 @@ def test_config_forward(stage, is_none):
         missing.remove(item)
 
 
+@pytest.mark.integration
+@pytest.mark.requires_models
 @pytest.mark.parametrize("stage", ["rover", "spxmod"])
 @pytest.mark.parametrize("is_none", [True, False])
 def test_config_backward(stage, is_none):

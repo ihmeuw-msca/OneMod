@@ -3,20 +3,35 @@ from typing import Any
 from pandas import DataFrame
 from pydantic import Field
 
-from onemod.config import KregConfig, RoverConfig, SpxmodConfig, StageConfig
+from onemod.config import StageConfig
 from onemod.stage import Stage
 
 
-class CustomConfig(StageConfig):
+class DummyCustomConfig(StageConfig):
     """Custom stage config."""
 
     custom_param: int | list[int] = 1
 
 
+class DummyKregConfig(StageConfig):
+    """Kreg config."""
+
+    kreg_model: dict
+    kreg_fit: dict = {}
+    kreg_uncertainty: dict = {}
+
+
+class DummyRoverConfig(StageConfig):
+    """Rover config."""
+
+    cov_exploring: list[str]
+    cov_groupby: list[str]
+
+
 class DummyCustomStage(Stage):
     """Custom stage."""
 
-    config: CustomConfig = CustomConfig()  # type: ignore
+    config: DummyCustomConfig = DummyCustomConfig()  # type: ignore
     _collect_after: list[str] = ["run", "predict"]
     _required_input: dict[str, dict[str, Any]] = {
         "observations": {"format": "parquet"},
@@ -71,7 +86,7 @@ class DummyCustomStage(Stage):
 class DummyKregStage(Stage):
     """Kreg stage."""
 
-    config: KregConfig
+    config: DummyKregConfig
     _collect_after: list[str] = ["run", "predict"]
     _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
     _optional_input: dict[str, dict[str, Any]] = {
@@ -169,7 +184,7 @@ class DummyPreprocessingStage(Stage):
 class DummyRoverStage(Stage):
     """Rover stage."""
 
-    config: RoverConfig
+    config: DummyRoverConfig
     _skip: list[str] = ["predict"]
     _collect_after: list[str] = ["run", "fit"]
     _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
@@ -219,10 +234,16 @@ class DummyRoverStage(Stage):
         return self.log
 
 
+class DummySpxmodConfig(StageConfig):
+    """Spxmod config."""
+
+    xmodel: dict
+
+
 class DummySpxmodStage(Stage):
     """Spxmod stage."""
 
-    config: SpxmodConfig
+    config: DummySpxmodConfig
     _collect_after: list[str] = ["run", "predict"]
     _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
     _optional_input: dict[str, dict[str, Any]] = {

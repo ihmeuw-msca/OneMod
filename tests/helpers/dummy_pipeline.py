@@ -1,21 +1,18 @@
 import pandas as pd
 from tests.helpers.dummy_stages import (
-    CustomConfig,
+    DummyCustomConfig,
     DummyCustomStage,
+    DummyKregConfig,
     DummyKregStage,
     DummyPreprocessingStage,
+    DummyRoverConfig,
     DummyRoverStage,
+    DummySpxmodConfig,
     DummySpxmodStage,
 )
 
 from onemod import Pipeline
-from onemod.config import (
-    Config,
-    KregConfig,
-    RoverConfig,
-    SpxmodConfig,
-    StageConfig,
-)
+from onemod.config import Config, StageConfig
 from onemod.constraints import Constraint
 from onemod.dtypes import ColumnSpec, Data
 
@@ -44,7 +41,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
     covariate_selection = DummyRoverStage(
         name="covariate_selection",
-        config=RoverConfig(
+        config=DummyRoverConfig(
             model_type="binomial",
             observation_column="fake_observation_column",
             weights_column="fake_weights_column",
@@ -56,7 +53,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
     global_model = DummySpxmodStage(
         name="global_model",
-        config=SpxmodConfig(
+        config=DummySpxmodConfig(
             id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
             model_type="binomial",
             observation_column="fake_observation_column",
@@ -68,7 +65,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
     location_model = DummySpxmodStage(
         name="location_model",
-        config=SpxmodConfig(
+        config=DummySpxmodConfig(
             id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
             model_type="binomial",
             observation_column="fake_observation_column",
@@ -80,7 +77,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
     smoothing = DummyKregStage(
         name="smoothing",
-        config=KregConfig(
+        config=DummyKregConfig(
             id_columns=["age_group_id", "location_id", "sex_id", "year_id"],
             model_type="binomial",
             kreg_model={
@@ -103,7 +100,7 @@ def setup_dummy_pipeline(test_input_data, test_base_dir):
     )
     custom_stage = DummyCustomStage(
         name="custom_stage",
-        config=CustomConfig(custom_param=[1, 2]),
+        config=DummyCustomConfig(custom_param=[1, 2]),
         groupby=["sex_id", "super_region_id"],
         crossby=["custom_param"],
     )
