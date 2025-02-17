@@ -16,7 +16,11 @@ from typing import Any
 
 import pandas as pd
 from loguru import logger
-from modrover.api import Rover
+
+try:
+    from modrover.api import Rover
+except ImportError:
+    raise ImportError("Missing optional dependency 'rover'")
 
 from onemod.config.model_config.rover_config import RoverConfig
 from onemod.stage import Stage

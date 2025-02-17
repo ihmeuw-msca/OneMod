@@ -20,8 +20,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from loguru import logger
-from spxmod.model import XModel
-from xspline import XSpline
+
+try:
+    from spxmod.model import XModel
+    from xspline import XSpline
+except ImportError:
+    raise ImportError("Missing optional dependency 'spxmod'")
 
 from onemod.config.model_config.spxmod_config import SpxmodConfig
 from onemod.dtypes import Data
