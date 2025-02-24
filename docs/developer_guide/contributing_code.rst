@@ -21,6 +21,8 @@ Follow these steps to contribute code to **OneMod**:
 
        git checkout -b feat/my-feature
 
+   See :ref:`Branches and Versioning <branches_and_versioning>` for more information on branch naming conventions for the **OneMod** project.
+
    .. admonition:: Tip
 
         While not strictly enforced, we recommend following best practices when contributing commits. See `Conventional Commits <https://www.conventionalcommits.org/en/v1.0.0/>`_ for conventions to follow when naming your branch and writing commit messages.
@@ -30,6 +32,18 @@ Follow these steps to contribute code to **OneMod**:
    Write clean, well-documented code. Add tests to verify your changes.
 
    See :ref:`Contributing to Documentation <contributing_docs>` for documentation guidelines and :ref:`Running Tests <running_tests>` for testing guidelines.
+
+   If making many iterative updates, it is also recommended to commit often, which will trigger pre-commit checks. If not, at least type check your code as you go to catch any issues early:
+
+   .. code-block:: bash
+
+      mypy src/ tests/
+
+   You may also want to manually run Ruff to check for any linting issues:
+
+   .. code-block:: bash
+
+      ruff --check
 
 4. **Run tests**:
 
@@ -41,7 +55,29 @@ Follow these steps to contribute code to **OneMod**:
 
    It is often useful to take advantage of our pytest markers to run only specific tests during iterative development. See the :ref:`Running Tests <running_tests>` section for more details.
 
-5. **Submit a pull request**:
+5. **Update CHANGELOG.md**:
+
+   If your changes include new features or bug fixes, update the repository's ``CHANGELOG.md`` file to reflect these changes.
+
+   Example ``CHANGELOG.md`` entries:
+
+   .. code-block:: markdown
+
+      ## [Unreleased]
+
+      ### Added
+
+      - Added ability to ... Description of the new feature.
+
+      ### Changed
+
+      - Changed behavior of ... Description of the change.
+
+      ### Fixed
+
+      - Fixed bug where ... Description of the bug fix.
+
+6. **Submit a pull request**:
 
    Push your branch to your forked repository and submit a pull request. Creating a pull request should automatically trigger a GitHub Actions workflow to ensure your code passes all tests and checks.
 
