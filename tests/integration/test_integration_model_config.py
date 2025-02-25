@@ -1,9 +1,9 @@
 """Test errors thrown if missing required model attributes."""
 
 import pytest
+from tests.helpers.dummy_stages import DummyRoverConfig, DummySpxmodConfig
 
-from onemod.config import Config, RoverConfig, SpxmodConfig
-from onemod.config.model_config.spxmod_config import SpxmodModelConfig
+from onemod.config import Config
 
 CONFIG_ITEMS = {
     "id_columns": ["sex_id", "year_id"],
@@ -16,10 +16,10 @@ CONFIG_ITEMS = {
 
 REQUIRED_ITEMS = {
     "rover": [
+        "holdout_columns",
         "model_type",
         "observation_column",
         "weights_column",
-        "holdout_columns",
     ],
     "spxmod": [
         "id_columns",
@@ -31,8 +31,8 @@ REQUIRED_ITEMS = {
 }
 
 STAGE_DICT = {
-    "rover": RoverConfig(cov_exploring=["cov1", "cov2"]),
-    "spxmod": SpxmodConfig(xmodel=SpxmodModelConfig(variables=[])),
+    "rover": DummyRoverConfig(cov_exploring=["cov1", "cov2"]),
+    "spxmod": DummySpxmodConfig(xmodel={"variables": []}),
 }
 
 
