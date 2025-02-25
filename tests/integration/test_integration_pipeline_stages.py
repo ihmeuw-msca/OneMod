@@ -2,13 +2,11 @@ from typing import Any
 
 import pytest
 
-from onemod.config import StageConfig
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
-    config: StageConfig
     _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
     _optional_input: dict[str, dict[str, Any]] = {"priors": {"format": "pkl"}}
     _output_items: dict[str, dict[str, Any]] = {
