@@ -6,8 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-
-[1.0.1] - 2025-02-25
+## [1.0.1] - 2025-02-25
 
 ### Added
 
@@ -22,13 +21,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Pass stage fields as kwargs in `stage.__init__()` to allow default fields in custom stages.
 
-[1.0.0] - 2025-02-14
+## [1.0.0] - 2025-02-14
 
 ### Changed
 
 - Package redesigned to allow more flexibility and customization.
 
-[0.2.2] - 2024-03-07
+## [0.2.2] - 2024-03-07
 
 ### Fixed
 
