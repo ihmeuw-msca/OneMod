@@ -45,11 +45,11 @@ class Stage(BaseModel, ABC):
     model_config = ConfigDict(validate_assignment=True)
 
     name: str
-    config: StageConfig
-    groupby: UniqueList[str] | None
-    crossby: UniqueList[str] | None
-    input_validation: dict[str, Data] | None
-    output_validation: dict[str, Data] | None
+    config: StageConfig = StageConfig()
+    groupby: UniqueList[str] | None = None
+    crossby: UniqueList[str] | None = None
+    input_validation: dict[str, Data] | None = None
+    output_validation: dict[str, Data] | None = None
     _module: Path | None = None
     _input: Input
     _output: Output
@@ -64,26 +64,13 @@ class Stage(BaseModel, ABC):
 
     def __init__(
         self,
-        name: str,
-        config: StageConfig = StageConfig(),
-        groupby: list[str] | None = None,
-        crossby: list[str] | None = None,
-        input_validation: dict[str, Data | dict] | None = None,
-        output_validation: dict[str, Data | dict] | None = None,
         module: Path | str | None = None,
         input: Input | dict = {},
         config_path: Path | str | None = None,
+        **kwargs,
     ) -> None:
         """Create stage instance."""
-        super().__init__(
-            name=name,
-            config=config,
-            groupby=groupby,
-            crossby=crossby,
-            input_validation=input_validation,
-            output_validation=output_validation,
-        )
-
+        super().__init__(**kwargs)
         self.set_module(module)
         self.set_input(input)
         if config_path is not None:
