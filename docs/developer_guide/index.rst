@@ -14,6 +14,7 @@ Included in this Guide
 - :ref:`Contributing Code <contributing_code>` - How to contribute to the OneMod codebase, including coding standards.
 - :ref:`Contributing to Documentation <contributing_docs>` - Instructions for improving OneMod’s documentation.
 - :ref:`Pull Requests <pull_requests>` - Guidelines for submitting and reviewing pull requests.
+- :ref:`Branches and Versioning <branches_and_versioning>` - Information on the OneMod branching strategy and versioning scheme.
 
 Table of Contents
 =================
@@ -26,6 +27,7 @@ Table of Contents
    contributing_code
    contributing_docs
    pull_requests
+   branches_and_versioning
 
 ----
 
