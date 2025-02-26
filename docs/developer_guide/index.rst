@@ -13,6 +13,7 @@ Included in this Guide
 - :ref:`Running Tests <running_tests>` - Instructions and guidelines for testing your changes before submitting.
 - :ref:`Contributing Code <contributing_code>` - How to contribute to the OneMod codebase, including coding standards.
 - :ref:`Contributing to Documentation <contributing_docs>` - Instructions for improving OneMod’s documentation.
+- :ref:`Pull Requests <pull_requests>` - Guidelines for submitting and reviewing pull requests.
 
 Table of Contents
 =================
@@ -24,6 +25,7 @@ Table of Contents
    testing
    contributing_code
    contributing_docs
+   pull_requests
 
 ----
 
