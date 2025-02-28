@@ -97,12 +97,34 @@ class Pipeline(BaseModel):
 
         """
         config_path = config_path or self.directory / (self.name + ".json")
+        
+        # First get the JSON as a dictionary
+        pipeline_dict = self.model_dump(
+            exclude_none=True, serialize_as_any=True
+        )
+        
+        # Post-process to remove empty inputs and convert Path objects to strings
+        def convert_paths_to_strings(obj):
+            if isinstance(obj, dict):
+                return {k: convert_paths_to_strings(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_paths_to_strings(item) for item in obj]
+            elif isinstance(obj, Path):
+                return str(obj)
+            else:
+                return obj
+        
+        pipeline_dict = convert_paths_to_strings(pipeline_dict)
+        
+        # Remove empty inputs
+        if "stages" in pipeline_dict:
+            for stage_name, stage_data in pipeline_dict["stages"].items():
+                if "input" in stage_data and (stage_data["input"] is None or stage_data["input"] == {}):
+                    del stage_data["input"]
+        
+        # Write to file
         with open(config_path, "w") as file:
-            file.write(
-                self.model_dump_json(
-                    indent=2, exclude_none=True, serialize_as_any=True
-                )
-            )
+            json.dump(pipeline_dict, file, indent=2)
 
     def add_stages(self, stages: list[Stage]) -> None:
         """Add stages to pipeline.
