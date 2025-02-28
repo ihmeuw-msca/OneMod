@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.0.2] - 2025-02-28
+
+### Fixed
+
+- `Input` model serializer always returns a dictionary; fixes issue with loading pipeline or stage when stage has no input items.
+
 ## [1.0.1] - 2025-02-25
 
 ### Added
