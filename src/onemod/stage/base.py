@@ -94,7 +94,7 @@ class Stage(BaseModel, ABC):
             if not hasattr(onemod_stages, self.type):
                 try:
                     self._module = Path(getfile(self.__class__))
-                except TypeError:
+                except (OSError, TypeError):
                     raise TypeError(
                         f"Could not find module for custom stage '{self.name}'"
                     )

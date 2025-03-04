@@ -116,20 +116,12 @@ def test_stage_model(stage_1, stage_2):
         "module": Path(__file__),
         "input": {
             "data": {
-                "stage": None,
-                "methods": None,
                 "format": "parquet",
                 "path": Path("/path/to/data.parquet"),
-                "shape": None,
-                "columns": None,
             },
             "covariates": {
-                "stage": None,
-                "methods": None,
                 "format": "csv",
                 "path": Path("/path/to/covariates.csv"),
-                "shape": None,
-                "columns": None,
             },
         },
         "groupby": None,
@@ -150,20 +142,13 @@ def test_stage_model(stage_1, stage_2):
         "input": {
             "data": {
                 "stage": "stage_1",
-                "methods": None,
                 "path": stage_1.dataif.get_path("output")
                 / "predictions.parquet",
                 "format": "parquet",
-                "shape": None,
-                "columns": None,
             },
             "covariates": {
-                "stage": None,
-                "methods": None,
                 "path": Path("/path/to/covariates.csv"),
                 "format": "csv",
-                "shape": None,
-                "columns": None,
             },
         },
         "groupby": None,
