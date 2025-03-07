@@ -34,16 +34,14 @@ class IO(BaseModel, ABC):
     items: dict[str, Data] = {}
 
     @model_serializer
-    def serialize_io(self) -> dict[str, dict[str, Any]] | None:
+    def serialize_io(self) -> dict[str, dict[str, Any]]:
         # Simplify output to config files
-        if self.items:
-            input_dict: dict[str, dict[str, Any]] = {}
-            for item_name, item_value in self.items.items():
-                input_dict[item_name] = item_value.model_dump(
-                    serialize_as_any=True
-                )
-            return input_dict
-        return None
+        input_dict: dict[str, dict[str, Any]] = {}
+        for item_name, item_value in self.items.items():
+            input_dict[item_name] = item_value.model_dump(
+                exclude_none=True, serialize_as_any=True
+            )
+        return input_dict
 
     def get(self, item_name: str, default: Any = None) -> Any:
         return self.items.get(item_name, default)
