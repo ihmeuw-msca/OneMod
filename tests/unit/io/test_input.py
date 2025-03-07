@@ -273,31 +273,21 @@ def test_serialize():
     test_input = get_input(VALID_ITEMS)
     assert test_input.model_dump() == {
         "data": {
-            "stage": None,
-            "methods": None,
             "format": "parquet",
             "path": Path("/path/to/predictions.parquet"),
-            "shape": None,
-            "columns": None,
         },
         "covariates": {
             "stage": "first_stage",
-            "methods": None,
             "format": "csv",
             "path": Path("/path/to/selected_covs.csv"),
-            "shape": None,
-            "columns": None,
         },
         "priors": {
             "stage": "second_stage",
-            "methods": None,
             "format": "pkl",
             "path": Path("/path/to/model.pkl"),
-            "shape": None,
-            "columns": None,
         },
     }
-    assert get_input().model_dump() is None
+    assert get_input().model_dump() == {}
 
 
 @pytest.mark.unit

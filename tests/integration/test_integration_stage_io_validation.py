@@ -165,20 +165,12 @@ def stage_1_model_expected(test_base_dir):
         },
         "input": {
             "data": {
-                "stage": None,
-                "methods": None,
                 "format": "parquet",
                 "path": test_base_dir / "stage_0" / "data.parquet",
-                "shape": None,
-                "columns": None,
             },
             "covariates": {
-                "stage": None,
-                "methods": None,
                 "format": "csv",
                 "path": test_base_dir / "stage_0" / "covariates.csv",
-                "shape": None,
-                "columns": None,
             },
         },
         "groupby": None,
@@ -275,19 +267,12 @@ def stage_2_model_expected(test_base_dir):
         "input": {
             "data": {
                 "stage": "stage_1",
-                "methods": None,
                 "format": "parquet",
                 "path": test_base_dir / "stage_1" / "predictions.parquet",
-                "shape": None,
-                "columns": None,
             },
             "covariates": {
-                "stage": None,
-                "methods": None,
                 "format": "csv",
                 "path": test_base_dir / "stage_0" / "covariates.csv",
-                "shape": None,
-                "columns": None,
             },
         },
         "groupby": None,

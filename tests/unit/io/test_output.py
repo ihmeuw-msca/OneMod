@@ -14,8 +14,6 @@ ITEMS = {
         "methods": ["run", "fit"],
         "format": "parquet",
         "path": Path("/path/to/stage/output/predictions.parquet"),
-        "shape": None,
-        "columns": None,
     }
 }
 OUTPUT = Output(
