@@ -4,11 +4,12 @@ All notable changes to OneMod will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - TBD
 
 ### Added
 
 - Added "Branches and Versioning" page to dev docs
+- Added GitHub repository contribution guidelines
 
 ### Changed
 
@@ -17,6 +18,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 ### Deprecated
 
 ### Removed
+
+## [1.0.2] - 2025-02-28
+
+### Fixed
+
+- `Input` model serializer always returns a dictionary; fixes issue with loading pipeline or stage when stage has no input items.
+- `Input` model serializer uses `exclude_none=True` to exclude empty `Data` fields.
+- Catch `OSError` in `Stage.set_module()`.
 
 ## [1.0.1] - 2025-02-25
 

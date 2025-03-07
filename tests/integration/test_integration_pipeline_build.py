@@ -228,22 +228,14 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
                 "groupby": ["age_group_id"],
                 "input": {
                     "data": {
-                        "stage": None,
-                        "methods": None,
                         "format": "parquet",
                         "path": str(test_base_dir / "data" / "data.parquet"),
-                        "shape": None,
-                        "columns": None,
                     },
                     "covariates": {
-                        "stage": None,
-                        "methods": None,
                         "format": "parquet",
                         "path": str(
                             test_base_dir / "data" / "covariates.parquet"
                         ),
-                        "shape": None,
-                        "columns": None,
                     },
                 },
                 "input_validation": {
