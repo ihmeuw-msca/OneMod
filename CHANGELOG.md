@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 ### Added
 
 - Added "Branches and Versioning" page to dev docs
+- Added GitHub repository contribution guidelines
 
 ### Changed
 
