@@ -49,6 +49,7 @@ from typing import Any, Literal
 from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
+from jobmon.client.workflow import Workflow
 from pydantic import validate_call
 
 from onemod.backend.utils import (
@@ -72,6 +73,7 @@ def evaluate_with_jobmon(
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
+    workflow: Workflow | None = None,
     **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
@@ -112,6 +114,17 @@ def evaluate_with_jobmon(
         instance. If `subsets` and `paramsets` are both None, default is
         True, otherwise default is False.
 
+    Jobmon Parameters
+    -----------------
+    workflow : Workflow, optional
+        Instantiated Jobmon workflow. If passed, add Pipeline and Stage
+        tasks to the existing Jobmon workflow, rather than creating a new
+        workflow. Additionally, do not run the workflow; just add the
+        tasks. Default is None, which will result in creating and running
+        a new Jobmon workflow.
+    template_concurency_limits : dict, optional
+
+
     """
     check_method(model, method)
     check_input_exists(model, stages)
@@ -119,7 +132,10 @@ def evaluate_with_jobmon(
         python = str(sys.executable)
 
     resources_dict = get_resources(resources)
-    tool = get_tool(model.name, method, cluster, resources_dict)
+    if workflow:
+        tool = workflow.tool
+    else:
+        tool = get_tool(model.name, method, cluster, resources_dict)
     tasks = get_tasks(
         model,
         method,
@@ -132,7 +148,18 @@ def evaluate_with_jobmon(
         collect,
         **kwargs,
     )
-    run_workflow(model.name, method, tool, tasks)
+    if not workflow:
+        workflow = create_workflow(model.name, method, tasks, tool)
+        set_task_template_concurrency(workflow)
+        run_workflow(workflow)
+    else:
+        workflow.add_tasks(tasks)
+        set_task_template_concurrency(workflow)
+
+
+def set_task_template_concurrency(workflow: Workflow) -> None:
+    """TODO"""
+    pass
 
 
 def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
@@ -649,8 +676,10 @@ def get_task_resources(
     }
 
 
-def run_workflow(name: str, method: str, tool: Tool, tasks: list[Task]) -> None:
-    """Create and run workflow.
+def create_workflow(
+    name: str, method: str, tasks: list[Task], tool: Tool
+) -> Workflow:
+    """Create workflow.
 
     Parameters
     ----------
@@ -658,15 +687,27 @@ def run_workflow(name: str, method: str, tool: Tool, tasks: list[Task]) -> None:
         Pipeline or stage name.
     method : str
         Name of method being evaluated.
-    tool : Tool
-        Jobmon tool.
     tasks : list of Task
         List of stage tasks.
+    tool : Tool
+        Jobmon tool.
 
     """
     workflow = tool.create_workflow(name=f"{name}_{method}")
     workflow.add_tasks(tasks)
     workflow.bind()
+    return workflow
+
+
+def run_workflow(workflow: Workflow) -> None:
+    """Run workflow.
+
+    Parameters
+    ----------
+    workflow : Workflow
+        Jobmon workflow to run.
+
+    """
     print(f"Starting workflow {workflow.workflow_id}")
     status = workflow.run()
     if status != "D":
