@@ -398,7 +398,7 @@ def get_stage_tasks(
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
     upstream_tasks: list[Task] | None = None,
-    external_upstream_tasks: list[Task] = [],
+    external_upstream_tasks: list[Task] | None = None,
     template_prefix: str | None = None,
     max_attempts: int = 1,
     **kwargs,
@@ -431,7 +431,8 @@ def get_stage_tasks(
         List of upstream stage tasks. Default is None.
     external_upstream_tasks : list, optional
         List of Jobmon tasks external to the OneMod Stages or Pipeline that
-        should be treated as upstream dependencies of the new tasks.
+        should be treated as upstream dependencies of the new tasks. Default
+        is no external upstream tasks.
     template_prefix : str, optional
         Optional prefix to append to task name. Default is None, no prefix.
     max_attempts : int, optional
@@ -466,11 +467,16 @@ def get_stage_tasks(
         if template_prefix
         else f"{stage.name}_{method}"
     )
+    all_upstream_tasks = (
+        upstream_tasks + external_upstream_tasks
+        if external_upstream_tasks
+        else upstream_tasks
+    )
 
     if submodel_args:
         tasks = task_template.create_tasks(
             name=task_name,
-            upstream_tasks=upstream_tasks + external_upstream_tasks,
+            upstream_tasks=all_upstream_tasks,
             max_attempts=max_attempts,
             entrypoint=entrypoint,
             config=config_path,
@@ -482,7 +488,7 @@ def get_stage_tasks(
         tasks = [
             task_template.create_task(
                 name=task_name,
-                upstream_tasks=upstream_tasks + external_upstream_tasks,
+                upstream_tasks=all_upstream_tasks,
                 max_attempts=max_attempts,
                 entrypoint=entrypoint,
                 config=config_path,
