@@ -398,6 +398,9 @@ def get_stage_tasks(
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
     upstream_tasks: list[Task] | None = None,
+    external_upstream_tasks: list[Task] = [],
+    template_prefix: str | None = None,
+    max_attempts: int = 1,
     **kwargs,
 ) -> list[Task]:
     """Get stage tasks.
@@ -426,6 +429,13 @@ def get_stage_tasks(
         True, otherwise default is False.
     upstream_tasks : list of Task or None, optional
         List of upstream stage tasks. Default is None.
+    external_upstream_tasks : list, optional
+        List of Jobmon tasks external to the OneMod Stages or Pipeline that
+        should be treated as upstream dependencies of the new tasks.
+    template_prefix : str, optional
+        Optional prefix to append to task name. Default is None, no prefix.
+    max_attempts : int, optional
+        Maximum number of attempts for a task. Default is 1.
     **kwargs
         Additional keyword arguments passed to stage method.
 
@@ -451,11 +461,17 @@ def get_stage_tasks(
         **kwargs,
     )
 
+    task_name = (
+        f"{template_prefix}_{stage.name}_{method}"
+        if template_prefix
+        else f"{stage.name}_{method}"
+    )
+
     if submodel_args:
         tasks = task_template.create_tasks(
-            name=f"{stage.name}_{method}",
-            upstream_tasks=upstream_tasks,
-            max_attempts=1,
+            name=task_name,
+            upstream_tasks=upstream_tasks + external_upstream_tasks,
+            max_attempts=max_attempts,
             entrypoint=entrypoint,
             config=config_path,
             method=method,
@@ -465,9 +481,9 @@ def get_stage_tasks(
     else:
         tasks = [
             task_template.create_task(
-                name=f"{stage.name}_{method}",
-                upstream_tasks=upstream_tasks,
-                max_attempts=1,
+                name=task_name,
+                upstream_tasks=upstream_tasks + external_upstream_tasks,
+                max_attempts=max_attempts,
                 entrypoint=entrypoint,
                 config=config_path,
                 method=method,
