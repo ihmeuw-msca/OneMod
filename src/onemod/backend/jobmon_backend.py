@@ -147,7 +147,7 @@ def evaluate_with_jobmon(
         **kwargs,
     )
     if not workflow:
-        create_and_run_workflow(model.name, method, tasks, tool)
+        create_and_run_workflow(model.name, method, tool, tasks)
     else:
         workflow.add_tasks(tasks)
 

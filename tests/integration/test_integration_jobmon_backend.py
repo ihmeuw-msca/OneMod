@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -430,3 +431,54 @@ def test_stage_tasks_collect_after(parallel_pipeline, method):
     else:
         assert len(tasks) == 2
         assert tasks[1].task_args["method"] == "collect"
+
+
+@pytest.mark.integration
+@pytest.mark.requires_jobmon
+def test_stage_tasks_jobmon_args(simple_pipeline):
+    stage = simple_pipeline.stages["run_1"]
+    method = "run"
+    cluster = "cluster"
+    resources = {"tool_resources": {cluster: {"queue": "null.q"}}}
+    python = "/path/to/python/env/bin/python"
+    external_upstream_tasks = [
+        jb.Task(
+            node=mock.MagicMock(),
+            task_args={"fake_arg_1": "fake_value"},
+            op_args={"fake_arg_2": "fake_value"},
+            name="fake_task",
+            task_attributes=[],
+        )
+    ]
+    template_prefix = "testing"
+    max_attempts = 3
+    entrypoint = str(Path(python).parent / "onemod")
+    config = str(stage.dataif.get_path("config"))
+    tasks = jb.get_stage_tasks(
+        stage,
+        method,
+        jb.get_tool(simple_pipeline.name, method, cluster, resources),
+        resources=resources,
+        python=python,
+        external_upstream_tasks=external_upstream_tasks,
+        template_prefix=template_prefix,
+        max_attempts=max_attempts,
+    )
+    task = tasks[0]
+
+    assert len(tasks) == 1
+    assert task.name == f"{template_prefix}_{stage.name}_{method}"
+    assert task.cluster_name == ""
+    assert task.compute_resources == {}
+    assert task.command == jb.get_command_template(method, []).format(
+        entrypoint=entrypoint, config=config, method=method, stages=stage.name
+    )
+    assert task.max_attempts == max_attempts
+    assert task.op_args == {"entrypoint": entrypoint}
+    assert task.task_args == {
+        "config": config,
+        "method": method,
+        "stages": stage.name,
+    }
+    assert task.node.node_args == {}
+    assert task.upstream_tasks == set(external_upstream_tasks)
