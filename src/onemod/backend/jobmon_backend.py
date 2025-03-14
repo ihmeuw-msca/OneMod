@@ -50,7 +50,7 @@ from jobmon.client.api import Tool
 from jobmon.client.task import Task
 from jobmon.client.task_template import TaskTemplate
 from jobmon.client.workflow import Workflow
-from pydantic import validate_call
+from pydantic import ConfigDict, validate_call
 
 from onemod.backend.utils import (
     check_input_exists,
@@ -62,7 +62,7 @@ from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
-@validate_call
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def evaluate_with_jobmon(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict", "collect"],
@@ -122,8 +122,6 @@ def evaluate_with_jobmon(
         workflow. Additionally, do not run the workflow; just add the
         tasks. Default is None, which will result in creating and running
         a new Jobmon workflow.
-    template_concurency_limits : dict, optional
-
 
     """
     check_method(model, method)
@@ -149,17 +147,9 @@ def evaluate_with_jobmon(
         **kwargs,
     )
     if not workflow:
-        workflow = create_workflow(model.name, method, tasks, tool)
-        set_task_template_concurrency(workflow)
-        run_workflow(workflow)
+        create_and_run_workflow(model.name, method, tasks, tool)
     else:
         workflow.add_tasks(tasks)
-        set_task_template_concurrency(workflow)
-
-
-def set_task_template_concurrency(workflow: Workflow) -> None:
-    """TODO"""
-    pass
 
 
 def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
@@ -676,10 +666,10 @@ def get_task_resources(
     }
 
 
-def create_workflow(
-    name: str, method: str, tasks: list[Task], tool: Tool
-) -> Workflow:
-    """Create workflow.
+def create_and_run_workflow(
+    name: str, method: str, tool: Tool, tasks: list[Task]
+) -> None:
+    """Create and run workflow.
 
     Parameters
     ----------
@@ -687,27 +677,15 @@ def create_workflow(
         Pipeline or stage name.
     method : str
         Name of method being evaluated.
-    tasks : list of Task
-        List of stage tasks.
     tool : Tool
         Jobmon tool.
+    tasks : list of Task
+        List of stage tasks.
 
     """
     workflow = tool.create_workflow(name=f"{name}_{method}")
     workflow.add_tasks(tasks)
     workflow.bind()
-    return workflow
-
-
-def run_workflow(workflow: Workflow) -> None:
-    """Run workflow.
-
-    Parameters
-    ----------
-    workflow : Workflow
-        Jobmon workflow to run.
-
-    """
     print(f"Starting workflow {workflow.workflow_id}")
     status = workflow.run()
     if status != "D":
