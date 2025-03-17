@@ -52,7 +52,7 @@ docs = [
     "sphinx-autodoc-typehints",
 ]
 jobmon = [
-    "jobmon_installer_ihme",
+    "jobmon_installer_ihme>=10.9.0",
 ]
 test = [
     "pytest>=7.0.0",
