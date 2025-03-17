@@ -146,10 +146,10 @@ def evaluate_with_jobmon(
         collect,
         **kwargs,
     )
-    if not workflow:
-        create_and_run_workflow(model.name, method, tool, tasks)
-    else:
+    if workflow:
         workflow.add_tasks(tasks)
+    else:
+        create_and_run_workflow(model.name, method, tool, tasks)
 
 
 def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
@@ -399,7 +399,7 @@ def get_stage_tasks(
     collect: bool | None = None,
     upstream_tasks: list[Task] | None = None,
     external_upstream_tasks: list[Task] | None = None,
-    template_prefix: str | None = None,
+    task_prefix: str | None = None,
     max_attempts: int = 1,
     **kwargs,
 ) -> list[Task]:
@@ -433,7 +433,7 @@ def get_stage_tasks(
         List of Jobmon tasks external to the OneMod Stages or Pipeline that
         should be treated as upstream dependencies of the new tasks. Default
         is no external upstream tasks.
-    template_prefix : str, optional
+    task_prefix : str, optional
         Optional prefix to append to task name. Default is None, no prefix.
     max_attempts : int, optional
         Maximum number of attempts for a task. Default is 1.
@@ -463,8 +463,8 @@ def get_stage_tasks(
     )
 
     task_name = (
-        f"{template_prefix}_{stage.name}_{method}"
-        if template_prefix
+        f"{task_prefix}_{stage.name}_{method}"
+        if task_prefix
         else f"{stage.name}_{method}"
     )
     all_upstream_tasks = (

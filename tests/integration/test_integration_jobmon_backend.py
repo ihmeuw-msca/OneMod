@@ -450,7 +450,7 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
             task_attributes=[],
         )
     ]
-    template_prefix = "testing"
+    task_prefix = "testing"
     max_attempts = 3
     entrypoint = str(Path(python).parent / "onemod")
     config = str(stage.dataif.get_path("config"))
@@ -461,13 +461,13 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
         resources=resources,
         python=python,
         external_upstream_tasks=external_upstream_tasks,
-        template_prefix=template_prefix,
+        task_prefix=task_prefix,
         max_attempts=max_attempts,
     )
     task = tasks[0]
 
     assert len(tasks) == 1
-    assert task.name == f"{template_prefix}_{stage.name}_{method}"
+    assert task.name == f"{task_prefix}_{stage.name}_{method}"
     assert task.cluster_name == ""
     assert task.compute_resources == {}
     assert task.command == jb.get_command_template(method, []).format(
