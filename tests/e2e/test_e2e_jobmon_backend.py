@@ -8,6 +8,7 @@ These tests take a long time, e.g., test_simple_pipeline() took 2m 11.6s
 """
 
 import pytest
+from jobmon.client.api import Tool
 
 KWARGS = {
     "backend": "jobmon",
@@ -57,6 +58,20 @@ def test_parallel_pipeline_stages(parallel_pipeline):
     parallel_pipeline.evaluate(
         method="run", stages=["run_1", "fit_2"], **KWARGS
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.requires_jobmon
+def test_parallel_pipeline_stages_existing_workflow(parallel_pipeline):
+    tool = Tool(name="test_run")
+    tool.set_default_cluster_name("dummy")
+    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
+    workflow = tool.create_workflow(name="test_run_workflow")
+    parallel_pipeline.evaluate(
+        method="run", stages=["run_1", "fit_2"], workflow=workflow, **KWARGS
+    )
+    workflow.bind()
+    workflow.run()
 
 
 @pytest.mark.e2e
