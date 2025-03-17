@@ -399,7 +399,7 @@ def get_stage_tasks(
     collect: bool | None = None,
     upstream_tasks: list[Task] | None = None,
     external_upstream_tasks: list[Task] | None = None,
-    task_prefix: str | None = None,
+    task_and_template_prefix: str | None = None,
     max_attempts: int = 1,
     **kwargs,
 ) -> list[Task]:
@@ -433,8 +433,9 @@ def get_stage_tasks(
         List of Jobmon tasks external to the OneMod Stages or Pipeline that
         should be treated as upstream dependencies of the new tasks. Default
         is no external upstream tasks.
-    task_prefix : str, optional
-        Optional prefix to append to task name. Default is None, no prefix.
+    task_and_template_prefix : str, optional
+        Optional prefix to append to task/tempalte name. Default is None,
+        no prefix.
     max_attempts : int, optional
         Maximum number of attempts for a task. Default is 1.
     **kwargs
@@ -463,8 +464,8 @@ def get_stage_tasks(
     )
 
     task_name = (
-        f"{task_prefix}_{stage.name}_{method}"
-        if task_prefix
+        f"{task_and_template_prefix}_{stage.name}_{method}"
+        if task_and_template_prefix
         else f"{stage.name}_{method}"
     )
     all_upstream_tasks = (
@@ -570,9 +571,13 @@ def get_task_template(
     tool: Tool,
     resources: dict[str, Any],
     submodel_args: list[str],
+    task_and_template_prefix: str | None = None,
     **kwargs,
 ) -> TaskTemplate:
     """Get stage task template.
+
+    If the Jobmon Tool already has an active task template with the same
+    name, use that task template.
 
     Parameters
     ----------
@@ -586,6 +591,9 @@ def get_task_template(
         Dictionary of compute resources.
     submodel_args : list of str
         List including 'subsets' and/or 'paramsets'.
+    task_and_template_prefix : str, optional
+        Optional prefix to append to task/tempalte name. Default is None,
+        no prefix.
     **kwargs
         Additional keyword arguments passed to stage method.
 
@@ -595,8 +603,14 @@ def get_task_template(
         Stage task template.
 
     """
+    template_name = (
+        f"{task_and_template_prefix}_{stage_name}_{method}"
+        if task_and_template_prefix
+        else f"{stage_name}_{method}"
+    )
+
     task_template = tool.get_task_template(
-        template_name=f"{stage_name}_{method}",
+        template_name=template_name,
         command_template=get_command_template(method, submodel_args, **kwargs),
         op_args=["entrypoint"],
         task_args=["config", "method", "stages"] + list(kwargs.keys()),
