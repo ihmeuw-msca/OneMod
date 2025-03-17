@@ -6,11 +6,6 @@ Setting Up Your Development Environment
 
 Follow the steps below to set up a local development environment for **OneMod**. You can use either a Python virtual environment (``venv``) or a Conda environment, depending on your preference. The instructions below include both options.
 
-Before starting, ensure you have:
-
-- ``Python`` installed (see **Python Versions** below for requirements).
-- ``Make`` installed on your system.
-
 1. Clone the Repository
 ------------------------
 
@@ -32,60 +27,90 @@ First, clone the **OneMod** repository and navigate to the project directory:
    name = "onemod"
    requires-python = ">=3.10, <3.13"
 
-Ensure you have a compatible Python version installed, or use ``conda`` to set up a new environment with the required version:
-
-.. code-block:: bash
-
-    python --version
-
-3. Set Up the Development Environment
---------------------------------------
+3. Set Up a Virtual or Conda Environment
+-----------------------------------------
 
 You can choose between a **virtual environment (venv)** or a **Conda environment** to set up your development environment.
 
-.. admonition:: Tip
-
-   You may specify the Python version and environment type as arguments to the ``make setup`` command, or specify them as environment variables. See ``.env.example`` for an example ``.env`` file.
-
 **Option 1: Using Virtual Environment (venv)**
 
-Run the following commands to set up the virtual environment:
+   1. Ensure you have a compatible Python version installed:
 
-.. code-block:: bash
+      .. code-block:: bash
 
-   make setup ENV_TYPE=venv PYTHON_VERSION=3.10
+         python --version
 
-This will:
+   2. Create a virtual environment in the ``.venv`` directory:
 
-- Create a virtual environment in the ``.venv`` directory.
-- Install the required dependencies (including development tools).
+      .. code-block:: bash
 
-Activate the environment:
+         python -m venv .venv
 
-.. code-block:: bash
+   3. Activate the virtual environment:
 
-   source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
+      .. code-block:: bash
+
+         source .venv/bin/activate  # On Windows, use .venv\Scripts\activate
 
 **Option 2: Using Conda**
 
-Run the following commands to set up a Conda environment:
+   1. Create a Conda environment named ``onemod`` (or name it as you prefer):
 
-.. code-block:: bash
+      .. code-block:: bash
 
-   make setup ENV_TYPE=conda CONDA_ENV=onemod PYTHON_VERSION=3.10
+         conda create -n onemod python=3.10  # Substitute with desired Python version
 
-This will:
+   2.  Activate the Conda environment:
 
-- Create a Conda environment named ``onemod`` (or supply custom name of your choice).
-- Install the required dependencies (including development tools).
+      .. code-block:: bash
 
-Activate the Conda environment:
+         conda activate onemod
 
-.. code-block:: bash
+**(Optional) Ensure pip is up to date:**
 
-   conda activate onemod
+   .. code-block:: bash
 
-4. Verify the Setup
+      python -m pip install --upgrade pip
+
+4. Install required dependencies
+---------------------------------
+
+**Example 1:** Install only the required dependencies for local development and testing:
+
+   .. code-block:: bash
+
+      pip install -e ".[dev]"
+
+**Example 2:** If you will be working on ``jobmon``-related tasks, or want to test ``jobmon`` execution functionality on the **Slurm Cluster**, you will also need to install the ``jobmon`` dependencies:
+
+   .. code-block:: bash
+
+      pip install -e ".[dev, jobmon]"
+
+**Example 3:** If you will be contributing to the documentation (or simply wish to build the docs locally), you will need the ``docs`` dependencies as well:
+
+   .. code-block:: bash
+
+      pip install -e ".[dev, docs]"
+
+.. admonition:: Tip
+
+   The most common setup for internal contributors working on the **Slurm Cluster** is to install all dependencies at once:
+
+   .. code-block:: bash
+
+      pip install -e ".[dev, jobmon, docs]"
+
+5. Install the pre-commit git hooks
+------------------------------------
+
+Finally, to ensure code quality and consistency, install the pre-commit hooks:
+
+   .. code-block:: bash
+
+      pre-commit install
+
+6. Verify the Setup
 -------------------
 
 After setting up and **activating your environment**, verify that everything works as expected:
@@ -97,7 +122,7 @@ To confirm that ``pre-commit`` hooks and tools (e.g., ``mypy``, ``ruff``) are wo
    pre-commit run --all-files
 
 
-5. Start Developing
+7. Start Developing
 -------------------
 
 You should be ready to start contributing to **OneMod**!
@@ -144,7 +169,6 @@ Notes for Contributors
 
 - **Python Versions**: Ensure you are using the correct Python version (see ``pyproject.toml``).
 - **Dependencies**: Dependencies are managed in ``pyproject.toml``. Use ``pip install -e ".[dev]"`` for manual installation if needed. Please update the ``pyproject.toml`` file if you add new dependencies.
-- **Makefile**: Use the ``Makefile`` for consistent setup and tooling. Be sure to update it if changing setup processes.
 - **Pre-commit Hooks**: Pre-commit hooks (e.g., ``mypy``, ``ruff``) ensure code quality. They are automatically installed during setup.
 
 In addition, please see :ref:`Contributing Code <contributing_code>` for guidelines on contributing to the codebase.
