@@ -19,6 +19,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Removed
 
+## [1.0.3] - 2025-03-12
+
+### Changed
+
+- Patch: Set minimum `jobmon_installer_ihme` version to `10.9.0` to ensure Slurm 24.11 compatibility.
+
 ## [1.0.2] - 2025-02-28
 
 ### Fixed
