@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onemod"
-version = "1.0.2"
+version = "1.0.3"
 description = "An orchestration package for statistical modeling pipelines."
 readme = "README.md"
 requires-python = ">=3.10, <3.13"
@@ -52,7 +52,7 @@ docs = [
     "sphinx-autodoc-typehints",
 ]
 jobmon = [
-    "jobmon_installer_ihme",
+    "jobmon_installer_ihme>=10.9.0",
 ]
 test = [
     "pytest>=7.0.0",
