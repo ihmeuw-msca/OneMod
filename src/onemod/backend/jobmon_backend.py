@@ -434,7 +434,7 @@ def get_stage_tasks(
         should be treated as upstream dependencies of the new tasks. Default
         is no external upstream tasks.
     task_and_template_prefix : str, optional
-        Optional prefix to append to task/tempalte name. Default is None,
+        Optional prefix to append to task/template name. Default is None,
         no prefix.
     max_attempts : int, optional
         Maximum number of attempts for a task. Default is 1.
@@ -592,7 +592,7 @@ def get_task_template(
     submodel_args : list of str
         List including 'subsets' and/or 'paramsets'.
     task_and_template_prefix : str, optional
-        Optional prefix to append to task/tempalte name. Default is None,
+        Optional prefix to append to task/template name. Default is None,
         no prefix.
     **kwargs
         Additional keyword arguments passed to stage method.
