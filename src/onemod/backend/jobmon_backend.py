@@ -117,11 +117,11 @@ def evaluate_with_jobmon(
     Jobmon Parameters
     -----------------
     workflow : Workflow, optional
-        Instantiated Jobmon workflow. If passed, add Pipeline and Stage
-        tasks to the existing Jobmon workflow, rather than creating a new
-        workflow. Additionally, do not run the workflow; just add the
-        tasks. Default is None, which will result in creating and running
-        a new Jobmon workflow.
+        Instantiated Jobmon workflow. If passed, add new tasks to the
+        existing Jobmon workflow rather than creating a new workflow.
+        Additionally, do not run the workflow; just add the tasks. Default
+        is None, which will result in creating and running a new Jobmon
+        workflow.
 
     """
     check_method(model, method)
