@@ -6,8 +6,6 @@ Setting Up Your Development Environment
 
 Follow the steps below to set up a local development environment for **OneMod**. You can use either a Python virtual environment (``venv``) or a Conda environment, depending on your preference. The instructions below include both options.
 
-Before starting, ensure you have: **Python** installed (see **Python Versions** below for requirements).
-
 1. Clone the Repository
 ------------------------
 
