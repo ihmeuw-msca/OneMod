@@ -62,20 +62,6 @@ def test_parallel_pipeline_stages(parallel_pipeline):
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_parallel_pipeline_stages_existing_workflow(parallel_pipeline):
-    tool = Tool(name="test_run")
-    tool.set_default_cluster_name("dummy")
-    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
-    workflow = tool.create_workflow(name="test_run_workflow")
-    parallel_pipeline.evaluate(
-        method="run", stages=["run_1", "fit_2"], workflow=workflow, **KWARGS
-    )
-    workflow.bind()
-    workflow.run()
-
-
-@pytest.mark.e2e
-@pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_simple_stage_method(simple_pipeline, method):
     for stage in simple_pipeline.stages.values():
@@ -130,3 +116,31 @@ def test_parallel_stage_submodels(parallel_pipeline, submodel, collect):
             "collect": collect,
         },
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.requires_jobmon
+def test_simple_pipeline_add_tasks_to_workflow(simple_pipeline):
+    tool = Tool(name="test_run_simple_pipeline")
+    tool.set_default_cluster_name("dummy")
+    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
+    workflow = tool.create_workflow(name="test_run_workflow")
+    simple_pipeline.add_tasks_to_workflow(
+        workflow=workflow, method="run", stages=["run_1", "fit_2"], **KWARGS
+    )
+    workflow.bind()
+    workflow.run()
+
+
+@pytest.mark.e2e
+@pytest.mark.requires_jobmon
+def test_parallel_pipeline_add_tasks_to_workflow(parallel_pipeline):
+    tool = Tool(name="test_run_parallel_pipeline")
+    tool.set_default_cluster_name("dummy")
+    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
+    workflow = tool.create_workflow(name="test_run_workflow")
+    parallel_pipeline.add_tasks_to_workflow(
+        workflow=workflow, method="run", stages=["run_1", "fit_2"], **KWARGS
+    )
+    workflow.bind()
+    workflow.run()

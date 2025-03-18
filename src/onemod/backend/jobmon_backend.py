@@ -62,7 +62,7 @@ from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
-@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+@validate_call
 def evaluate_with_jobmon(
     model: Pipeline | Stage,
     method: Literal["run", "fit", "predict", "collect"],
@@ -73,7 +73,8 @@ def evaluate_with_jobmon(
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
-    workflow: Workflow | None = None,
+    task_and_template_prefix: str | None = None,
+    max_attempts: int = 1,
     **kwargs,
 ) -> None:
     """Evaluate pipeline or stage method with Jobmon.
@@ -116,12 +117,11 @@ def evaluate_with_jobmon(
 
     Jobmon Parameters
     -----------------
-    workflow : Workflow, optional
-        Instantiated Jobmon workflow. If passed, add new tasks to the
-        existing Jobmon workflow rather than creating a new workflow.
-        Additionally, do not run the workflow; just add the tasks. Default
-        is None, which will result in creating and running a new Jobmon
-        workflow.
+    task_and_template_prefix : str, optional
+        Optional prefix to append to task/template name. Default is None,
+        no prefix.
+    max_attempts : int
+        Maximum number of attempts for a task. Default is 1.
 
     """
     check_method(model, method)
@@ -130,26 +130,115 @@ def evaluate_with_jobmon(
         python = str(sys.executable)
 
     resources_dict = get_resources(resources)
-    if workflow:
-        tool = workflow.tool
-    else:
-        tool = get_tool(model.name, method, cluster, resources_dict)
+    tool = get_tool(model.name, method, cluster, resources_dict)
     tasks = get_tasks(
-        model,
-        method,
-        tool,
-        resources_dict,
-        python,
-        stages,
-        subsets,
-        paramsets,
-        collect,
+        model=model,
+        method=method,
+        tool=tool,
+        resources=resources_dict,
+        python=python,
+        stages=stages,
+        subsets=subsets,
+        paramsets=paramsets,
+        collect=collect,
+        task_and_template_prefix=task_and_template_prefix,
+        max_attempts=max_attempts,
         **kwargs,
     )
-    if workflow:
-        workflow.add_tasks(tasks)
-    else:
-        create_and_run_workflow(model.name, method, tool, tasks)
+    create_and_run_workflow(model.name, method, tool, tasks)
+
+
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+def add_tasks_to_workflow(
+    workflow: Workflow,
+    model: Pipeline | Stage,
+    method: Literal["run", "fit", "predict", "collect"],
+    resources: Path | str | dict[str, Any],
+    python: Path | str | None = None,
+    stages: list[str] | None = None,
+    subsets: dict[str, Any | list[Any]] | None = None,
+    paramsets: dict[str, Any | list[Any]] | None = None,
+    collect: bool | None = None,
+    task_and_template_prefix: str | None = None,
+    max_attempts: int = 1,
+    external_upstream_tasks: list[Task] | None = None,
+    **kwargs,
+) -> None:
+    """Add Pipeline tasks to an existing Jobmon Workflow.
+
+    Parameters
+    ----------
+    workflow : Workflow
+        Instantiated Jobmon workflow. Add new tasks to an existing Jobmon
+        workflow rather than creating a new workflow. Does not run the
+        workflow, only adds the tasks.
+    model : Pipeline or Stage
+        Pipeline or stage instance.
+    method : {'run', 'fit', 'predict', 'collect'}
+        Name of method to evalaute.
+    resources : dict, Path, or str
+        Path to resources file or dictionary of compute resources.
+    python : Path or str, optional
+        Path to Python environment. If None, use sys.executable.
+        Default is None.
+    **kwargs
+        Additional keyword arguments passed to stage methods. If `model`
+        is a `Pipeline` instance, use format`stage={arg_name: arg_value}`.
+
+    Pipeline Parameters
+    -------------------
+    stages : list of str, optional
+        Names of stages to evaluate if `model` is a `Pipeline` instance.
+        If None, evaluate pipeline stages. Default is None.
+
+    Stage Parameters
+    ----------------
+    subsets : dict, optional
+        Submodel data subsets to evaluate if `model` is a `Stage`
+        instance. If None, evaluate all data subsets. Default is None.
+    paramsets : dict, optional
+        Submodel parameter sets to evaluate if `model` is a `Stage`
+        instance. If None, evaluate all parameter sets. Default is None.
+    collect : bool, optional
+        Whether to collect submodel results if `model` is a `Stage`
+        instance. If `subsets` and `paramsets` are both None, default is
+        True, otherwise default is False.
+
+    Jobmon Parameters
+    -----------------
+    task_and_template_prefix : str, optional
+        Optional prefix to append to task/template name. Default is None,
+        no prefix.
+    max_attempts : int
+        Maximum number of attempts for a task. Default is 1.
+    external_upstream_tasks : list, optional
+        List of Jobmon tasks external to the OneMod Stages or Pipeline that
+        should be treated as upstream dependencies of the new tasks. Default
+        is no external upstream tasks.
+
+    """
+    check_method(model, method)
+    check_input_exists(model, stages)
+    if python is None:
+        python = str(sys.executable)
+
+    resources_dict = get_resources(resources)
+    tasks = get_tasks(
+        model=model,
+        method=method,
+        tool=workflow.tool,
+        resources=resources_dict,
+        python=python,
+        stages=stages,
+        subsets=subsets,
+        paramsets=paramsets,
+        collect=collect,
+        task_and_template_prefix=task_and_template_prefix,
+        max_attempts=max_attempts,
+        external_upstream_tasks=external_upstream_tasks,
+        **kwargs,
+    )
+    workflow.add_tasks(tasks)
 
 
 def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
@@ -212,6 +301,9 @@ def get_tasks(
     subsets: dict[str, Any | list[Any]] | None,
     paramsets: dict[str, Any | list[Any]] | None,
     collect: bool | None,
+    task_and_template_prefix: str | None,
+    max_attempts: int,
+    external_upstream_tasks: list[Task] | None = None,
     **kwargs,
 ) -> list[Task]:
     """Get Jobmon tasks.
@@ -249,6 +341,17 @@ def get_tasks(
         Whether to collect submodel results if `model` is a `Stage`
         instance.
 
+    Jobmon Parameters
+    -----------------
+    task_and_template_prefix : str, optional
+        Optional prefix to append to task/template name.
+    max_attempts : int
+        Maximum number of attempts for a task.
+    external_upstream_tasks : list, optional
+        List of Jobmon tasks external to the OneMod Stages or Pipeline that
+        should be treated as upstream dependencies of the new tasks. Default
+        None, no external upstreams.
+
     Returns
     -------
     list of Task
@@ -257,17 +360,28 @@ def get_tasks(
     """
     if isinstance(model, Pipeline):
         return get_pipeline_tasks(
-            model, method, tool, resources, python, stages, **kwargs
+            model,
+            method,
+            tool,
+            resources,
+            python,
+            stages,
+            external_upstream_tasks,
+            task_and_template_prefix,
+            max_attempts,
+            **kwargs,
         )
     return get_stage_tasks(
-        model,
-        method,
-        tool,
-        resources,
-        python,
-        subsets,
-        paramsets,
-        collect,
+        stage=model,
+        method=method,
+        tool=tool,
+        resources=resources,
+        python=python,
+        task_and_template_prefix=task_and_template_prefix,
+        max_attempts=max_attempts,
+        subsets=subsets,
+        paramsets=paramsets,
+        collect=collect,
         **kwargs,
     )
 
@@ -279,6 +393,9 @@ def get_pipeline_tasks(
     resources: dict[str, Any],
     python: Path | str,
     stages: list[str] | None,
+    external_upstream_tasks: list[Task] | None,
+    task_and_template_prefix: str | None,
+    max_attempts: int,
     **kwargs,
 ) -> list[Task]:
     """Get pipeline stage tasks.
@@ -298,6 +415,13 @@ def get_pipeline_tasks(
     stages : list of str or None
         Name of stages to evaluate. If None, evaluate all pipeline
         stages.
+    external_upstream_tasks : list, optional
+        List of Jobmon tasks external to the OneMod Stages or Pipeline that
+        should be treated as upstream dependencies of the new tasks.
+    task_and_template_prefix : str, optional
+        Optional prefix to append to task/template name.
+    max_attempts : int
+        Maximum number of attempts for a task.
     **kwargs
         Additional keyword arguments passed to stage methods.
 
@@ -309,6 +433,7 @@ def get_pipeline_tasks(
     """
     tasks = []
     task_dict: dict[str, list[Task]] = {}
+    task_dict["external"] = external_upstream_tasks or []
 
     for stage_name in pipeline.get_execution_order(stages):
         stage = pipeline.stages[stage_name]
@@ -317,11 +442,13 @@ def get_pipeline_tasks(
                 stage, method, pipeline.stages, task_dict, stages
             )
             task_dict[stage_name] = get_stage_tasks(
-                stage,
-                method,
-                tool,
-                resources,
-                python,
+                stage=stage,
+                method=method,
+                tool=tool,
+                resources=resources,
+                python=python,
+                task_and_template_prefix=task_and_template_prefix,
+                max_attempts=max_attempts,
                 upstream_tasks=upstream_tasks,
                 **kwargs,
             )
@@ -365,6 +492,7 @@ def get_upstream_tasks(
     * If an upstream stage has submodels and `method` is in the
       upstream's `collect_after`, only include the task corresponding to
       the upstream's `collect` method.
+    * If there are no upstream tasks, add any external tasks as upstream.
 
     """
     upstream_tasks = []
@@ -385,6 +513,10 @@ def get_upstream_tasks(
             else:
                 upstream_tasks.extend(task_dict[upstream_name])
 
+    # if there are no upstream tasks, add external upstream tasks
+    if not upstream_tasks:
+        upstream_tasks = task_dict.get("external", [])
+
     return upstream_tasks
 
 
@@ -394,13 +526,12 @@ def get_stage_tasks(
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
+    task_and_template_prefix: str | None,
+    max_attempts: int,
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
     upstream_tasks: list[Task] | None = None,
-    external_upstream_tasks: list[Task] | None = None,
-    task_and_template_prefix: str | None = None,
-    max_attempts: int = 1,
     **kwargs,
 ) -> list[Task]:
     """Get stage tasks.
@@ -429,15 +560,10 @@ def get_stage_tasks(
         True, otherwise default is False.
     upstream_tasks : list of Task or None, optional
         List of upstream stage tasks. Default is None.
-    external_upstream_tasks : list, optional
-        List of Jobmon tasks external to the OneMod Stages or Pipeline that
-        should be treated as upstream dependencies of the new tasks. Default
-        is no external upstream tasks.
     task_and_template_prefix : str, optional
-        Optional prefix to append to task/template name. Default is None,
-        no prefix.
-    max_attempts : int, optional
-        Maximum number of attempts for a task. Default is 1.
+        Optional prefix to append to task/template name.
+    max_attempts : int
+        Maximum number of attempts for a task.
     **kwargs
         Additional keyword arguments passed to stage method.
 
@@ -460,6 +586,7 @@ def get_stage_tasks(
         tool,
         resources,
         list(submodel_args.keys()),
+        task_and_template_prefix=task_and_template_prefix,
         **kwargs,
     )
 
@@ -468,16 +595,10 @@ def get_stage_tasks(
         if task_and_template_prefix
         else f"{stage.name}_{method}"
     )
-    all_upstream_tasks = (
-        upstream_tasks + external_upstream_tasks
-        if external_upstream_tasks
-        else upstream_tasks
-    )
-
     if submodel_args:
         tasks = task_template.create_tasks(
             name=task_name,
-            upstream_tasks=all_upstream_tasks,
+            upstream_tasks=upstream_tasks,
             max_attempts=max_attempts,
             entrypoint=entrypoint,
             config=config_path,
@@ -489,7 +610,7 @@ def get_stage_tasks(
         tasks = [
             task_template.create_task(
                 name=task_name,
-                upstream_tasks=all_upstream_tasks,
+                upstream_tasks=upstream_tasks,
                 max_attempts=max_attempts,
                 entrypoint=entrypoint,
                 config=config_path,
@@ -502,7 +623,14 @@ def get_stage_tasks(
     if collect_results(stage, method, subsets, paramsets, collect):
         tasks.extend(
             get_stage_tasks(
-                stage, "collect", tool, resources, python, upstream_tasks=tasks
+                stage=stage,
+                method="collect",
+                tool=tool,
+                resources=resources,
+                python=python,
+                task_and_template_prefix=task_and_template_prefix,
+                max_attempts=max_attempts,
+                upstream_tasks=tasks,
             )
         )
 
@@ -571,7 +699,7 @@ def get_task_template(
     tool: Tool,
     resources: dict[str, Any],
     submodel_args: list[str],
-    task_and_template_prefix: str | None = None,
+    task_and_template_prefix: str | None,
     **kwargs,
 ) -> TaskTemplate:
     """Get stage task template.
@@ -592,8 +720,7 @@ def get_task_template(
     submodel_args : list of str
         List including 'subsets' and/or 'paramsets'.
     task_and_template_prefix : str, optional
-        Optional prefix to append to task/template name. Default is None,
-        no prefix.
+        Optional prefix to append to task/template name.
     **kwargs
         Additional keyword arguments passed to stage method.
 

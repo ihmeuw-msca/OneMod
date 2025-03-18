@@ -6,9 +6,12 @@ import json
 import logging
 from collections import deque
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from jobmon.client.workflow import Workflow
 
 from onemod.config import Config
 from onemod.serialization import serialize
@@ -259,6 +262,28 @@ class Pipeline(BaseModel):
         validation_dir.mkdir(exist_ok=True)
         report_path = validation_dir / "validation_report.json"
         serialize(collector.errors, report_path)  # type: ignore[arg-type]
+
+    def add_tasks_to_workflow(
+        self,
+        workflow: "Workflow",
+        method: Literal["run", "fit", "predict", "collect"],
+        stages: list[str] | None,
+        resources: Path | str | dict[str, Any],
+        python: Path | str | None,
+        **kwargs,
+    ) -> None:
+        """Add pipeline tasks to existing Jobmon Workflow."""
+        from onemod.backend.jobmon_backend import add_tasks_to_workflow
+
+        add_tasks_to_workflow(
+            workflow=workflow,
+            model=self,
+            method=method,
+            stages=stages,
+            resources=resources,
+            python=python,
+            **kwargs,
+        )
 
     def evaluate(
         self,
