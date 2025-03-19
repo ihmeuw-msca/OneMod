@@ -10,6 +10,8 @@ These tests take a long time, e.g., test_simple_pipeline() took 2m 11.6s
 import pytest
 from jobmon.client.api import Tool
 
+from onemod.backend.jobmon_backend import add_tasks_to_workflow
+
 KWARGS = {
     "backend": "jobmon",
     "cluster": "dummy",
@@ -125,8 +127,12 @@ def test_simple_pipeline_add_tasks_to_workflow(simple_pipeline):
     tool.set_default_cluster_name("dummy")
     tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
     workflow = tool.create_workflow(name="test_run_workflow")
-    simple_pipeline.add_tasks_to_workflow(
-        workflow=workflow, method="run", stages=["run_1", "fit_2"], **KWARGS
+    add_tasks_to_workflow(
+        model=simple_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **KWARGS,
     )
     workflow.bind()
     workflow.run()
@@ -139,8 +145,12 @@ def test_parallel_pipeline_add_tasks_to_workflow(parallel_pipeline):
     tool.set_default_cluster_name("dummy")
     tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
     workflow = tool.create_workflow(name="test_run_workflow")
-    parallel_pipeline.add_tasks_to_workflow(
-        workflow=workflow, method="run", stages=["run_1", "fit_2"], **KWARGS
+    add_tasks_to_workflow(
+        model=parallel_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **KWARGS,
     )
     workflow.bind()
     workflow.run()

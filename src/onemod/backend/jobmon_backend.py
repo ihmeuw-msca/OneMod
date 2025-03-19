@@ -150,8 +150,8 @@ def evaluate_with_jobmon(
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def add_tasks_to_workflow(
-    workflow: Workflow,
     model: Pipeline | Stage,
+    workflow: Workflow,
     method: Literal["run", "fit", "predict", "collect"],
     resources: Path | str | dict[str, Any],
     python: Path | str | None = None,
