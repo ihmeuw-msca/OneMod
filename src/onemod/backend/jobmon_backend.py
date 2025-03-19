@@ -166,6 +166,9 @@ def add_tasks_to_workflow(
 ) -> None:
     """Add Pipeline tasks to an existing Jobmon Workflow.
 
+    Note that this is a publically available function, be careful of
+    breaking changes to the API or functionality.
+
     Parameters
     ----------
     workflow : Workflow
@@ -360,15 +363,15 @@ def get_tasks(
     """
     if isinstance(model, Pipeline):
         return get_pipeline_tasks(
-            model,
-            method,
-            tool,
-            resources,
-            python,
-            stages,
-            external_upstream_tasks,
-            task_and_template_prefix,
-            max_attempts,
+            pipeline=model,
+            method=method,
+            tool=tool,
+            resources=resources,
+            python=python,
+            stages=stages,
+            external_upstream_tasks=external_upstream_tasks,
+            task_and_template_prefix=task_and_template_prefix,
+            max_attempts=max_attempts,
             **kwargs,
         )
     return get_stage_tasks(
@@ -382,6 +385,7 @@ def get_tasks(
         subsets=subsets,
         paramsets=paramsets,
         collect=collect,
+        upstream_tasks=external_upstream_tasks,
         **kwargs,
     )
 
