@@ -27,7 +27,9 @@ def load_pipeline(config: Path | str) -> Pipeline:
         Pipeline instance.
 
     """
-    return Pipeline.from_json(config)
+    pipeline_class: type[Pipeline] = _get_class(config)
+    pipeline = pipeline_class.from_json(config)
+    return pipeline
 
 
 def load_stage(config: Path | str, stage_name: str) -> Stage:
@@ -46,25 +48,28 @@ def load_stage(config: Path | str, stage_name: str) -> Stage:
         Stage instance.
 
     """
-    stage_class = _get_stage(config, stage_name)
+    stage_class: type[Stage] = _get_class(config, stage_name)
     stage = stage_class.from_json(config, stage_name)
     return stage
 
 
-def _get_stage(config: Path | str, stage_name: str) -> Stage:
-    """Get stage class from JSON file.
+def _get_class(
+    config: Path | str, stage_name: str | None = None
+) -> type[Pipeline] | type[Stage]:
+    """Get pipeline or stage class from JSON file.
 
     Parameters
     ----------
     config : Path or str
         Path to config file.
-    stage_name : str
-        Stage name.
+    stage_name : str or None, optional
+        Name of stage in config file to get class for. If None, get
+        class for pipeline in config file. Default is None.
 
     Returns
     -------
-    Stage
-        Stage class.
+    Pipeline or Stage
+        Pipeline or Stage class.
 
     Notes
     -----
@@ -74,34 +79,46 @@ def _get_stage(config: Path | str, stage_name: str) -> Stage:
     """
     with open(config, "r") as f:
         config_dict = json.load(f)
-    if stage_name not in config_dict["stages"]:
-        raise KeyError(f"Config does not contain a stage named '{stage_name}'")
-    config_dict = config_dict["stages"][stage_name]
-    stage_type = config_dict["type"]
+
+    if stage_name is None:
+        model_name = config_dict["name"]
+        model_type = config_dict["type"]
+    else:
+        if stage_name not in config_dict["stages"]:
+            raise KeyError(
+                f"Config does not contain a stage named '{stage_name}'"
+            )
+        config_dict = config_dict["stages"][stage_name]
+        model_name = stage_name
+        model_type = config_dict["type"]
 
     if "module" in config_dict:
-        return _get_custom_stage(stage_type, config_dict["module"])
-    if hasattr(onemod_stages, stage_type):
-        return getattr(onemod_stages, stage_type)
+        return _get_custom_class(model_type, config_dict["module"])
+    if model_type == "Pipeline":
+        return Pipeline
+    if hasattr(onemod_stages, model_type):
+        return getattr(onemod_stages, model_type)
     raise KeyError(
-        f"Config does not contain a module for custom stage '{stage_name}'"
+        f"Config does not contain a module for custom class '{model_name}'"
     )
 
 
-def _get_custom_stage(stage_type: str, module: str) -> Stage:
-    """Get custom stage class from file.
+def _get_custom_class(
+    class_type: str, module: str
+) -> type[Pipeline] | type[Stage]:
+    """Get custom pipeline or stage class from file.
 
     Parameters
     ----------
-    stage_type : str
-        Name of custom stage class.
+    class_type : str
+        Name of custom  class.
     module : str
-        Path to Python module containing custom stage class definition.
+        Path to Python module containing custom class definition.
 
     Returns
     -------
     Stage
-        Custom stage class.
+        Custom pipeline or stage class.
 
     """
     module_path = Path(module)
@@ -120,7 +137,7 @@ def _get_custom_stage(stage_type: str, module: str) -> Stage:
     loaded_module = module_from_spec(spec)
     spec.loader.exec_module(loaded_module)
 
-    return getattr(loaded_module, stage_type)
+    return getattr(loaded_module, class_type)
 
 
 def evaluate(
