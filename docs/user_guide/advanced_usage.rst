@@ -145,7 +145,8 @@ automatically validate any user-supplied settings.
   attribute. For example, ``stage.config["id_columns"]`` will return
   ``id_columns`` from the stage's config if it exists and is not ``None``,
   otherwise it will return ``id_columns`` from the pipeline's config if it
-  exists and is not ``None``.
+  exists and is not ``None``. If an attribute exists but is ``None``, it is
+  treated as if it does not exist.
 * If a stage has a required setting that can be specified at either the stage or
   pipeline level, the item should include ``None`` as its default in the custom
   stage config and the item's name should be included in the stage config's
@@ -153,3 +154,8 @@ automatically validate any user-supplied settings.
 * To enable the :py:attr:`~onemod.stage.base.Stage.crossby` attribute for a
   setting in a custom stage config, the setting's type hints must include a
   list, set, or tuple. For example, ``param: int | list[int]``.
+* When defining a custom :py:attr:`~onemod.config.base.StageConfig` class, you
+  should specify the type of the private ``_pipeline_config`` attribute if it
+  corresponds to a custom :py:attr:`~onemod.config.base.Config` class, otherwise
+  custom fields in the pipeline config will not be validated when reloading the
+  stage from a JSON file.
