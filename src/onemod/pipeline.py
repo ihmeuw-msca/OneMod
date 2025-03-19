@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import deque
+from inspect import getfile
 from pathlib import Path
 from typing import Any, Literal
 
@@ -40,7 +41,41 @@ class Pipeline(BaseModel):
     directory: Path
     config: Config = Config()
     groupby_data: Path | None = None
+    _module: Path | None = None
     _stages: dict[str, Stage] = {}
+
+    def __init__(
+        self,
+        module: Path | str | None = None,
+        stages: list[Stage] | None = None,
+        **kwargs,
+    ) -> None:
+        """Create pipeline instance."""
+        super().__init__(**kwargs)
+        self.set_module(module)
+        if stages is not None:
+            self.add_stages(stages)
+
+    @computed_property
+    def type(self) -> str:
+        """Pipeline type."""
+        return type(self).__name__
+
+    @computed_property
+    def module(self) -> Path | None:
+        """Path to module containing custom pipeline definition."""
+        return self._module
+
+    def set_module(self, module: Path | str | None) -> None:
+        if isinstance(module, (Path, str)):
+            self._module = Path(module)
+        elif self.type != "Pipeline":
+            try:
+                self._module = Path(getfile(self.__class__))
+            except (OSError, TypeError):
+                raise TypeError(
+                    f"Could not find module for custom pipeline class '{self.name}'"
+                )
 
     @computed_property
     def stages(self) -> dict[str, Stage]:
@@ -72,18 +107,19 @@ class Pipeline(BaseModel):
         with open(config_path, "r") as file:
             config = json.load(file)
 
+        del config["type"]
+        del config["dependencies"]
         stages = config.pop("stages", {})
-
-        pipeline = cls(**config)
 
         if stages:
             from onemod.main import load_stage
 
-            pipeline.add_stages(
-                [load_stage(config_path, stage) for stage in stages]
+            return cls(
+                stages=[load_stage(config_path, stage) for stage in stages],
+                **config,
             )
 
-        return pipeline
+        return cls(**config)
 
     def to_json(self, config_path: Path | str | None = None) -> None:
         """Save pipeline as JSON file.
