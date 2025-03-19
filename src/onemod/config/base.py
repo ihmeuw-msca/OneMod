@@ -65,7 +65,7 @@ class StageConfig(Config):
 
     def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):
-            pipeline_config = Config(**pipeline_config)
+            pipeline_config = type(self._pipeline_config)(**pipeline_config)
 
         missing = []
         for item in self._required:
