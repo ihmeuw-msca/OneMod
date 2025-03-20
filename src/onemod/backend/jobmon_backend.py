@@ -130,11 +130,11 @@ def evaluate_with_jobmon(
         python = str(sys.executable)
 
     resources_dict = get_resources(resources)
-    tool = get_tool(model.name, method, cluster, resources_dict)
-    tasks = get_tasks(
+    workflow = create_workflow(model.name, method, cluster, resources_dict)
+    add_tasks_to_workflow(
         model=model,
+        workflow=workflow,
         method=method,
-        tool=tool,
         resources=resources_dict,
         python=python,
         stages=stages,
@@ -145,7 +145,7 @@ def evaluate_with_jobmon(
         max_attempts=max_attempts,
         **kwargs,
     )
-    create_and_run_workflow(model.name, method, tool, tasks)
+    run_workflow(workflow)
 
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -262,6 +262,36 @@ def get_resources(resources: Path | str | dict[str, Any]) -> dict[str, Any]:
         config_loader = ConfigLoader()
         return config_loader.load(Path(resources))
     return resources
+
+
+def create_workflow(
+    name: str,
+    method: Literal["run", "fit", "predict", "collect"],
+    cluster: str,
+    resources: dict[str, Any],
+) -> Workflow:
+    """Create and return workflow.
+
+    Parameters
+    ----------
+    name : str
+        Pipeline or stage name.
+    method : str
+        Name of method being evaluated.
+    cluster : str
+        Cluster name.
+    resources : dict
+        Dictionary of compute resources.
+
+    Returns
+    -------
+    Workflow
+        Jobmon workflow.
+
+    """
+    tool = get_tool(name, method, cluster, resources)
+    workflow = tool.create_workflow(name=f"{name}_{method}")
+    return workflow
 
 
 def get_tool(
@@ -833,25 +863,15 @@ def get_task_resources(
     }
 
 
-def create_and_run_workflow(
-    name: str, method: str, tool: Tool, tasks: list[Task]
-) -> None:
-    """Create and run workflow.
+def run_workflow(workflow: Workflow) -> None:
+    """Run workflow.
 
     Parameters
     ----------
-    name : str
-        Pipeline or stage name.
-    method : str
-        Name of method being evaluated.
-    tool : Tool
-        Jobmon tool.
-    tasks : list of Task
-        List of stage tasks.
+    workflow : Workflow
+        Jobmon workflow to run.
 
     """
-    workflow = tool.create_workflow(name=f"{name}_{method}")
-    workflow.add_tasks(tasks)
     workflow.bind()
     print(f"Starting workflow {workflow.workflow_id}")
     status = workflow.run()
