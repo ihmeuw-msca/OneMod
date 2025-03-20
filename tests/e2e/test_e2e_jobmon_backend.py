@@ -8,12 +8,17 @@ These tests take a long time, e.g., test_simple_pipeline() took 2m 11.6s
 """
 
 import pytest
+from jobmon.client.api import Tool
+
+from onemod.backend.jobmon_backend import add_tasks_to_workflow
 
 KWARGS = {
     "backend": "jobmon",
     "cluster": "dummy",
     "resources": {"tool_resources": {"dummy": {"queue": "null.q"}}},
     "python": None,
+    "task_and_template_prefix": "jobmon_e2e_testing",
+    "max_attempts": 3,
 }
 
 STAGE_KWARGS = {**KWARGS, "subsets": None, "paramsets": None, "collect": None}
@@ -113,3 +118,39 @@ def test_parallel_stage_submodels(parallel_pipeline, submodel, collect):
             "collect": collect,
         },
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.requires_jobmon
+def test_simple_pipeline_add_tasks_to_workflow(simple_pipeline):
+    tool = Tool(name="test_run_simple_pipeline")
+    tool.set_default_cluster_name("dummy")
+    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
+    workflow = tool.create_workflow(name="test_run_workflow")
+    add_tasks_to_workflow(
+        model=simple_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **KWARGS,
+    )
+    workflow.bind()
+    workflow.run()
+
+
+@pytest.mark.e2e
+@pytest.mark.requires_jobmon
+def test_parallel_pipeline_add_tasks_to_workflow(parallel_pipeline):
+    tool = Tool(name="test_run_parallel_pipeline")
+    tool.set_default_cluster_name("dummy")
+    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
+    workflow = tool.create_workflow(name="test_run_workflow")
+    add_tasks_to_workflow(
+        model=parallel_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **KWARGS,
+    )
+    workflow.bind()
+    workflow.run()
