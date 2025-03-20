@@ -90,14 +90,13 @@ class Stage(BaseModel, ABC):
     def set_module(self, module: Path | str | None) -> None:
         if isinstance(module, (Path, str)):
             self._module = Path(module)
-        else:
-            if not hasattr(onemod_stages, self.type):
-                try:
-                    self._module = Path(getfile(self.__class__))
-                except (OSError, TypeError):
-                    raise TypeError(
-                        f"Could not find module for custom stage '{self.name}'"
-                    )
+        elif not hasattr(onemod_stages, self.type):
+            try:
+                self._module = Path(getfile(self.__class__))
+            except (OSError, TypeError):
+                raise TypeError(
+                    f"Could not find module for custom stage '{self.name}'"
+                )
 
     @computed_property
     def input(self) -> Input:
