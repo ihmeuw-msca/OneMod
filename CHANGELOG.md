@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Added new pipeline method `add_tasks_to_workflow` for adding tasks to an existing Jobmon workflow
+- Added new Jobmon-backend method `add_tasks_to_workflow` for adding tasks to an existing Jobmon workflow.
 - Added new Jobmon-related arguments: `external_upstream_dependencies`, `task_and_template_prefix`, and `max_attempts`.
+- Split Jobmon-backend method `run_workflow` into `create_workflow` and `run_workflow`.
 
 ## [1.0.3] - 2025-03-12
 

@@ -8,9 +8,14 @@ These tests take a long time, e.g., test_simple_pipeline() took 2m 11.6s
 """
 
 import pytest
-from jobmon.client.api import Tool
 
-from onemod.backend.jobmon_backend import add_tasks_to_workflow
+try:
+    from jobmon.client.api import Tool
+
+    from onemod.backend.jobmon_backend import add_tasks_to_workflow
+except ImportError:
+    pass
+
 
 KWARGS = {
     "backend": "jobmon",
