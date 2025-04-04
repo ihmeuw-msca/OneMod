@@ -19,7 +19,6 @@ class DummyKregConfig(StageConfig):
     kreg_model: dict
     kreg_fit: dict = {}
     kreg_uncertainty: dict = {}
-    _required: list[str] = ["kreg_model"]
 
 
 class DummyRoverConfig(StageConfig):
