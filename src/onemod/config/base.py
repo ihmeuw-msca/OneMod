@@ -11,9 +11,9 @@ class Config(BaseModel):
     """Base configuration class.
 
     Config instances are dictionary-like objects that contains settings.
-    For attribute validation, users can create custom configuration
-    classes by subclassing Config. Alternatively, users can add extra
-    attributes to Config instances without validation.
+    For attribute validation and default values, users can create custom
+    configuration classes by subclassing Config. Alternatively, users
+    can add extra attributes to Config instances without validation.
 
     """
 
@@ -44,7 +44,7 @@ class Config(BaseModel):
         return f"{type(self).__name__}({', '.join(arg_list)})"
 
     def _get_fields(self) -> list[str]:
-        return list(self.model_dump(exclude_none=True))
+        return list(self.model_dump())
 
 
 class StageConfig(Config):
@@ -61,18 +61,10 @@ class StageConfig(Config):
     )
 
     _pipeline_config: Config = Config()
-    _required: list[str] = []
 
     def add_pipeline_config(self, pipeline_config: Config | dict) -> None:
         if isinstance(pipeline_config, dict):
             pipeline_config = Config(**pipeline_config)
-
-        missing = []
-        for item in self._required:
-            if not self.stage_contains(item) and item not in pipeline_config:
-                missing.append(item)
-        if missing:
-            raise AttributeError(f"Missing required config items: {missing}")
 
         self._pipeline_config = pipeline_config
 
@@ -109,7 +101,7 @@ class StageConfig(Config):
         )
 
     def _get_stage_fields(self) -> list[str]:
-        return list(self.model_dump(exclude_none=True))
+        return list(self.model_dump())
 
     def _get_pipeline_fields(self) -> list[str]:
         return self._pipeline_config._get_fields()
