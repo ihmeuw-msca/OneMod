@@ -134,8 +134,8 @@ Configuration Classes
 ^^^^^^^^^^^^^^^^^^^^^
 You can pass any setting to existing :py:class:`~onemod.config.base.Config` or
 :py:class:`~onemod.config.base.StageConfig` classes without creating your own
-subclasses. However, creating your own subclasses allows you to add validation.
-Both configuration classes are subclasses of Pydantic's
+subclasses. However, creating your own subclasses allows you to add validation
+and default values. Both configuration classes are subclasses of Pydantic's
 `BaseModel <https://docs.pydantic.dev/latest/api/base_model/>`_ class. By adding
 your own model fields with type hints, your custom configuration class will
 automatically validate any user-supplied settings.
@@ -143,13 +143,10 @@ automatically validate any user-supplied settings.
 * Stage :py:attr:`~onemod.stage.base.Stage.config` attributes have access to
   their corresponding pipeline's :py:attr:`~onemod.pipeline.Pipeline.config`
   attribute. For example, ``stage.config["id_columns"]`` will return
-  ``id_columns`` from the stage's config if it exists and is not ``None``,
-  otherwise it will return ``id_columns`` from the pipeline's config if it
-  exists and is not ``None``.
-* If a stage has a required setting that can be specified at either the stage or
-  pipeline level, the item should include ``None`` as its default in the custom
-  stage config and the item's name should be included in the stage config's
-  ``_required`` attribute.
+  ``id_columns`` from the stage's config if it exists, otherwise it will return
+  ``id_columns`` from the pipeline's config if it exists.
+* If a stage requires specific pipeline settings, the item's name should be
+  included in the stage config's ``_required`` attribute.
 * To enable the :py:attr:`~onemod.stage.base.Stage.crossby` attribute for a
   setting in a custom stage config, the setting's type hints must include a
   list, set, or tuple. For example, ``param: int | list[int]``.
