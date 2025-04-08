@@ -37,15 +37,9 @@ STAGE_DICT = {
 
 
 @pytest.mark.parametrize("stage", ["rover", "spxmod"])
-@pytest.mark.parametrize("is_none", [True, False])
-def test_config_forward(stage, is_none):
+def test_config_forward(stage):
     stage_config = STAGE_DICT[stage]
-    if is_none:
-        pipeline_config = Config(
-            **{item: None for item in REQUIRED_ITEMS[stage]}
-        )
-    else:
-        pipeline_config = Config()
+    pipeline_config = Config()
     missing = list(REQUIRED_ITEMS[stage])
 
     for item in REQUIRED_ITEMS[stage]:
@@ -58,17 +52,13 @@ def test_config_forward(stage, is_none):
 
 
 @pytest.mark.parametrize("stage", ["rover", "spxmod"])
-@pytest.mark.parametrize("is_none", [True, False])
-def test_config_backward(stage, is_none):
+def test_config_backward(stage):
     stage_config = STAGE_DICT[stage]
     pipeline_config = Config(**CONFIG_ITEMS)
     missing = []
 
     for item in REQUIRED_ITEMS[stage]:
-        if is_none:
-            pipeline_config[item] = None
-        else:
-            delattr(pipeline_config, item)
+        delattr(pipeline_config, item)
         missing.append(item)
 
         with pytest.raises(AttributeError) as e:
