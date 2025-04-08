@@ -45,8 +45,7 @@ def get_custom_config_class(class_name: str, module: str) -> type[BaseModel]:
         Custom pipeline config class from file.
 
     """
-    loaded_module = load_module(module)
-    pipeline_class = getattr(loaded_module, class_name)
+    pipeline_class = get_custom_class(class_name, module)
     config_class = pipeline_class.__pydantic_fields__["config"].annotation
     return config_class
 
