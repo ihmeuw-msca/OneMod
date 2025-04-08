@@ -1,8 +1,6 @@
 """Methods to load and evaluate pipeline and stage objects."""
 
 import json
-from importlib.util import module_from_spec, spec_from_file_location
-from inspect import getmodulename
 from pathlib import Path
 from typing import Any, Literal
 
@@ -11,6 +9,7 @@ import fire
 import onemod.stage as onemod_stages
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
+from onemod.utils.custom_classes import get_custom_class
 
 
 def load_pipeline(config: Path | str) -> Pipeline:
@@ -27,7 +26,9 @@ def load_pipeline(config: Path | str) -> Pipeline:
         Pipeline instance.
 
     """
-    return Pipeline.from_json(config)
+    pipeline_class: type[Pipeline] = _get_class(config)
+    pipeline = pipeline_class.from_json(config)
+    return pipeline
 
 
 def load_stage(config: Path | str, stage_name: str) -> Stage:
@@ -46,81 +47,59 @@ def load_stage(config: Path | str, stage_name: str) -> Stage:
         Stage instance.
 
     """
-    stage_class = _get_stage(config, stage_name)
+    stage_class: type[Stage] = _get_class(config, stage_name)
     stage = stage_class.from_json(config, stage_name)
     return stage
 
 
-def _get_stage(config: Path | str, stage_name: str) -> Stage:
-    """Get stage class from JSON file.
+def _get_class(
+    config: Path | str, stage_name: str | None = None
+) -> type[Pipeline] | type[Stage]:
+    """Get pipeline or stage class from JSON file.
 
     Parameters
     ----------
     config : Path or str
         Path to config file.
-    stage_name : str
-        Stage name.
+    stage_name : str or None, optional
+        Name of stage in config file to get class for. If None, get
+        class for pipeline in config file. Default is None.
 
     Returns
     -------
-    Stage
-        Stage class.
+    Pipeline or Stage
+        Pipeline or Stage class.
 
     Notes
     -----
-    When a custom stage class has the same name as a built-in OneMod
-    stage class, this function returns the custom stage class.
+    When a custom class has the same name as a built-in OneMod class,
+    this function returns the custom class.
 
     """
     with open(config, "r") as f:
         config_dict = json.load(f)
-    if stage_name not in config_dict["stages"]:
-        raise KeyError(f"Config does not contain a stage named '{stage_name}'")
-    config_dict = config_dict["stages"][stage_name]
-    stage_type = config_dict["type"]
+
+    if stage_name is None:
+        model_name = config_dict["name"]
+        model_type = config_dict["type"]
+    else:
+        if stage_name not in config_dict["stages"]:
+            raise KeyError(
+                f"Config does not contain a stage named '{stage_name}'"
+            )
+        config_dict = config_dict["stages"][stage_name]
+        model_name = stage_name
+        model_type = config_dict["type"]
 
     if "module" in config_dict:
-        return _get_custom_stage(stage_type, config_dict["module"])
-    if hasattr(onemod_stages, stage_type):
-        return getattr(onemod_stages, stage_type)
+        return get_custom_class(model_type, config_dict["module"])
+    if model_type == "Pipeline":
+        return Pipeline
+    if hasattr(onemod_stages, model_type):
+        return getattr(onemod_stages, model_type)
     raise KeyError(
-        f"Config does not contain a module for custom stage '{stage_name}'"
+        f"Config does not contain a module for custom class '{model_name}'"
     )
-
-
-def _get_custom_stage(stage_type: str, module: str) -> Stage:
-    """Get custom stage class from file.
-
-    Parameters
-    ----------
-    stage_type : str
-        Name of custom stage class.
-    module : str
-        Path to Python module containing custom stage class definition.
-
-    Returns
-    -------
-    Stage
-        Custom stage class.
-
-    """
-    module_path = Path(module)
-
-    module_name = getmodulename(module_path)
-    if module_name is None:
-        raise ValueError(f"Could not determine module name from {module_path}")
-
-    spec = spec_from_file_location(module_name, module_path)
-    if spec is None:
-        raise ImportError(f"Could not load spec for module {module_path}")
-
-    if spec.loader is None:
-        raise ImportError(f"Module spec for {module_path} has no loader")
-
-    loaded_module = module_from_spec(spec)
-    spec.loader.exec_module(loaded_module)
-
-    return getattr(loaded_module, stage_type)
 
 
 def evaluate(

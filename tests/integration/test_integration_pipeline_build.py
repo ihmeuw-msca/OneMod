@@ -219,6 +219,7 @@ def test_pipeline_build_single_stage(test_base_dir, pipeline_with_single_stage):
             "id_columns": ["age_group_id", "location_id"],
             "model_type": "binomial",
         },
+        "type": "Pipeline",
         "stages": {
             "stage_1": {
                 "name": "stage_1",

@@ -21,15 +21,11 @@ def stage_config(pipeline_config):
     return stage_config
 
 
-@pytest.mark.parametrize("from_config", [True, False])
-def test_pipeline_config(pipeline_config, from_config):
+def test_pipeline_config(pipeline_config):
     stage_config = StageConfig(
         stage_key="stage_value", shared_key="stage_shared_value"
     )
-    if from_config:
-        stage_config.add_pipeline_config(pipeline_config)
-    else:  # from dictionary
-        stage_config.add_pipeline_config(pipeline_config.model_dump())
+    stage_config.add_pipeline_config(pipeline_config)
     assert isinstance(stage_config._pipeline_config, Config)
     assert stage_config._pipeline_config["pipeline_key"] == "pipeline_value"
     assert (

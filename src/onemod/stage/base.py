@@ -13,11 +13,11 @@ from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict
 
 import onemod.stage as onemod_stages
-from onemod.config import StageConfig
-from onemod.dtypes import Data
-from onemod.dtypes.unique_sequence import UniqueList
+from onemod.config import Config, StageConfig
+from onemod.dtypes import Data, UniqueList
 from onemod.fsutils import DataInterface
 from onemod.io import Input, Output
+from onemod.utils.custom_classes import get_custom_config_class
 from onemod.utils.decorators import computed_property
 from onemod.validation import ValidationErrorCollector, handle_error
 
@@ -90,14 +90,13 @@ class Stage(BaseModel, ABC):
     def set_module(self, module: Path | str | None) -> None:
         if isinstance(module, (Path, str)):
             self._module = Path(module)
-        else:
-            if not hasattr(onemod_stages, self.type):
-                try:
-                    self._module = Path(getfile(self.__class__))
-                except (OSError, TypeError):
-                    raise TypeError(
-                        f"Could not find module for custom stage '{self.name}'"
-                    )
+        elif not hasattr(onemod_stages, self.type):
+            try:
+                self._module = Path(getfile(self.__class__))
+            except (OSError, TypeError):
+                raise TypeError(
+                    f"Could not find module for custom stage '{self.name}'"
+                )
 
     @computed_property
     def input(self) -> Input:
@@ -372,7 +371,19 @@ class Stage(BaseModel, ABC):
             )
 
         stage = cls(config_path=config_path, **stage_config)
-        stage.config.add_pipeline_config(pipeline_config["config"])
+
+        if (pipeline_module := pipeline_config.get("module")) is None:
+            stage.config.add_pipeline_config(
+                Config(**pipeline_config["config"])
+            )
+        else:
+            config_class = get_custom_config_class(
+                pipeline_config["type"], pipeline_module
+            )
+            stage.config.add_pipeline_config(
+                config_class(**pipeline_config["config"])
+            )
+
         return stage
 
     def build(
