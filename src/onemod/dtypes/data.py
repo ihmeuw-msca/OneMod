@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Any, ClassVar
 
-from polars import Boolean, DataFrame, Float64, Int64, String
+import pandas as pd
+import polars as pl
 from pydantic import BaseModel
 
 from onemod.constraints import Constraint
@@ -22,10 +23,10 @@ class Data(BaseModel):
     shape: tuple[int, int] | None = None
     columns: dict[str, ColumnSpec] | None = None
     type_mapping: ClassVar[dict[type, Any]] = {
-        bool: Boolean,
-        int: Int64,
-        float: Float64,
-        str: String,
+        bool: pl.Boolean,
+        int: pl.Int64,
+        float: pl.Float64,
+        str: pl.String,
     }
 
     def model_post_init(self, *args, **kwargs) -> None:
@@ -98,7 +99,9 @@ class Data(BaseModel):
                             )
 
     def validate_shape(
-        self, data: DataFrame, collector: ValidationErrorCollector | None = None
+        self,
+        data: pl.DataFrame,
+        collector: ValidationErrorCollector | None = None,
     ) -> None:
         """Validate the shape of the data."""
         if data.shape != self.shape:
@@ -112,13 +115,20 @@ class Data(BaseModel):
 
     def validate_data(
         self,
-        data: DataFrame | None,
+        data: pl.DataFrame | None,
         collector: ValidationErrorCollector | None = None,
     ) -> None:
         """Validate the columns and shape of the data."""
         if data is None and self.path is not None:
             try:
-                data = DataLoader().load(self.path)
+                df = DataLoader().load(self.path)
+
+                if isinstance(df, pl.LazyFrame):
+                    df = df.collect()
+                elif isinstance(df, pd.DataFrame):
+                    df = pl.from_pandas(df)
+
+                data = df
             except Exception as e:
                 handle_error(
                     self.stage,
@@ -129,6 +139,16 @@ class Data(BaseModel):
                 )
                 return
 
+        if data is None:
+            handle_error(
+                self.stage,
+                "Data validation",
+                ValueError,
+                "No data provided or could not be loaded",
+                collector,
+            )
+            return
+
         if self.shape:
             self.validate_shape(data, collector)
 
@@ -136,7 +156,9 @@ class Data(BaseModel):
             self.validate_columns(data, collector)
 
     def validate_columns(
-        self, data: DataFrame, collector: ValidationErrorCollector | None = None
+        self,
+        data: pl.DataFrame,
+        collector: ValidationErrorCollector | None = None,
     ) -> None:
         """Validate columns based on specified types and constraints."""
         if self.columns is None:

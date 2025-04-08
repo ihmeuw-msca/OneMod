@@ -18,7 +18,7 @@ ITEMS = {
 }
 OUTPUT = Output(
     stage="stage",
-    directory="/path/to/stage/output",
+    directory=Path("/path/to/stage/output"),
     items={"predictions": Data(format="parquet", methods=["run", "fit"])},
 )
 
