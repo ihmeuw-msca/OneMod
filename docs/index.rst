@@ -10,7 +10,7 @@ Welcome to OneMod!
    developer_guide/index
 
 **OneMod** is an orchestration package that allows users to build pipelines of
-various models created by `IHME Math Sciences <https://github.com/ihmeuw-msca>`_.
+statistical models created by `IHME Math Sciences <https://github.com/ihmeuw-msca>`_.
 Core features of **OneMod** include an intuitive syntax for defining the
 dataflow between pipeline stages, the ability to easily parallelize over
 different data subsets and/or parameter sets, and options for data validation.

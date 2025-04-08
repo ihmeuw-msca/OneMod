@@ -38,7 +38,6 @@ See Jobmon documentation for additional resources and default values.
 
 """
 # TODO: Optional stage-specific Python environments
-# TODO: User-defined max_attempts
 # TODO: Could dependencies be method specific?
 # TODO: should we check resources format, minimum resources, cluster?
 
@@ -46,11 +45,15 @@ import sys
 from pathlib import Path
 from typing import Any, Literal
 
-from jobmon.client.api import Tool
-from jobmon.client.task import Task
-from jobmon.client.task_template import TaskTemplate
-from jobmon.client.workflow import Workflow
 from pydantic import ConfigDict, validate_call
+
+try:
+    from jobmon.client.api import Tool
+    from jobmon.client.task import Task
+    from jobmon.client.task_template import TaskTemplate
+    from jobmon.client.workflow import Workflow
+except ImportError:
+    raise ImportError("Missing optional 'jobmon' dependency")
 
 from onemod.backend.utils import (
     check_input_exists,
