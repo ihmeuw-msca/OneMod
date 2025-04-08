@@ -154,8 +154,3 @@ automatically validate any user-supplied settings.
 * To enable the :py:attr:`~onemod.stage.base.Stage.crossby` attribute for a
   setting in a custom stage config, the setting's type hints must include a
   list, set, or tuple. For example, ``param: int | list[int]``.
-* When defining a custom :py:attr:`~onemod.config.base.StageConfig` class, you
-  should specify the type of the private ``_pipeline_config`` attribute if it
-  corresponds to a custom :py:attr:`~onemod.config.base.Config` class, otherwise
-  custom fields in the pipeline config will not be validated when reloading the
-  stage from a JSON file.
