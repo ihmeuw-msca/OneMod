@@ -16,13 +16,13 @@ class SimpleStage(Stage):
 
     # TODO: Update once method-specific dependencies implemented
 
-    _required_input: dict[str, dict[str, Any]] = {
-        "fit_input": {"methods": ["run", "fit"], "format": "csv"},
-        "predict_input": {"methods": ["run", "predict"], "format": "csv"},
+    _required_input: dict[str, Data] = {
+        "fit_input": Data(methods=["run", "fit"], format="csv"),
+        "predict_input": Data(methods=["run", "predict"], format="csv"),
     }
-    _output_items: dict[str, dict[str, Any]] = {
-        "fit_output": {"methods": ["run", "fit"], "format": "csv"},
-        "predict_output": {"methods": ["run", "predict"], "format": "csv"},
+    _output_items: dict[str, Data] = {
+        "fit_output": Data(methods=["run", "fit"], format="csv"),
+        "predict_output": Data(methods=["run", "predict"], format="csv"),
     }
     _log: list[str] = []
 
@@ -56,11 +56,11 @@ class SimpleStage(Stage):
 
 class SimpleStageFit(SimpleStage):
     _skip: list[str] = ["predict"]
-    _required_input: dict[str, dict[str, Any]] = {
-        "fit_input": {"methods": ["run", "fit"], "format": "csv"}
+    _required_input: dict[str, Data] = {
+        "fit_input": Data(methods=["run", "fit"], format="csv")
     }
-    _output_items: dict[str, dict[str, Any]] = {
-        "fit_output": {"methods": ["run", "fit"], "format": "csv"}
+    _output_items: dict[str, Data] = {
+        "fit_output": Data(methods=["run", "fit"], format="csv")
     }
 
     def _run(self, **kwargs) -> None:
@@ -70,11 +70,11 @@ class SimpleStageFit(SimpleStage):
 
 class SimpleStagePredict(SimpleStage):
     _skip: list[str] = ["fit"]
-    _required_input: dict[str, dict[str, Any]] = {
-        "predict_input": {"methods": ["run", "fit"], "format": "csv"}
+    _required_input: dict[str, Data] = {
+        "predict_input": Data(methods=["run", "fit"], format="csv")
     }
-    _output_items: dict[str, dict[str, Any]] = {
-        "predict_output": {"methods": ["run", "fit"], "format": "csv"}
+    _output_items: dict[str, Data] = {
+        "predict_output": Data(methods=["run", "fit"], format="csv")
     }
 
     def _run(self, **kwargs) -> None:
@@ -87,11 +87,11 @@ class ParallelStage(Stage):
 
     # TODO: Update once stage instance can be passed as input
 
-    _required_input: dict[str, dict[str, Any]] = {
-        "input1": {"format": "directory"},
-        "input2": {"format": "directory"},
+    _required_input: dict[str, Data] = {
+        "input1": Data(format="directory"),
+        "input2": Data(format="directory"),
     }
-    _output_items: dict[str, dict[str, Any]] = {"output": {"format": "csv"}}
+    _output_items: dict[str, Data] = {"output": Data(format="csv")}
     _collect_after: list[str] = ["run", "fit", "predict"]
     _log: list[str] = []
 
