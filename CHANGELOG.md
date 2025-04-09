@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-04-09
+
+### Added
+
+- Adding tag to push package to Zenodo for a DOI
+
 ## [1.1.0] - 2025-03-18
 
 ### Added
