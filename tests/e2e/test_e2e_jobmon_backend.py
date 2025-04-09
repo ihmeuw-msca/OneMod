@@ -139,7 +139,9 @@ def test_parallel_stage_submodels(
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_simple_pipeline_add_tasks_to_workflow(simple_pipeline):
+def test_simple_pipeline_add_tasks_to_workflow(
+    jobmon_dummy_cluster_env, simple_pipeline
+):
     tool = Tool(name="test_run_simple_pipeline")
     tool.set_default_cluster_name("dummy")
     tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
@@ -157,7 +159,9 @@ def test_simple_pipeline_add_tasks_to_workflow(simple_pipeline):
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_parallel_pipeline_add_tasks_to_workflow(parallel_pipeline):
+def test_parallel_pipeline_add_tasks_to_workflow(
+    jobmon_dummy_cluster_env, parallel_pipeline
+):
     tool = Tool(name="test_run_parallel_pipeline")
     tool.set_default_cluster_name("dummy")
     tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
