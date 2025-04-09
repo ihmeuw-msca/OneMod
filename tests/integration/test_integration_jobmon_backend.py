@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -115,7 +116,12 @@ def test_task_template(stage_cluster):
     }
     tool = jb.get_tool("pipeline", "method", "cluster", resources)
     task_template = jb.get_task_template(
-        "stage", "method", tool, resources, submodel_args=[]
+        "stage",
+        "method",
+        tool,
+        resources,
+        submodel_args=[],
+        task_and_template_prefix=None,
     )
     default_cluster = task_template.default_cluster_name
     default_resources = task_template.default_compute_resources_set
@@ -211,6 +217,9 @@ def test_simple_pipeline_tasks(simple_pipeline, method, stages):
         resources=resources,
         python=python,
         stages=stages,
+        external_upstream_tasks=None,
+        task_and_template_prefix=None,
+        max_attempts=1,
     )
     stages = list(simple_pipeline.stages.keys()) if stages is None else stages
     task_dict = {task.task_args["stages"]: task for task in tasks}
@@ -243,6 +252,9 @@ def test_parallel_pipeline_tasks(parallel_pipeline, method, stages):
         resources=resources,
         python=python,
         stages=stages,
+        external_upstream_tasks=None,
+        task_and_template_prefix=None,
+        max_attempts=1,
     )
     stages = list(parallel_pipeline.stages.keys()) if stages is None else stages
     task_dict = {task.task_args["stages"]: defaultdict(list) for task in tasks}
@@ -289,6 +301,91 @@ def test_parallel_pipeline_tasks(parallel_pipeline, method, stages):
 
 @pytest.mark.integration
 @pytest.mark.requires_jobmon
+@pytest.mark.parametrize("method", ["run", "fit", "predict"])
+@pytest.mark.parametrize("stages", [None, ["run_1", "fit_2", "predict_3"]])
+def test_parallel_pipeline_tasks_jobmon_args(parallel_pipeline, method, stages):
+    cluster = "cluster"
+    resources = {"tool_resources": {cluster: {"queue": "null.q"}}}
+    python = "/path/to/python/env/bin/python"
+    external_upstream_tasks = [
+        jb.Task(
+            node=mock.MagicMock(),
+            task_args={"fake_arg_1": "fake_value"},
+            op_args={"fake_arg_2": "fake_value"},
+            name="fake_task",
+            task_attributes=[],
+        )
+    ]
+    task_and_template_prefix = "testing"
+    max_attempts = 3
+    tasks = jb.get_pipeline_tasks(
+        parallel_pipeline,
+        method,
+        jb.get_tool(parallel_pipeline.name, method, cluster, resources),
+        resources=resources,
+        python=python,
+        stages=stages,
+        external_upstream_tasks=external_upstream_tasks,
+        task_and_template_prefix=task_and_template_prefix,
+        max_attempts=max_attempts,
+    )
+    stages = list(parallel_pipeline.stages.keys()) if stages is None else stages
+    task_dict = {task.task_args["stages"]: defaultdict(list) for task in tasks}
+    for task in tasks:
+        task_dict[task.task_args["stages"]][task.task_args["method"]].append(
+            task
+        )
+
+    for stage in parallel_pipeline.stages.values():
+        if stage.name in stages:
+            method_tasks = task_dict[stage.name][method]
+            collect_tasks = task_dict[stage.name]["collect"]
+            assert len(method_tasks) == len(stage.get_submodels())
+
+            if method in stage.collect_after:
+                assert len(collect_tasks) == 1
+                assert collect_tasks[0].upstream_tasks == set(method_tasks)
+            else:
+                assert len(collect_tasks) == 0
+
+            for task in method_tasks:
+                stage_upstreams = [
+                    upstream_task
+                    for upstream_task in task.upstream_tasks
+                    if "stages" in upstream_task.task_args
+                ]
+                external_upstreams = [
+                    upstream_task
+                    for upstream_task in task.upstream_tasks
+                    if "stages" not in upstream_task.task_args
+                ]
+                upstream_dict = {
+                    upstream_task.task_args["stages"]: defaultdict(list)
+                    for upstream_task in stage_upstreams
+                }
+                for upstream_task in stage_upstreams:
+                    upstream_dict[upstream_task.task_args["stages"]][
+                        upstream_task.task_args["method"]
+                    ].append(upstream_task)
+                for upstream_name in stage.dependencies:
+                    # assumes upstream_stage in stages
+                    upstream_stage = parallel_pipeline.stages[upstream_name]
+                    if method in upstream_stage.collect_after:
+                        assert len(upstream_dict[upstream_name][method]) == 0
+                        assert len(upstream_dict[upstream_name]["collect"]) == 1
+                    else:
+                        assert len(upstream_dict[upstream_name][method]) == len(
+                            upstream_stage.get_submodels()
+                        )
+                        assert len(upstream_dict[upstream_name]["collect"]) == 0
+                if external_upstreams:
+                    assert external_upstreams == external_upstream_tasks
+        else:
+            assert stage.name not in task_dict
+
+
+@pytest.mark.integration
+@pytest.mark.requires_jobmon
 def test_stage_tasks_basic(simple_pipeline):
     stage = simple_pipeline.stages["run_1"]
     method = "run"
@@ -303,6 +400,8 @@ def test_stage_tasks_basic(simple_pipeline):
         jb.get_tool(simple_pipeline.name, method, cluster, resources),
         resources=resources,
         python=python,
+        task_and_template_prefix=None,
+        max_attempts=1,
     )
     task = tasks[0]
 
@@ -341,6 +440,8 @@ def test_stage_tasks_kwargs(simple_pipeline, kwargs):
         jb.get_tool(simple_pipeline.name, method, cluster, resources),
         resources=resources,
         python=python,
+        task_and_template_prefix=None,
+        max_attempts=1,
         **kwargs,
     )[0]
     assert task.command == jb.get_command_template(method, [], **kwargs).format(
@@ -382,6 +483,8 @@ def test_stage_tasks_submodels(parallel_pipeline, submodel, collect):
         subsets=subsets,
         paramsets=paramsets,
         collect=collect,
+        task_and_template_prefix=None,
+        max_attempts=1,
     )
     submodels = [
         [str(submodel[0]), str(submodel[1])]
@@ -423,6 +526,8 @@ def test_stage_tasks_collect_after(parallel_pipeline, method):
         subsets={"sex_id": 1},
         paramsets={"param": 1},
         collect=True,
+        task_and_template_prefix=None,
+        max_attempts=1,
     )
     assert tasks[0].task_args["method"] == method
     if method == "predict":
@@ -430,3 +535,43 @@ def test_stage_tasks_collect_after(parallel_pipeline, method):
     else:
         assert len(tasks) == 2
         assert tasks[1].task_args["method"] == "collect"
+
+
+@pytest.mark.integration
+@pytest.mark.requires_jobmon
+def test_stage_tasks_jobmon_args(simple_pipeline):
+    stage = simple_pipeline.stages["run_1"]
+    method = "run"
+    cluster = "cluster"
+    resources = {"tool_resources": {cluster: {"queue": "null.q"}}}
+    python = "/path/to/python/env/bin/python"
+    task_and_template_prefix = "testing"
+    max_attempts = 3
+    entrypoint = str(Path(python).parent / "onemod")
+    config = str(stage.dataif.get_path("config"))
+    tasks = jb.get_stage_tasks(
+        stage,
+        method,
+        jb.get_tool(simple_pipeline.name, method, cluster, resources),
+        resources=resources,
+        python=python,
+        task_and_template_prefix=task_and_template_prefix,
+        max_attempts=max_attempts,
+    )
+    task = tasks[0]
+
+    assert len(tasks) == 1
+    assert task.name == f"{task_and_template_prefix}_{stage.name}_{method}"
+    assert task.cluster_name == ""
+    assert task.compute_resources == {}
+    assert task.command == jb.get_command_template(method, []).format(
+        entrypoint=entrypoint, config=config, method=method, stages=stage.name
+    )
+    assert task.max_attempts == max_attempts
+    assert task.op_args == {"entrypoint": entrypoint}
+    assert task.task_args == {
+        "config": config,
+        "method": method,
+        "stages": stage.name,
+    }
+    assert task.node.node_args == {}
