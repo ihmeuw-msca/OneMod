@@ -288,9 +288,9 @@ def setup_simple_pipeline(directory: Path) -> Pipeline:
     pipeline = Pipeline(name="test_simple_pipeline", directory=directory)
 
     # Create stages and add to pipeline
-    run_1 = SimpleStage(name="run_1")
-    fit_2 = SimpleStageFit(name="fit_2")
-    predict_3 = SimpleStagePredict(name="predict_3")
+    run_1 = SimpleStage(name="run_1")  # type: ignore
+    fit_2 = SimpleStageFit(name="fit_2")  # type: ignore
+    predict_3 = SimpleStagePredict(name="predict_3")  # type: ignore
     pipeline.add_stages([run_1, fit_2, predict_3])
 
     # Define dataflow
