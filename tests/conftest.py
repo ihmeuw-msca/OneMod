@@ -78,3 +78,10 @@ def resource_dir(tmp_path_factory):
             directory / f"resources.{extension}",
         )
     return directory
+
+
+@pytest.fixture(scope="function")
+def jobmon_dummy_cluster_env(monkeypatch):
+    monkeypatch.setenv("JOBMON__DISTRIBUTOR__POLL_INTERVAL", "1")
+    monkeypatch.setenv("JOBMON__HEARTBEAT__WORKFLOW_RUN_INTERVAL", "1")
+    monkeypatch.setenv("JOBMON__HEARTBEAT__TASK_INSTANCE_INTERVAL", "1")
