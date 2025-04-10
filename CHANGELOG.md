@@ -19,6 +19,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Removed
 
+## [1.1.1] - 2025-04-09
+
+### Added
+
+- Adding tag to push package to Zenodo for a DOI
+
 ## [1.1.0] - 2025-03-18
 
 ### Added
