@@ -32,13 +32,15 @@ STAGE_KWARGS = {**KWARGS, "subsets": None, "paramsets": None, "collect": None}
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
-def test_simple_pipeline_method(simple_pipeline, method):
+def test_simple_pipeline_method(
+    jobmon_dummy_cluster_env, simple_pipeline, method
+):
     simple_pipeline.evaluate(method=method, stages=None, **KWARGS)
 
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_simple_pipeline_stages(simple_pipeline):
+def test_simple_pipeline_stages(jobmon_dummy_cluster_env, simple_pipeline):
     simple_pipeline.evaluate(method="run", stages=["run_1", "fit_2"], **KWARGS)
 
 
@@ -47,7 +49,9 @@ def test_simple_pipeline_stages(simple_pipeline):
 @pytest.mark.parametrize(
     "kwargs", [{}, {"run_1": {"key1": "dummy", "key2": {"key3": "dummy"}}}]
 )
-def test_simple_pipeline_kwargs(simple_pipeline, kwargs):
+def test_simple_pipeline_kwargs(
+    jobmon_dummy_cluster_env, simple_pipeline, kwargs
+):
     stage = simple_pipeline.stages["run_1"]
     stage.evaluate(method="run", stages=["run_1"], **STAGE_KWARGS, **kwargs)
 
@@ -55,13 +59,15 @@ def test_simple_pipeline_kwargs(simple_pipeline, kwargs):
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
-def test_parallel_pipeline_method(parallel_pipeline, method):
+def test_parallel_pipeline_method(
+    jobmon_dummy_cluster_env, parallel_pipeline, method
+):
     parallel_pipeline.evaluate(method=method, stages=None, **KWARGS)
 
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_parallel_pipeline_stages(parallel_pipeline):
+def test_parallel_pipeline_stages(jobmon_dummy_cluster_env, parallel_pipeline):
     parallel_pipeline.evaluate(
         method="run", stages=["run_1", "fit_2"], **KWARGS
     )
@@ -70,7 +76,7 @@ def test_parallel_pipeline_stages(parallel_pipeline):
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
-def test_simple_stage_method(simple_pipeline, method):
+def test_simple_stage_method(jobmon_dummy_cluster_env, simple_pipeline, method):
     for stage in simple_pipeline.stages.values():
         if stage.name == "run_1":
             stage.evaluate(method=method, **STAGE_KWARGS)
@@ -87,7 +93,9 @@ def test_simple_stage_method(simple_pipeline, method):
 @pytest.mark.parametrize(
     "kwargs", [{}, {"key1": "dummy", "key2": {"key3": "dummy"}}]
 )
-def test_simple_stages_kwargs(simple_pipeline, kwargs):
+def test_simple_stages_kwargs(
+    jobmon_dummy_cluster_env, simple_pipeline, kwargs
+):
     stage = simple_pipeline.stages["run_1"]
     stage.evaluate(method="run", **STAGE_KWARGS, **kwargs)
 
@@ -95,7 +103,9 @@ def test_simple_stages_kwargs(simple_pipeline, kwargs):
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
-def test_parallel_stage_method(parallel_pipeline, method):
+def test_parallel_stage_method(
+    jobmon_dummy_cluster_env, parallel_pipeline, method
+):
     # Inputs are paths or upstream stage output directories,
     # so check_input shouldn't raise an error
     for stage in parallel_pipeline.stages.values():
@@ -112,7 +122,9 @@ def test_parallel_stage_method(parallel_pipeline, method):
     ],
 )
 @pytest.mark.parametrize("collect", [True, False])
-def test_parallel_stage_submodels(parallel_pipeline, submodel, collect):
+def test_parallel_stage_submodels(
+    jobmon_dummy_cluster_env, parallel_pipeline, submodel, collect
+):
     stage = parallel_pipeline.stages["run_1"]
     stage.evaluate(
         method="run",
@@ -127,7 +139,9 @@ def test_parallel_stage_submodels(parallel_pipeline, submodel, collect):
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_simple_pipeline_add_tasks_to_workflow(simple_pipeline):
+def test_simple_pipeline_add_tasks_to_workflow(
+    jobmon_dummy_cluster_env, simple_pipeline
+):
     tool = Tool(name="test_run_simple_pipeline")
     tool.set_default_cluster_name("dummy")
     tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
@@ -145,7 +159,9 @@ def test_simple_pipeline_add_tasks_to_workflow(simple_pipeline):
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_parallel_pipeline_add_tasks_to_workflow(parallel_pipeline):
+def test_parallel_pipeline_add_tasks_to_workflow(
+    jobmon_dummy_cluster_env, parallel_pipeline
+):
     tool = Tool(name="test_run_parallel_pipeline")
     tool.set_default_cluster_name("dummy")
     tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
