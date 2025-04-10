@@ -31,7 +31,7 @@ def test_assets_dir():
 
 @pytest.fixture
 def small_input_data(request, test_assets_dir):
-    """Fixture providing path to test input data for tests marked with requires_data."""
+    """Fixture providing small test input data"""
     if request.node.get_closest_marker("requires_data") is None:
         pytest.skip("Skipping test because it requires data assets.")
 
@@ -39,18 +39,6 @@ def small_input_data(request, test_assets_dir):
         test_assets_dir, "e2e", "example1", "data", "small_data.parquet"
     )
     return small_input_data_path
-
-
-@pytest.fixture
-def dummy_resources(request, test_assets_dir):
-    """Fixture providing path to test resources for tests marked with requires_data."""
-    if request.node.get_closest_marker("requires_data") is None:
-        pytest.skip("Skipping test because it requires data assets.")
-
-    dummy_resources_path = Path(
-        test_assets_dir, "e2e", "example1", "config", "jobmon", "resources.yaml"
-    )
-    return dummy_resources_path
 
 
 @pytest.fixture

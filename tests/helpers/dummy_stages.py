@@ -4,6 +4,7 @@ from pandas import DataFrame
 from pydantic import Field
 
 from onemod.config import StageConfig
+from onemod.dtypes import Data
 from onemod.stage import Stage
 
 
@@ -53,9 +54,9 @@ class DummyCustomStage(Stage):
 
     config: DummyCustomConfig = DummyCustomConfig()  # type: ignore
     _collect_after: list[str] = ["run", "predict"]
-    _required_input: dict[str, dict[str, Any]] = {
-        "observations": {"format": "parquet"},
-        "predictions": {"format": "parquet"},
+    _required_input: dict[str, Data] = {
+        "observations": Data(format="parquet"),
+        "predictions": Data(format="parquet"),
     }
 
     # Dummy-specific attributes
@@ -108,14 +109,14 @@ class DummyKregStage(Stage):
 
     config: DummyKregConfig
     _collect_after: list[str] = ["run", "predict"]
-    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
-    _optional_input: dict[str, dict[str, Any]] = {
-        "offset": {"format": "parquet"},
-        "priors": {"format": "pkl"},
+    _required_input: dict[str, Data] = {"data": Data(format="parquet")}
+    _optional_input: dict[str, Data] = {
+        "offset": Data(format="parquet"),
+        "priors": Data(format="pkl"),
     }
-    _output_items: dict[str, dict[str, Any]] = {
-        "predictions": {"format": "parquet"},
-        "model": {"format": "pkl"},
+    _output_items: dict[str, Data] = {
+        "predictions": Data(format="parquet"),
+        "model": Data(format="pkl"),
     }
 
     # Dummy-specific attributes
@@ -168,12 +169,12 @@ class DummyPreprocessingStage(Stage):
 
     config: StageConfig
     _skip: list[str] = ["predict"]
-    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
-    _optional_input: dict[str, dict[str, Any]] = {
-        "age_metadata": {"format": "parquet"},
-        "location_metadata": {"format": "parquet"},
+    _required_input: dict[str, Data] = {"data": Data(format="parquet")}
+    _optional_input: dict[str, Data] = {
+        "age_metadata": Data(format="parquet"),
+        "location_metadata": Data(format="parquet"),
     }
-    _output_items: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _output_items: dict[str, Data] = {"data": Data(format="parquet")}
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -207,10 +208,8 @@ class DummyRoverStage(Stage):
     config: DummyRoverConfig
     _skip: list[str] = ["predict"]
     _collect_after: list[str] = ["run", "fit"]
-    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
-    _output_items: dict[str, dict[str, Any]] = {
-        "selected_covs": {"format": "csv"}
-    }
+    _required_input: dict[str, Data] = {"data": Data(format="parquet")}
+    _output_items: dict[str, Data] = {"selected_covs": Data(format="csv")}
 
     # Dummy-specific attributes
     log: list[str] = Field(default_factory=list, exclude=True)
@@ -259,15 +258,15 @@ class DummySpxmodStage(Stage):
 
     config: DummySpxmodConfig
     _collect_after: list[str] = ["run", "predict"]
-    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
-    _optional_input: dict[str, dict[str, Any]] = {
-        "selected_covs": {"format": "csv"},
-        "offset": {"format": "parquet"},
-        "priors": {"format": "pkl"},
+    _required_input: dict[str, Data] = {"data": Data(format="parquet")}
+    _optional_input: dict[str, Data] = {
+        "selected_covs": Data(format="csv"),
+        "offset": Data(format="parquet"),
+        "priors": Data(format="pkl"),
     }
-    _output_items: dict[str, dict[str, Any]] = {
-        "predictions": {"format": "parquet"},
-        "model": {"format": "pkl"},
+    _output_items: dict[str, Data] = {
+        "predictions": Data(format="parquet"),
+        "model": Data(format="pkl"),
     }
 
     # Dummy-specific attributes
@@ -320,12 +319,12 @@ class MultiplyByTwoStage(Stage):
 
     config: StageConfig
     _skip: list[str] = ["predict"]
-    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
-    _optional_input: dict[str, dict[str, Any]] = {
-        "age_metadata": {"format": "parquet"},
-        "location_metadata": {"format": "parquet"},
+    _required_input: dict[str, Data] = {"data": Data(format="parquet")}
+    _optional_input: dict[str, Data] = {
+        "age_metadata": Data(format="parquet"),
+        "location_metadata": Data(format="parquet"),
     }
-    _output_items: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
+    _output_items: dict[str, Data] = {"data": Data(format="parquet")}
 
     def _run(self, subset: dict[str, Any], *args, **kwargs) -> None:
         """Run MultiplyByTwoStage."""

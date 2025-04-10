@@ -58,14 +58,14 @@ class Stage(BaseModel, ABC):
     _paramsets: DataFrame | None = None
     _skip: list[str] = []
     _collect_after: list[str] = []
-    _required_input: dict[str, dict[str, Any]] = {}
-    _optional_input: dict[str, dict[str, Any]] = {}
-    _output_items: dict[str, dict[str, Any]] = {}
+    _required_input: dict[str, Data] = {}
+    _optional_input: dict[str, Data] = {}
+    _output_items: dict[str, Data] = {}
 
     def __init__(
         self,
         module: Path | str | None = None,
-        input: Input | dict = {},
+        input: dict = {},
         config_path: Path | str | None = None,
         **kwargs,
     ) -> None:
@@ -105,12 +105,12 @@ class Stage(BaseModel, ABC):
         # TODO: Could add more description, like keys, Data
         return self._input
 
-    def set_input(self, input: Data | dict) -> None:
+    def set_input(self, items: dict[str, Data]) -> None:
         self._input = Input(
             stage=self.name,
             required=self._required_input,
             optional=self._optional_input,
-            items=input,
+            items=items,
         )
 
     @property
