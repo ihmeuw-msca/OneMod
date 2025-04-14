@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Split Jobmon-related argument `task_and_template_prefix` into `task_prefix` and `template_prefix`.
 
+### Changed
+
+- Add 'config' to node args instead of task args for distinct node args across multiple models in a single workflow.
+
 ## [1.1.1] - 2025-04-09
 
 ### Added

@@ -74,8 +74,22 @@ def simple_pipeline(tmp_path_factory):
 
 
 @pytest.fixture(scope="function")
+def second_simple_pipeline(tmp_path_factory):
+    directory = tmp_path_factory.mktemp("second_jobmon_test_dir")
+    pipeline = setup_simple_pipeline(directory)
+    return pipeline
+
+
+@pytest.fixture(scope="function")
 def parallel_pipeline(tmp_path_factory):
     directory = tmp_path_factory.mktemp("jobmon_test_dir")
+    pipeline = setup_parallel_pipeline(directory)
+    return pipeline
+
+
+@pytest.fixture(scope="function")
+def second_parallel_pipeline(tmp_path_factory):
+    directory = tmp_path_factory.mktemp("second_jobmon_test_dir")
     pipeline = setup_parallel_pipeline(directory)
     return pipeline
 

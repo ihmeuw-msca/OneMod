@@ -418,12 +418,8 @@ def test_stage_tasks_basic(simple_pipeline):
         entrypoint=entrypoint, config=config, method=method, stages=stage.name
     )
     assert task.op_args == {"entrypoint": entrypoint}
-    assert task.task_args == {
-        "config": config,
-        "method": method,
-        "stages": stage.name,
-    }
-    assert task.node.node_args == {}
+    assert task.task_args == {"method": method, "stages": stage.name}
+    assert task.node.node_args == {"config": config}
 
 
 @pytest.mark.integration
@@ -579,9 +575,5 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
     )
     assert task.max_attempts == max_attempts
     assert task.op_args == {"entrypoint": entrypoint}
-    assert task.task_args == {
-        "config": config,
-        "method": method,
-        "stages": stage.name,
-    }
-    assert task.node.node_args == {}
+    assert task.task_args == {"method": method, "stages": stage.name}
+    assert task.node.node_args == {"config": config}

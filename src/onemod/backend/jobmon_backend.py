@@ -216,7 +216,8 @@ def add_tasks_to_workflow(
     Jobmon Parameters
     -----------------
     task_prefix : str, optional
-        TODO
+        Optional prefix to append to task names. Default is None, no
+        prefix.
     template_prefix : str, optional
         Optional prefix to append to task template name. Default is None,
         no prefix.
@@ -387,9 +388,9 @@ def get_tasks(
     Jobmon Parameters
     -----------------
     task_prefix : str, optional
-        TODO
+        Optional prefix to append to task names.
     template_prefix : str, optional
-        Optional prefix to append to task/template name.
+        Optional prefix to append to task template name.
     max_attempts : int
         Maximum number of attempts for a task.
     external_upstream_tasks : list, optional
@@ -468,9 +469,9 @@ def get_pipeline_tasks(
         List of Jobmon tasks external to the OneMod Stages or Pipeline that
         should be treated as upstream dependencies of the new tasks.
     task_prefix : str, optional
-        TODO
+        Optional prefix to append to task names.
     template_prefix : str, optional
-        Optional prefix to append to task/template name.
+        Optional prefix to append to task template name.
     max_attempts : int
         Maximum number of attempts for a task.
     **kwargs
@@ -614,7 +615,7 @@ def get_stage_tasks(
     upstream_tasks : list of Task or None, optional
         List of upstream stage tasks. Default is None.
     task_prefix : str, optional
-        TODO
+        Optional prefix to append to task names.
     template_prefix : str, optional
         Optional prefix to append to task template name.
     max_attempts : int
@@ -776,7 +777,7 @@ def get_task_template(
     submodel_args : list of str
         List including 'subsets' and/or 'paramsets'.
     template_prefix : str, optional
-        Optional prefix to append to task/template name.
+        Optional prefix to append to task template name.
     **kwargs
         Additional keyword arguments passed to stage method.
 
@@ -796,8 +797,8 @@ def get_task_template(
         template_name=template_name,
         command_template=get_command_template(method, submodel_args, **kwargs),
         op_args=["entrypoint"],
-        task_args=["config", "method", "stages"] + list(kwargs.keys()),
-        node_args=submodel_args,
+        task_args=["method", "stages"] + list(kwargs.keys()),
+        node_args=["config"] + submodel_args,
     )
 
     task_resources = get_task_resources(
