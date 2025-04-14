@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-04-14
+
+### Added
+
+- Split Jobmon-related argument `task_and_template_prefix` into `task_prefix` and `template_prefix`.
+
 ## [1.1.1] - 2025-04-09
 
 ### Added

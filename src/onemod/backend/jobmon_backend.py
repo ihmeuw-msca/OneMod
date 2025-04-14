@@ -73,7 +73,8 @@ def evaluate_with_jobmon(
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
-    task_and_template_prefix: str | None = None,
+    task_prefix: str | None = None,
+    template_prefix: str | None = None,
     max_attempts: int = 1,
     **kwargs,
 ) -> None:
@@ -117,8 +118,11 @@ def evaluate_with_jobmon(
 
     Jobmon Parameters
     -----------------
-    task_and_template_prefix : str, optional
-        Optional prefix to append to task/template name. Default is None,
+    task_prefix : str, optional
+        Optional prefix to append to task names. Default is None, no
+        prefix.
+    template_prefix : str, optional
+        Optional prefix to append to task template name. Default is None,
         no prefix.
     max_attempts : int
         Maximum number of attempts for a task. Default is 1.
@@ -141,7 +145,8 @@ def evaluate_with_jobmon(
         subsets=subsets,
         paramsets=paramsets,
         collect=collect,
-        task_and_template_prefix=task_and_template_prefix,
+        task_prefix=task_prefix,
+        template_prefix=template_prefix,
         max_attempts=max_attempts,
         **kwargs,
     )
@@ -159,7 +164,8 @@ def add_tasks_to_workflow(
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
-    task_and_template_prefix: str | None = None,
+    task_prefix: str | None = None,
+    template_prefix: str | None = None,
     max_attempts: int = 1,
     external_upstream_tasks: list[Task] | None = None,
     **kwargs,
@@ -209,8 +215,10 @@ def add_tasks_to_workflow(
 
     Jobmon Parameters
     -----------------
-    task_and_template_prefix : str, optional
-        Optional prefix to append to task/template name. Default is None,
+    task_prefix : str, optional
+        TODO
+    template_prefix : str, optional
+        Optional prefix to append to task template name. Default is None,
         no prefix.
     max_attempts : int
         Maximum number of attempts for a task. Default is 1.
@@ -236,7 +244,8 @@ def add_tasks_to_workflow(
         subsets=subsets,
         paramsets=paramsets,
         collect=collect,
-        task_and_template_prefix=task_and_template_prefix,
+        task_prefix=task_prefix,
+        template_prefix=template_prefix,
         max_attempts=max_attempts,
         external_upstream_tasks=external_upstream_tasks,
         **kwargs,
@@ -334,7 +343,8 @@ def get_tasks(
     subsets: dict[str, Any | list[Any]] | None,
     paramsets: dict[str, Any | list[Any]] | None,
     collect: bool | None,
-    task_and_template_prefix: str | None,
+    task_prefix: str | None,
+    template_prefix: str | None,
     max_attempts: int,
     external_upstream_tasks: list[Task] | None = None,
     **kwargs,
@@ -376,7 +386,9 @@ def get_tasks(
 
     Jobmon Parameters
     -----------------
-    task_and_template_prefix : str, optional
+    task_prefix : str, optional
+        TODO
+    template_prefix : str, optional
         Optional prefix to append to task/template name.
     max_attempts : int
         Maximum number of attempts for a task.
@@ -400,7 +412,8 @@ def get_tasks(
             python=python,
             stages=stages,
             external_upstream_tasks=external_upstream_tasks,
-            task_and_template_prefix=task_and_template_prefix,
+            task_prefix=task_prefix,
+            template_prefix=template_prefix,
             max_attempts=max_attempts,
             **kwargs,
         )
@@ -410,7 +423,8 @@ def get_tasks(
         tool=tool,
         resources=resources,
         python=python,
-        task_and_template_prefix=task_and_template_prefix,
+        task_prefix=task_prefix,
+        template_prefix=template_prefix,
         max_attempts=max_attempts,
         subsets=subsets,
         paramsets=paramsets,
@@ -428,7 +442,8 @@ def get_pipeline_tasks(
     python: Path | str,
     stages: list[str] | None,
     external_upstream_tasks: list[Task] | None,
-    task_and_template_prefix: str | None,
+    task_prefix: str | None,
+    template_prefix: str | None,
     max_attempts: int,
     **kwargs,
 ) -> list[Task]:
@@ -452,7 +467,9 @@ def get_pipeline_tasks(
     external_upstream_tasks : list, optional
         List of Jobmon tasks external to the OneMod Stages or Pipeline that
         should be treated as upstream dependencies of the new tasks.
-    task_and_template_prefix : str, optional
+    task_prefix : str, optional
+        TODO
+    template_prefix : str, optional
         Optional prefix to append to task/template name.
     max_attempts : int
         Maximum number of attempts for a task.
@@ -481,7 +498,8 @@ def get_pipeline_tasks(
                 tool=tool,
                 resources=resources,
                 python=python,
-                task_and_template_prefix=task_and_template_prefix,
+                task_prefix=task_prefix,
+                template_prefix=template_prefix,
                 max_attempts=max_attempts,
                 upstream_tasks=upstream_tasks,
                 **kwargs,
@@ -560,7 +578,8 @@ def get_stage_tasks(
     tool: Tool,
     resources: dict[str, Any],
     python: Path | str,
-    task_and_template_prefix: str | None,
+    task_prefix: str | None,
+    template_prefix: str | None,
     max_attempts: int,
     subsets: dict[str, Any | list[Any]] | None = None,
     paramsets: dict[str, Any | list[Any]] | None = None,
@@ -594,8 +613,10 @@ def get_stage_tasks(
         True, otherwise default is False.
     upstream_tasks : list of Task or None, optional
         List of upstream stage tasks. Default is None.
-    task_and_template_prefix : str, optional
-        Optional prefix to append to task/template name.
+    task_prefix : str, optional
+        TODO
+    template_prefix : str, optional
+        Optional prefix to append to task template name.
     max_attempts : int
         Maximum number of attempts for a task.
     **kwargs
@@ -620,13 +641,13 @@ def get_stage_tasks(
         tool,
         resources,
         list(submodel_args.keys()),
-        task_and_template_prefix=task_and_template_prefix,
+        template_prefix=template_prefix,
         **kwargs,
     )
 
     task_name = (
-        f"{task_and_template_prefix}_{stage.name}_{method}"
-        if task_and_template_prefix
+        f"{task_prefix}_{stage.name}_{method}"
+        if task_prefix
         else f"{stage.name}_{method}"
     )
     if submodel_args:
@@ -662,7 +683,8 @@ def get_stage_tasks(
                 tool=tool,
                 resources=resources,
                 python=python,
-                task_and_template_prefix=task_and_template_prefix,
+                task_prefix=task_prefix,
+                template_prefix=template_prefix,
                 max_attempts=max_attempts,
                 upstream_tasks=tasks,
             )
@@ -733,7 +755,7 @@ def get_task_template(
     tool: Tool,
     resources: dict[str, Any],
     submodel_args: list[str],
-    task_and_template_prefix: str | None,
+    template_prefix: str | None,
     **kwargs,
 ) -> TaskTemplate:
     """Get stage task template.
@@ -753,7 +775,7 @@ def get_task_template(
         Dictionary of compute resources.
     submodel_args : list of str
         List including 'subsets' and/or 'paramsets'.
-    task_and_template_prefix : str, optional
+    template_prefix : str, optional
         Optional prefix to append to task/template name.
     **kwargs
         Additional keyword arguments passed to stage method.
@@ -765,8 +787,8 @@ def get_task_template(
 
     """
     template_name = (
-        f"{task_and_template_prefix}_{stage_name}_{method}"
-        if task_and_template_prefix
+        f"{template_prefix}_{stage_name}_{method}"
+        if template_prefix
         else f"{stage_name}_{method}"
     )
 

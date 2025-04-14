@@ -22,7 +22,8 @@ KWARGS = {
     "cluster": "dummy",
     "resources": {"tool_resources": {"dummy": {"queue": "null.q"}}},
     "python": None,
-    "task_and_template_prefix": "jobmon_e2e_testing",
+    "task_prefix": "me_1234",
+    "template_prefix": "jobmon_e2e_testing",
     "max_attempts": 3,
 }
 
