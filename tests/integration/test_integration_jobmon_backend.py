@@ -455,9 +455,10 @@ def test_stage_tasks_kwargs(simple_pipeline, kwargs):
     )
     assert task.op_args == {"entrypoint": entrypoint}
     assert task.task_args == {
-        **{"config": config, "method": method, "stages": stage.name},
+        **{"method": method, "stages": stage.name},
         **kwargs,
     }
+    assert task.node.node_args == {"config": config}
 
 
 @pytest.mark.integration

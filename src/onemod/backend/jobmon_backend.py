@@ -42,6 +42,7 @@ See Jobmon documentation for additional resources and default values.
 # TODO: Could dependencies be method specific?
 # TODO: should we check resources format, minimum resources, cluster?
 
+import itertools
 import sys
 from pathlib import Path
 from typing import Any, Literal
@@ -652,16 +653,31 @@ def get_stage_tasks(
         else f"{stage.name}_{method}"
     )
     if submodel_args:
-        tasks = task_template.create_tasks(
-            name=task_name,
-            upstream_tasks=upstream_tasks,
-            max_attempts=max_attempts,
-            entrypoint=entrypoint,
-            config=config_path,
-            method=method,
-            stages=stage.name,
-            **{**submodel_args, **kwargs},
-        )
+        # NOTE: TaskTemplate.create_tasks can only be called once per
+        # instantiated TaskTemplate, but workflows that contain multiple
+        # OneMod Pipelines with overlapping TaskTemplates will need to
+        # add tasks to the same template multiple times. To get around
+        # this, we need to use TaskTemplate.create_task (not tasks)
+        # instead. This means we need to generate all combinations of
+        # submodel args and loop over them in task creation.
+        submodel_keys, submodel_values = zip(*submodel_args.items())
+        submodel_argsets = [
+            dict(zip(submodel_keys, submodel_valueset))
+            for submodel_valueset in itertools.product(*submodel_values)
+        ]
+        tasks = [
+            task_template.create_task(
+                name=task_name,
+                upstream_tasks=upstream_tasks,
+                max_attempts=max_attempts,
+                entrypoint=entrypoint,
+                config=config_path,
+                method=method,
+                stages=stage.name,
+                **{**submodel_argset, **kwargs},
+            )
+            for submodel_argset in submodel_argsets
+        ]
     else:
         tasks = [
             task_template.create_task(
@@ -793,6 +809,10 @@ def get_task_template(
         else f"{stage_name}_{method}"
     )
 
+    # NOTE: Config is a node arg for the purposes of running multiple
+    # OneMod models in a single workflow; since each model will have
+    # a separate config, this allows a user to keep the same task
+    # template name across all models in a given workflow.
     task_template = tool.get_task_template(
         template_name=template_name,
         command_template=get_command_template(method, submodel_args, **kwargs),
