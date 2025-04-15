@@ -661,7 +661,7 @@ def get_stage_tasks(
         # instead. This means we need to generate all combinations of
         # submodel args and loop over them in task creation.
         submodel_keys, submodel_values = zip(*submodel_args.items())
-        submodel_argsets = [
+        submodel_arg_combinations = [
             dict(zip(submodel_keys, submodel_valueset))
             for submodel_valueset in itertools.product(*submodel_values)
         ]
@@ -674,9 +674,9 @@ def get_stage_tasks(
                 config=config_path,
                 method=method,
                 stages=stage.name,
-                **{**submodel_argset, **kwargs},
+                **{**submodel_arg_combination, **kwargs},
             )
-            for submodel_argset in submodel_argsets
+            for submodel_arg_combination in submodel_arg_combinations
         ]
     else:
         tasks = [
