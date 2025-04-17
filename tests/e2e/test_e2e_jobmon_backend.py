@@ -190,7 +190,6 @@ def test_parallel_pipeline_add_tasks_to_workflow(parallel_pipeline):
     workflow.run()
 
 
-@pytest.mark.skip(reason="Bug in Jobmon dummy cluster/null.q execution.")
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
 def test_parallel_pipeline_add_tasks_to_workflow_multiple_models(
