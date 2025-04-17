@@ -809,16 +809,35 @@ def get_task_template(
         else f"{stage_name}_{method}"
     )
 
+    command_template = get_command_template(method, submodel_args, **kwargs)
+    task_args = ["method", "stages"] + list(kwargs.keys())
     # NOTE: Config is a node arg for the purposes of running multiple
     # OneMod models in a single workflow; since each model will have
     # a separate config, this allows a user to keep the same task
     # template name across all models in a given workflow.
+    node_args = ["config"] + submodel_args
+
+    # If the task template already exists in the tool, check that it's
+    # identical to the new task template.
+    if template_name in tool.active_task_templates.keys():
+        existing_template = tool.active_task_templates[template_name]
+        existing_template.load_task_template_versions()
+        if len(existing_template.task_template_versions) != 1:
+            raise RuntimeError("TODO: Too many task template versions")
+        existing_template_version = existing_template.task_template_versions[0]
+        if command_template != existing_template_version.command_template:
+            raise RuntimeError("TODO: command_template")
+        if set(task_args) != existing_template_version.task_args:
+            raise RuntimeError("TODO: task_args")
+        if set(node_args) != existing_template_version.node_args:
+            raise RuntimeError("TODO: node_args")
+
     task_template = tool.get_task_template(
         template_name=template_name,
-        command_template=get_command_template(method, submodel_args, **kwargs),
+        command_template=command_template,
         op_args=["entrypoint"],
-        task_args=["method", "stages"] + list(kwargs.keys()),
-        node_args=["config"] + submodel_args,
+        task_args=task_args,
+        node_args=node_args,
     )
 
     task_resources = get_task_resources(
