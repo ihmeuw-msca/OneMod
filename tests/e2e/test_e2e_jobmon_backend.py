@@ -22,7 +22,8 @@ KWARGS = {
     "cluster": "dummy",
     "resources": {"tool_resources": {"dummy": {"queue": "null.q"}}},
     "python": None,
-    "task_and_template_prefix": "jobmon_e2e_testing",
+    "task_prefix": "me_1234",
+    "template_prefix": "jobmon_e2e_testing",
     "max_attempts": 3,
 }
 
@@ -159,8 +160,54 @@ def test_simple_pipeline_add_tasks_to_workflow(
 
 @pytest.mark.e2e
 @pytest.mark.requires_jobmon
-def test_parallel_pipeline_add_tasks_to_workflow(
-    jobmon_dummy_cluster_env, parallel_pipeline
+def test_simple_pipeline_add_tasks_to_workflow_multiple_models(
+    simple_pipeline, second_simple_pipeline
+):
+    tool = Tool(name="test_run_simple_pipeline")
+    tool.set_default_cluster_name("dummy")
+    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
+    workflow = tool.create_workflow(name="test_run_workflow")
+    add_tasks_to_workflow(
+        model=simple_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **KWARGS,
+    )
+    # Same tasks with a "different" ME/pipeline
+    add_tasks_to_workflow(
+        model=second_simple_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **(KWARGS | {"task_prefix": "me_1235"}),
+    )
+    workflow.bind()
+    workflow.run()
+
+
+@pytest.mark.e2e
+@pytest.mark.requires_jobmon
+def test_parallel_pipeline_add_tasks_to_workflow(parallel_pipeline):
+    tool = Tool(name="test_run_parallel_pipeline")
+    tool.set_default_cluster_name("dummy")
+    tool.set_default_compute_resources_from_dict("dummy", {"queue": "null.q"})
+    workflow = tool.create_workflow(name="test_run_workflow")
+    add_tasks_to_workflow(
+        model=parallel_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **KWARGS,
+    )
+    workflow.bind()
+    workflow.run()
+
+
+@pytest.mark.e2e
+@pytest.mark.requires_jobmon
+def test_parallel_pipeline_add_tasks_to_workflow_multiple_models(
+    parallel_pipeline, second_parallel_pipeline
 ):
     tool = Tool(name="test_run_parallel_pipeline")
     tool.set_default_cluster_name("dummy")
@@ -172,6 +219,14 @@ def test_parallel_pipeline_add_tasks_to_workflow(
         method="run",
         stages=["run_1", "fit_2"],
         **KWARGS,
+    )
+    # Same tasks with a "different" ME/pipeline
+    add_tasks_to_workflow(
+        model=second_parallel_pipeline,
+        workflow=workflow,
+        method="run",
+        stages=["run_1", "fit_2"],
+        **(KWARGS | {"task_prefix": "me_1235"}),
     )
     workflow.bind()
     workflow.run()

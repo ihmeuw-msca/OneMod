@@ -19,6 +19,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Removed
 
+## [1.2.0] - 2025-04-14
+
+### Added
+
+- Split Jobmon-related argument `task_and_template_prefix` into `task_prefix` and `template_prefix`.
+
+### Changed
+
+- Add 'config' to node args instead of task args for distinct node args across multiple models in a single workflow.
+
 ## [1.1.1] - 2025-04-09
 
 ### Added
