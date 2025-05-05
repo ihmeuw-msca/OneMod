@@ -492,7 +492,13 @@ def get_pipeline_tasks(
         stage = pipeline.stages[stage_name]
         if method not in stage.skip:
             upstream_tasks = get_upstream_tasks(
-                stage, method, pipeline.stages, task_dict, stages
+                stage=stage,
+                method=method,
+                stage_dict=pipeline.stages,
+                task_dict=task_dict,
+                stages=stages,
+                task_prefix=task_prefix,
+                template_prefix=template_prefix,
             )
             task_dict[stage_name] = get_stage_tasks(
                 stage=stage,
@@ -517,6 +523,8 @@ def get_upstream_tasks(
     stage_dict: dict[str, Stage],
     task_dict: dict[str, list[Task]],
     stages: list[str] | None,
+    task_prefix: str | None,
+    template_prefix: str | None,
 ) -> list[Task]:
     """Get upstream tasks for current stage.
 
@@ -533,6 +541,10 @@ def get_upstream_tasks(
     stages : list of str or None
         Names of all pipeline stages being evaluated. If None, assume
         all stages are being evaluated.
+    task_prefix : str, optional
+        Optional prefix to filter upstream tasks with.
+    template_prefix : str, optional
+        Optional prefix to filter task templates with.
 
     Returns
     -------
@@ -557,15 +569,33 @@ def get_upstream_tasks(
             continue
 
         upstream_stage = stage_dict[upstream_name]
+
+        # Filter possible upstreams using task and template prefixes
+        possible_upstream_tasks = task_dict[upstream_name]
+        if task_prefix:
+            possible_upstream_tasks = [
+                possible_upstream_task
+                for possible_upstream_task in possible_upstream_tasks
+                if task_prefix in possible_upstream_task.name
+            ]
+        if template_prefix:
+            possible_upstream_tasks = [
+                possible_upstream_task
+                for possible_upstream_task in possible_upstream_tasks
+                if template_prefix
+                in (
+                    possible_upstream_task.node.task_template_version.task_template.template_name
+                )
+            ]
         if method not in upstream_stage.skip:
             if (
                 upstream_stage.has_submodels
                 and method in upstream_stage.collect_after
             ):
                 # only include task corresponding to 'collect' method
-                upstream_tasks.append(task_dict[upstream_name][-1])
+                upstream_tasks.append(possible_upstream_tasks[-1])
             else:
-                upstream_tasks.extend(task_dict[upstream_name])
+                upstream_tasks.extend(possible_upstream_tasks)
 
     # if there are no upstream tasks, add external upstream tasks
     if not upstream_tasks:
