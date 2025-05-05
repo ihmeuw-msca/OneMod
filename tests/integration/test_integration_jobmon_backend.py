@@ -121,7 +121,7 @@ def test_task_template(stage_cluster):
         tool,
         resources,
         submodel_args=[],
-        task_and_template_prefix=None,
+        template_prefix=None,
     )
     default_cluster = task_template.default_cluster_name
     default_resources = task_template.default_compute_resources_set
@@ -218,7 +218,8 @@ def test_simple_pipeline_tasks(simple_pipeline, method, stages):
         python=python,
         stages=stages,
         external_upstream_tasks=None,
-        task_and_template_prefix=None,
+        task_prefix=None,
+        template_prefix=None,
         max_attempts=1,
     )
     stages = list(simple_pipeline.stages.keys()) if stages is None else stages
@@ -253,7 +254,8 @@ def test_parallel_pipeline_tasks(parallel_pipeline, method, stages):
         python=python,
         stages=stages,
         external_upstream_tasks=None,
-        task_and_template_prefix=None,
+        task_prefix=None,
+        template_prefix=None,
         max_attempts=1,
     )
     stages = list(parallel_pipeline.stages.keys()) if stages is None else stages
@@ -316,7 +318,8 @@ def test_parallel_pipeline_tasks_jobmon_args(parallel_pipeline, method, stages):
             task_attributes=[],
         )
     ]
-    task_and_template_prefix = "testing"
+    task_prefix = "me_1234"
+    template_prefix = "testing"
     max_attempts = 3
     tasks = jb.get_pipeline_tasks(
         parallel_pipeline,
@@ -326,7 +329,8 @@ def test_parallel_pipeline_tasks_jobmon_args(parallel_pipeline, method, stages):
         python=python,
         stages=stages,
         external_upstream_tasks=external_upstream_tasks,
-        task_and_template_prefix=task_and_template_prefix,
+        task_prefix=task_prefix,
+        template_prefix=template_prefix,
         max_attempts=max_attempts,
     )
     stages = list(parallel_pipeline.stages.keys()) if stages is None else stages
@@ -400,7 +404,8 @@ def test_stage_tasks_basic(simple_pipeline):
         jb.get_tool(simple_pipeline.name, method, cluster, resources),
         resources=resources,
         python=python,
-        task_and_template_prefix=None,
+        task_prefix=None,
+        template_prefix=None,
         max_attempts=1,
     )
     task = tasks[0]
@@ -413,12 +418,8 @@ def test_stage_tasks_basic(simple_pipeline):
         entrypoint=entrypoint, config=config, method=method, stages=stage.name
     )
     assert task.op_args == {"entrypoint": entrypoint}
-    assert task.task_args == {
-        "config": config,
-        "method": method,
-        "stages": stage.name,
-    }
-    assert task.node.node_args == {}
+    assert task.task_args == {"method": method, "stages": stage.name}
+    assert task.node.node_args == {"config": config}
 
 
 @pytest.mark.integration
@@ -440,7 +441,8 @@ def test_stage_tasks_kwargs(simple_pipeline, kwargs):
         jb.get_tool(simple_pipeline.name, method, cluster, resources),
         resources=resources,
         python=python,
-        task_and_template_prefix=None,
+        task_prefix=None,
+        template_prefix=None,
         max_attempts=1,
         **kwargs,
     )[0]
@@ -453,9 +455,10 @@ def test_stage_tasks_kwargs(simple_pipeline, kwargs):
     )
     assert task.op_args == {"entrypoint": entrypoint}
     assert task.task_args == {
-        **{"config": config, "method": method, "stages": stage.name},
+        **{"method": method, "stages": stage.name},
         **kwargs,
     }
+    assert task.node.node_args == {"config": config}
 
 
 @pytest.mark.integration
@@ -483,7 +486,8 @@ def test_stage_tasks_submodels(parallel_pipeline, submodel, collect):
         subsets=subsets,
         paramsets=paramsets,
         collect=collect,
-        task_and_template_prefix=None,
+        task_prefix=None,
+        template_prefix=None,
         max_attempts=1,
     )
     submodels = [
@@ -526,7 +530,8 @@ def test_stage_tasks_collect_after(parallel_pipeline, method):
         subsets={"sex_id": 1},
         paramsets={"param": 1},
         collect=True,
-        task_and_template_prefix=None,
+        task_prefix=None,
+        template_prefix=None,
         max_attempts=1,
     )
     assert tasks[0].task_args["method"] == method
@@ -545,7 +550,8 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
     cluster = "cluster"
     resources = {"tool_resources": {cluster: {"queue": "null.q"}}}
     python = "/path/to/python/env/bin/python"
-    task_and_template_prefix = "testing"
+    task_prefix = "me_1234"
+    template_prefix = "testing"
     max_attempts = 3
     entrypoint = str(Path(python).parent / "onemod")
     config = str(stage.dataif.get_path("config"))
@@ -555,13 +561,14 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
         jb.get_tool(simple_pipeline.name, method, cluster, resources),
         resources=resources,
         python=python,
-        task_and_template_prefix=task_and_template_prefix,
+        task_prefix=task_prefix,
+        template_prefix=template_prefix,
         max_attempts=max_attempts,
     )
     task = tasks[0]
 
     assert len(tasks) == 1
-    assert task.name == f"{task_and_template_prefix}_{stage.name}_{method}"
+    assert task.name == f"{task_prefix}_{stage.name}_{method}"
     assert task.cluster_name == ""
     assert task.compute_resources == {}
     assert task.command == jb.get_command_template(method, []).format(
@@ -569,9 +576,5 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
     )
     assert task.max_attempts == max_attempts
     assert task.op_args == {"entrypoint": entrypoint}
-    assert task.task_args == {
-        "config": config,
-        "method": method,
-        "stages": stage.name,
-    }
-    assert task.node.node_args == {}
+    assert task.task_args == {"method": method, "stages": stage.name}
+    assert task.node.node_args == {"config": config}
