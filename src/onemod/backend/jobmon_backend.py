@@ -583,9 +583,7 @@ def get_upstream_tasks(
                 possible_upstream_task
                 for possible_upstream_task in possible_upstream_tasks
                 if template_prefix
-                in (
-                    possible_upstream_task.node.task_template_version.task_template.template_name
-                )
+                in possible_upstream_task.node.task_template_version.task_template.template_name
             ]
         if method not in upstream_stage.skip:
             if (

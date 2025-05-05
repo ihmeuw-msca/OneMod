@@ -145,7 +145,13 @@ def test_simple_upstream(simple_pipeline, method, stages):
         stage = simple_pipeline.stages[stage_name]
         if method not in stage.skip:
             upstream_tasks = jb.get_upstream_tasks(
-                stage, method, simple_pipeline.stages, task_dict, stages=stages
+                stage=stage,
+                method=method,
+                stage_dict=simple_pipeline.stages,
+                task_dict=task_dict,
+                stages=stages,
+                task_prefix=None,
+                template_prefix=None,
             )
 
             if stage_name == "run_1" or stages is not None:
@@ -165,7 +171,13 @@ def test_parallel_upstream(parallel_pipeline, method, stages):
     for stage_name in parallel_pipeline.get_execution_order(stages):
         stage = parallel_pipeline.stages[stage_name]
         upstream_tasks = jb.get_upstream_tasks(
-            stage, method, parallel_pipeline.stages, task_dict, stages=stages
+            stage=stage,
+            method=method,
+            stage_dict=parallel_pipeline.stages,
+            task_dict=task_dict,
+            stages=stages,
+            task_prefix=None,
+            template_prefix=None,
         )
 
         if stage_name == "run_1" or stages is not None:
