@@ -1,8 +1,9 @@
 import json
 
 import pytest
-from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
+from tests.helpers.dummy_pipeline import setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
+from tests.helpers.get_expected_args import get_expected_args
 from tests.helpers.utils import assert_equal_unordered
 
 KWARGS = {
@@ -17,7 +18,6 @@ KWARGS = {
 
 
 @pytest.mark.e2e
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_dummy_pipeline(small_input_data, test_base_dir, method):
     """End-to-end test for a the OneMod example pipeline with arbitrary configs and constraints, test data."""
