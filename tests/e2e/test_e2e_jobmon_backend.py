@@ -169,6 +169,10 @@ def test_simple_pipeline_add_tasks_to_workflow_multiple_models(
         **(KWARGS | {"task_prefix": "me_1235"}),
     )
     workflow.bind()
+    for task in workflow.tasks.values():
+        for upstream_task in task.upstream_tasks:
+            # Check task prefixes are always identical for upstreams
+            assert task.name[:7] == upstream_task.name[:7]
     workflow.run()
 
 
@@ -215,4 +219,8 @@ def test_parallel_pipeline_add_tasks_to_workflow_multiple_models(
         **(KWARGS | {"task_prefix": "me_1235"}),
     )
     workflow.bind()
+    for task in workflow.tasks.values():
+        for upstream_task in task.upstream_tasks:
+            # Check task prefixes are always identical for upstreams
+            assert task.name[:7] == upstream_task.name[:7]
     workflow.run()
