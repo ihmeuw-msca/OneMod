@@ -75,6 +75,7 @@ def evaluate_with_jobmon(
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
     task_prefix: str | None = None,
+    task_attributes: dict[str, Any] | None = None,
     template_prefix: str | None = None,
     max_attempts: int = 1,
     **kwargs,
@@ -122,6 +123,10 @@ def evaluate_with_jobmon(
     task_prefix : str, optional
         Optional prefix to append to task names. Default is None, no
         prefix.
+    task_attributes : dict, optional
+        Optional dictionary containing task attribute names and values.
+        Note that the task attributes will be shared across all tasks in
+        any given Workflow. Default is None, no task attributes.
     template_prefix : str, optional
         Optional prefix to append to task template name. Default is None,
         no prefix.
@@ -147,6 +152,7 @@ def evaluate_with_jobmon(
         paramsets=paramsets,
         collect=collect,
         task_prefix=task_prefix,
+        task_attributes=task_attributes,
         template_prefix=template_prefix,
         max_attempts=max_attempts,
         **kwargs,
@@ -166,6 +172,7 @@ def add_tasks_to_workflow(
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
     task_prefix: str | None = None,
+    task_attributes: dict[str, Any] | None = None,
     template_prefix: str | None = None,
     max_attempts: int = 1,
     external_upstream_tasks: list[Task] | None = None,
@@ -219,6 +226,10 @@ def add_tasks_to_workflow(
     task_prefix : str, optional
         Optional prefix to append to task names. Default is None, no
         prefix.
+    task_attributes : dict, optional
+        Optional dictionary containing task attribute names and values.
+        Note that the task attributes will be shared across all tasks in
+        any given Workflow. Default is None, no task attributes.
     template_prefix : str, optional
         Optional prefix to append to task template name. Default is None,
         no prefix.
@@ -247,6 +258,7 @@ def add_tasks_to_workflow(
         paramsets=paramsets,
         collect=collect,
         task_prefix=task_prefix,
+        task_attributes=task_attributes,
         template_prefix=template_prefix,
         max_attempts=max_attempts,
         external_upstream_tasks=external_upstream_tasks,
@@ -346,6 +358,7 @@ def get_tasks(
     paramsets: dict[str, Any | list[Any]] | None,
     collect: bool | None,
     task_prefix: str | None,
+    task_attributes: dict[str, Any] | None,
     template_prefix: str | None,
     max_attempts: int,
     external_upstream_tasks: list[Task] | None = None,
@@ -390,6 +403,8 @@ def get_tasks(
     -----------------
     task_prefix : str, optional
         Optional prefix to append to task names.
+    task_attributes : dict, optional
+        Optional dictionary containing task attribute names and values.
     template_prefix : str, optional
         Optional prefix to append to task template name.
     max_attempts : int
@@ -415,6 +430,7 @@ def get_tasks(
             stages=stages,
             external_upstream_tasks=external_upstream_tasks,
             task_prefix=task_prefix,
+            task_attributes=task_attributes,
             template_prefix=template_prefix,
             max_attempts=max_attempts,
             **kwargs,
@@ -426,6 +442,7 @@ def get_tasks(
         resources=resources,
         python=python,
         task_prefix=task_prefix,
+        task_attributes=task_attributes,
         template_prefix=template_prefix,
         max_attempts=max_attempts,
         subsets=subsets,
@@ -445,6 +462,7 @@ def get_pipeline_tasks(
     stages: list[str] | None,
     external_upstream_tasks: list[Task] | None,
     task_prefix: str | None,
+    task_attributes: dict[str, Any] | None,
     template_prefix: str | None,
     max_attempts: int,
     **kwargs,
@@ -471,6 +489,8 @@ def get_pipeline_tasks(
         should be treated as upstream dependencies of the new tasks.
     task_prefix : str, optional
         Optional prefix to append to task names.
+    task_attributes : dict, optional
+        Optional dictionary containing task attribute names and values.
     template_prefix : str, optional
         Optional prefix to append to task template name.
     max_attempts : int
@@ -507,6 +527,7 @@ def get_pipeline_tasks(
                 resources=resources,
                 python=python,
                 task_prefix=task_prefix,
+                task_attributes=task_attributes,
                 template_prefix=template_prefix,
                 max_attempts=max_attempts,
                 upstream_tasks=upstream_tasks,
@@ -609,6 +630,7 @@ def get_stage_tasks(
     resources: dict[str, Any],
     python: Path | str,
     task_prefix: str | None,
+    task_attributes: dict[str, Any] | None,
     template_prefix: str | None,
     max_attempts: int,
     subsets: dict[str, Any | list[Any]] | None = None,
@@ -645,6 +667,8 @@ def get_stage_tasks(
         List of upstream stage tasks. Default is None.
     task_prefix : str, optional
         Optional prefix to append to task names.
+    task_attributes : dict, optional
+        Optional dictionary containing task attribute names and values.
     template_prefix : str, optional
         Optional prefix to append to task template name.
     max_attempts : int
@@ -697,6 +721,7 @@ def get_stage_tasks(
             task_template.create_task(
                 name=task_name,
                 upstream_tasks=upstream_tasks,
+                task_attributes=task_attributes,
                 max_attempts=max_attempts,
                 entrypoint=entrypoint,
                 config=config_path,
@@ -711,6 +736,7 @@ def get_stage_tasks(
             task_template.create_task(
                 name=task_name,
                 upstream_tasks=upstream_tasks,
+                task_attributes=task_attributes,
                 max_attempts=max_attempts,
                 entrypoint=entrypoint,
                 config=config_path,
@@ -729,6 +755,7 @@ def get_stage_tasks(
                 resources=resources,
                 python=python,
                 task_prefix=task_prefix,
+                task_attributes=task_attributes,
                 template_prefix=template_prefix,
                 max_attempts=max_attempts,
                 upstream_tasks=tasks,
