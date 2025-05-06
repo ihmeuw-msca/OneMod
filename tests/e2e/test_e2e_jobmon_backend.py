@@ -171,14 +171,14 @@ def test_simple_pipeline_add_tasks_to_workflow_multiple_models(
             KWARGS
             | {
                 "task_prefix": "me_1235",
-                "task_attributes": {"modelable_entity_id": 1235},
+                "task_attributes": {"modelable_entity_id": "1235"},
             }
         ),
     )
     workflow.bind()
     for task in workflow.tasks.values():
-        assert set(task.attributes.keys()) == {"modelable_entity_id"}
-        assert set(task.attributes.values()).issubset({1234, 1235})
+        assert set(task.task_attributes.keys()) == {"modelable_entity_id"}
+        assert set(task.task_attributes.values()).issubset({"1234", "1235"})
         for upstream_task in task.upstream_tasks:
             # Check task prefixes are always identical for upstreams
             assert task.name[:7] == upstream_task.name[:7]
@@ -229,14 +229,14 @@ def test_parallel_pipeline_add_tasks_to_workflow_multiple_models(
             KWARGS
             | {
                 "task_prefix": "me_1235",
-                "task_attributes": {"modelable_entity_id": 1235},
+                "task_attributes": {"modelable_entity_id": "1235"},
             }
         ),
     )
     workflow.bind()
     for task in workflow.tasks.values():
-        assert set(task.attributes.keys()) == {"modelable_entity_id"}
-        assert set(task.attributes.values()).issubset({1234, 1235})
+        assert set(task.task_attributes.keys()) == {"modelable_entity_id"}
+        assert set(task.task_attributes.values()).issubset({"1234", "1235"})
         for upstream_task in task.upstream_tasks:
             # Check task prefixes are always identical for upstreams
             assert task.name[:7] == upstream_task.name[:7]

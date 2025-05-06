@@ -75,7 +75,7 @@ def evaluate_with_jobmon(
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
     task_prefix: str | None = None,
-    task_attributes: dict[str, Any] | None = None,
+    task_attributes: dict[str, Any] = dict(),
     template_prefix: str | None = None,
     max_attempts: int = 1,
     **kwargs,
@@ -123,10 +123,10 @@ def evaluate_with_jobmon(
     task_prefix : str, optional
         Optional prefix to append to task names. Default is None, no
         prefix.
-    task_attributes : dict, optional
-        Optional dictionary containing task attribute names and values.
-        Note that the task attributes will be shared across all tasks in
-        any given Workflow. Default is None, no task attributes.
+    task_attributes : dict
+        Dictionary containing task attribute names and values. Note that
+        the task attributes will be shared across all tasks in any given
+        Workflow. Default is an empty dict, no task attributes.
     template_prefix : str, optional
         Optional prefix to append to task template name. Default is None,
         no prefix.
@@ -172,7 +172,7 @@ def add_tasks_to_workflow(
     paramsets: dict[str, Any | list[Any]] | None = None,
     collect: bool | None = None,
     task_prefix: str | None = None,
-    task_attributes: dict[str, Any] | None = None,
+    task_attributes: dict[str, Any] = dict(),
     template_prefix: str | None = None,
     max_attempts: int = 1,
     external_upstream_tasks: list[Task] | None = None,
@@ -226,10 +226,10 @@ def add_tasks_to_workflow(
     task_prefix : str, optional
         Optional prefix to append to task names. Default is None, no
         prefix.
-    task_attributes : dict, optional
-        Optional dictionary containing task attribute names and values.
-        Note that the task attributes will be shared across all tasks in
-        any given Workflow. Default is None, no task attributes.
+    task_attributes : dict
+        Dictionary containing task attribute names and values. Note that
+        the task attributes will be shared across all tasks in any given
+        Workflow. Default is an empty dict, no task attributes.
     template_prefix : str, optional
         Optional prefix to append to task template name. Default is None,
         no prefix.
@@ -358,7 +358,7 @@ def get_tasks(
     paramsets: dict[str, Any | list[Any]] | None,
     collect: bool | None,
     task_prefix: str | None,
-    task_attributes: dict[str, Any] | None,
+    task_attributes: dict[str, Any],
     template_prefix: str | None,
     max_attempts: int,
     external_upstream_tasks: list[Task] | None = None,
@@ -462,7 +462,7 @@ def get_pipeline_tasks(
     stages: list[str] | None,
     external_upstream_tasks: list[Task] | None,
     task_prefix: str | None,
-    task_attributes: dict[str, Any] | None,
+    task_attributes: dict[str, Any],
     template_prefix: str | None,
     max_attempts: int,
     **kwargs,
@@ -630,7 +630,7 @@ def get_stage_tasks(
     resources: dict[str, Any],
     python: Path | str,
     task_prefix: str | None,
-    task_attributes: dict[str, Any] | None,
+    task_attributes: dict[str, Any],
     template_prefix: str | None,
     max_attempts: int,
     subsets: dict[str, Any | list[Any]] | None = None,
