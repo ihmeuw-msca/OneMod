@@ -1,11 +1,39 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to OneMod will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - TBD
+
+### Added
+
+- Added "Branches and Versioning" page to dev docs
+- Added GitHub repository contribution guidelines
+
+### Changed
+
+### Fixed
+
+### Deprecated
+
+### Removed
+
+## [1.2.0] - 2025-04-14
+
+### Added
+
+- Split Jobmon-related argument `task_and_template_prefix` into `task_prefix` and `template_prefix`.
+
+### Changed
+
+- Add 'config' to node args instead of task args for distinct node args across multiple models in a single workflow.
+
+## [1.1.1] - 2025-04-09
+
+### Added
+
+- Adding tag to push package to Zenodo for a DOI
 
 ## [1.1.0] - 2025-03-18
 
@@ -35,14 +63,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Added `deptry` to pyproject.toml to track dependencies.
 
+### Fixed
+
+- Pass stage fields as kwargs in `stage.__init__()` to allow default fields in custom stages.
+
 ### Removed
 
 - Removed unused `DataIOHandler` class.
 - Removed modeling code (examples, model stages, model configs, utils, tests)
-
-### Fixed
-
-- Pass stage fields as kwargs in `stage.__init__()` to allow default fields in custom stages.
 
 ## [1.0.0] - 2025-02-14
 

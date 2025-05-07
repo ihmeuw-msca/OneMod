@@ -1,17 +1,16 @@
-from typing import Any
-
 import pytest
 
+from onemod.dtypes import Data
 from onemod.pipeline import Pipeline
 from onemod.stage import Stage
 
 
 class DummyStage(Stage):
-    _required_input: dict[str, dict[str, Any]] = {"data": {"format": "parquet"}}
-    _optional_input: dict[str, dict[str, Any]] = {"priors": {"format": "pkl"}}
-    _output_items: dict[str, dict[str, Any]] = {
-        "predictions": {"format": "parquet"},
-        "model": {"format": "pkl"},
+    _required_input: dict[str, Data] = {"data": Data(format="parquet")}
+    _optional_input: dict[str, Data] = {"priors": Data(format="pkl")}
+    _output_items: dict[str, Data] = {
+        "predictions": Data(format="parquet"),
+        "model": Data(format="pkl"),
     }
 
     def _run(self) -> None:

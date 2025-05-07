@@ -9,36 +9,42 @@ from onemod.dtypes import Data
 from onemod.io import Input
 
 REQUIRED_INPUT = {
-    "data": {"format": "parquet"},
-    "covariates": {"format": "csv"},
+    "data": Data(format="parquet"),
+    "covariates": Data(format="csv"),
 }
-OPTIONAL_INPUT = {"priors": {"format": "pkl"}}
+OPTIONAL_INPUT = {"priors": Data(format="pkl")}
 VALID_ITEMS = {
-    "data": "/path/to/predictions.parquet",
-    "covariates": Data(stage="first_stage", path="/path/to/selected_covs.csv"),
-    "priors": Data(stage="second_stage", path="/path/to/model.pkl"),
+    "data": Path("/path/to/predictions.parquet"),
+    "covariates": Data(
+        stage="first_stage", path=Path("/path/to/selected_covs.csv")
+    ),
+    "priors": Data(stage="second_stage", path=Path("/path/to/model.pkl")),
 }
 ITEMS_WITH_CYCLES = {
-    "data": "/path/to/predictions.parquet",
-    "covariates": Data(stage="test_stage", path="/path/to/selected_covs.csv"),
-    "priors": Data(stage="test_stage", path="/path/to/model.pkl"),
+    "data": Path("/path/to/predictions.parquet"),
+    "covariates": Data(
+        stage="test_stage", path=Path("/path/to/selected_covs.csv")
+    ),
+    "priors": Data(stage="test_stage", path=Path("/path/to/model.pkl")),
 }
 ITEMS_WITH_INVALID_TYPES = {
-    "data": "/path/to/predictions.csv",
+    "data": Path("/path/to/predictions.csv"),
     "covariates": Data(
-        stage="first_stage", path="/path/to/selected_covs.parquet"
+        stage="first_stage", path=Path("/path/to/selected_covs.parquet")
     ),
-    "priors": Data(stage="second_stage", path="/path/to/model.zip"),
+    "priors": Data(stage="second_stage", path=Path("/path/to/model.zip")),
 }
-ITEMS_WITH_EXTRAS = {"dummy": "/path/to/dummy.parquet", **VALID_ITEMS}
+ITEMS_WITH_EXTRAS = {"dummy": Path("/path/to/dummy.parquet"), **VALID_ITEMS}
 ITEMS_WITH_SHARED_DEPENDENCY = {
-    "data": "/path/to/predictions.parquet",
-    "covariates": Data(stage="first_stage", path="/path/to/selected_covs.csv"),
-    "priors": Data(stage="first_stage", path="/path/to/model.pkl"),
+    "data": Path("/path/to/predictions.parquet"),
+    "covariates": Data(
+        stage="first_stage", path=Path("/path/to/selected_covs.csv")
+    ),
+    "priors": Data(stage="first_stage", path=Path("/path/to/model.pkl")),
 }
 
 
-def get_input(items: dict[str, Data | Path | str] = {}) -> Input:
+def get_input(items: dict[str, Data] = {}) -> Input:
     if items:
         items = items.copy()
         for item_name in items:

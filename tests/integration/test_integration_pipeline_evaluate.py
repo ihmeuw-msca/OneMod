@@ -1,9 +1,7 @@
-from unittest.mock import patch
-
 import pytest
-from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
+from tests.helpers.dummy_pipeline import setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
-from tests.helpers.utils import assert_equal_unordered
+from tests.helpers.get_expected_args import get_expected_args
 
 KWARGS = {
     "backend": "local",
@@ -36,7 +34,6 @@ def create_dummy_preprocessing_output_file(test_base_dir, stages):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_invalid_stage_name(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() raises an error when an invalid stage name is provided."""
@@ -66,7 +63,6 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_subset_stage_identification(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() identifies the correct subset of stages."""
@@ -110,7 +106,6 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_missing_dependency_error(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() on a subset of stages raises an error when required inputs for a specified stage are missing."""
@@ -130,7 +125,6 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_duplicate_stage_names(small_input_data, test_base_dir, method):
     """Test that duplicate stage names passed to Pipeline.evaluate() are coerced to unique stage names."""
@@ -156,44 +150,3 @@ def test_duplicate_stage_names(small_input_data, test_base_dir, method):
                 assert stage.get_log() == []
         else:
             assert stage.get_log() == []
-
-
-@pytest.mark.skip(
-    "Jobmon test - Run manually until better jobmon testing solution in place"
-)
-@pytest.mark.integration
-@pytest.mark.requires_data
-@pytest.mark.requires_jobmon
-@pytest.mark.parametrize("method", ["run", "fit", "predict"])
-def test_evaluate_with_jobmon_subset_call(
-    dummy_resources, small_input_data, test_base_dir, method
-):
-    """Test that jobmon_backend.evaluate is called with the correct subset."""
-    assert dummy_resources.exists()
-
-    dummy_pipeline, stages = setup_dummy_pipeline(
-        small_input_data, test_base_dir
-    )
-
-    subset_stage_names = {"preprocessing", "covariate_selection"}
-
-    with patch(
-        "onemod.backend.jobmon_backend.evaluate"
-    ) as mock_evaluate_with_jobmon:
-        dummy_pipeline.evaluate(
-            backend="jobmon",
-            cluster="local",
-            resources=dummy_resources,
-            method=method,
-            stages=subset_stage_names,
-        )
-
-        mock_evaluate_with_jobmon.assert_called_once()
-
-        args, kwargs = mock_evaluate_with_jobmon.call_args
-
-        assert kwargs["model"] == dummy_pipeline
-        assert kwargs["cluster"] == "local"
-        assert kwargs["resources"] == dummy_resources
-        assert kwargs["method"] == method
-        assert_equal_unordered(kwargs["stages"], list(subset_stage_names))
