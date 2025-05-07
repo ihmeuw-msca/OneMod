@@ -1,44 +1,90 @@
-import os
-from pathlib import Path
 from typing import Generator
 
+import pandas as pd
 import pytest
-from dotenv import load_dotenv
 
 from onemod.fsutils.config_loader import ConfigLoader
 from onemod.validation.error_handling import (
     ValidationErrorCollector,
     validation_context,
 )
+from tests.helpers.get_expected_args import get_expected_args
 from tests.helpers.orchestration_helpers import (
     setup_parallel_pipeline,
     setup_simple_pipeline,
 )
 
-load_dotenv()
-
-
-@pytest.fixture(scope="session")
-def test_assets_dir():
-    """Fixture to provide the test assets directory, as set in the environment variable."""
-    test_dir = os.getenv("TEST_ASSETS_DIR")
-    if not test_dir:
-        raise EnvironmentError(
-            "The TEST_ASSETS_DIR environment variable is not set."
-        )
-    return test_dir
-
 
 @pytest.fixture
-def small_input_data(request, test_assets_dir):
-    """Fixture providing small test input data"""
-    if request.node.get_closest_marker("requires_data") is None:
-        pytest.skip("Skipping test because it requires data assets.")
+def small_input_data(tmp_path_factory):
+    """Create a dynamic test dataset based on expected stage inputs from get_expected_args()."""
+    tmp_dir = tmp_path_factory.mktemp("data")
+    parquet_path = tmp_dir / "small_data.parquet"
 
-    small_input_data_path = Path(
-        test_assets_dir, "e2e", "example1", "data", "small_data.parquet"
+    expected = get_expected_args()
+    dfs = []
+
+    for stage_args in expected.values():
+        subsets = stage_args.get("subsets")
+        if subsets is not None:
+            df = subsets.copy()
+            # Add required columns not in the subset
+            if "age_group_id" not in df.columns:
+                df["age_group_id"] = 2
+            if "location_id" not in df.columns:
+                df["location_id"] = 6
+            if "region_id" not in df.columns:
+                df["region_id"] = 5.0
+            if "super_region_id" not in df.columns:
+                df["super_region_id"] = 4.0
+            if "sex_id" not in df.columns:
+                df["sex_id"] = 1
+            if "year_id" not in df.columns:
+                df["year_id"] = 1990
+
+            # Add dummy values for required numeric columns
+            df["fake_observation_column"] = 0.1
+            df["fake_prediction_column"] = 0.2
+            df["fake_weights_column"] = 1.0
+            df["cov1"] = 0.5
+            df["cov2"] = 1.5
+            df["cov3"] = 2.5
+            df["holdout1"] = 0
+            df["holdout2"] = 1
+            df["holdout3"] = 0
+            df["adult_hiv_death_rate"] = 0.01
+
+            dfs.append(df)
+
+    # Add a few default rows for the preprocessing stage, which has no subset requirements
+    dfs.append(
+        pd.DataFrame(
+            [
+                {
+                    "age_group_id": 1,
+                    "location_id": 6,
+                    "sex_id": 1,
+                    "year_id": 1990,
+                    "region_id": 5.0,
+                    "super_region_id": 4.0,
+                    "fake_observation_column": 0.1,
+                    "fake_prediction_column": 0.2,
+                    "fake_weights_column": 1.0,
+                    "cov1": 0.5,
+                    "cov2": 1.5,
+                    "cov3": 2.5,
+                    "holdout1": 0,
+                    "holdout2": 1,
+                    "holdout3": 0,
+                    "adult_hiv_death_rate": 0.01,
+                }
+            ]
+        )
     )
-    return small_input_data_path
+
+    df_final = pd.concat(dfs, ignore_index=True).drop_duplicates()
+    df_final.to_parquet(parquet_path, index=False)
+    return parquet_path
 
 
 @pytest.fixture

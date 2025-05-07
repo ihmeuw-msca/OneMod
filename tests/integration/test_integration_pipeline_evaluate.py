@@ -1,6 +1,7 @@
 import pytest
-from tests.helpers.dummy_pipeline import get_expected_args, setup_dummy_pipeline
+from tests.helpers.dummy_pipeline import setup_dummy_pipeline
 from tests.helpers.dummy_stages import assert_stage_logs
+from tests.helpers.get_expected_args import get_expected_args
 
 KWARGS = {
     "backend": "local",
@@ -33,7 +34,6 @@ def create_dummy_preprocessing_output_file(test_base_dir, stages):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_invalid_stage_name(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() raises an error when an invalid stage name is provided."""
@@ -63,7 +63,6 @@ def test_invalid_stage_name(small_input_data, test_base_dir, method):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_subset_stage_identification(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() identifies the correct subset of stages."""
@@ -107,7 +106,6 @@ def test_subset_stage_identification(small_input_data, test_base_dir, method):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_missing_dependency_error(small_input_data, test_base_dir, method):
     """Test that Pipeline.evaluate() on a subset of stages raises an error when required inputs for a specified stage are missing."""
@@ -127,7 +125,6 @@ def test_missing_dependency_error(small_input_data, test_base_dir, method):
 
 
 @pytest.mark.integration
-@pytest.mark.requires_data
 @pytest.mark.parametrize("method", ["run", "fit", "predict"])
 def test_duplicate_stage_names(small_input_data, test_base_dir, method):
     """Test that duplicate stage names passed to Pipeline.evaluate() are coerced to unique stage names."""
