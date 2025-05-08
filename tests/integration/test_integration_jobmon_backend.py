@@ -145,7 +145,13 @@ def test_simple_upstream(simple_pipeline, method, stages):
         stage = simple_pipeline.stages[stage_name]
         if method not in stage.skip:
             upstream_tasks = jb.get_upstream_tasks(
-                stage, method, simple_pipeline.stages, task_dict, stages=stages
+                stage=stage,
+                method=method,
+                stage_dict=simple_pipeline.stages,
+                task_dict=task_dict,
+                stages=stages,
+                task_prefix=None,
+                template_prefix=None,
             )
 
             if stage_name == "run_1" or stages is not None:
@@ -165,7 +171,13 @@ def test_parallel_upstream(parallel_pipeline, method, stages):
     for stage_name in parallel_pipeline.get_execution_order(stages):
         stage = parallel_pipeline.stages[stage_name]
         upstream_tasks = jb.get_upstream_tasks(
-            stage, method, parallel_pipeline.stages, task_dict, stages=stages
+            stage=stage,
+            method=method,
+            stage_dict=parallel_pipeline.stages,
+            task_dict=task_dict,
+            stages=stages,
+            task_prefix=None,
+            template_prefix=None,
         )
 
         if stage_name == "run_1" or stages is not None:
@@ -219,6 +231,7 @@ def test_simple_pipeline_tasks(simple_pipeline, method, stages):
         stages=stages,
         external_upstream_tasks=None,
         task_prefix=None,
+        task_attributes=dict(),
         template_prefix=None,
         max_attempts=1,
     )
@@ -255,6 +268,7 @@ def test_parallel_pipeline_tasks(parallel_pipeline, method, stages):
         stages=stages,
         external_upstream_tasks=None,
         task_prefix=None,
+        task_attributes=dict(),
         template_prefix=None,
         max_attempts=1,
     )
@@ -320,6 +334,7 @@ def test_parallel_pipeline_tasks_jobmon_args(parallel_pipeline, method, stages):
     ]
     task_prefix = "me_1234"
     template_prefix = "testing"
+    task_attributes = {"modelable_entity_id": "1234"}
     max_attempts = 3
     tasks = jb.get_pipeline_tasks(
         parallel_pipeline,
@@ -330,6 +345,7 @@ def test_parallel_pipeline_tasks_jobmon_args(parallel_pipeline, method, stages):
         stages=stages,
         external_upstream_tasks=external_upstream_tasks,
         task_prefix=task_prefix,
+        task_attributes=task_attributes,
         template_prefix=template_prefix,
         max_attempts=max_attempts,
     )
@@ -353,6 +369,7 @@ def test_parallel_pipeline_tasks_jobmon_args(parallel_pipeline, method, stages):
                 assert len(collect_tasks) == 0
 
             for task in method_tasks:
+                assert task.task_attributes == task_attributes
                 stage_upstreams = [
                     upstream_task
                     for upstream_task in task.upstream_tasks
@@ -405,6 +422,7 @@ def test_stage_tasks_basic(simple_pipeline):
         resources=resources,
         python=python,
         task_prefix=None,
+        task_attributes=dict(),
         template_prefix=None,
         max_attempts=1,
     )
@@ -442,6 +460,7 @@ def test_stage_tasks_kwargs(simple_pipeline, kwargs):
         resources=resources,
         python=python,
         task_prefix=None,
+        task_attributes=dict(),
         template_prefix=None,
         max_attempts=1,
         **kwargs,
@@ -487,6 +506,7 @@ def test_stage_tasks_submodels(parallel_pipeline, submodel, collect):
         paramsets=paramsets,
         collect=collect,
         task_prefix=None,
+        task_attributes=dict(),
         template_prefix=None,
         max_attempts=1,
     )
@@ -531,6 +551,7 @@ def test_stage_tasks_collect_after(parallel_pipeline, method):
         paramsets={"param": 1},
         collect=True,
         task_prefix=None,
+        task_attributes=dict(),
         template_prefix=None,
         max_attempts=1,
     )
@@ -551,6 +572,7 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
     resources = {"tool_resources": {cluster: {"queue": "null.q"}}}
     python = "/path/to/python/env/bin/python"
     task_prefix = "me_1234"
+    task_attributes = {"modelable_entity_id": "1234"}
     template_prefix = "testing"
     max_attempts = 3
     entrypoint = str(Path(python).parent / "onemod")
@@ -562,6 +584,7 @@ def test_stage_tasks_jobmon_args(simple_pipeline):
         resources=resources,
         python=python,
         task_prefix=task_prefix,
+        task_attributes=task_attributes,
         template_prefix=template_prefix,
         max_attempts=max_attempts,
     )

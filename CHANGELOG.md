@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-05-05
+
+### Added
+
+- Add new Jobmon-related argument `task_attributes`.
+
+### Fixed
+
+- Fixes upstream stage logic when multiple Pipelines exist in a single workflow, all with different task or template prefixes.
+
 ## [1.2.0] - 2025-04-14
 
 ### Added
