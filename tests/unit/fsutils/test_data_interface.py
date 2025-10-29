@@ -225,15 +225,15 @@ def test_load_with_columns_and_subset_parquet(data_files, tmp_path, extension):
     with patch(
         "onemod.fsutils.io.DataIO.load_eager",
         return_value=pd.DataFrame(columns=columns),
-    ) as mock_evaluate_with_jobmon:
+    ) as mock_load_eager:
         dataif.load(data_path.name, key="tmp", columns=columns, subset=subset)
-        mock_evaluate_with_jobmon.assert_called_once()
+        mock_load_eager.assert_called_once()
         if extension == "parquet":
-            assert "columns" in mock_evaluate_with_jobmon.call_args.kwargs
-            assert "filters" in mock_evaluate_with_jobmon.call_args.kwargs
+            assert "columns" in mock_load_eager.call_args.kwargs
+            assert "filters" in mock_load_eager.call_args.kwargs
         else:
-            assert "columns" not in mock_evaluate_with_jobmon.call_args.kwargs
-            assert "filters" not in mock_evaluate_with_jobmon.call_args.kwargs
+            assert "columns" not in mock_load_eager.call_args.kwargs
+            assert "filters" not in mock_load_eager.call_args.kwargs
 
 
 @pytest.mark.unit
