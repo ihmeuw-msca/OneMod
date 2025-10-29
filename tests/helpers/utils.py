@@ -1,15 +1,15 @@
 def assert_equal_unordered(actual, expected):
     """Recursively compare two data structures, treating lists as unordered collections."""
     if isinstance(actual, dict) and isinstance(expected, dict):
-        assert set(actual.keys()) == set(
-            expected.keys()
-        ), f"Dict keys differ: {actual.keys()} != {expected.keys()}"
+        assert set(actual.keys()) == set(expected.keys()), (
+            f"Dict keys differ: {actual.keys()} != {expected.keys()}"
+        )
         for key in actual:
             assert_equal_unordered(actual[key], expected[key])
     elif isinstance(actual, list) and isinstance(expected, list):
-        assert len(actual) == len(
-            expected
-        ), f"List lengths differ: {len(actual)} != {len(expected)}"
+        assert len(actual) == len(expected), (
+            f"List lengths differ: {len(actual)} != {len(expected)}"
+        )
         unmatched_expected_items = expected.copy()
         for actual_item in actual:
             match_found = False

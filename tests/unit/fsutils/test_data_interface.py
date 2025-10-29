@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -208,6 +210,30 @@ def test_load_with_columns_and_subset(data_files, tmp_path, extension):
     assert np.array_equal(loaded_data["age_group_id"], [2, 2])
     assert np.array_equal(loaded_data["location_id"], [20, 20])
     assert np.array_equal(loaded_data["value"], [200, 300])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("extension", ["csv", "parquet"])
+def test_load_with_columns_and_subset_parquet(data_files, tmp_path, extension):
+    """Test loading passes through subset and columns to read parquet"""
+    dataif = DataInterface(tmp=tmp_path)
+    data_path = data_files[extension]
+
+    columns = ["age_group_id", "location_id", "value"]
+    subset = {"location_id": [20]}
+
+    with patch(
+        "onemod.fsutils.io.DataIO.load_eager",
+        return_value=pd.DataFrame(columns=columns),
+    ) as mock_evaluate_with_jobmon:
+        dataif.load(data_path.name, key="tmp", columns=columns, subset=subset)
+        mock_evaluate_with_jobmon.assert_called_once()
+        if extension == "parquet":
+            assert "columns" in mock_evaluate_with_jobmon.call_args.kwargs
+            assert "filters" in mock_evaluate_with_jobmon.call_args.kwargs
+        else:
+            assert "columns" not in mock_evaluate_with_jobmon.call_args.kwargs
+            assert "filters" not in mock_evaluate_with_jobmon.call_args.kwargs
 
 
 @pytest.mark.unit

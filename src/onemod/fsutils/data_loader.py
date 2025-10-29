@@ -30,10 +30,23 @@ class DataLoader:
             raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
         if return_type == "pandas_dataframe":
+            if path.suffix == ".parquet":
+                if columns:
+                    options["columns"] = columns
+                if subset and "filters" not in options:
+                    options["filters"] = [
+                        (
+                            col,
+                            "in",
+                            values if isinstance(values, list) else [values],
+                        )
+                        for col, values in subset.items()
+                    ]
+
             pandas_df = self.io_dict[path.suffix].load_eager(path, **options)
-            assert isinstance(
-                pandas_df, pd.DataFrame
-            ), "Expected a pandas DataFrame"
+            assert isinstance(pandas_df, pd.DataFrame), (
+                "Expected a pandas DataFrame"
+            )
 
             if columns:
                 pandas_df = pandas_df[columns]

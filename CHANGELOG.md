@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.3.1] - 2025-10-29
+
+### Changed
+
+- `columns` and `subsets` arguments to `fsutils.data_loader.DataLoader.load` are passed through as `options` to `load_eager` when `path` is a parquet file to optimize memory usage.
+
 ## [1.3.0] - 2025-05-05
 
 ### Added
