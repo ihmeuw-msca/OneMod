@@ -214,8 +214,8 @@ def test_load_with_columns_and_subset(data_files, tmp_path, extension):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("extension", ["csv", "parquet"])
-def test_load_with_columns_and_subset_parquet(data_files, tmp_path, extension):
-    """Test loading passes through subset and columns to pd.read_parquet"""
+def test_load_pandas_with_columns_and_subset(data_files, tmp_path, extension):
+    """Test loading passes through subset and columns to pandas"""
     dataif = DataInterface(tmp=tmp_path)
     data_path = data_files[extension]
 
