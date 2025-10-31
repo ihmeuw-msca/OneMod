@@ -30,37 +30,17 @@ class DataLoader:
             raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
         if return_type == "pandas_dataframe":
-            if path.suffix == ".parquet":
-                if columns:
-                    options["columns"] = columns
-                if subset and "filters" not in options:
-                    options["filters"] = [
-                        (
-                            col,
-                            "in",
-                            values if isinstance(values, list) else [values],
-                        )
-                        for col, values in subset.items()
-                    ]
-
-            pandas_df = self.io_dict[path.suffix].load_eager(path, **options)
+            pandas_df = self.io_dict[path.suffix].load_eager(
+                path, columns=columns, subset=subset, **options
+            )
             assert isinstance(pandas_df, pd.DataFrame), (
                 "Expected a pandas DataFrame"
             )
 
+            # Enforce `column` order if requested and reset index in case of `subset`.
             if columns:
                 pandas_df = pandas_df[columns]
-
-            if subset:
-                for col, values in subset.items():
-                    pandas_df = pandas_df[
-                        pandas_df[col].isin(
-                            values if isinstance(values, list) else [values]
-                        )
-                    ]
-                    pandas_df.reset_index(drop=True, inplace=True)
-
-            return pandas_df
+            return pandas_df.reset_index(drop=True)
         elif return_type in ["polars_dataframe", "polars_lazyframe"]:
             polars_lf = self.io_dict[path.suffix].load_lazy(path, **options)
 

@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Literal, Type
+from typing import Any, Literal, Mapping, Type
 
 import dill
 import pandas as pd
@@ -9,6 +9,22 @@ import polars as pl
 import tomli
 import tomli_w
 import yaml
+
+
+def _subset_dataframe(
+    data: pd.DataFrame, subset: Mapping[str, Any | list[any]] | None = None
+) -> pd.DataFrame:
+    """Helper function to subset a dataframe given a dictionary of column
+    names and values. Note: Modifies the dataframe in place.
+    """
+    if subset is None:
+        return data
+
+    for col, values in subset.items():
+        data = data[
+            data[col].isin(values if isinstance(values, list) else [values])
+        ]
+    return data
 
 
 class DataIO(ABC):
@@ -21,6 +37,8 @@ class DataIO(ABC):
         self,
         fpath: Path | str,
         backend: Literal["pandas", "polars"] = "pandas",
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
         **options,
     ) -> pd.DataFrame | pl.DataFrame:
         """Load data from given path."""
@@ -28,9 +46,13 @@ class DataIO(ABC):
         if fpath.suffix not in self.fextns:
             raise ValueError(f"File extension must be in {self.fextns}.")
         if backend == "polars":
-            return self._load_eager_polars_impl(fpath, **options)
+            return self._load_eager_polars_impl(
+                fpath, columns=columns, subset=subset, **options
+            )
         elif backend == "pandas":
-            return self._load_eager_pandas_impl(fpath, **options)
+            return self._load_eager_pandas_impl(
+                fpath, columns=columns, subset=subset, **options
+            )
         else:
             raise ValueError("Backend must be either 'polars' or 'pandas'.")
 
@@ -64,12 +86,24 @@ class DataIO(ABC):
             raise TypeError(f"Data must be an instance of {self.dtypes}.")
 
     @abstractmethod
-    def _load_eager_polars_impl(self, fpath: Path, **options) -> pl.DataFrame:
+    def _load_eager_polars_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pl.DataFrame:
         """Polars implementation of eager loading."""
         pass
 
     @abstractmethod
-    def _load_eager_pandas_impl(self, fpath: Path, **options) -> pd.DataFrame:
+    def _load_eager_pandas_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pd.DataFrame:
         """Pandas implementation of eager loading."""
         pass
 
@@ -131,11 +165,27 @@ class ConfigIO(ABC):
 class CSVIO(DataIO):
     fextns: tuple[str, ...] = (".csv",)
 
-    def _load_eager_polars_impl(self, fpath: Path, **options) -> pl.DataFrame:
-        return pl.read_csv(fpath, **options)
+    def _load_eager_polars_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pl.DataFrame:
+        return _subset_dataframe(
+            pl.read_csv(fpath, usecols=columns, **options), subset=subset
+        )
 
-    def _load_eager_pandas_impl(self, fpath: Path, **options) -> pd.DataFrame:
-        return pd.read_csv(fpath, **options)
+    def _load_eager_pandas_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pd.DataFrame:
+        return _subset_dataframe(
+            pd.read_csv(fpath, usecols=columns, **options), subset=subset
+        )
 
     def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
         return pl.scan_csv(fpath, **options)
@@ -150,11 +200,35 @@ class CSVIO(DataIO):
 class ParquetIO(DataIO):
     fextns: tuple[str, ...] = (".parquet",)
 
-    def _load_eager_polars_impl(self, fpath: Path, **options) -> pl.DataFrame:
-        return pl.read_parquet(fpath, **options)
+    def _load_eager_polars_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pl.DataFrame:
+        return _subset_dataframe(
+            pl.read_parquet(fpath, columns=columns, **options), subset=subset
+        )
 
-    def _load_eager_pandas_impl(self, fpath: Path, **options) -> pd.DataFrame:
-        return pd.read_parquet(fpath, **options)
+    def _load_eager_pandas_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pd.DataFrame:
+        filters = (
+            [
+                (col, "in" if isinstance(values, list) else "=", values)
+                for col, values in subset.items()
+            ]
+            if subset
+            else None
+        )
+        return pd.read_parquet(
+            fpath, columns=columns, filters=filters, **options
+        )
 
     def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
         return pl.scan_parquet(fpath, **options)
