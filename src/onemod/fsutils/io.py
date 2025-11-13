@@ -1,4 +1,5 @@
 import json
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Literal, Mapping, Type
@@ -182,12 +183,16 @@ class CSVIO(DataIO):
         **options,
     ) -> pd.DataFrame:
         # `columns` overrides options['usecols'] if both are present.
-        # this is because `columns` is used to define column order,
+        # because `columns` is used to define column order,
         # not just column existence.
-        usecols = columns or options.pop("usecols", None)
+        if (columns is not None) and ("usecols" in options):
+            warnings.warn(
+                "Both `columns` and `usecols` passed, `usecols` will "
+                "be ignored in favor of `columns`."
+            )
+        options_usecols = options.pop("usecols", None)
+        usecols = columns or options_usecols
         obj = pd.read_csv(fpath, usecols=usecols, **options)
-        if columns:
-            obj = obj[columns]
         if subset:
             for col, values in subset.items():
                 obj = obj[
@@ -195,6 +200,8 @@ class CSVIO(DataIO):
                         values if isinstance(values, list) else [values]
                     )
                 ]
+        if columns:
+            obj = obj[columns]
         return obj.reset_index(drop=True)
 
     def _load_lazy_impl(
@@ -205,8 +212,6 @@ class CSVIO(DataIO):
         **options,
     ) -> pl.LazyFrame:
         obj = pl.scan_csv(fpath, **options)
-        if columns:
-            obj = obj.select(columns)
         if subset:
             for col, values in subset.items():
                 obj = obj.filter(
@@ -214,6 +219,8 @@ class CSVIO(DataIO):
                         values if isinstance(values, list) else [values]
                     )
                 )
+        if columns:
+            obj = obj.select(columns)
 
         return obj
 
@@ -248,6 +255,11 @@ class ParquetIO(DataIO):
         # `subset` is applied alongside options['filters'] if both
         # are present. neither overrides the other, data is filtered
         # to the intersection of the two.
+        if (subset is not None) and ("filters" in options):
+            warnings.warn(
+                "Both `subset` and `filters` passed, both will be "
+                "applied through an AND operation."
+            )
         options_filters = options.pop("filters", [])
         subset_filters = [
             (col, "in" if isinstance(values, list) else "=", values)
@@ -269,8 +281,6 @@ class ParquetIO(DataIO):
         **options,
     ) -> pl.LazyFrame:
         obj = pl.scan_parquet(fpath, **options)
-        if columns:
-            obj = obj.select(columns)
         if subset:
             for col, values in subset.items():
                 obj = obj.filter(
@@ -278,6 +288,8 @@ class ParquetIO(DataIO):
                         values if isinstance(values, list) else [values]
                     )
                 )
+        if columns:
+            obj = obj.select(columns)
         return obj
 
     def _dump_polars_impl(self, obj: pl.DataFrame, fpath: Path, **options):

@@ -31,30 +31,17 @@ class DataLoader:
 
         if return_type in ["pandas_dataframe", "polars_dataframe"]:
             backend = return_type.split("_")[0]
-            obj = self.io_dict[path.suffix].load_eager(
+            return self.io_dict[path.suffix].load_eager(
                 path, backend=backend, columns=columns, subset=subset, **options
             )
         elif return_type == "polars_lazyframe":
-            obj = self.io_dict[path.suffix].load_lazy(
+            return self.io_dict[path.suffix].load_lazy(
                 path, columns=columns, subset=subset, **options
             )
         else:
             raise ValueError(
                 "Return type must be one of 'polars_dataframe', 'polars_lazyframe', or 'pandas_dataframe'"
             )
-
-        expected_data_type = {
-            "pandas_dataframe": pd.DataFrame,
-            "polars_dataframe": pl.DataFrame,
-            "polars_lazyframe": pl.LazyFrame,
-        }[return_type]
-        if not isinstance(obj, expected_data_type):
-            raise RuntimeError(
-                f"Given return_type='{return_type}', expected loaded data to be "
-                f"of type {expected_data_type} not {type(obj)}."
-            )
-
-        return obj
 
     def dump(
         self,

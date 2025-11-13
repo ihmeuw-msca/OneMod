@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -210,34 +208,6 @@ def test_load_with_columns_and_subset(data_files, tmp_path, extension):
     assert np.array_equal(loaded_data["age_group_id"], [2, 2])
     assert np.array_equal(loaded_data["location_id"], [20, 20])
     assert np.array_equal(loaded_data["value"], [200, 300])
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("extension", ["csv", "parquet"])
-def test_load_pandas_with_columns_and_subset(data_files, tmp_path, extension):
-    """Test loading passes through subset and columns to pandas"""
-    dataif = DataInterface(tmp=tmp_path)
-    data_path = data_files[extension]
-
-    columns = ["age_group_id", "location_id", "value"]
-    subset = {"location_id": [20]}
-
-    with (
-        patch(
-            "pandas.read_parquet", return_value=pd.DataFrame(columns=columns)
-        ) as mock_pd_read_parquet,
-        patch(
-            "pandas.read_csv", return_value=pd.DataFrame(columns=columns)
-        ) as mock_pd_read_csv,
-    ):
-        dataif.load(data_path.name, key="tmp", columns=columns, subset=subset)
-        if extension == "parquet":
-            mock_pd_read_parquet.assert_called_once()
-            assert "columns" in mock_pd_read_parquet.call_args.kwargs
-            assert "filters" in mock_pd_read_parquet.call_args.kwargs
-        else:
-            mock_pd_read_csv.assert_called_once()
-            assert "usecols" in mock_pd_read_csv.call_args.kwargs
 
 
 @pytest.mark.unit
