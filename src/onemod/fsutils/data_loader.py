@@ -29,40 +29,32 @@ class DataLoader:
         if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
-        if return_type == "pandas_dataframe":
-            pandas_df = self.io_dict[path.suffix].load_eager(
+        if return_type in ["pandas_dataframe", "polars_dataframe"]:
+            backend = return_type.split("_")[0]
+            obj = self.io_dict[path.suffix].load_eager(
+                path, backend=backend, columns=columns, subset=subset, **options
+            )
+        elif return_type == "polars_lazyframe":
+            obj = self.io_dict[path.suffix].load_lazy(
                 path, columns=columns, subset=subset, **options
             )
-            assert isinstance(pandas_df, pd.DataFrame), (
-                "Expected a pandas DataFrame"
-            )
-
-            # Enforce `column` order if requested and reset index in case of `subset`.
-            if columns:
-                pandas_df = pandas_df[columns]
-            return pandas_df.reset_index(drop=True)
-        elif return_type in ["polars_dataframe", "polars_lazyframe"]:
-            polars_lf = self.io_dict[path.suffix].load_lazy(path, **options)
-
-            if columns:
-                polars_lf = polars_lf.select(columns)
-
-            if subset:
-                for col, values in subset.items():
-                    polars_lf = polars_lf.filter(
-                        pl.col(col).is_in(
-                            values if isinstance(values, list) else [values]
-                        )
-                    )
-
-            if return_type == "polars_dataframe":
-                return polars_lf.collect()
-            elif return_type == "polars_lazyframe":
-                return polars_lf
         else:
             raise ValueError(
                 "Return type must be one of 'polars_dataframe', 'polars_lazyframe', or 'pandas_dataframe'"
             )
+
+        expected_data_type = {
+            "pandas_dataframe": pd.DataFrame,
+            "polars_dataframe": pl.DataFrame,
+            "polars_lazyframe": pl.LazyFrame,
+        }[return_type]
+        if not isinstance(obj, expected_data_type):
+            raise RuntimeError(
+                f"Given return_type='{return_type}', expected loaded data to be "
+                f"of type {expected_data_type} not {type(obj)}."
+            )
+
+        return obj
 
     def dump(
         self,

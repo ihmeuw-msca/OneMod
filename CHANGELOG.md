@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-## [1.3.1] - 2025-10-31
+## [1.3.1] - 2025-11-12
 
 ### Changed
 
-- `columns` and `subsets` arguments to `fsutils.data_loader.DataLoader.load` are passed through to `load_eager` to optimize memory usage where possible in the underlying pandas and polars calls.
+- `columns` and `subsets` arguments to `fsutils.data_loader.DataLoader.load` are passed through to the underlying pandas and polars calls to optimize memory usage where possible.
 
 ## [1.3.0] - 2025-05-05
 

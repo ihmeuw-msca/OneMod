@@ -11,22 +11,6 @@ import tomli_w
 import yaml
 
 
-def _subset_dataframe(
-    data: pd.DataFrame, subset: Mapping[str, Any | list[any]] | None = None
-) -> pd.DataFrame:
-    """Helper function to subset a dataframe given a dictionary of column
-    names and values. Note: Modifies the dataframe in place.
-    """
-    if subset is None:
-        return data
-
-    for col, values in subset.items():
-        data = data[
-            data[col].isin(values if isinstance(values, list) else [values])
-        ]
-    return data
-
-
 class DataIO(ABC):
     """Bridge class that unifies the I/O for different data file types."""
 
@@ -56,12 +40,20 @@ class DataIO(ABC):
         else:
             raise ValueError("Backend must be either 'polars' or 'pandas'.")
 
-    def load_lazy(self, fpath: Path | str, **options) -> pl.LazyFrame:
+    def load_lazy(
+        self,
+        fpath: Path | str,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pl.LazyFrame:
         """Load data lazily (Polars only) from given path."""
         fpath = Path(fpath)
         if fpath.suffix not in self.fextns:
             raise ValueError(f"File extension must be in {self.fextns}.")
-        return self._load_lazy_impl(fpath, **options)
+        return self._load_lazy_impl(
+            fpath, columns=columns, subset=subset, **options
+        )
 
     def dump(
         self,
@@ -108,7 +100,13 @@ class DataIO(ABC):
         pass
 
     @abstractmethod
-    def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
+    def _load_lazy_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pl.LazyFrame:
         """Polars implementation of lazy loading."""
         pass
 
@@ -172,9 +170,9 @@ class CSVIO(DataIO):
         subset: Mapping[str, Any | list[Any]] | None = None,
         **options,
     ) -> pl.DataFrame:
-        return _subset_dataframe(
-            pl.read_csv(fpath, usecols=columns, **options), subset=subset
-        )
+        return self._load_lazy_impl(
+            fpath, columns=columns, subset=subset, **options
+        ).collect()
 
     def _load_eager_pandas_impl(
         self,
@@ -183,12 +181,41 @@ class CSVIO(DataIO):
         subset: Mapping[str, Any | list[Any]] | None = None,
         **options,
     ) -> pd.DataFrame:
-        return _subset_dataframe(
-            pd.read_csv(fpath, usecols=columns, **options), subset=subset
-        )
+        # `columns` overrides options['usecols'] if both are present.
+        # this is because `columns` is used to define column order,
+        # not just column existence.
+        usecols = columns or options.pop("usecols", None)
+        obj = pd.read_csv(fpath, usecols=usecols, **options)
+        if columns:
+            obj = obj[columns]
+        if subset:
+            for col, values in subset.items():
+                obj = obj[
+                    obj[col].isin(
+                        values if isinstance(values, list) else [values]
+                    )
+                ]
+        return obj.reset_index(drop=True)
 
-    def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
-        return pl.scan_csv(fpath, **options)
+    def _load_lazy_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pl.LazyFrame:
+        obj = pl.scan_csv(fpath, **options)
+        if columns:
+            obj = obj.select(columns)
+        if subset:
+            for col, values in subset.items():
+                obj = obj.filter(
+                    pl.col(col).is_in(
+                        values if isinstance(values, list) else [values]
+                    )
+                )
+
+        return obj
 
     def _dump_polars_impl(self, obj: pl.DataFrame, fpath: Path, **options):
         obj.write_csv(fpath, **options)
@@ -207,9 +234,9 @@ class ParquetIO(DataIO):
         subset: Mapping[str, Any | list[Any]] | None = None,
         **options,
     ) -> pl.DataFrame:
-        return _subset_dataframe(
-            pl.read_parquet(fpath, columns=columns, **options), subset=subset
-        )
+        return self._load_lazy_impl(
+            fpath, columns=columns, subset=subset, **options
+        ).collect()
 
     def _load_eager_pandas_impl(
         self,
@@ -218,20 +245,40 @@ class ParquetIO(DataIO):
         subset: Mapping[str, Any | list[Any]] | None = None,
         **options,
     ) -> pd.DataFrame:
-        filters = (
-            [
-                (col, "in" if isinstance(values, list) else "=", values)
-                for col, values in subset.items()
-            ]
-            if subset
-            else None
-        )
-        return pd.read_parquet(
+        # `subset` is applied alongside options['filters'] if both
+        # are present. neither overrides the other, data is filtered
+        # to the intersection of the two.
+        options_filters = options.pop("filters", [])
+        subset_filters = [
+            (col, "in" if isinstance(values, list) else "=", values)
+            for col, values in (subset or {}).items()
+        ]
+        filters = (options_filters + subset_filters) or None
+        obj = pd.read_parquet(
             fpath, columns=columns, filters=filters, **options
         )
+        if columns:
+            obj = obj[columns]
+        return obj.reset_index(drop=True)
 
-    def _load_lazy_impl(self, fpath: Path, **options) -> pl.LazyFrame:
-        return pl.scan_parquet(fpath, **options)
+    def _load_lazy_impl(
+        self,
+        fpath: Path,
+        columns: list[str] | None = None,
+        subset: Mapping[str, Any | list[Any]] | None = None,
+        **options,
+    ) -> pl.LazyFrame:
+        obj = pl.scan_parquet(fpath, **options)
+        if columns:
+            obj = obj.select(columns)
+        if subset:
+            for col, values in subset.items():
+                obj = obj.filter(
+                    pl.col(col).is_in(
+                        values if isinstance(values, list) else [values]
+                    )
+                )
+        return obj
 
     def _dump_polars_impl(self, obj: pl.DataFrame, fpath: Path, **options):
         obj.write_parquet(fpath, **options)
