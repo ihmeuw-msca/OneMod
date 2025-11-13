@@ -29,43 +29,15 @@ class DataLoader:
         if path.suffix not in self.io_dict:
             raise ValueError(f"Unsupported data format for '{path.suffix}'")
 
-        if return_type == "pandas_dataframe":
-            pandas_df = self.io_dict[path.suffix].load_eager(path, **options)
-            assert isinstance(
-                pandas_df, pd.DataFrame
-            ), "Expected a pandas DataFrame"
-
-            if columns:
-                pandas_df = pandas_df[columns]
-
-            if subset:
-                for col, values in subset.items():
-                    pandas_df = pandas_df[
-                        pandas_df[col].isin(
-                            values if isinstance(values, list) else [values]
-                        )
-                    ]
-                    pandas_df.reset_index(drop=True, inplace=True)
-
-            return pandas_df
-        elif return_type in ["polars_dataframe", "polars_lazyframe"]:
-            polars_lf = self.io_dict[path.suffix].load_lazy(path, **options)
-
-            if columns:
-                polars_lf = polars_lf.select(columns)
-
-            if subset:
-                for col, values in subset.items():
-                    polars_lf = polars_lf.filter(
-                        pl.col(col).is_in(
-                            values if isinstance(values, list) else [values]
-                        )
-                    )
-
-            if return_type == "polars_dataframe":
-                return polars_lf.collect()
-            elif return_type == "polars_lazyframe":
-                return polars_lf
+        if return_type in ["pandas_dataframe", "polars_dataframe"]:
+            backend = return_type.split("_")[0]
+            return self.io_dict[path.suffix].load_eager(
+                path, backend=backend, columns=columns, subset=subset, **options
+            )
+        elif return_type == "polars_lazyframe":
+            return self.io_dict[path.suffix].load_lazy(
+                path, columns=columns, subset=subset, **options
+            )
         else:
             raise ValueError(
                 "Return type must be one of 'polars_dataframe', 'polars_lazyframe', or 'pandas_dataframe'"
